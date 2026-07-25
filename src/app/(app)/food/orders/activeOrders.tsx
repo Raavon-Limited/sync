@@ -7,9 +7,8 @@ import { getDemoOrders, type DemoOrder } from "@/lib/demo-order"
 
 const STATUS_LABEL: Record<DemoOrder["status"], string> = {
     preparing: "Preparing your order",
-    rider_assigned: "Rider heading to restaurant",
-    en_route: "On the way to you",
-    arriving: "Almost there",
+    picked_up: "Rider heading to you",
+    on_the_way: "On the way to you",
     delivered: "Delivered",
 }
 
