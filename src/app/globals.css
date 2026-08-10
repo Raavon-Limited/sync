@@ -237,7 +237,6 @@ input:-webkit-autofill:focus {
 
 /* Hard colour cut at the half-cycle so the two dots trade colours. */
 @keyframes sync-color-a {
-
   0%,
   49.9% {
     background-color: var(--color-lime-deep);
@@ -250,7 +249,6 @@ input:-webkit-autofill:focus {
 }
 
 @keyframes sync-color-b {
-
   0%,
   49.9% {
     background-color: var(--color-lime);
@@ -264,7 +262,6 @@ input:-webkit-autofill:focus {
 
 /* Occasional glitch jitter on the whole dot group. */
 @keyframes sync-glitch {
-
   0%,
   86%,
   100% {
@@ -306,7 +303,6 @@ input:-webkit-autofill:focus {
 
 /* Breathing glow behind the orbiting dots (own element, no transform clash). */
 @keyframes sync-glow {
-
   0%,
   100% {
     transform: scale(0.8);
@@ -333,7 +329,6 @@ input:-webkit-autofill:focus {
 
 /* Blinking caret beside the wordmark. */
 @keyframes sync-caret {
-
   0%,
   100% {
     opacity: 1;
@@ -363,7 +358,6 @@ input:-webkit-autofill:focus {
 
 /* Slow morphing ambient glow (footer / dark CTA backdrop). */
 @keyframes morph {
-
   0%,
   100% {
     transform: translate(-50%, 12%) scale(1) rotate(0deg);
@@ -488,6 +482,26 @@ input:-webkit-autofill:focus {
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* utility */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.menu-item:hover {
+  background: rgb(243 244 246);
+}
+
+.menu-item[data-highlighted] {
+  background: rgb(243 244 246);
 }
 
 @keyframes amap-pulse {

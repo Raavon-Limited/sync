@@ -1,5 +1,4 @@
-import { orderColumns } from '@/components/data-table/columns/order-columns';
-import { DataTable } from '@/components/data-table/data-table';
+import { OrdersTable } from './(components)/orders-table';
 /**
  * ROUTE: /vendor/orders
  * ACCESS: authenticated vendor
@@ -52,8 +51,8 @@ export default function Page() {
           ))}
         </div>
       </section>
-      <section className="p-6">
-        <DataTable columns={orderColumns} data={orders} />
+      <section className="p-2 sm:p-4 md:p-6">
+        <OrdersTable data={orders} />
       </section>
     </section>
   );

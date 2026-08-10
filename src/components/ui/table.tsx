@@ -35,7 +35,7 @@ const TableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn('bg-muted/50 border-t font-medium [&>tr]:last:border-b-0', className)}
+    className={cn('bg-ink/5 border-t font-medium [&>tr]:last:border-b-0', className)}
     {...props}
   />
 ));
@@ -47,7 +47,13 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
     <tr
       ref={ref}
       className={cn(
-        'hover:bg-muted/50 data-[state=selected]:bg-muted border-line/5 border-b transition-colors',
+        /*
+         * `muted` is a TEXT token in this design system (#6a6a72), not a
+         * surface - the upstream `bg-muted/50` painted rows dark grey on
+         * hover. Tint with `ink` instead, which is what the rest of the app
+         * uses for subtle hover backgrounds.
+         */
+        'hover:bg-ink/5 data-[state=selected]:bg-ink/8 border-line/5 border-b transition-colors',
         className,
       )}
       {...props}

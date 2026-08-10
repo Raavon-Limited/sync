@@ -3,6 +3,10 @@
  * Cross-module shared types belong in @/types.
  */
 
+import { Attachment } from '@/app/(vendor)/vendor/inbox/(components)/attachments/attachment';
+
+export type ListingStatus = 'Active' | 'Out of Stock' | 'Archived';
+
 export interface Listing {
   id: string;
   name: string;
@@ -10,7 +14,11 @@ export interface Listing {
   price: number;
   stock: number;
   sold: number;
-  status: 'Active' | 'Draft' | 'Out of Stock';
+
+  status: ListingStatus;
+
+  archivedAt?: string | null;
+
   imageUrl?: string;
 }
 
@@ -27,8 +35,9 @@ export interface ChatContact {
 export interface ChatMessage {
   id: string;
   content: string;
-  timestamp: string;
   isVendor: boolean;
+  timestamp: string;
+  attachments?: Attachment[];
 }
 
 export interface ChatOrder {

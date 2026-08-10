@@ -188,13 +188,6 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
             />
           </Field>
         </div>
-
-        <AppSelect
-          label="Category"
-          value={form.category}
-          onValueChange={(value) => set('category', value)}
-          options={mockCategories.filter((c) => c !== 'All')}
-        />
       </div>
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="outline" size="sm" onClick={onClose}>
@@ -216,6 +209,7 @@ const EMPTY: Omit<Listing, 'id' | 'sold'> = {
   stock: 0,
   status: 'Active',
   imageUrl: '',
+  archived: false,
 };
 
 interface AddListingModalProps {
@@ -309,18 +303,6 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
             />
           </Field>
         </div>
-
-        <Field label="Status">
-          <select
-            value={form.status}
-            onChange={(e) => set('status', e.target.value as Listing['status'])}
-            className="border-line/15 text-ink bg-panel h-11 w-full rounded-lg border px-3 text-sm focus:outline-none"
-          >
-            <option>Active</option>
-            <option>Draft</option>
-            <option>Out of Stock</option>
-          </select>
-        </Field>
       </div>
 
       <div className="mt-6 flex justify-end gap-3">

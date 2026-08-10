@@ -47,7 +47,7 @@ export function AppSelect({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
 
-        <SelectContent className="border-border bg-popover w- rounded-xl shadow-xl">
+        <SelectContent className="border-line/5 w- rounded-xl bg-white shadow-xl">
           {options.map((option) => (
             <SelectItem key={option} value={option} className="cursor-pointer rounded-lg">
               {option}

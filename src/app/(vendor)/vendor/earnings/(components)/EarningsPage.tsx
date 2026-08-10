@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/table';
 import { DateRangePicker, DateRange } from '@/components/shared/date-range-picker';
 import { Modal } from '@/components/shared/custom-modal';
+import { DataTable } from '@/components/data-table/data-table';
+import { earningsColumns } from './EarningsComponent';
 
 type ChartPeriod = '3M' | '6M' | '1Y';
 
@@ -172,7 +174,7 @@ const mockData: EarningsData = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function TxnStatusBadge({ status }: { status: Transaction['status'] }) {
+export function TxnStatusBadge({ status }: { status: Transaction['status'] }) {
   const map: Record<Transaction['status'], string> = {
     Settled: 'border border-emerald-500/30 text-emerald-600 bg-emerald-50',
     Completed: 'border border-violet-500/30 text-violet-600 bg-violet-50',
@@ -188,7 +190,7 @@ function TxnStatusBadge({ status }: { status: Transaction['status'] }) {
   );
 }
 
-function TxnDot({ type }: { type: Transaction['type'] }) {
+export function TxnDot({ type }: { type: Transaction['type'] }) {
   const color =
     type === 'order' ? 'bg-emerald-500' : type === 'refund' ? 'bg-red-500' : 'bg-content-muted';
   return <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${color}`} />;
@@ -459,7 +461,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
 
         {/* Bank Account Bar */}
         <div className="bg-panel shadow-card border-line/10 flex items-center justify-between gap-4 rounded-xl border px-5 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex-col items-center gap-3 sm:flex-row">
             <div className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-sm font-bold text-white">
               {accountDetails.bankName.slice(0, 2).toUpperCase()}
             </div>
@@ -484,24 +486,29 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
         {/* Transaction History Table */}
         <div className="bg-panel shadow-card border-line/10 overflow-hidden rounded-xl border">
           {/* Table Header */}
-          <div className="border-line/5 flex items-center justify-between gap-3 border-b px-5 py-4">
+          <div className="border-line/5 flex flex-col gap-4 border-b px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <span className="font-display text-content text-base font-semibold">
               Transaction History
             </span>
-            <div className="flex items-center gap-2">
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
+
+            <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:items-center sm:gap-3">
+              <div className="col-span-1">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
+
               {dateRange.from && (
                 <Button
                   onClick={handleExportFiltered}
-                  className="flex items-center gap-1.5 rounded-lg bg-transparent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-lime-600"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-lime-600 sm:w-auto"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Export Filtered
                 </Button>
               )}
+
               <Button
                 onClick={handleExportAll}
-                className="border-line/20 flex items-center gap-1.5 rounded-lg border-none bg-lime-500 px-3 py-1.5 text-sm text-white transition-colors hover:bg-lime-600"
+                className="border-line/20 flex w-full items-center justify-center gap-1.5 rounded-lg border-none bg-lime-500 px-3 py-2 text-sm text-white transition-colors hover:bg-lime-600 sm:w-auto"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export All
@@ -510,70 +517,12 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
           </div>
 
           {/* Table */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-5 font-mono text-[10px] tracking-widest uppercase">
-                  Transaction ID
-                </TableHead>
-                <TableHead className="font-mono text-[10px] tracking-widest uppercase">
-                  Description
-                </TableHead>
-                <TableHead className="font-mono text-[10px] tracking-widest uppercase">
-                  Date
-                </TableHead>
-                <TableHead className="text-right font-mono text-[10px] tracking-widest uppercase">
-                  Amount
-                </TableHead>
-                <TableHead className="px-5 text-right font-mono text-[10px] tracking-widest uppercase">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filteredTransactions.length ? (
-                filteredTransactions.map((txn) => (
-                  <TableRow
-                    key={txn.id}
-                    onClick={() => setSelectedTxn(txn)} // 👈 new
-                    className="hover:bg-surface-deep/40 cursor-pointer"
-                  >
-                    <TableCell className="px-5 py-3.5">
-                      <span className="font-mono text-xs font-medium text-violet-600">
-                        {txn.id}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <div className="flex items-center gap-2">
-                        <TxnDot type={txn.type} />
-                        <span className="text-content text-sm">
-                          {txn.customer ? `${txn.description} – ${txn.customer}` : txn.description}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-content-muted py-3.5 text-sm">{txn.date}</TableCell>
-                    <TableCell
-                      className={`font-display py-3.5 text-right text-sm font-semibold ${
-                        txn.amount > 0 ? 'text-emerald-600' : 'text-red-500'
-                      }`}
-                    >
-                      {txn.amount > 0 ? '+' : ''}₦{Math.abs(txn.amount).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-5 py-3.5 text-right">
-                      <TxnStatusBadge status={txn.status} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-content-muted h-24 text-center text-sm">
-                    No transactions found for this date range.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={earningsColumns}
+            data={filteredTransactions}
+            onRowClick={setSelectedTxn}
+            showToolbar={false}
+          />
         </div>
       </div>
     </>

@@ -59,31 +59,130 @@ export function BillingHistoryToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-panel p-4 shadow-card">
-      {/* Left: search + date filter */}
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="bg-panel shadow-card flex flex-col gap-4 rounded-xl p-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Left Side */}
+      <div className="flex w-full flex-col gap-3 lg:w-auto">
+        {/* Search */}
         <Input
           placeholder="Search invoices…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="!border-line/20 w-48 !ring-0 focus-visible:!ring-0"
+          className="!border-line/20 w-full lg:w-64"
         />
 
-        {/* Date range popover trigger */}
+        {/* Mobile: Date Range + Export All */}
+        <div className="grid w-full grid-cols-2 gap-2 lg:hidden">
+          {/* Date Range */}
+          <div className="relative" ref={popoverRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`w-full justify-center gap-2 ${
+                hasDateFilter ? 'border-violet-400 bg-violet-50 text-violet-700' : ''
+              }`}
+              onClick={() => {
+                setLocalRange(dateRange);
+                setPopoverOpen((p) => !p);
+              }}
+            >
+              <CalendarDays className="h-4 w-4" />
+              {hasDateFilter ? 'Date Range' : 'Date Range'}
+
+              {hasDateFilter && (
+                <X
+                  className="ml-1 h-3 w-3 opacity-60 hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearDateRange();
+                  }}
+                />
+              )}
+            </Button>
+
+            {popoverOpen && (
+              <div className="border-line/10 bg-panel shadow-pop absolute top-full left-0 z-30 mt-2 w-72 rounded-xl border p-4">
+                <p className="text-content-muted mb-3 font-mono text-[10px] tracking-widest uppercase">
+                  Filter by date
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-content-muted mb-1 block text-xs">From</label>
+                    <Input
+                      type="date"
+                      value={localRange.from}
+                      onChange={(e) =>
+                        setLocalRange((r) => ({
+                          ...r,
+                          from: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-content-muted mb-1 block text-xs">To</label>
+                    <Input
+                      type="date"
+                      value={localRange.to}
+                      onChange={(e) =>
+                        setLocalRange((r) => ({
+                          ...r,
+                          to: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={clearDateRange}>
+                    Clear
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    className="bg-violet-600 text-white hover:bg-violet-700"
+                    onClick={applyDateRange}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Export All */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExportAll}
+            className="w-full justify-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export All
+          </Button>
+        </div>
+      </div>
+
+      {/* Desktop Buttons */}
+      <div className="hidden items-center gap-2 lg:flex">
+        {/* Desktop Date Range */}
         <div className="relative" ref={popoverRef}>
           <Button
             variant="outline"
             size="sm"
-            className={`gap-2 ${hasDateFilter ? 'border-violet-400 bg-violet-50 text-violet-700' : ''}`}
+            className={`gap-2 ${
+              hasDateFilter ? 'border-violet-400 bg-violet-50 text-violet-700' : ''
+            }`}
             onClick={() => {
               setLocalRange(dateRange);
               setPopoverOpen((p) => !p);
             }}
           >
             <CalendarDays className="h-4 w-4" />
-            {hasDateFilter
-              ? `${dateRange.from || '…'} → ${dateRange.to || '…'}`
-              : 'Date Range'}
+            {hasDateFilter ? `${dateRange.from || '…'} → ${dateRange.to || '…'}` : 'Date Range'}
+
             {hasDateFilter && (
               <X
                 className="ml-1 h-3 w-3 opacity-60 hover:opacity-100"
@@ -95,36 +194,47 @@ export function BillingHistoryToolbar({
             )}
           </Button>
 
-          {/* Popover */}
           {popoverOpen && (
-            <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-line/10 bg-panel p-4 shadow-pop">
-              <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-content-muted">
+            <div className="border-line/10 bg-panel shadow-pop absolute top-full right-0 z-30 mt-2 w-72 rounded-xl border p-4">
+              <p className="text-content-muted mb-3 font-mono text-[10px] tracking-widest uppercase">
                 Filter by date
               </p>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs text-content-muted">From</label>
+                  <label className="text-content-muted mb-1 block text-xs">From</label>
                   <Input
                     type="date"
                     value={localRange.from}
-                    onChange={(e) => setLocalRange((r) => ({ ...r, from: e.target.value }))}
-                    className="text-sm"
+                    onChange={(e) =>
+                      setLocalRange((r) => ({
+                        ...r,
+                        from: e.target.value,
+                      }))
+                    }
                   />
                 </div>
+
                 <div>
-                  <label className="mb-1 block text-xs text-content-muted">To</label>
+                  <label className="text-content-muted mb-1 block text-xs">To</label>
                   <Input
                     type="date"
                     value={localRange.to}
-                    onChange={(e) => setLocalRange((r) => ({ ...r, to: e.target.value }))}
-                    className="text-sm"
+                    onChange={(e) =>
+                      setLocalRange((r) => ({
+                        ...r,
+                        to: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
+
               <div className="mt-3 flex justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={clearDateRange}>
                   Clear
                 </Button>
+
                 <Button
                   size="sm"
                   className="bg-violet-600 text-white hover:bg-violet-700"
@@ -136,16 +246,14 @@ export function BillingHistoryToolbar({
             </div>
           )}
         </div>
-      </div>
 
-      {/* Right: export buttons */}
-      <div className="flex items-center gap-2">
         {hasDateFilter && (
           <Button variant="outline" size="sm" onClick={onExportFiltered} className="gap-2">
             <Download className="h-4 w-4" />
             Export Filtered
           </Button>
         )}
+
         <Button variant="outline" size="sm" onClick={onExportAll} className="gap-2">
           <Download className="h-4 w-4" />
           Export All
