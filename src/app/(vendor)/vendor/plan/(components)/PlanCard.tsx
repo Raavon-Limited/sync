@@ -29,7 +29,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
   return (
     <div
       className={cn(
-        'relative flex flex-col rounded-xl border p-6 transition-shadow',
+        'relative flex h-full flex-col rounded-xl border p-5 transition-shadow sm:p-6',
         isEnterprise
           ? 'text-cream border-lime-100 bg-lime-500'
           : 'border-line/10 bg-panel text-content shadow-card',
@@ -64,7 +64,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
       <div className="mb-5">
         <span
           className={cn(
-            'font-display text-3xl font-black',
+            'font-display text-2xl font-black sm:text-3xl',
             isEnterprise ? 'text-cream' : 'text-content',
           )}
         >
@@ -80,7 +80,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
       </div>
 
       {/* Features */}
-      <ul className="mb-6 flex flex-col gap-2">
+      <ul className="mb-6 flex flex-1 flex-col gap-2">
         {plan.features.map((f) => (
           <li key={f.label} className="flex items-center gap-2 text-sm">
             <Check

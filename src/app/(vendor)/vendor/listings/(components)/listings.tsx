@@ -56,15 +56,21 @@ export default function ListingsPage() {
       const matchCat = category === 'All' || l.category === category;
       const matchStatus = status === 'All Status' || l.status === status;
       const matchSearch = l.name.toLowerCase().includes(search.toLowerCase());
+
       return matchCat && matchStatus && matchSearch;
     });
   }, [listings, category, status, search]);
 
-  // ── selection ────────────────────────────────────────────────
+  const archivedListings = useMemo(() => {
+    return listings.filter((l) => l.status === 'Archived');
+  }, [listings]);
+
+  // Active Listing
+  const activeListings = useMemo(() => {
+    return listings.filter((l) => l.status === 'Active');
+  }, [listings]);
 
   // ── selection ────────────────────────────────────────────────
-  // ── selection ────────────────────────────────────────────────
-
   const filteredIds = filtered.map((listing) => listing.id);
 
   const selectedCount = selectedIds.size;

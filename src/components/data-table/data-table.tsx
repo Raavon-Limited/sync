@@ -19,12 +19,26 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchColumn?: string;
+
+  toolbar?: React.ReactNode;
+  showToolbar?: boolean;
+
+  onRowClick?: (row: TData) => void;
+
+  emptyMessage?: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchColumn,
+
+  toolbar,
+  showToolbar = true,
+
+  onRowClick,
+
+  emptyMessage = 'No results.',
 }: DataTableProps<TData, TValue>) {
   const [globalFilter, setGlobalFilter] = React.useState('');
 
@@ -51,11 +65,19 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="space-y-4 rounded-md p-8">
-      <DataTableToolbar table={table} searchValue={globalFilter} onSearchChange={setGlobalFilter} />
+    <div className="space-y-4 rounded-md px-2 py-3 sm:px-4 md:px-6">
+      {toolbar
+        ? toolbar
+        : showToolbar && (
+            <DataTableToolbar
+              table={table}
+              searchValue={globalFilter}
+              onSearchChange={setGlobalFilter}
+            />
+          )}
 
-      <div className="border-line/5 rounded-md border bg-panel p-2">
-        <Table>
+      <div className="border-line/5 bg-panel overflow-x-auto rounded-md border p-2">
+        <Table className="min-w-max">
           <TableHeader>
             {table.getHeaderGroups().map((group) => (
               <TableRow key={group.id}>
@@ -73,7 +95,27 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  /*
+                   * A <tr> isn't focusable, so a click-only row is unreachable
+                   * by keyboard. Make it tabbable and accept Enter/Space.
+                   */
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onRowClick(row.original);
+                          }
+                        }
+                      : undefined
+                  }
+                  // Hover color is owned by TableRow; only add the affordance here.
+                  className={onRowClick ? 'cursor-pointer' : ''}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -84,7 +126,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}

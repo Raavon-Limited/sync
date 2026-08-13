@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Inbox' };
 
 export default function Page() {
   return (
-    <section className="flex flex-col gap-3">
+    <section className="h-full overflow-hidden">
       <ChatComponent />
     </section>
   );

@@ -103,7 +103,7 @@ export default function PlanPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5 sm:space-y-8 sm:py-8">
       {/* Page header */}
       <div>
         <h1 className="font-display text-content text-2xl font-bold">

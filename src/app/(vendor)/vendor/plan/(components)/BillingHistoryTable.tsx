@@ -181,8 +181,8 @@ export function BillingHistoryTable({ invoices }: Props) {
           />
 
           {/* Table */}
-          <div className="border-line/5 bg-panel rounded-xl border">
-            <Table>
+          <div className="border-line/5 bg-panel overflow-x-auto rounded-xl border">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 {table.getHeaderGroups().map((group) => (
                   <TableRow key={group.id} className="border-line/5">
@@ -232,12 +232,12 @@ export function BillingHistoryTable({ invoices }: Props) {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-content-muted text-xs">
               Showing {table.getRowModel().rows.length} of {table.getFilteredRowModel().rows.length}{' '}
               invoices
             </p>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               {(() => {
                 const pageCount = table.getPageCount();
                 const current = table.getState().pagination.pageIndex;

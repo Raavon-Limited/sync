@@ -1,6 +1,6 @@
 import { CustomCard } from '@/components/shared/card';
 import { Listing } from '@/modules/vendor/types';
-import { BadgeCheck, FilePenLine, Package, PackageX } from 'lucide-react';
+import { Archive, BadgeCheck, FilePenLine, Package, PackageX } from 'lucide-react';
 interface ListingStatsBarProps {
   listings: Listing[];
 }
@@ -8,8 +8,9 @@ interface ListingStatsBarProps {
 export function ListingStatsBar({ listings }: ListingStatsBarProps) {
   const total = listings.length;
   const active = listings.filter((l) => l.status === 'Active').length;
-  const draft = listings.filter((l) => l.status === 'Draft').length;
+  // const draft = listings.filter((l) => l.status === 'Draft').length;
   const outOfStock = listings.filter((l) => l.status === 'Out of Stock').length;
+  const archived = listings.filter((l) => l.status === 'Archived').length;
 
   const stats = [
     {
@@ -27,8 +28,8 @@ export function ListingStatsBar({ listings }: ListingStatsBarProps) {
       iconBg: 'bg-green-100',
     },
     {
-      label: 'DRAFT',
-      value: draft,
+      label: 'ARCHIVED',
+      value: archived,
       valueColor: 'text-amber-600',
       icon: <FilePenLine className="size-5 text-amber-600" />,
       iconBg: 'bg-amber-100',

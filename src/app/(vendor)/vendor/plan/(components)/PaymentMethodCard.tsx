@@ -22,7 +22,7 @@ export function PaymentMethodCard({ method, onUpdate }: Props) {
     // ── First-time / no card state ─────────────────────────────────────────
     return (
       <Card className="border-line/20 border-dashed">
-        <CardContent className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
           <div className="bg-ink/5 flex h-12 w-12 items-center justify-center rounded-full">
             <CreditCard className="text-content-muted h-6 w-6" />
           </div>
@@ -49,30 +49,31 @@ export function PaymentMethodCard({ method, onUpdate }: Props) {
   const brandBg = brandColour[method.brand] ?? 'bg-ink';
 
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4 py-4">
-        {/* Brand icon */}
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-lg ${brandBg} shrink-0`}
-        >
-          <CreditCard className="h-5 w-5 text-white" />
+    <Card className="">
+      <CardContent className="flex justify-between gap-2 py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          {/* Brand icon */}
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${brandBg}`}
+          >
+            <CreditCard className="h-5 w-5 text-white" />
+          </div>
+
+          <div className="flex-1">
+            <p className="font-display text-content text-sm font-semibold">
+              {method.brand} ending in {method.last4}
+            </p>
+
+            <p className="text-content-muted mt-0.5 text-xs">
+              Expires {method.expiresAt} · Billing contact: {method.billingEmail}
+            </p>
+          </div>
         </div>
 
-        {/* Details */}
-        <div className="flex-1">
-          <p className="font-display text-content text-sm font-semibold">
-            {method.brand} ending in {method.last4}
-          </p>
-          <p className="text-content-muted mt-0.5 text-xs">
-            Expires {method.expiresAt} · Billing contact: {method.billingEmail}
-          </p>
-        </div>
-
-        {/* Update button */}
         <Button
           variant="outline"
           size="sm"
-          className="shrink-0 border-lime-200 text-lime-600 hover:bg-lime-50"
+          className="mt-8 w-full border-lime-200 text-lime-600 hover:bg-lime-50 sm:mt-0 sm:mt-4 sm:w-auto"
           onClick={onUpdate}
         >
           Update

@@ -12,8 +12,8 @@ interface Props {
 export function PlanGrid({ plans, currentPlanId, onSelectPlan }: Props) {
   return (
     <section>
-      <h2 className="font-display text-base font-semibold text-content">Compare Plans</h2>
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <h2 className="font-display text-content text-base font-semibold">Compare Plans</h2>
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((plan) => (
           <PlanCard
             key={plan.id}

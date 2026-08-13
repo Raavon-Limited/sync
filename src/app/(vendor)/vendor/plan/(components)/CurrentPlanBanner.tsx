@@ -17,13 +17,13 @@ function formatRenewalDate(iso: string): string {
 
 export function CurrentPlanBanner({ plan }: Props) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-lime-600 px-8 py-7 text-white">
+    <div className="relative overflow-hidden rounded-2xl bg-lime-600 px-5 py-6 text-white sm:px-8 sm:py-7">
       {/* Decorative circles */}
       <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white/5" />
       <div className="pointer-events-none absolute right-20 -bottom-14 h-56 w-56 rounded-full bg-white/5" />
 
       {/* Commission pill */}
-      <div className="absolute top-1/2 right-8 -translate-y-1/2">
+      <div className="relative mt-6 sm:absolute sm:top-1/2 sm:right-8 sm:mt-0 sm:-translate-y-1/2">
         <div className="flex flex-col items-center justify-center rounded-xl bg-white/15 px-5 py-3 backdrop-blur-sm">
           <span className="font-mono text-xs tracking-widest text-white/70 uppercase">
             Commission
@@ -33,11 +33,13 @@ export function CurrentPlanBanner({ plan }: Props) {
       </div>
 
       {/* Left content */}
-      <div className="max-w-[60%]">
+      <div className="max-w-full sm:max-w-[60%]">
         <span className="font-mono text-[10px] tracking-[0.15em] text-white/60 uppercase">
           Current Plan
         </span>
-        <h2 className="font-display mt-1 text-4xl leading-none font-bold">{plan.name}</h2>
+        <h2 className="font-display mt-1 text-3xl leading-tight font-bold sm:text-4xl">
+          {plan.name}
+        </h2>
         <p className="mt-2 text-sm text-white/70">
           ₦{plan.price.toLocaleString('en-NG')}/month · Renews {formatRenewalDate(plan.renewsAt)}
         </p>
