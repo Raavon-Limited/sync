@@ -38,7 +38,7 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
  *  signed out or if the table hasn't been migrated yet. */
 export type Profile = {
   id: string;
-  role: 'student' | 'vendor' | 'admin' | 'super_admin';
+  role: 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
   full_name: string | null;
   phone: string | null;
   vendor_category: 'landlord' | 'food' | 'beauty' | 'laundry' | 'tradesman' | null;

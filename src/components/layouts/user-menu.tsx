@@ -24,7 +24,11 @@ import {
 import { toast } from '@/components/ui/toast';
 import { signOut } from '@/modules/auth/actions';
 
-const ROLE_LABELS: Record<string, string> = { student: 'Student', vendor: 'Vendor' };
+const ROLE_LABELS: Record<string, string> = {
+  student: 'Student',
+  vendor: 'Vendor',
+  landlord: 'Landlord',
+};
 const CATEGORY_LABELS: Record<string, string> = {
   landlord: 'Landlord',
   food: 'Food vendor',
@@ -45,13 +49,24 @@ export interface UserMenuProps {
 
 export function UserMenu({ name, email, initial, role, category, handle }: UserMenuProps) {
   const router = useRouter();
-  // Everyone gets a "Dashboard" link. Students/vendors go to their name-based
-  // handle URL (/muiz-owolabi); admins to /admin; fall back to the static base.
-  const dashboardHref =
-    role === 'admin' ? '/admin' : handle ? `/${handle}` : role === 'vendor' ? '/vendor' : '/me';
+  // Everyone gets a "Dashboard" link. Students/vendors/landlords go to their
+  // name-based handle URL (/muiz-owolabi) which the proxy rewrites to the right
+  // dashboard; admins to /admin; fall back to the static base per role.
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const dashboardHref = isAdmin
+    ? '/admin'
+    : handle
+      ? `/${handle}`
+      : role === 'landlord'
+        ? '/landlord'
+        : role === 'vendor'
+          ? '/vendor'
+          : '/me';
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : null;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;
+  // Landlords already read "Landlord" from the role label, so only vendors need
+  // the category appended (e.g. "Vendor · Food vendor").
   const badge = [roleLabel, role === 'vendor' ? categoryLabel : null].filter(Boolean).join(' · ');
 
   async function handleSignOut() {

@@ -118,7 +118,7 @@ export const mockListings: Listing[] = [
     price: 4800,
     stock: 4,
     sold: 55,
-    status: 'Draft',
+    status: 'Archived',
     imageUrl:
       'https://images.unsplash.com/photo-1653981608672-aea09b857b20?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8bmlnZXJpYW4lMjBqb2xsb2YlMjByaWNlfGVufDB8fDB8fHww',
   },

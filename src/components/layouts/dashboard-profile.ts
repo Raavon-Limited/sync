@@ -54,7 +54,9 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
 
   // Handle is derived from user_metadata (+ email), NOT the profile row, so it
   // matches exactly what the proxy computes when rewriting the name-based URL.
-  const handleRole = navKey === 'student' ? 'student' : 'vendor';
+  // vendor and landlord both key off business_name, so they resolve alike - but
+  // pass the real role through rather than collapsing landlord into 'vendor'.
+  const handleRole = navKey === 'student' ? 'student' : navKey === 'landlord' ? 'landlord' : 'vendor';
   const handle =
     navKey === 'admin'
       ? undefined

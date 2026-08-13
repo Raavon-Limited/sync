@@ -3,9 +3,19 @@
  * Cross-module shared types belong in @/types.
  */
 
-/** Account roles. Signup only ever assigns student/vendor; admin/super_admin
- *  are granted server-side. Drives routing + the proxy gate. */
-export type Role = 'student' | 'vendor' | 'admin' | 'super_admin';
+/** Account roles. Signup only ever assigns student/vendor/landlord (the DB
+ *  trigger derives landlord from vendor_category); admin/super_admin are
+ *  granted server-side. Drives routing + the proxy gate. */
+export type Role = 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
+
+/** Business (non-student, non-admin) roles - both onboard and get verified the
+ *  same way, and both key their handle off `business_name`. */
+export const BUSINESS_ROLES = ['vendor', 'landlord'] as const;
+
+/** True for accounts that own a storefront/property listing. */
+export function isBusinessRole(role?: string | null): boolean {
+  return role === 'vendor' || role === 'landlord';
+}
 
 /** Result of an auth mutation. Actions return this instead of throwing, so the
  *  client can surface a friendly message and never sees raw Supabase errors. */

@@ -22,9 +22,10 @@ export function toHandle(name?: string | null): string | null {
 }
 
 /**
- * The signed-in user's handle: vendors key off business name, everyone else off
- * full name, falling back to the email local-part. Kept deliberately simple
- * (no uniqueness suffix) - swap for a stored `handle` column when we need it.
+ * The signed-in user's handle: business accounts (vendor + landlord) key off
+ * business name, everyone else off full name, falling back to the email
+ * local-part. Kept deliberately simple (no uniqueness suffix) - swap for a
+ * stored `handle` column when we need it.
  */
 export function resolveHandle(opts: {
   role?: string;
@@ -32,7 +33,8 @@ export function resolveHandle(opts: {
   business_name?: string | null;
   email?: string | null;
 }): string | null {
-  const primary = opts.role === 'vendor' ? opts.business_name || opts.full_name : opts.full_name;
+  const isBusiness = opts.role === 'vendor' || opts.role === 'landlord';
+  const primary = isBusiness ? opts.business_name || opts.full_name : opts.full_name;
   return toHandle(primary || opts.email?.split('@')[0]);
 }
 

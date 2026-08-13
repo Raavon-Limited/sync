@@ -24,11 +24,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { isReservedHandle, resolveHandle } from '@/lib/handle';
 
-type Role = 'student' | 'vendor' | 'admin' | 'super_admin';
+type Role = 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
 
 // Shared marketplace modules: any signed-in user can browse and transact. The
-// only role difference is the dashboard (/me vs /vendor vs /admin).
-const ALL: Role[] = ['student', 'vendor', 'admin', 'super_admin'];
+// only role difference is the dashboard (/me vs /vendor vs /landlord vs /admin).
+const ALL: Role[] = ['student', 'vendor', 'landlord', 'admin', 'super_admin'];
 
 const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // /around is the public "home of the full Sync app" per the wireframe -
@@ -45,9 +45,10 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/wallet', roles: ALL },
   // Dashboards - role-specific. This is the only access difference.
   { prefix: '/me', roles: ['student'] },
-  { prefix: '/onboarding', roles: ['vendor'] },
+  // Both business roles onboard through the same wizard.
+  { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
   { prefix: '/vendor', roles: ['vendor'] },
-  { prefix: '/landlord', roles: ['vendor'] }, // category-check happens in the page itself
+  { prefix: '/landlord', roles: ['landlord'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 
@@ -85,7 +86,10 @@ export async function proxy(request: NextRequest) {
   if (firstSeg && !isReservedHandle(firstSeg)) {
     if (user) {
       const meta = user.user_metadata ?? {};
-      const role = (meta.role as Role | undefined) ?? 'student';
+      // Server-trusted role (profiles.role), never the editable user_metadata:
+      // a landlord whose metadata still reads 'vendor' must not rewrite to
+      // /vendor, and the handle must match what the sidebar links to.
+      const role = (trustedRole as Role | undefined) ?? 'student';
       const handle = resolveHandle({
         role,
         full_name: meta.full_name as string | undefined,
@@ -95,11 +99,11 @@ export async function proxy(request: NextRequest) {
       const base =
         role === 'student'
           ? '/me'
-          : role === 'vendor'
-            ? meta.vendor_category === 'landlord'
-              ? '/landlord'
-              : '/vendor'
-            : null;
+          : role === 'landlord'
+            ? '/landlord'
+            : role === 'vendor'
+              ? '/vendor'
+              : null;
       if (handle && base && firstSeg === handle) {
         const rest = segments.slice(1).join('/');
         const url = request.nextUrl.clone();

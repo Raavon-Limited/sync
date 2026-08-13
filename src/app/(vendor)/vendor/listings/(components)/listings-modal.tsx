@@ -209,7 +209,7 @@ const EMPTY: Omit<Listing, 'id' | 'sold'> = {
   stock: 0,
   status: 'Active',
   imageUrl: '',
-  archived: false,
+  archivedAt: null,
 };
 
 interface AddListingModalProps {

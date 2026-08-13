@@ -68,8 +68,10 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
         full_name: fullName,
         phone,
         role,
-        // Vendor specialisation - null for students. `landlord` is read by the
-        // proxy gate; the rest scope the vendor's listings.
+        // Vendor specialisation - null for students. A `landlord` category is
+        // promoted to role='landlord' by the signup trigger (see migration
+        // 0005); the rest scope the vendor's listings. The gate reads the
+        // resulting profiles.role, never this editable metadata.
         vendor_category: role === 'vendor' ? (vendorCategory ?? null) : null,
         trade: role === 'vendor' && vendorCategory === 'tradesman' ? (trade ?? null) : null,
       },
@@ -105,7 +107,18 @@ export async function verifySignupOtp(input: VerifyOtpInput): Promise<VerifyResu
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' });
   if (error) return { ok: false, error: error.message };
 
-  const role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
+  // Prefer the server-trusted profiles.role: the signup trigger promotes a
+  // landlord-category signup to role='landlord', so the editable metadata
+  // (which still says 'vendor') would route them to the wrong dashboard.
+  let role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    if (profile?.role) role = profile.role as Role;
+  }
   return { ok: true, role };
 }
 

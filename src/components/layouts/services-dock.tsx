@@ -26,8 +26,9 @@ import { MODULES } from '@/config/modules';
 import { MALETE_AREAS } from '@/mock/around';
 import { useOptionalLocation } from '@/app/around/location-context';
 import { cn } from '@/lib/utils';
-
-type Role = 'student' | 'vendor' | 'admin';
+// Canonical role union - kept in one place so new roles (e.g. landlord) can't
+// silently drift out of sync with the proxy gate.
+import type { Role } from '@/modules/auth/types';
 
 interface ServicesDockProps {
   location?: string;
@@ -82,15 +83,21 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
             { href: '/vendor/inbox',  label: 'Inbox',   icon: MessageCircle, badge: 2 },
             { href: '/vendor',        label: 'You',     icon: LayoutDashboard },
           ]
-        : role === 'admin'
-          ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
-          : role === 'student'
-            ? [
-                { href: '/me/saved',    label: 'Saved',  icon: Heart },
-                { href: '/me/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
-                { href: '/me',          label: 'You',    icon: User },
-              ]
-            : [{ href: '/login', label: 'Sign in', icon: LogIn }];
+        : role === 'landlord'
+          ? [
+              { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
+              { href: '/landlord/inbox',    label: 'Inbox',    icon: MessageCircle, badge: 2 },
+              { href: '/landlord',          label: 'You',      icon: LayoutDashboard },
+            ]
+          : role === 'admin' || role === 'super_admin'
+            ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
+            : role === 'student'
+              ? [
+                  { href: '/me/saved',    label: 'Saved',  icon: Heart },
+                  { href: '/me/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
+                  { href: '/me',          label: 'You',    icon: User },
+                ]
+              : [{ href: '/login', label: 'Sign in', icon: LogIn }];
 
   const tabCount = (isFood ? 1 : 2) + accountTabs.length;
   return (

@@ -145,7 +145,13 @@ export default function ListingsPage() {
   };
 
   const handleArchive = () => {
-    setListings((prev) => prev.map((l) => (selectedIds.has(l.id) ? { ...l, status: 'Draft' } : l)));
+    setListings((prev) =>
+      prev.map((l) =>
+        selectedIds.has(l.id)
+          ? { ...l, status: 'Archived', archivedAt: new Date().toISOString() }
+          : l,
+      ),
+    );
 
     clearSelection();
     closeArchiveListings();

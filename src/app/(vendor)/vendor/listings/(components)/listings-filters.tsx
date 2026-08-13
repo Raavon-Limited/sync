@@ -29,7 +29,7 @@ interface ListingFiltersProps {
   onToggleSelectAll: () => void;
 }
 
-const STATUS_OPTIONS = ['All Status', 'Active', 'Draft', 'Out of Stock'];
+const STATUS_OPTIONS = ['All Status', 'Active', 'Out of Stock', 'Archived'];
 
 export function ListingFilters({
   categories,

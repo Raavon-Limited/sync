@@ -59,7 +59,9 @@ export function VerifyForm({ email, next }: { email: string; next?: string }) {
       toast(res.error);
       return;
     }
-    router.push(res.role === 'vendor' ? '/onboarding' : (next ?? '/me'));
+    // Both business roles finish setup in the same onboarding wizard.
+    const needsOnboarding = res.role === 'vendor' || res.role === 'landlord';
+    router.push(needsOnboarding ? '/onboarding' : (next ?? '/me'));
     router.refresh();
   }
 

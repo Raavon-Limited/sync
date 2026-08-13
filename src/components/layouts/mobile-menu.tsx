@@ -19,6 +19,9 @@ import { toast } from '@/components/ui/toast';
 import { MODULES } from '@/config/modules';
 import { SITE } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
+// Canonical role union - kept in one place so new roles (e.g. landlord) can't
+// silently drift out of sync with the proxy gate.
+import type { Role } from '@/modules/auth/types';
 
 export function MobileMenu({
   signedIn = false,
@@ -30,15 +33,23 @@ export function MobileMenu({
   signedIn?: boolean;
   name?: string;
   email?: string;
-  role?: 'student' | 'vendor' | 'admin';
+  role?: Role;
   handle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const close = () => setOpen(false);
-  // Students/vendors use their name-based handle URL; admins keep /admin.
-  const dashboardHref =
-    role === 'admin' ? '/admin' : handle ? `/${handle}` : role === 'vendor' ? '/vendor' : '/me';
+  // Students/vendors/landlords use their name-based handle URL; admins keep /admin.
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const dashboardHref = isAdmin
+    ? '/admin'
+    : handle
+      ? `/${handle}`
+      : role === 'landlord'
+        ? '/landlord'
+        : role === 'vendor'
+          ? '/vendor'
+          : '/me';
 
   async function handleSignOut() {
     close();

@@ -15,7 +15,7 @@ import { Listing } from '@/modules/vendor/types';
 
 const statusStyle: Record<Listing['status'], string> = {
   Active: 'bg-green-100 text-green-700',
-  Draft: 'bg-ink/8 text-ink',
+  Archived: 'bg-ink/8 text-ink',
   'Out of Stock': 'bg-red-100 text-red-600',
 };
 
