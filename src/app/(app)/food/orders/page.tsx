@@ -32,6 +32,11 @@ function formatTimeWindow(createdAt: number, etaMinutes: number, status: DemoOrd
 
 function OrderCard({ order }: { order: DemoOrder }) {
     const config = STATUS_CONFIG[order.status]
+
+    if (!config) {
+        return null
+    }
+
     const timeWindow = formatTimeWindow(order.createdAt, order.etaMinutes, order.status)
     const isActive = order.status !== 'delivered'
 
@@ -116,7 +121,10 @@ export default function OrdersPage() {
             )}
 
             {/* Order history link */}
-            <div className="rounded-2xl border border-line/10 bg-panel shadow-card px-4 py-4 flex items-center gap-3">
+            <Link
+                href="/food/orders/history"
+                className="rounded-2xl border border-line/10 bg-panel shadow-card px-4 py-4 flex items-center gap-3 hover:border-line/20 transition-colors"
+            >
                 <ClipboardList size={20} className="text-content-muted flex-shrink-0" />
                 <div className="flex-1">
                     <p className="text-sm text-content-muted">Need to review past orders or reorder?</p>
@@ -124,7 +132,7 @@ export default function OrdersPage() {
                         Check your order history
                     </p>
                 </div>
-            </div>
+            </Link>
         </div>
     )
 }

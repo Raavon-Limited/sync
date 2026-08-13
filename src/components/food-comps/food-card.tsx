@@ -13,6 +13,7 @@ import {
     CardFooter,
 } from "@/components/ui/card"
 import { useOptionalFavorites, type FavoriteFood } from "@/app/(app)/food/favorites-context"
+import { toast } from "@/components/ui/toast"
 
 type VendorStatus = "open" | "closed" | "delivery-only"
 
@@ -70,8 +71,6 @@ export default function FoodCards({
     const [localFavourited, setLocalFavourited] = useState(false)
     const isFavourited = favorites ? favorites.isFavorite(slug) : localFavourited
 
-    const [toast, setToast] = useState<"added" | "removed" | null>(null)
-
     function toggleFavourite(e: React.MouseEvent) {
         // Prevent the card link from firing when tapping the heart
         e.preventDefault()
@@ -90,8 +89,9 @@ export default function FoodCards({
             setLocalFavourited(next)
         }
 
-        setToast(next ? "added" : "removed")
-        setTimeout(() => setToast(null), 2500)
+        toast(next ? `Added ${name} to favourites` : `Removed ${name} from favourites`, {
+            icon: <Heart size={14} className={next ? "fill-current" : ""} />,
+        })
     }
 
     return (
@@ -101,25 +101,6 @@ export default function FoodCards({
             aria-label={`View ${name}`}
         >
             <Card className="w-full h-fit bg-panel border border-line/10 shadow-card relative group-hover:border-line/30 transition-colors cursor-pointer">
-
-                {/* Toast notification */}
-                <div
-                    className={`absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md border transition-all duration-300 whitespace-nowrap
-                        ${toast
-                            ? "opacity-100 translate-y-0 pointer-events-none"
-                            : "opacity-0 -translate-y-2 pointer-events-none"
-                        }
-                        ${toast === "added"
-                            ? "bg-lime text-ink border-lime/40"
-                            : "bg-panel text-content-muted border-line/20"
-                        }`}
-                >
-                    <Heart
-                        size={11}
-                        className={toast === "added" ? "fill-ink text-ink" : "text-content-muted"}
-                    />
-                    {toast === "added" ? "Added to favourites" : "Removed from favourites"}
-                </div>
 
                 {/* Image */}
                 <div className="relative w-full h-48">

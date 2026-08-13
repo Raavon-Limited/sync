@@ -147,7 +147,7 @@ export default function TicketPanel({
                         {/* BUY BUTTON — opens invoice modal */}
                         <button
                             onClick={() => setInvoiceOpen(true)}
-                            className="flex items-center rounded-lg mt-3 w-full justify-center gap-2 bg-[#C5FF4A] py-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold text-sm border-1 cursor-pointer"
+                            className="flex items-center rounded-lg mt-3 w-full justify-center gap-2 bg-[#C5FF4A] py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-bold text-sm border-1 cursor-pointer"
                         >
                             Buy {totalTickets} ticket{totalTickets > 1 ? "s" : ""}{" "}
                             <MoveRight strokeWidth={2} width={15} />
