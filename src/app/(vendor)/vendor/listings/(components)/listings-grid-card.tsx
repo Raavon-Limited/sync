@@ -17,8 +17,8 @@ interface ListingGridCardProps {
 
 const statusStyle: Record<Listing['status'], string> = {
   Active: 'bg-green-500 text-white',
-  Draft: 'bg-ink/60 text-white',
   'Out of Stock': 'bg-red-500 text-white',
+  Archived: 'bg-ink/70 text-white',
 };
 
 export function ListingGridCard({
@@ -38,7 +38,7 @@ export function ListingGridCard({
     >
       {/* Image area */}
       <div
-        className="relative h-44 cursor-pointer overflow-hidden bg-[#f0ece4]"
+        className="bg-surface-deep relative h-44 cursor-pointer overflow-hidden"
         onClick={() => onToggleSelect(listing.id)}
       >
         {listing.imageUrl ? (
@@ -83,13 +83,13 @@ export function ListingGridCard({
 
       {/* Content */}
       <div className="flex flex-col gap-1 px-4 pt-3 pb-2">
-        <p className="text-ink font-display font-semibold">{listing.name}</p>
-        <p className="text-muted text-xs">{listing.category}</p>
+        <p className="text-content font-display font-semibold">{listing.name}</p>
+        <p className="text-content-muted text-xs">{listing.category}</p>
         <div className="mt-1 flex items-center justify-between">
-          <p className="text-ink text-base font-bold">₦{listing.price.toLocaleString()}</p>
-          <p className="text-muted text-xs">{listing.sold} sold</p>
+          <p className="text-content text-base font-bold">₦{listing.price.toLocaleString()}</p>
+          <p className="text-content-muted text-xs">{listing.sold} sold</p>
         </div>
-        <p className="text-muted text-xs">
+        <p className="text-content-muted text-xs">
           {listing.stock === 0 ? (
             <span className="text-red-500">Out of stock</span>
           ) : (
@@ -102,19 +102,19 @@ export function ListingGridCard({
       <div className="border-line/5 flex items-center gap-2 border-t px-4 py-2.5">
         <button
           onClick={() => onEdit(listing)}
-          className="text-muted hover:text-ink flex items-center gap-1.5 text-xs transition-colors"
+          className="text-content-muted hover:text-content flex items-center gap-1.5 text-xs transition-colors"
         >
           <Pencil className="size-3.5" /> Edit
         </button>
         <button
           onClick={() => onPromote(listing)}
-          className="text-muted hover:text-ink flex items-center gap-1.5 text-xs transition-colors"
+          className="text-content-muted hover:text-content flex items-center gap-1.5 text-xs transition-colors"
         >
           <Megaphone className="size-3.5" /> Promote
         </button>
         <button
           onClick={() => onMore(listing)}
-          className="text-muted hover:text-ink ml-auto transition-colors"
+          className="text-content-muted hover:text-content ml-auto transition-colors"
         >
           <MoreHorizontal className="size-4" />
         </button>

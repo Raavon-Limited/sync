@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { mockContacts, mockCustomers, mockMessages } from '@/mock/chat';
+import { findConversationId } from '@/lib/order-chat';
+import type { ChatOrder } from '@/modules/vendor/types';
 import { ChatList, ChatFilter } from './chat-list';
 import { ChatWindow } from './chat-window';
 import { ChatCustomerPanel } from './chat-panel';
@@ -14,12 +16,7 @@ import { ChatMessage } from '@/modules/vendor/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
-import {
-  ChatTheme,
-  ConversationPrefs,
-  DEFAULT_PREFS,
-  useChatStore,
-} from '@/store/use-chat-store';
+import { ChatTheme, ConversationPrefs, DEFAULT_PREFS, useChatStore } from '@/store/use-chat-store';
 
 /*
  * Stable empty values used before hydration. zustand's persist middleware reads
@@ -44,8 +41,44 @@ function seedMessages(): Record<string, ChatMessage[]> {
   );
 }
 
-export default function ChatComponent() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+interface ChatComponentProps {
+  /** Conversation to open on arrival - see lib/order-chat. */
+  initialContactId?: string;
+  /** Fallback used when the id is missing or no longer matches a conversation. */
+  initialCustomerName?: string;
+  /**
+   * Order the vendor arrived here to discuss. Shown on the chat's linked-order
+   * pill in place of the customer's most recent order.
+   */
+  focusedOrder?: ChatOrder;
+}
+
+export default function ChatComponent({
+  initialContactId,
+  initialCustomerName,
+  focusedOrder,
+}: ChatComponentProps = {}) {
+  /*
+   * Which conversation the incoming deep link points at. Resolved from props
+   * (not state) so the server and first client render agree.
+   */
+  const requestedId = useMemo(
+    () =>
+      findConversationId(mockContacts, {
+        contactId: initialContactId,
+        customerName: initialCustomerName,
+      }),
+    [initialContactId, initialCustomerName],
+  );
+
+  /*
+   * Seeded once on mount, which is enough: reaching the inbox from the orders
+   * table is a route change, so this component always mounts fresh with the new
+   * params. No effect syncing it - that would only matter if the query could
+   * change while the inbox stayed mounted, which nothing does today.
+   */
+  const [selectedId, setSelectedId] = useState<string | null>(requestedId);
+
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ChatFilter>('all');
   const [messagesByConversation, setMessagesByConversation] = useState(seedMessages);
@@ -115,7 +148,11 @@ export default function ChatComponent() {
   const selectedMessages = selectedId ? (messagesByConversation[selectedId] ?? []) : [];
   const selectedCustomer = selectedId ? mockCustomers[selectedId] : undefined;
   const selectedPrefs = selectedId ? prefsFor(selectedId) : DEFAULT_PREFS;
-  const linkedOrder = selectedCustomer?.recentOrders[0];
+  /*
+   * The order pill shows what the vendor came here to talk about; without a
+   * deep link it falls back to the customer's most recent order as before.
+   */
+  const linkedOrder = focusedOrder ?? selectedCustomer?.recentOrders[0];
 
   //SEND FUNCTION
   const handleSend = (message: string, attachments: Attachment[]) => {

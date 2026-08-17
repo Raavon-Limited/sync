@@ -18,7 +18,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SITE } from '@/config/site';
-import { DASHBOARD_NAV, type DashboardNavKey } from '@/config/dashboard-nav';
+import { resolveDashboardNav, type DashboardNavKey } from '@/config/dashboard-nav';
 import type { DashboardProfile } from './dashboard-profile';
 import { toast } from '@/components/ui/toast';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -33,7 +33,9 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { brandLabel, sections, rootHref } = DASHBOARD_NAV[navKey];
+  // Nav rows carry the vendor's own wording (Menu / Services / Bookings). The
+  // hrefs are untouched - only the visible labels differ per category.
+  const { brandLabel, sections, rootHref } = resolveDashboardNav(navKey, profile.vendorCategory);
 
   // Student + vendor dashboards live at a name-based root (e.g. /muiz-owolabi),
   // so rewrite each item's href from its static base (/me, /vendor) to the

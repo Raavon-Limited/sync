@@ -15,6 +15,11 @@ interface CustomCardProps {
   children?: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  /**
+   * Marks a clickable card as currently chosen (e.g. the active filter), so
+   * assistive tech hears the toggle state rather than just "button".
+   */
+  selected?: boolean;
 }
 
 const trendStyles: Record<
@@ -36,13 +41,36 @@ export function CustomCard({
   children,
   className,
   onClick,
+  selected,
 }: CustomCardProps) {
   const { textClass, Icon } = trendStyles[trend];
 
   return (
     <Card
       onClick={onClick}
-      className={cn(onClick && 'cursor-pointer transition-shadow hover:shadow-md', className)}
+      /*
+       * A div with onClick is invisible to the keyboard, so a clickable card
+       * announces itself as a button and accepts Enter/Space. Static cards stay
+       * plain markup.
+       */
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick && selected !== undefined ? selected : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        onClick &&
+          'focus-visible:ring-accent-fg cursor-pointer transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:outline-none',
+        className,
+      )}
     >
       <CardContent className="flex items-start justify-between gap-4 pt-5">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">

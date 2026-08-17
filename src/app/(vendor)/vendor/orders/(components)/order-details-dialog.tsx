@@ -5,24 +5,12 @@ import { CalendarDays, Package, Receipt, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Order } from '@/types/order';
+import { ORDER_PAYMENT_STYLE, ORDER_STATUS_STYLE } from '@/config/order-status';
 
 interface OrderDetailsDialogProps {
   order: Order | null;
   onClose: () => void;
 }
-
-const statusVariant: Record<Order['status'], string> = {
-  Pending: 'bg-ink/8 text-ink',
-  Processing: 'bg-amber-100 text-amber-700',
-  Delivered: 'bg-green-100 text-green-700',
-  Cancelled: 'bg-red-100 text-red-700',
-};
-
-const paymentVariant: Record<Order['payment'], string> = {
-  Paid: 'bg-green-100 text-green-700',
-  Pending: 'bg-amber-100 text-amber-700',
-  Failed: 'bg-red-100 text-red-700',
-};
 
 /**
  * The dialog's contents. Split out from the Dialog wrapper because Radix
@@ -43,7 +31,7 @@ export function OrderDetailsBody({ order }: { order: Order }) {
         <span
           className={cn(
             'rounded-full px-2.5 py-0.5 text-xs font-medium',
-            statusVariant[order.status],
+            ORDER_STATUS_STYLE[order.status].pill,
           )}
         >
           {order.status}
@@ -52,7 +40,7 @@ export function OrderDetailsBody({ order }: { order: Order }) {
         <span
           className={cn(
             'rounded-full px-2.5 py-0.5 text-xs font-medium',
-            paymentVariant[order.payment],
+            ORDER_PAYMENT_STYLE[order.payment].pill,
           )}
         >
           Payment: {order.payment}
@@ -62,11 +50,11 @@ export function OrderDetailsBody({ order }: { order: Order }) {
       <dl className="border-line/10 mt-5 divide-y divide-current/5 rounded-xl border">
         {rows.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-center gap-3 px-4 py-3">
-            <span className="bg-ink/5 flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <span className="bg-content/5 text-content-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
               <Icon className="size-4" />
             </span>
 
-            <dt className="text-muted text-xs">{label}</dt>
+            <dt className="text-content-muted text-xs">{label}</dt>
 
             <dd className="text-content ml-auto min-w-0 truncate text-sm font-medium">{value}</dd>
           </div>
@@ -74,7 +62,7 @@ export function OrderDetailsBody({ order }: { order: Order }) {
       </dl>
 
       <div className="border-line/10 mt-4 flex items-center justify-between rounded-xl border px-4 py-3">
-        <span className="text-muted text-xs tracking-wide uppercase">Total</span>
+        <span className="text-content-muted text-xs tracking-wide uppercase">Total</span>
 
         <span className="text-content font-display text-lg font-semibold">
           ₦{order.amount.toLocaleString()}

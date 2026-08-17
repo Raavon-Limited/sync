@@ -15,9 +15,16 @@
  * it's dynamic by default.
  */
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/types/database.types';
 
-/** Columns a user is allowed to change about themselves. */
-const UPDATABLE = ['full_name', 'phone'] as const;
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+
+/**
+ * Columns a user is allowed to change about themselves. The `satisfies` clause
+ * ties this whitelist to the generated schema, so renaming or dropping either
+ * column upstream fails the build here rather than silently no-op'ing.
+ */
+const UPDATABLE = ['full_name', 'phone'] as const satisfies readonly (keyof ProfileUpdate)[];
 
 export async function GET() {
   const supabase = await createClient();
@@ -52,9 +59,9 @@ export async function PATCH(request: Request) {
 
   // Whitelist: silently drop anything that isn't user-editable. This is what
   // stops a client from escalating role / forcing verification_status.
-  const patch: Record<string, unknown> = {};
+  const patch: ProfileUpdate = {};
   for (const key of UPDATABLE) {
-    if (key in body) patch[key] = body[key];
+    if (key in body) patch[key] = body[key] as ProfileUpdate[typeof key];
   }
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: 'No updatable fields provided' }, { status: 400 });

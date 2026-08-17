@@ -10,6 +10,7 @@
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { resolveHandle } from '@/lib/handle';
 import type { DashboardNavKey } from '@/config/dashboard-nav';
+import { vendorCategoryLabel, type VendorCategory } from '@/config/vendor-vocabulary';
 
 export interface DashboardProfile {
   /** Status/role line above the name, e.g. "Verified vendor". */
@@ -29,15 +30,13 @@ export interface DashboardProfile {
    * proxy uses, so sidebar links and the proxy rewrite always agree.
    */
   handle?: string;
+  /**
+   * Vendor specialisation, read server-side so the sidebar and header render
+   * the right wording on the first paint (no flash of "Listings" before "Menu").
+   * Drives config/vendor-vocabulary; undefined for students and admins.
+   */
+  vendorCategory?: VendorCategory;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-  landlord: 'Landlord',
-  food: 'Food vendor',
-  beauty: 'Beauty pro',
-  laundry: 'Laundry',
-  tradesman: 'Tradesman',
-};
 
 export async function getDashboardProfile(navKey: DashboardNavKey): Promise<DashboardProfile> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -73,10 +72,9 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         email,
         initial,
         handle,
+        vendorCategory: profile?.vendor_category ?? undefined,
         metaLabel: 'Business',
-        metaValue:
-          profile?.business_name ||
-          (profile?.vendor_category ? CATEGORY_LABELS[profile.vendor_category] : undefined),
+        metaValue: profile?.business_name || vendorCategoryLabel(profile?.vendor_category),
       };
     case 'landlord':
       return {

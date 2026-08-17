@@ -1,48 +1,36 @@
 'use client';
 
-import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectItem,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
-interface Props<TData> {
-  table: Table<TData>;
+/**
+ * Default toolbar for <DataTable>: just the search box.
+ *
+ * It used to also render a status <Select> hardcoded with the *order* statuses
+ * (Pending/Processing/Delivered/Cancelled). Since this is the fallback toolbar
+ * for every DataTable, any other table silently inherited an orders filter -
+ * Earnings only escaped it by passing `showToolbar={false}`. Filters that mean
+ * something to one screen belong to that screen; pass your own via the
+ * `toolbar` prop, as the orders page now does with its status cards.
+ */
+interface Props {
   searchValue: string;
   onSearchChange: (value: string) => void;
+  placeholder?: string;
 }
 
-export function DataTableToolbar<TData>({ table, searchValue, onSearchChange }: Props<TData>) {
+export function DataTableToolbar({
+  searchValue,
+  onSearchChange,
+  placeholder = 'Search...',
+}: Props) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md bg-panel p-4">
+    <div className="bg-panel flex items-center justify-between gap-4 rounded-md p-4">
       <Input
-        placeholder="Search..."
+        placeholder={placeholder}
         value={searchValue}
         onChange={(e) => onSearchChange(e.target.value)}
         className="!border-line/20 max-w-sm !ring-0 !outline-none focus:!ring-0 focus-visible:!ring-0 focus-visible:!outline-none"
       />
-
-      <Select
-        onValueChange={(value) =>
-          table.getColumn('status')?.setFilterValue(value === 'all' ? undefined : value)
-        }
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
-          <SelectItem value="Pending">Pending</SelectItem>
-          <SelectItem value="Processing">Processing</SelectItem>
-          <SelectItem value="Delivered">Delivered</SelectItem>
-          <SelectItem value="Cancelled">Cancelled</SelectItem>
-        </SelectContent>
-      </Select>
     </div>
   );
 }

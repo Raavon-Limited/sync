@@ -117,7 +117,7 @@ export async function RoleDashboard({
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {styledKpis.map(({ label, value, sub, icon: Icon, iconBg }) => (
           <CustomCard
             key={label}

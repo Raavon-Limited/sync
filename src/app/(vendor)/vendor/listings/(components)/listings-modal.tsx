@@ -39,7 +39,10 @@ function Modal({
         aria-modal="true"
         className="bg-panel relative w-full max-w-md rounded-2xl p-6 shadow-xl"
       >
-        <button onClick={onClose} className="text-muted hover:text-ink absolute top-4 right-4">
+        <button
+          onClick={onClose}
+          className="text-content-muted hover:text-content absolute top-4 right-4"
+        >
           <X className="size-4" />
         </button>
 
@@ -58,11 +61,11 @@ interface DeleteModalProps {
 export function DeleteModal({ open, listing, onConfirm, onClose }: DeleteModalProps) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="font-display text-ink text-lg font-semibold">Delete listing</h2>
-      <p className="text-muted mt-2 text-sm">
+      <h2 className="font-display text-content text-lg font-semibold">Delete listing</h2>
+      <p className="text-content-muted mt-2 text-sm">
         Are you sure you want to delete{' '}
-        <span className="text-ink font-semibold">&ldquo;{listing?.name}&rdquo;</span>? This action
-        cannot be undone.
+        <span className="text-content font-semibold">&ldquo;{listing?.name}&rdquo;</span>? This
+        action cannot be undone.
       </p>
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="outline" size="sm" onClick={onClose}>
@@ -86,10 +89,10 @@ interface BulkDeleteModalProps {
 export function BulkDeleteModal({ open, count, onConfirm, onClose }: BulkDeleteModalProps) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="font-display text-ink text-lg font-semibold">Delete {count} listings</h2>
-      <p className="text-muted mt-2 text-sm">
+      <h2 className="font-display text-content text-lg font-semibold">Delete {count} listings</h2>
+      <p className="text-content-muted mt-2 text-sm">
         Are you sure you want to delete{' '}
-        <span className="text-ink font-semibold">{count} listings</span>? This action cannot be
+        <span className="text-content font-semibold">{count} listings</span>? This action cannot be
         undone.
       </p>
       <div className="mt-6 flex justify-end gap-3">
@@ -114,10 +117,10 @@ interface ArchiveModalProps {
 export function ArchiveModal({ open, count, onConfirm, onClose }: ArchiveModalProps) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="font-display text-ink text-lg font-semibold">
+      <h2 className="font-display text-content text-lg font-semibold">
         Archive {count} listing{count > 1 ? 's' : ''}
       </h2>
-      <p className="text-muted mt-2 text-sm">
+      <p className="text-content-muted mt-2 text-sm">
         Archived listings are hidden from your storefront but can be restored anytime from your
         archive.
       </p>
@@ -155,7 +158,7 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
   return (
     <Modal open={open} onClose={onClose}>
       {' '}
-      <h2 className="font-display text-ink text-lg font-semibold">Edit listing</h2>
+      <h2 className="font-display text-content text-lg font-semibold">Edit listing</h2>
       <div className="mt-4 flex flex-col gap-3">
         <Field label="Name">
           <Input
@@ -209,7 +212,7 @@ const EMPTY: Omit<Listing, 'id' | 'sold'> = {
   stock: 0,
   status: 'Active',
   imageUrl: '',
-  archived: false,
+  archivedAt: null,
 };
 
 interface AddListingModalProps {
@@ -263,7 +266,7 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
 
   return (
     <Modal open={open} onClose={handleClose}>
-      <h2 className="font-display text-ink text-lg font-semibold">Add new listing</h2>
+      <h2 className="font-display text-content text-lg font-semibold">Add new listing</h2>
 
       <div className="mt-4 flex flex-col gap-3">
         <Field label="Product name" error={errors.name}>
@@ -330,7 +333,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-muted text-xs font-medium">{label}</label>
+      <label className="text-content-muted text-xs font-medium">{label}</label>
       {children}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>

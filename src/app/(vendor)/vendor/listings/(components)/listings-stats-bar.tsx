@@ -16,7 +16,7 @@ export function ListingStatsBar({ listings }: ListingStatsBarProps) {
     {
       label: 'TOTAL LISTINGS',
       value: total,
-      valueColor: 'text-ink',
+      valueColor: 'text-content',
       icon: <Package className="size-5 text-blue-600" />,
       iconBg: 'bg-blue-100',
     },

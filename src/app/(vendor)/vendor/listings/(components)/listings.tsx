@@ -18,8 +18,12 @@ import {
   EditModal,
 } from './listings-modal';
 import { useModalStore } from '@/store';
+import { useVendorTerms } from '@/components/layouts/vendor-vocabulary-provider';
 
 export default function ListingsPage() {
+  // "listings" for a generic vendor, "dishes" for a food vendor, "services" for
+  // a barber - the page never asks which category it's rendering for.
+  const { listings: t } = useVendorTerms();
   const [listings, setListings] = useState<Listing[]>(mockListings);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [category, setCategory] = useState('All');
@@ -145,7 +149,9 @@ export default function ListingsPage() {
   };
 
   const handleArchive = () => {
-    setListings((prev) => prev.map((l) => (selectedIds.has(l.id) ? { ...l, status: 'Draft' } : l)));
+    setListings((prev) =>
+      prev.map((l) => (selectedIds.has(l.id) ? { ...l, status: 'Archived' } : l)),
+    );
 
     clearSelection();
     closeArchiveListings();
@@ -156,9 +162,9 @@ export default function ListingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-ink text-2xl font-bold">Listings</h1>
-          <p className="text-muted text-sm">
-            {listings.length} products · {listings.filter((l) => l.status === 'Active').length}{' '}
+          <h1 className="font-display text-content text-2xl font-bold">{t.heading}</h1>
+          <p className="text-content-muted text-sm">
+            {listings.length} {t.many} · {listings.filter((l) => l.status === 'Active').length}{' '}
             active
           </p>
         </div>
@@ -167,7 +173,7 @@ export default function ListingsPage() {
           className="hover:bg-accent-fg bg-lime-500 text-white"
           onClick={openAddListing}
         >
-          <Plus className="size-4" /> Add New Listing
+          <Plus className="size-4" /> Add new {t.one}
         </Button>
       </div>
 
@@ -224,8 +230,8 @@ export default function ListingsPage() {
             />
           ))}
           {filtered.length === 0 && (
-            <p className="text-muted col-span-full py-16 text-center text-sm">
-              No listings match your filters.
+            <p className="text-content-muted col-span-full py-16 text-center text-sm">
+              No {t.many} match your filters.
             </p>
           )}
         </div>

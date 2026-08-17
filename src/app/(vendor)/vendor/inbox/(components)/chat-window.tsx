@@ -27,6 +27,8 @@ import { AttachmentViewer } from './attachments/attachment-viewer';
 import { Attachment } from './attachments/attachment';
 import { ChatTheme, ConversationPrefs } from '@/store/use-chat-store';
 import { CHAT_THEMES } from './chat-theme';
+import { VoiceRecorder } from './voice-recorder';
+import type { VoiceRecording } from '@/hooks/use-voice-recorder';
 
 interface ChatWindowProps {
   contact: ChatContact;
@@ -243,6 +245,27 @@ export function ChatWindow({
 
     setMessage('');
     setAttachments([]);
+  };
+
+  /**
+   * Voice notes send the moment recording finishes, the way a held-and-released
+   * mic behaves everywhere else - they don't queue up in the attachment tray.
+   */
+  const handleVoiceRecorded = (recording: VoiceRecording) => {
+    if (prefs.blocked) return;
+
+    onSend('', [
+      {
+        id: crypto.randomUUID(),
+        file: recording.file,
+        type: 'audio',
+        url: recording.url,
+        name: recording.file.name,
+        size: recording.file.size,
+        mimeType: recording.file.type || 'audio/webm',
+        duration: recording.duration,
+      },
+    ]);
   };
 
   const addFiles = (files: FileList | null, type: Attachment['type']) => {
@@ -478,7 +501,10 @@ export function ChatWindow({
                 ref={(node) => {
                   messageRefs.current[message.id] = node;
                 }}
-                className={cn('flex flex-col gap-1', message.isVendor ? 'items-end' : 'items-start')}
+                className={cn(
+                  'flex flex-col gap-1',
+                  message.isVendor ? 'items-end' : 'items-start',
+                )}
               >
                 {!message.isVendor && (
                   <Avatar className="size-6">
@@ -693,7 +719,8 @@ export function ChatWindow({
             </Button>
           </div>
         ) : (
-          <div className="border-ink/10 flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
+          // `relative` anchors the voice recorder's overlay to this row.
+          <div className="border-ink/10 relative flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
             <Popover.Root>
               <Popover.Trigger asChild>
                 <Button variant="ghost" size="icon" className="size-8 shrink-0">
@@ -795,14 +822,19 @@ export function ChatWindow({
               }}
             />
 
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8 shrink-0 text-violet-500"
-              onClick={sendMessage}
-            >
-              <Send className="size-4" />
-            </Button>
+            {/* Mic until there's something typed or attached, then send. */}
+            {message.trim() || attachments.length > 0 ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0 text-violet-500"
+                onClick={sendMessage}
+              >
+                <Send className="size-4" />
+              </Button>
+            ) : (
+              <VoiceRecorder onRecorded={handleVoiceRecorded} disabled={prefs.blocked} />
+            )}
           </div>
         )}
       </div>

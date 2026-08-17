@@ -6,10 +6,14 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
   useReactTable,
   ColumnDef,
   PaginationState,
+  SortingState,
 } from '@tanstack/react-table';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import { DataTableToolbar } from './data-table-toolbar';
 import { DataTablePagination } from './data-table-pagination';
@@ -25,6 +29,9 @@ interface DataTableProps<TData, TValue> {
 
   onRowClick?: (row: TData) => void;
 
+  /** Sort applied on first render, e.g. newest-first for a queue. */
+  initialSorting?: SortingState;
+
   emptyMessage?: string;
 }
 
@@ -38,9 +45,12 @@ export function DataTable<TData, TValue>({
 
   onRowClick,
 
+  initialSorting = [],
+
   emptyMessage = 'No results.',
 }: DataTableProps<TData, TValue>) {
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
 
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
@@ -54,13 +64,16 @@ export function DataTable<TData, TValue>({
     state: {
       globalFilter,
       pagination,
+      sorting,
     },
 
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onSortingChange: setSorting,
 
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
 
@@ -69,11 +82,7 @@ export function DataTable<TData, TValue>({
       {toolbar
         ? toolbar
         : showToolbar && (
-            <DataTableToolbar
-              table={table}
-              searchValue={globalFilter}
-              onSearchChange={setGlobalFilter}
-            />
+            <DataTableToolbar searchValue={globalFilter} onSearchChange={setGlobalFilter} />
           )}
 
       <div className="border-line/5 bg-panel overflow-x-auto rounded-md border p-2">
@@ -81,13 +90,41 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((group) => (
               <TableRow key={group.id}>
-                {group.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {group.headers.map((header) => {
+                  if (header.isPlaceholder) return <TableHead key={header.id} />;
+
+                  const label = flexRender(header.column.columnDef.header, header.getContext());
+
+                  /*
+                   * Sortable headers become buttons so they're keyboard
+                   * reachable; the rest stay plain text. Columns opt out with
+                   * `enableSorting: false` (e.g. the row-action column).
+                   */
+                  if (!header.column.getCanSort()) {
+                    return <TableHead key={header.id}>{label}</TableHead>;
+                  }
+
+                  const sorted = header.column.getIsSorted();
+                  const SortIcon =
+                    sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ChevronsUpDown;
+
+                  return (
+                    <TableHead key={header.id}>
+                      <button
+                        type="button"
+                        onClick={header.column.getToggleSortingHandler()}
+                        aria-label={`Sort by ${header.column.id}`}
+                        className="focus-visible:ring-accent-fg inline-flex items-center gap-1.5 rounded whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        {label}
+                        <SortIcon
+                          className={cn('size-3.5 shrink-0', sorted ? 'opacity-100' : 'opacity-40')}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>

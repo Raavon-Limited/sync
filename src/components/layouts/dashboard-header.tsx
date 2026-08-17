@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
-import { DASHBOARD_NAV, activeNav, type DashboardNavKey } from '@/config/dashboard-nav';
+import { resolveDashboardNav, activeNav, type DashboardNavKey } from '@/config/dashboard-nav';
 import { DashboardSidebar } from './dashboard-sidebar';
 import { NotificationBell } from './notification-bell';
 import { AccountMenu } from './account-menu';
@@ -24,11 +24,11 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ navKey, profile }: DashboardHeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const { brandLabel, rootHref } = DASHBOARD_NAV[navKey];
+  const { brandLabel, rootHref } = resolveDashboardNav(navKey, profile.vendorCategory);
 
   const handle = navKey === 'student' || navKey === 'vendor' ? profile.handle : undefined;
   const base = handle ? `/${handle}` : rootHref;
-  const { label, heading } = activeNav(navKey, pathname, handle);
+  const { label, heading } = activeNav(navKey, pathname, handle, profile.vendorCategory);
   // Only the student dashboard has a dedicated profile page.
   const profileHref = navKey === 'student' ? `${base}/profile` : undefined;
 

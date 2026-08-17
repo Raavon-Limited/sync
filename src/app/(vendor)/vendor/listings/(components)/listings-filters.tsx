@@ -53,7 +53,7 @@ export function ListingFilters({
         {/* Left Side */}
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           {/* Select All */}
-          <div className="border-line/10 bg-background flex shrink-0 items-center gap-3 rounded-lg border px-3 py-2">
+          <div className="border-line/10 bg-surface-deep flex shrink-0 items-center gap-3 rounded-lg border px-3 py-2">
             <Checkbox
               checked={allSelected ? true : someSelected ? 'indeterminate' : false}
               onCheckedChange={onToggleSelectAll}
@@ -66,7 +66,7 @@ export function ListingFilters({
 
           {/* Search */}
           <div className="relative w-full lg:max-w-md">
-            <Search className="text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-content-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 
             <Input
               value={searchValue}
@@ -88,7 +88,7 @@ export function ListingFilters({
               'rounded-md p-2 transition-all',
               view === 'grid'
                 ? 'bg-lime-500 text-white shadow-sm'
-                : 'text-muted-foreground hover:bg-background',
+                : 'text-content-muted hover:bg-surface-deep',
             )}
           >
             <LayoutGrid className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function ListingFilters({
               'rounded-md p-2 transition-all',
               view === 'list'
                 ? 'bg-lime-500 text-white shadow-sm'
-                : 'text-muted-foreground hover:bg-background',
+                : 'text-content-muted hover:bg-surface-deep',
             )}
           >
             <List className="h-4 w-4" />
@@ -140,7 +140,7 @@ export function ListingFilters({
                 'shrink-0 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200',
                 selectedCategory === cat
                   ? 'border-lime-500 bg-lime-500 text-white shadow-sm'
-                  : 'border-line/10 bg-background text-muted-foreground hover:border-border hover:bg-lime-500 hover:text-white',
+                  : 'border-line/10 bg-surface-deep text-content-muted hover:border-lime-500 hover:bg-lime-500 hover:text-white',
               )}
             >
               {cat}

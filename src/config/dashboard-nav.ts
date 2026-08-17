@@ -35,6 +35,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { resolveVendorTerms, type TermKey, type VendorCategory } from '@/config/vendor-vocabulary';
 
 export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student';
 
@@ -46,6 +47,12 @@ export interface DashboardNavItem {
   badge?: number;
   /** Descriptive page title for the header (falls back to `label`). */
   heading?: string;
+  /**
+   * Marks this row as renameable by vendor category (see config/vendor-vocabulary).
+   * The `label`/`heading` above stay as the neutral fallback; `resolveDashboardNav`
+   * swaps in the category's wording. The href never changes.
+   */
+  termKey?: TermKey;
 }
 
 export interface DashboardNavSection {
@@ -63,6 +70,34 @@ export interface DashboardNavConfig {
 }
 
 /**
+ * The nav for a role with the signed-in vendor's wording applied. Every consumer
+ * (sidebar, header) goes through here rather than reading DASHBOARD_NAV directly,
+ * so exactly one module knows vendor categories exist. Roles without a category
+ * get the config back untouched.
+ */
+export function resolveDashboardNav(
+  navKey: DashboardNavKey,
+  category?: VendorCategory | null,
+): DashboardNavConfig {
+  const config = DASHBOARD_NAV[navKey];
+  const renameable = config.sections.some((s) => s.items.some((i) => i.termKey));
+  if (!category || !renameable) return config;
+
+  const terms = resolveVendorTerms(category);
+  return {
+    ...config,
+    sections: config.sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => {
+        if (!item.termKey) return item;
+        const term = terms[item.termKey];
+        return { ...item, label: term.label, heading: term.heading };
+      }),
+    })),
+  };
+}
+
+/**
  * The nav item the current path falls under (longest-prefix match), resolving
  * handle-based hrefs the same way the sidebar does. Used by the header to show
  * "what screen we're on": `label` for the breadcrumb, `heading` for the big
@@ -72,8 +107,9 @@ export function activeNav(
   navKey: DashboardNavKey,
   pathname: string,
   handle?: string,
+  category?: VendorCategory | null,
 ): { label: string; heading: string } {
-  const { sections, brandLabel, rootHref } = DASHBOARD_NAV[navKey];
+  const { sections, brandLabel, rootHref } = resolveDashboardNav(navKey, category);
   const toHref = (href: string) => (handle ? `/${handle}${href.slice(rootHref.length)}` : href);
   let label = brandLabel;
   let heading = brandLabel;
@@ -99,8 +135,8 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/vendor', label: 'Overview', icon: LayoutDashboard },
-          { href: '/vendor/listings', label: 'Listings', icon: List },
-          { href: '/vendor/orders', label: 'Orders', icon: ShoppingBag },
+          { href: '/vendor/listings', label: 'Listings', icon: List, termKey: 'listings' },
+          { href: '/vendor/orders', label: 'Orders', icon: ShoppingBag, termKey: 'orders' },
           { href: '/vendor/inbox', label: 'Inbox', icon: Inbox },
         ],
       },

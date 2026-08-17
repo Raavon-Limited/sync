@@ -23,15 +23,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/components/ui/toast';
 import { signOut } from '@/modules/auth/actions';
+import { vendorCategoryLabel } from '@/config/vendor-vocabulary';
 
 const ROLE_LABELS: Record<string, string> = { student: 'Student', vendor: 'Vendor' };
-const CATEGORY_LABELS: Record<string, string> = {
-  landlord: 'Landlord',
-  food: 'Food vendor',
-  beauty: 'Beauty pro',
-  laundry: 'Laundry',
-  tradesman: 'Tradesman',
-};
 
 export interface UserMenuProps {
   name: string;
@@ -51,7 +45,7 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
     role === 'admin' ? '/admin' : handle ? `/${handle}` : role === 'vendor' ? '/vendor' : '/me';
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : null;
-  const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;
+  const categoryLabel = category ? (vendorCategoryLabel(category) ?? category) : null;
   const badge = [roleLabel, role === 'vendor' ? categoryLabel : null].filter(Boolean).join(' · ');
 
   async function handleSignOut() {

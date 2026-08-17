@@ -39,6 +39,11 @@ export const contentSecurityPolicy = [
   `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS}`,
   `style-src 'self' 'unsafe-inline'`,
   `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${MAP_TILE_ORIGINS}`,
+  // <audio>/<video> are governed by media-src, NOT img-src. Without this line
+  // they fall back to `default-src 'self'`, which rejects the blob: URLs every
+  // chat attachment uses - recording a voice note works, playing it back dies
+  // silently in the element's error handler.
+  `media-src 'self' data: blob: ${SUPABASE_ORIGINS}`,
   `font-src 'self' data:`,
   `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
   `frame-src ${PAYSTACK_ORIGINS}`,
@@ -55,8 +60,13 @@ export const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
+    // An empty allowlist - `microphone=()` - disables the feature for every
+    // origin *including this one*, so getUserMedia rejects with
+    // "NotAllowedError: Permission denied" no matter what the user allows in
+    // their browser. The vendor inbox records voice notes, so microphone needs
+    // `(self)`. Camera stays fully off until something actually needs it.
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(self), payment=(self)',
+    value: 'camera=(), microphone=(self), geolocation=(self), payment=(self)',
   },
   // HSTS only in production - never on localhost or it pins your browser.
   ...(process.env.NODE_ENV === 'production'
