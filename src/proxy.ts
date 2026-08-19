@@ -35,7 +35,7 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // signed-out users land here, so it's deliberately not in the gate list.
   { prefix: '/hostels', roles: ALL },
   { prefix: '/events', roles: ALL },
-  { prefix: '/food', roles: ALL },
+  // { prefix: '/food', roles: ALL },
   { prefix: '/beauty', roles: ALL },
   { prefix: '/workmanship', roles: ALL },
   { prefix: '/laundry', roles: ALL },
@@ -48,7 +48,7 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // Both business roles onboard through the same wizard.
   { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
   { prefix: '/vendor', roles: ['vendor'] },
-  { prefix: '/landlord', roles: ['landlord'] },
+  // { prefix: '/landlord', roles: ['landlord'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 

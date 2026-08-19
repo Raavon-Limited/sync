@@ -58,14 +58,14 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
   // pass the real role through rather than collapsing landlord into 'vendor'.
   const handleRole = navKey === 'student' ? 'student' : navKey === 'landlord' ? 'landlord' : 'vendor';
   const handle =
-    navKey === 'admin'
+    navKey === 'admin' || navKey === 'rider'
       ? undefined
       : (resolveHandle({
-          role: handleRole,
-          full_name: meta.full_name as string | undefined,
-          business_name: meta.business_name as string | undefined,
-          email: user?.email,
-        }) ?? undefined);
+        role: handleRole,
+        full_name: meta.full_name as string | undefined,
+        business_name: meta.business_name as string | undefined,
+        email: user?.email,
+      }) ?? undefined);
 
   switch (navKey) {
     case 'vendor':
@@ -89,6 +89,17 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         handle,
         metaLabel: 'Properties',
         metaValue: profile?.business_name || undefined,
+      };
+    case 'rider':
+      return {
+        eyebrow: verified ? 'Verified rider' : 'Rider — pending verification',
+        name,
+        email,
+        initial,
+        metaLabel: 'Vehicle',
+        metaValue: (profile as any)?.vehicle_type
+          ? (profile as any).vehicle_type.charAt(0).toUpperCase() + (profile as any).vehicle_type.slice(1)
+          : undefined,
       };
     case 'admin':
       return {

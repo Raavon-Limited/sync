@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student';
+export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student' | 'rider';
 
 export interface DashboardNavItem {
   href: string;
@@ -149,7 +149,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         items: [
           { href: '/admin', label: 'Overview', icon: LayoutDashboard },
           { href: '/admin/vendors', label: 'Vendors', icon: ShieldCheck },
-          { href: '/admin/landlord', label: '  Landlords', icon: Building2},
+          { href: '/admin/landlord', label: '  Landlords', icon: Building2 },
           { href: '/admin/verify-visits', label: 'Verification visits', icon: ClipboardCheck },
           { href: '/admin/users', label: 'Users', icon: Users },
         ],
@@ -205,6 +205,35 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             icon: Bell,
           },
           { href: '/me/reviews', label: 'Reviews', heading: 'Your reviews', icon: Star },
+        ],
+      },
+    ],
+  },
+  rider: {
+    brandLabel: 'Rider',
+    rootHref: '/rider',
+    sections: [
+      {
+        items: [
+          { href: '/rider', label: 'Dashboard', heading: 'Rider dashboard', icon: LayoutDashboard },
+          { href: '/rider/orders', label: 'Orders', heading: 'Active & available orders', icon: ShoppingBag },
+          { href: '/rider/history', label: 'History', heading: 'Delivery history', icon: ClipboardList },
+        ],
+      },
+      {
+        label: 'Performance',
+        items: [
+          { href: '/rider/earnings', label: 'Earnings', heading: 'Your earnings', icon: Wallet },
+          { href: '/rider/performance', label: 'Performance', heading: 'Your performance', icon: TrendingUp },
+          { href: '/rider/reviews', label: 'Reviews', heading: 'Reviews', icon: CalendarDays },
+        ],
+      },
+      {
+        label: 'Account',
+        items: [
+          { href: '/rider/profile', label: 'Profile', heading: 'Your profile', icon: Users },
+          { href: '/rider/support', label: 'Support', heading: 'Help & support', icon: Inbox },
+          { href: '/rider/settings', label: 'Settings', icon: Settings },
         ],
       },
     ],
