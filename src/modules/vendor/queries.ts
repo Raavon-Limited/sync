@@ -1,10 +1,369 @@
 /**
- * Server-side data fetching for the 'vendor' module.
- * Called from RSC pages. Uses the server Supabase client.
- * RLS is the real authorization layer - these queries return only what the
- * caller is allowed to see.
+ * Data access for the 'vendor' module — storefront, listings, the order inbox
+ * and promotions. Backs /vendor/listings, /vendor/orders, /vendor/promotions
+ * and /vendor/settings.
+ *
+ * `./types.ts` is left alone on purpose: it holds the MOCK shapes the vendor
+ * screens still render (`Listing`, `ChatContact`, `EarningsData`, …) and those
+ * components have not been migrated yet. The real shapes exported here are
+ * additive, so both can coexist while the screens move across one at a time.
  */
-import 'server-only';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
+import type { FoodOrder, OrderStatus } from '@/modules/food/types';
 
-// TODO: implement queries as features land.
-export {};
+/* eslint-disable @typescript-eslint/no-explicit-any -- see lib/query/helpers.ts */
+type Row = any;
+type Client = SupabaseClient<Database>;
+
+// ── Types specific to the vendor surface ───────────────────────────────────
+
+export interface VendorStorefront {
+  id: string;
+  slug: string;
+  businessName: string;
+  category: 'landlord' | 'food' | 'beauty' | 'laundry' | 'tradesman';
+  trade: string | null;
+  tagline: string | null;
+  bio: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  publicPhone: string | null;
+  businessAddress: string | null;
+  area: string | null;
+  /** Server-controlled — the column guard reverts client writes. */
+  verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
+  ratingAvg: number;
+  ratingCount: number;
+  isAcceptingOrders: boolean;
+  opensAt: string | null;
+  closesAt: string | null;
+}
+
+export interface VendorListing {
+  id: string;
+  vendorId: string;
+  name: string;
+  description: string | null;
+  category: string;
+  priceKobo: number;
+  stock: number;
+  sold: number;
+  status: 'Active' | 'Out of Stock' | 'Archived';
+  imageUrl: string | null;
+  archivedAt: string | null;
+}
+
+export interface Promotion {
+  id: string;
+  code: string | null;
+  name: string;
+  description: string | null;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  minOrderKobo: number;
+  maxRedemptions: number | null;
+  /** Server-maintained; incremented at checkout. */
+  redemptionCount: number;
+  startsAt: string;
+  endsAt: string | null;
+  isActive: boolean;
+}
+
+// ── Mappers ────────────────────────────────────────────────────────────────
+
+const toStorefront = (r: Row): VendorStorefront => ({
+  id: r.id,
+  slug: r.slug,
+  businessName: r.business_name,
+  category: r.category,
+  trade: r.trade,
+  tagline: r.tagline,
+  bio: r.bio,
+  logoUrl: r.logo_url,
+  coverUrl: r.cover_url,
+  publicPhone: r.public_phone,
+  businessAddress: r.business_address,
+  area: r.area,
+  verificationStatus: r.verification_status,
+  ratingAvg: Number(r.rating_avg ?? 0),
+  ratingCount: r.rating_count ?? 0,
+  isAcceptingOrders: r.is_accepting_orders,
+  opensAt: r.opens_at,
+  closesAt: r.closes_at,
+});
+
+const toListing = (r: Row): VendorListing => ({
+  id: r.id,
+  vendorId: r.vendor_id,
+  name: r.name,
+  description: r.description,
+  category: r.category,
+  priceKobo: Number(r.price_kobo ?? 0),
+  stock: r.stock ?? 0,
+  sold: r.sold ?? 0,
+  status: r.status,
+  imageUrl: r.image_url,
+  archivedAt: r.archived_at,
+});
+
+const toPromotion = (r: Row): Promotion => ({
+  id: r.id,
+  code: r.code,
+  name: r.name,
+  description: r.description,
+  discountType: r.discount_type,
+  discountValue: r.discount_value,
+  minOrderKobo: Number(r.min_order_kobo ?? 0),
+  maxRedemptions: r.max_redemptions,
+  redemptionCount: r.redemption_count ?? 0,
+  startsAt: r.starts_at,
+  endsAt: r.ends_at,
+  isActive: r.is_active,
+});
+
+const toOrder = (r: Row): FoodOrder => ({
+  id: r.id,
+  studentId: r.student_id,
+  vendorId: r.vendor_id,
+  vendorName: null,
+  customerName: r.customer_name,
+  customerPhone: r.customer_phone,
+  status: r.status,
+  subtotalKobo: Number(r.subtotal_kobo ?? 0),
+  deliveryFeeKobo: Number(r.delivery_fee_kobo ?? 0),
+  totalKobo: Number(r.total_kobo ?? 0),
+  deliveryAddress: r.delivery_address,
+  etaMinutes: r.eta_minutes,
+  paidAt: r.paid_at,
+  placedAt: r.placed_at,
+  deliveredAt: r.delivered_at,
+  lines: (r.order_items ?? []).map((i: Row) => ({
+    id: i.id,
+    listingId: i.listing_id,
+    name: i.name,
+    qty: i.qty,
+    priceKobo: Number(i.price_kobo ?? 0),
+    imageUrl: i.image_url,
+  })),
+});
+
+// ── Storefront ─────────────────────────────────────────────────────────────
+
+export async function fetchMyStorefront(db: Client, vendorId: string): Promise<VendorStorefront | null> {
+  const r = unwrapMaybe<Row>(
+    await db.from('vendor_profiles').select('*').eq('id', vendorId).maybeSingle(),
+  );
+  return r ? toStorefront(r) : null;
+}
+
+/**
+ * `verification_status`, `verified_at`, `rating_avg` and `rating_count` are
+ * omitted deliberately — `guard_vendor_profile_cols` reverts them. A vendor
+ * cannot self-verify or invent a rating.
+ */
+export async function updateMyStorefront(
+  db: Client,
+  vendorId: string,
+  patch: Partial<VendorStorefront>,
+): Promise<VendorStorefront> {
+  const payload: Database['public']['Tables']['vendor_profiles']['Update'] = {};
+  if (patch.businessName !== undefined) payload.business_name = patch.businessName;
+  if (patch.tagline !== undefined) payload.tagline = patch.tagline;
+  if (patch.bio !== undefined) payload.bio = patch.bio;
+  if (patch.logoUrl !== undefined) payload.logo_url = patch.logoUrl;
+  if (patch.coverUrl !== undefined) payload.cover_url = patch.coverUrl;
+  if (patch.publicPhone !== undefined) payload.public_phone = patch.publicPhone;
+  if (patch.businessAddress !== undefined) payload.business_address = patch.businessAddress;
+  if (patch.area !== undefined) payload.area = patch.area;
+  if (patch.isAcceptingOrders !== undefined) payload.is_accepting_orders = patch.isAcceptingOrders;
+  if (patch.opensAt !== undefined) payload.opens_at = patch.opensAt;
+  if (patch.closesAt !== undefined) payload.closes_at = patch.closesAt;
+
+  const row = unwrap<Row>(
+    await db.from('vendor_profiles').update(payload).eq('id', vendorId).select().single(),
+  );
+  return toStorefront(row);
+}
+
+// ── Listings ───────────────────────────────────────────────────────────────
+
+export async function fetchMyListings(
+  db: Client,
+  vendorId: string,
+  opts: { status?: string; search?: string; includeArchived?: boolean } & PageParams = {},
+): Promise<VendorListing[]> {
+  const [from, to] = toRange(opts);
+  let q = db
+    .from('listings')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (!opts.includeArchived) q = q.is('archived_at', null);
+  if (opts.status) q = q.eq('status', opts.status);
+  if (opts.search) q = q.ilike('name', `%${opts.search}%`);
+
+  return unwrapList<Row>(await q).map(toListing);
+}
+
+/** `sold` is omitted — it is maintained by checkout, not by the vendor. */
+export async function upsertListing(
+  db: Client,
+  // `name`, `category` and `price_kobo` are NOT NULL in the schema.
+  input: Partial<VendorListing> & {
+    vendorId: string;
+    name: string;
+    category: string;
+    priceKobo: number;
+  },
+): Promise<VendorListing> {
+  const payload = {
+    vendor_id: input.vendorId,
+    name: input.name,
+    description: input.description ?? null,
+    category: input.category,
+    price_kobo: input.priceKobo,
+    stock: input.stock ?? 0,
+    status: input.status ?? 'Active',
+    image_url: input.imageUrl ?? null,
+  };
+
+  const row = input.id
+    ? unwrap<Row>(await db.from('listings').update(payload).eq('id', input.id).select().single())
+    : unwrap<Row>(await db.from('listings').insert(payload).select().single());
+
+  return toListing(row);
+}
+
+/**
+ * Archive, not delete. `order_items.listing_id` is ON DELETE SET NULL, so a
+ * hard delete would silently detach the item from every historical order.
+ * Archiving keeps the link and drops the row out of the storefront.
+ */
+export async function archiveListings(db: Client, ids: string[]) {
+  const { error } = await db
+    .from('listings')
+    .update({ archived_at: new Date().toISOString(), status: 'Archived' })
+    .in('id', ids);
+  if (error) throw error;
+}
+
+export async function restoreListings(db: Client, ids: string[]) {
+  const { error } = await db
+    .from('listings')
+    .update({ archived_at: null, status: 'Active' })
+    .in('id', ids);
+  if (error) throw error;
+}
+
+/** Real deletion. Offer it only for listings that were never ordered. */
+export async function deleteListings(db: Client, ids: string[]) {
+  const { error } = await db.from('listings').delete().in('id', ids);
+  if (error) throw error;
+}
+
+// ── Order inbox ────────────────────────────────────────────────────────────
+
+export async function fetchVendorOrders(
+  db: Client,
+  vendorId: string,
+  opts: { status?: OrderStatus } & PageParams = {},
+): Promise<FoodOrder[]> {
+  const [from, to] = toRange(opts);
+  let q = db
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('vendor_id', vendorId)
+    .order('placed_at', { ascending: false })
+    .range(from, to);
+
+  if (opts.status) q = q.eq('status', opts.status);
+
+  return unwrapList<Row>(await q).map(toOrder);
+}
+
+/**
+ * Only the vendor advances fulfilment — that is `orders_update_vendor` in 0006.
+ * Money columns are frozen by `guard_order_privileged_cols`, so a vendor cannot
+ * mark an order paid or change its total while updating the status.
+ */
+export async function updateOrderStatus(
+  db: Client,
+  orderId: string,
+  status: OrderStatus,
+): Promise<FoodOrder> {
+  const patch: Database['public']['Tables']['orders']['Update'] = { status };
+  if (status === 'delivered') patch.delivered_at = new Date().toISOString();
+
+  const row = unwrap<Row>(
+    await db.from('orders').update(patch).eq('id', orderId).select('*, order_items(*)').single(),
+  );
+  return toOrder(row);
+}
+
+// ── Promotions ─────────────────────────────────────────────────────────────
+
+export async function fetchMyPromotions(db: Client, vendorId: string): Promise<Promotion[]> {
+  const rows = unwrapList<Row>(
+    await db
+      .from('promotions')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false }),
+  );
+  return rows.map(toPromotion);
+}
+
+/**
+ * `redemption_count` is omitted — `guard_promotion_cols` reverts it, because a
+ * vendor who could edit it could reset a capped promotion forever.
+ *
+ * The `promotions_percent_sane` constraint rejects a percentage over 100 and
+ * `promotions_window_sane` rejects an end before the start; both are validated
+ * here first so the user sees a sentence rather than a constraint name.
+ */
+export async function upsertPromotion(
+  db: Client,
+  // NOT NULL in the schema, so required here.
+  input: Partial<Promotion> & {
+    vendorId: string;
+    name: string;
+    discountType: 'percent' | 'fixed';
+    discountValue: number;
+  },
+): Promise<Promotion> {
+  if (input.discountType === 'percent' && (input.discountValue ?? 0) > 100) {
+    throw new Error('A percentage discount cannot exceed 100%.');
+  }
+  if (input.endsAt && input.startsAt && new Date(input.endsAt) <= new Date(input.startsAt)) {
+    throw new Error('The end date must be after the start date.');
+  }
+
+  const payload = {
+    vendor_id: input.vendorId,
+    code: input.code ?? null,
+    name: input.name,
+    description: input.description ?? null,
+    discount_type: input.discountType,
+    discount_value: input.discountValue,
+    min_order_kobo: input.minOrderKobo ?? 0,
+    max_redemptions: input.maxRedemptions ?? null,
+    starts_at: input.startsAt ?? new Date().toISOString(),
+    ends_at: input.endsAt ?? null,
+    is_active: input.isActive ?? true,
+  };
+
+  const row = input.id
+    ? unwrap<Row>(await db.from('promotions').update(payload).eq('id', input.id).select().single())
+    : unwrap<Row>(await db.from('promotions').insert(payload).select().single());
+
+  return toPromotion(row);
+}
+
+export async function deletePromotion(db: Client, id: string) {
+  const { error } = await db.from('promotions').delete().eq('id', id);
+  if (error) throw error;
+}

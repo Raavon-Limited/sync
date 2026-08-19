@@ -24,11 +24,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { isReservedHandle, resolveHandle } from '@/lib/handle';
 
-type Role = 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
+type Role = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
 
 // Shared marketplace modules: any signed-in user can browse and transact. The
-// only role difference is the dashboard (/me vs /vendor vs /landlord vs /admin).
-const ALL: Role[] = ['student', 'vendor', 'landlord', 'admin', 'super_admin'];
+// only role difference is the dashboard (/me vs /vendor vs /landlord vs /rider
+// vs /admin).
+const ALL: Role[] = ['student', 'vendor', 'landlord', 'rider', 'admin', 'super_admin'];
 
 const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // /around is the public "home of the full Sync app" per the wireframe -
@@ -49,6 +50,10 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
   { prefix: '/vendor', roles: ['vendor'] },
   { prefix: '/landlord', roles: ['landlord'] },
+  // Riders get their own dashboard: the delivery queue, active job and earnings.
+  // The route group does not exist yet — this gate is in place so that when it
+  // is added it is protected from the first commit rather than retrofitted.
+  { prefix: '/rider', roles: ['rider'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 
@@ -103,7 +108,9 @@ export async function proxy(request: NextRequest) {
             ? '/landlord'
             : role === 'vendor'
               ? '/vendor'
-              : null;
+              : role === 'rider'
+                ? '/rider'
+                : null;
       if (handle && base && firstSeg === handle) {
         const rest = segments.slice(1).join('/');
         const url = request.nextUrl.clone();

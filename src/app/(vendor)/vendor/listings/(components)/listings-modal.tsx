@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockCategories } from '@/mock/listings';
+import { SELECTABLE_LISTING_CATEGORIES } from '@/config/listing-categories';
 import { Listing } from '@/modules/vendor/types';
 import { AppSelect } from '@/components/shared/app-select';
 
@@ -168,7 +168,7 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
           label="Category"
           value={form.category}
           onValueChange={(value) => set('category', value)}
-          options={mockCategories.filter((c) => c !== 'All')}
+          options={[...SELECTABLE_LISTING_CATEGORIES]}
         />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Price (₦)">
@@ -279,7 +279,7 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
           label="Category"
           value={form.category}
           onValueChange={(value) => set('category', value)}
-          options={mockCategories.filter((c) => c !== 'All')}
+          options={[...SELECTABLE_LISTING_CATEGORIES]}
         />
 
         <div className="grid grid-cols-2 gap-3">

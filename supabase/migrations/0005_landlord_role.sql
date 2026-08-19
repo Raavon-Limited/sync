@@ -18,14 +18,12 @@
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check
   check (role in ('student', 'vendor', 'landlord', 'admin', 'super_admin'));
-
 -- ── 2. Backfill existing landlords ──────────────────────────────────────────
 -- Only touch vendors: never demote an admin who happens to own property.
 update public.profiles
    set role = 'landlord'
  where role = 'vendor'
    and vendor_category = 'landlord';
-
 -- ── 3. Signup trigger assigns landlord directly ─────────────────────────────
 -- Still clamped: a client can only ever land on student / vendor / landlord,
 -- never admin. Landlord requires BOTH role=vendor|landlord and the landlord
@@ -66,12 +64,10 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
 -- ── 4. Keep role and category consistent ────────────────────────────────────
 -- Guards against a server-side update setting one without the other. Runs after
 -- the privileged-column guard from 0001 (alphabetical trigger order: this is
@@ -88,7 +84,6 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists profiles_z_sync_landlord on public.profiles;
 create trigger profiles_z_sync_landlord
   before insert or update on public.profiles
