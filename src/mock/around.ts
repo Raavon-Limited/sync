@@ -14,7 +14,7 @@ export const MOCK_USER = {
 };
 
 // VERIFIED_SPOTS_COUNT removed - /around now reads the real count via
-// countVerifiedHostels() in @/modules/hostels/queries.
+// countVerifiedHostels() in @/modules/hostels/server-queries.
 
 // â”€â”€â”€ Quick stats (right side of hero) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const QUICK_STATS = [
@@ -134,5 +134,5 @@ export type NearbyCategory =
 
 
 // NearbyPin / NEARBY_PINS removed - the AroundMap now receives real pins
-// from listMapPins() in @/modules/around/queries (see MapPin there).
+// from listMapPins() in @/modules/around/server-queries (see MapPin there).
 // NearbyCategory above is still used by the map legend.

@@ -29,14 +29,14 @@ import {
   SPONSORED_SLOT,
 } from '@/mock/around';
 import { getCurrentUser, getFirstName } from '@/modules/auth/queries';
-import { countVerifiedHostels } from '@/modules/hostels/queries';
-import { countGoingTonight } from '@/modules/events/queries';
+import { countVerifiedHostels } from '@/modules/hostels/server-queries';
+import { countGoingTonight } from '@/modules/events/server-queries';
 import {
   countRoomsAvailable,
   getResumeBooking,
   listMapPins,
   type ResumeBooking,
-} from '@/modules/around/queries';
+} from '@/modules/around/server-queries';
 import { ScopeBlurb, ScopeHeadline, ScopeSuffix } from './location-scope';
 import { formatKobo, formatNaira } from '@/lib/utils';
 import { cn } from '@/lib/utils';

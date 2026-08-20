@@ -25,9 +25,7 @@
 -- PostGIS goes in `extensions`, not `public`. Installing it into public adds
 -- ~1000 objects to the schema and would bury our own tables.
 create extension if not exists postgis with schema extensions;
-
 set search_path = public, extensions;
-
 -- ============================================================================
 -- HOSTELS
 -- ============================================================================
@@ -58,13 +56,11 @@ create table if not exists public.hostels (
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now()
 );
-
 create index if not exists hostels_landlord_idx on public.hostels (landlord_id);
 create index if not exists hostels_area_idx     on public.hostels (area) where archived_at is null;
 create index if not exists hostels_price_idx    on public.hostels (price_per_session_kobo) where archived_at is null;
 -- Without this every "near me" is a sequential scan.
 create index if not exists hostels_geo_idx      on public.hostels using gist (geo);
-
 create table if not exists public.hostel_images (
   id         uuid primary key default gen_random_uuid(),
   hostel_id  uuid not null references public.hostels (id) on delete cascade,
@@ -73,7 +69,6 @@ create table if not exists public.hostel_images (
   created_at timestamptz not null default now()
 );
 create index if not exists hostel_images_hostel_idx on public.hostel_images (hostel_id, position);
-
 -- No `available` column by design - see header. `is_listed` is the one thing
 -- the landlord controls directly (maintenance, personal use).
 create table if not exists public.hostel_rooms (
@@ -86,7 +81,6 @@ create table if not exists public.hostel_rooms (
   unique (hostel_id, label)
 );
 create index if not exists hostel_rooms_hostel_idx on public.hostel_rooms (hostel_id);
-
 -- ============================================================================
 -- BOOKINGS
 -- ============================================================================
@@ -113,16 +107,13 @@ create table if not exists public.bookings (
   check (end_date is null or move_in is null or end_date >= move_in),
   check (status <> 'awaiting_payment' or reserved_until is not null)
 );
-
 create index if not exists bookings_student_idx on public.bookings (student_id, status);
 create index if not exists bookings_hostel_idx  on public.bookings (hostel_id, status);
 create index if not exists bookings_holds_idx   on public.bookings (reserved_until)
   where status = 'awaiting_payment';
-
 create unique index if not exists bookings_one_live_per_student_idx
   on public.bookings (student_id, hostel_id)
   where status in ('interested','requested','awaiting_payment','confirmed');
-
 -- Two students must never hold the same room. Index predicates must be
 -- immutable, so this cannot test `reserved_until > now()` - a lapsed-but-
 -- unswept row still blocks re-reservation. Mitigate with expire_stale_holds()
@@ -131,7 +122,6 @@ create unique index if not exists bookings_one_live_per_student_idx
 create unique index if not exists bookings_one_hold_per_room_idx
   on public.bookings (room_id)
   where status in ('awaiting_payment','confirmed');
-
 -- ============================================================================
 -- INSPECTIONS (student viewing) - booking_id NULL means "no hold"
 -- ============================================================================
@@ -159,7 +149,6 @@ create index if not exists inspections_student_idx on public.hostel_inspections 
 create index if not exists inspections_hostel_idx  on public.hostel_inspections (hostel_id, scheduled_for);
 create index if not exists inspections_booking_idx on public.hostel_inspections (booking_id)
   where booking_id is not null;
-
 -- ============================================================================
 -- VERIFICATION VISITS (ambassador confirms the listing is real)
 -- Distinct from student inspections: different actor, purpose, lifecycle.
@@ -185,17 +174,14 @@ create table if not exists public.hostel_verification_visits (
 );
 create index if not exists verification_visits_hostel_idx
   on public.hostel_verification_visits (hostel_id, created_at desc);
-
 -- ============================================================================
 -- HOLD MECHANICS
 -- ============================================================================
 
 create or replace function public.hold_interval()
 returns interval language sql immutable as $$ select interval '24 hours' $$;
-
 create or replace function public.max_holds_per_student()
 returns integer language sql immutable as $$ select 3 $$;
-
 -- Single place the deadline is computed. Uses NEW.locked_at (a BEFORE trigger
 -- can't read the updated row back from the table).
 create or replace function public.sync_booking_hold()
@@ -219,12 +205,10 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists bookings_sync_hold on public.bookings;
 create trigger bookings_sync_hold
   before insert or update on public.bookings
   for each row execute function public.sync_booking_hold();
-
 -- Booking or moving an inspection AFTER locking must push the deadline out.
 -- Only touches the row - sync_booking_hold does the arithmetic, so the rule
 -- lives in exactly one place.
@@ -240,13 +224,11 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists inspections_sync_hold on public.hostel_inspections;
 create trigger inspections_sync_hold
   after insert or update of scheduled_for, status, booking_id
   on public.hostel_inspections
   for each row execute function public.sync_hold_from_inspection();
-
 -- Cap concurrent holds. Needs a count, so it can't be an index.
 create or replace function public.enforce_max_holds()
 returns trigger language plpgsql as $$
@@ -271,14 +253,12 @@ begin
   return new;
 end;
 $$;
-
 -- Named _z_ so it fires after bookings_sync_hold (BEFORE triggers run in
 -- alphabetical order) and therefore sees the populated reserved_until.
 drop trigger if exists bookings_z_max_holds on public.bookings;
 create trigger bookings_z_max_holds
   before insert or update on public.bookings
   for each row execute function public.enforce_max_holds();
-
 -- Tidy-up only: availability is already correct without it. Call from a cron
 -- route alongside /api/cron/purge-archived, every ~5 minutes.
 create or replace function public.expire_stale_holds()
@@ -296,7 +276,6 @@ as $$
   )
   select count(*)::integer from expired;
 $$;
-
 -- ── Room state: free / reserved / booked ────────────────────────────────────
 -- Self-healing: an expired hold reads `free` without any sweep, because the
 -- comparison happens at read time.
@@ -318,7 +297,6 @@ select
   end as state
 from public.hostel_rooms r
 join public.hostels h on h.id = r.hostel_id;
-
 -- ── Hostel availability: active / ending_soon / closed ──────────────────────
 create or replace view public.hostel_availability as
 select
@@ -334,7 +312,6 @@ select
 from public.hostels h
 left join public.hostel_room_state s on s.hostel_id = h.id
 group by h.id;
-
 -- ── "Near me" ───────────────────────────────────────────────────────────────
 -- Not SECURITY DEFINER: RLS on hostels still applies.
 create or replace function public.hostels_near(
@@ -359,7 +336,6 @@ as $$
      and st_dwithin(h.geo, st_makepoint(lng, lat)::geography, radius_m)
    order by distance_m
 $$;
-
 -- ============================================================================
 -- SAVED · LISTINGS · ORDERS · ACTIVITY · EVENTS
 -- ============================================================================
@@ -372,7 +348,6 @@ create table if not exists public.saved_hostels (
 );
 create index if not exists saved_hostels_student_idx
   on public.saved_hostels (student_id, created_at desc);
-
 create table if not exists public.listings (
   id          uuid primary key default gen_random_uuid(),
   vendor_id   uuid not null references public.profiles (id) on delete cascade,
@@ -392,7 +367,6 @@ create table if not exists public.listings (
 );
 create index if not exists listings_vendor_idx   on public.listings (vendor_id, status);
 create index if not exists listings_category_idx on public.listings (category) where archived_at is null;
-
 create table if not exists public.orders (
   id                 uuid primary key default gen_random_uuid(),
   student_id         uuid not null references public.profiles (id) on delete cascade,
@@ -421,7 +395,6 @@ create index if not exists orders_vendor_idx  on public.orders (vendor_id, statu
 -- The overview's live-tracking card. Partial index stays small as history grows.
 create index if not exists orders_active_idx  on public.orders (student_id, created_at desc)
   where status in ('pending','preparing','picked_up','on_the_way');
-
 create table if not exists public.order_items (
   id         uuid primary key default gen_random_uuid(),
   order_id   uuid not null references public.orders (id) on delete cascade,
@@ -436,7 +409,6 @@ create table if not exists public.order_items (
   created_at timestamptz not null default now()
 );
 create index if not exists order_items_order_idx on public.order_items (order_id);
-
 create table if not exists public.activity_log (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references public.profiles (id) on delete cascade,
@@ -454,7 +426,6 @@ create table if not exists public.activity_log (
   created_at   timestamptz not null default now()
 );
 create index if not exists activity_log_user_idx on public.activity_log (user_id, created_at desc);
-
 create table if not exists public.events (
   id           uuid primary key default gen_random_uuid(),
   organizer_id uuid references public.profiles (id) on delete set null,
@@ -467,7 +438,6 @@ create table if not exists public.events (
 );
 create index if not exists events_starts_at_idx on public.events (starts_at);
 create index if not exists events_geo_idx       on public.events using gist (geo);
-
 create table if not exists public.tickets (
   id         uuid primary key default gen_random_uuid(),
   event_id   uuid not null references public.events   (id) on delete cascade,
@@ -481,7 +451,6 @@ create table if not exists public.tickets (
 );
 create index if not exists tickets_owner_idx on public.tickets (owner_id, status);
 create index if not exists tickets_event_idx on public.tickets (event_id);
-
 -- ============================================================================
 -- ROW-LEVEL SECURITY
 -- Every table is unreachable until a policy grants access.
@@ -500,48 +469,38 @@ alter table public.order_items                enable row level security;
 alter table public.activity_log               enable row level security;
 alter table public.events                     enable row level security;
 alter table public.tickets                    enable row level security;
-
 -- ── Public browse ───────────────────────────────────────────────────────────
 drop policy if exists "hostels_select_active" on public.hostels;
 create policy "hostels_select_active" on public.hostels
   for select using (archived_at is null);
-
 drop policy if exists "hostel_images_select" on public.hostel_images;
 create policy "hostel_images_select" on public.hostel_images
   for select using (exists (select 1 from public.hostels h
                              where h.id = hostel_id and h.archived_at is null));
-
 drop policy if exists "hostel_rooms_select" on public.hostel_rooms;
 create policy "hostel_rooms_select" on public.hostel_rooms
   for select using (exists (select 1 from public.hostels h
                              where h.id = hostel_id and h.archived_at is null));
-
 drop policy if exists "listings_select_active" on public.listings;
 create policy "listings_select_active" on public.listings
   for select using (archived_at is null and status <> 'Archived');
-
 drop policy if exists "events_select_all" on public.events;
 create policy "events_select_all" on public.events for select using (true);
-
 -- ── Landlords / vendors manage their own stock ──────────────────────────────
 drop policy if exists "hostels_write_own" on public.hostels;
 create policy "hostels_write_own" on public.hostels
   for all using (auth.uid() = landlord_id) with check (auth.uid() = landlord_id);
-
 drop policy if exists "hostel_images_write_own" on public.hostel_images;
 create policy "hostel_images_write_own" on public.hostel_images
   for all using (exists (select 1 from public.hostels h
                           where h.id = hostel_id and h.landlord_id = auth.uid()));
-
 drop policy if exists "hostel_rooms_write_own" on public.hostel_rooms;
 create policy "hostel_rooms_write_own" on public.hostel_rooms
   for all using (exists (select 1 from public.hostels h
                           where h.id = hostel_id and h.landlord_id = auth.uid()));
-
 drop policy if exists "listings_write_own" on public.listings;
 create policy "listings_write_own" on public.listings
   for all using (auth.uid() = vendor_id) with check (auth.uid() = vendor_id);
-
 -- A landlord must not be able to self-verify their own property.
 create or replace function public.guard_hostel_privileged_cols()
 returns trigger language plpgsql as $$
@@ -553,12 +512,10 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists hostels_guard_privileged on public.hostels;
 create trigger hostels_guard_privileged
   before update on public.hostels
   for each row execute function public.guard_hostel_privileged_cols();
-
 -- ── Bookings ────────────────────────────────────────────────────────────────
 drop policy if exists "bookings_select_own" on public.bookings;
 create policy "bookings_select_own" on public.bookings
@@ -567,15 +524,12 @@ create policy "bookings_select_own" on public.bookings
     or exists (select 1 from public.hostels h
                 where h.id = hostel_id and h.landlord_id = auth.uid())
   );
-
 drop policy if exists "bookings_insert_own" on public.bookings;
 create policy "bookings_insert_own" on public.bookings
   for insert with check (auth.uid() = student_id);
-
 drop policy if exists "bookings_update_own" on public.bookings;
 create policy "bookings_update_own" on public.bookings
   for update using (auth.uid() = student_id) with check (auth.uid() = student_id);
-
 -- RLS is row-level, so column rules need a trigger. Mirrors
 -- guard_profile_privileged_cols() in 0001.
 create or replace function public.guard_booking_privileged_cols()
@@ -595,14 +549,12 @@ begin
   return new;
 end;
 $$;
-
 -- Fires before bookings_sync_hold (alphabetical), so the hold is computed from
 -- the post-guard status.
 drop trigger if exists bookings_guard_privileged on public.bookings;
 create trigger bookings_guard_privileged
   before update on public.bookings
   for each row execute function public.guard_booking_privileged_cols();
-
 -- ── Inspections ─────────────────────────────────────────────────────────────
 drop policy if exists "inspections_select_own" on public.hostel_inspections;
 create policy "inspections_select_own" on public.hostel_inspections
@@ -612,15 +564,12 @@ create policy "inspections_select_own" on public.hostel_inspections
     or exists (select 1 from public.hostels h
                 where h.id = hostel_id and h.landlord_id = auth.uid())
   );
-
 drop policy if exists "inspections_insert_own" on public.hostel_inspections;
 create policy "inspections_insert_own" on public.hostel_inspections
   for insert with check (auth.uid() = student_id);
-
 drop policy if exists "inspections_update_own" on public.hostel_inspections;
 create policy "inspections_update_own" on public.hostel_inspections
   for update using (auth.uid() = student_id) with check (auth.uid() = student_id);
-
 -- The fee is non-refundable, so paid_at must never be client-settable.
 create or replace function public.guard_inspection_privileged_cols()
 returns trigger language plpgsql as $$
@@ -635,31 +584,25 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists inspections_guard_privileged on public.hostel_inspections;
 create trigger inspections_guard_privileged
   before update on public.hostel_inspections
   for each row execute function public.guard_inspection_privileged_cols();
-
 -- ── Verification visits: ambassador only; admins use the service role ───────
 drop policy if exists "verification_visits_ambassador" on public.hostel_verification_visits;
 create policy "verification_visits_ambassador" on public.hostel_verification_visits
   for select using (auth.uid() = ambassador_id);
-
 -- ── Orders ──────────────────────────────────────────────────────────────────
 drop policy if exists "orders_select_own" on public.orders;
 create policy "orders_select_own" on public.orders
   for select using (auth.uid() = student_id or auth.uid() = vendor_id);
-
 drop policy if exists "orders_insert_own" on public.orders;
 create policy "orders_insert_own" on public.orders
   for insert with check (auth.uid() = student_id);
-
 -- Only the vendor advances fulfilment.
 drop policy if exists "orders_update_vendor" on public.orders;
 create policy "orders_update_vendor" on public.orders
   for update using (auth.uid() = vendor_id) with check (auth.uid() = vendor_id);
-
 create or replace function public.guard_order_privileged_cols()
 returns trigger language plpgsql as $$
 begin
@@ -673,33 +616,27 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists orders_guard_privileged on public.orders;
 create trigger orders_guard_privileged
   before update on public.orders
   for each row execute function public.guard_order_privileged_cols();
-
 drop policy if exists "order_items_select" on public.order_items;
 create policy "order_items_select" on public.order_items
   for select using (exists (select 1 from public.orders o
                              where o.id = order_id
                                and (o.student_id = auth.uid() or o.vendor_id = auth.uid())));
-
 drop policy if exists "order_items_insert" on public.order_items;
 create policy "order_items_insert" on public.order_items
   for insert with check (exists (select 1 from public.orders o
                                   where o.id = order_id and o.student_id = auth.uid()));
-
 -- ── Strictly private ────────────────────────────────────────────────────────
 drop policy if exists "saved_hostels_own" on public.saved_hostels;
 create policy "saved_hostels_own" on public.saved_hostels
   for all using (auth.uid() = student_id) with check (auth.uid() = student_id);
-
 -- Select only: rows are written server-side so a client can't forge activity.
 drop policy if exists "activity_log_select_own" on public.activity_log;
 create policy "activity_log_select_own" on public.activity_log
   for select using (auth.uid() = user_id);
-
 drop policy if exists "tickets_select_own" on public.tickets;
 create policy "tickets_select_own" on public.tickets
   for select using (

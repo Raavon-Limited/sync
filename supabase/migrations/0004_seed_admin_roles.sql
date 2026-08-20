@@ -19,12 +19,10 @@
 update public.profiles p set role = 'super_admin'
   from auth.users u
   where u.id = p.id and lower(u.email) = 'hello@raavon.com';
-
 update public.profiles p set role = 'admin'
   from auth.users u
   where u.id = p.id and lower(u.email) = 'muiz@raavon.com';
-
 -- Verify (optional): should show super_admin / admin, not student.
 --   select u.email, p.role
 --   from public.profiles p join auth.users u on u.id = p.id
---   where lower(u.email) in ('hello@raavon.com', 'muiz@raavon.com');
+--   where lower(u.email) in ('hello@raavon.com', 'muiz@raavon.com');;

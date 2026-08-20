@@ -13,7 +13,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@/types/database';
+import type { Database } from '@/types/database.types';
 
 export async function createClient() {
   const cookieStore = await cookies();

@@ -3,8 +3,17 @@ import { useState, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Listing } from '@/modules/vendor/types';
-import { mockCategories, mockListings } from '@/mock/listings';
+import { LISTING_CATEGORIES } from '@/config/listing-categories';
+import { koboToNaira, nairaToKobo } from '@/lib/query/helpers';
+import {
+  useMyListings,
+  useUpsertListing,
+  useDeleteListings,
+  useArchiveListings,
+} from '@/modules/vendor/hooks';
+import type { VendorListing } from '@/modules/vendor/queries';
 import { ListingStatsBar } from './listings-stats-bar';
 import { ListingFilters } from './listings-filters';
 import { ListingBulkBar } from './listings-bulk-bar';
@@ -19,13 +28,52 @@ import {
 } from './listings-modal';
 import { useModalStore } from '@/store';
 
+/**
+ * Fetched once with archived included, then filtered in memory.
+ *
+ * The stats bar counts archived and out-of-stock alongside active, so a
+ * server-side status filter would make those tiles wrong. A vendor catalogue is
+ * tens of rows, not thousands - the whole set is cheaper to hold than to
+ * re-query on every filter change. Revisit past a few hundred listings.
+ *
+ * Declared at module scope, not inline: this object is part of the query key,
+ * and a fresh literal each render would key a new cache entry every time.
+ */
+const LIST_FILTERS = { includeArchived: true } as const;
+
+/**
+ * DB row -> UI shape. `Listing` (what every child component consumes) predates
+ * the schema and speaks Naira; the database stores kobo. Converting here keeps
+ * that boundary in one function instead of scattering divisions through the
+ * component tree.
+ */
+function toUiListing(row: VendorListing): Listing {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    price: koboToNaira(row.priceKobo),
+    stock: row.stock,
+    sold: row.sold,
+    status: row.status,
+    archivedAt: row.archivedAt,
+    imageUrl: row.imageUrl ?? undefined,
+  };
+}
+
 export default function ListingsPage() {
-  const [listings, setListings] = useState<Listing[]>(mockListings);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [category, setCategory] = useState('All');
   const [status, setStatus] = useState('All Status');
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
+
+  const { data: rows, isLoading, isError, error } = useMyListings(LIST_FILTERS);
+  const upsert = useUpsertListing();
+  const remove = useDeleteListings();
+  const archive = useArchiveListings(LIST_FILTERS);
+
+  const listings = useMemo(() => (rows ?? []).map(toUiListing), [rows]);
 
   const {
     addListing,
@@ -33,24 +81,18 @@ export default function ListingsPage() {
     deleteListing,
     bulkDelete,
     archiveListings,
-
     openAddListing,
     closeAddListing,
-
     openEditListing,
     closeEditListing,
-
     openDeleteListing,
     closeDeleteListing,
-
     openBulkDelete,
     closeBulkDelete,
-
     openArchiveListings,
     closeArchiveListings,
   } = useModalStore();
 
-  // ── filtering ────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return listings.filter((l) => {
       const matchCat = category === 'All' || l.category === category;
@@ -61,22 +103,9 @@ export default function ListingsPage() {
     });
   }, [listings, category, status, search]);
 
-  const archivedListings = useMemo(() => {
-    return listings.filter((l) => l.status === 'Archived');
-  }, [listings]);
-
-  // Active Listing
-  const activeListings = useMemo(() => {
-    return listings.filter((l) => l.status === 'Active');
-  }, [listings]);
-
-  // ── selection ────────────────────────────────────────────────
   const filteredIds = filtered.map((listing) => listing.id);
-
   const selectedCount = selectedIds.size;
-
   const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
-
   const someSelected = filteredIds.some((id) => selectedIds.has(id)) && !allSelected;
 
   const toggleSelect = (id: string) =>
@@ -108,64 +137,119 @@ export default function ListingsPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // ── CRUD ─────────────────────────────────────────────────────
+  // Every handler goes through the server; the cache is the source of truth.
+  // `useArchiveListings` is optimistic internally because archiving is
+  // reversible - create and delete are not, so they wait for confirmation.
   const handleAdd = (listing: Listing) => {
-    setListings((prev) => [listing, ...prev]);
-    closeAddListing();
+    upsert.mutate(
+      {
+        name: listing.name,
+        category: listing.category,
+        priceKobo: nairaToKobo(listing.price),
+        stock: listing.stock,
+        status: listing.status,
+        imageUrl: listing.imageUrl ?? null,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Listing added');
+          closeAddListing();
+        },
+        onError: (e) => toast.error(e.message || 'Could not add the listing'),
+      },
+    );
   };
 
   const handleEdit = (updated: Listing) => {
-    setListings((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-
-    closeEditListing();
+    upsert.mutate(
+      {
+        id: updated.id,
+        name: updated.name,
+        category: updated.category,
+        priceKobo: nairaToKobo(updated.price),
+        stock: updated.stock,
+        status: updated.status,
+        imageUrl: updated.imageUrl ?? null,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Listing updated');
+          closeEditListing();
+        },
+        onError: (e) => toast.error(e.message || 'Could not save your changes'),
+      },
+    );
   };
 
   const handleDuplicate = (listing: Listing) => {
-    const duplicate: Listing = {
-      ...listing,
-      id: `lst-${Date.now()}`,
-      name: `${listing.name} (Copy)`,
-      sold: 0,
-    };
-
-    setListings((prev) => [duplicate, ...prev]);
+    // No id -> insert. `sold` is server-owned and deliberately not copied.
+    upsert.mutate(
+      {
+        name: listing.name + ' (Copy)',
+        category: listing.category,
+        priceKobo: nairaToKobo(listing.price),
+        stock: listing.stock,
+        status: listing.status,
+        imageUrl: listing.imageUrl ?? null,
+      },
+      {
+        onSuccess: () => toast.success('Listing duplicated'),
+        onError: (e) => toast.error(e.message || 'Could not duplicate'),
+      },
+    );
   };
 
   const handleDelete = (listing: Listing) => {
-    setListings((prev) => prev.filter((l) => l.id !== listing.id));
-
-    closeDeleteListing();
+    remove.mutate([listing.id], {
+      onSuccess: () => {
+        toast.success('Listing deleted');
+        closeDeleteListing();
+      },
+      onError: (e) => toast.error(e.message || 'Could not delete the listing'),
+    });
   };
 
   const handleBulkDelete = () => {
-    setListings((prev) => prev.filter((l) => !selectedIds.has(l.id)));
+    const ids = Array.from(selectedIds);
 
-    clearSelection();
-    closeBulkDelete();
+    remove.mutate(ids, {
+      onSuccess: () => {
+        toast.success(ids.length + ' listings deleted');
+        clearSelection();
+        closeBulkDelete();
+      },
+      onError: (e) => toast.error(e.message || 'Could not delete the listings'),
+    });
   };
 
   const handleArchive = () => {
-    setListings((prev) =>
-      prev.map((l) =>
-        selectedIds.has(l.id)
-          ? { ...l, status: 'Archived', archivedAt: new Date().toISOString() }
-          : l,
-      ),
-    );
+    // The modal carries the ids it was opened with; fall back to the live
+    // selection if it was opened without them.
+    const ids = archiveListings.listingIds.length
+      ? archiveListings.listingIds
+      : Array.from(selectedIds);
 
-    clearSelection();
-    closeArchiveListings();
+    archive.mutate(ids, {
+      onSuccess: () => {
+        toast.success(ids.length + ' listings archived');
+        clearSelection();
+        closeArchiveListings();
+      },
+      onError: (e) => toast.error(e.message || 'Could not archive'),
+    });
   };
+
+  const activeCount = listings.filter((l) => l.status === 'Active').length;
 
   return (
     <section className="flex flex-col gap-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-ink text-2xl font-bold">Listings</h1>
           <p className="text-muted text-sm">
-            {listings.length} products · {listings.filter((l) => l.status === 'Active').length}{' '}
-            active
+            {isLoading
+              ? 'Loading your catalogue...'
+              : listings.length + ' products \u00b7 ' + activeCount + ' active'}
           </p>
         </div>
         <Button
@@ -177,12 +261,16 @@ export default function ListingsPage() {
         </Button>
       </div>
 
-      {/* Stats */}
+      {isError && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Could not load your listings: {(error as Error)?.message ?? 'unknown error'}
+        </p>
+      )}
+
       <ListingStatsBar listings={listings} />
 
-      {/* Filters */}
       <ListingFilters
-        categories={mockCategories}
+        categories={[...LISTING_CATEGORIES]}
         selectedCategory={category}
         onCategoryChange={setCategory}
         selectedStatus={status}
@@ -200,7 +288,6 @@ export default function ListingsPage() {
         onToggleSelectAll={toggleSelectAll}
       />
 
-      {/* Bulk bar */}
       <ListingBulkBar
         count={selectedIds.size}
         onEdit={() => {
@@ -215,8 +302,13 @@ export default function ListingsPage() {
         onClear={clearSelection}
       />
 
-      {/* Content */}
-      {view === 'grid' ? (
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-ink/5 h-56 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+      ) : view === 'grid' ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((listing) => (
             <ListingGridCard
@@ -231,7 +323,9 @@ export default function ListingsPage() {
           ))}
           {filtered.length === 0 && (
             <p className="text-muted col-span-full py-16 text-center text-sm">
-              No listings match your filters.
+              {listings.length === 0
+                ? 'No listings yet. Add your first product to start selling.'
+                : 'No listings match your filters.'}
             </p>
           )}
         </div>
@@ -246,7 +340,6 @@ export default function ListingsPage() {
         />
       )}
 
-      {/* Modals */}
       <AddListingModal open={addListing.open} onAdd={handleAdd} onClose={closeAddListing} />
 
       <EditModal

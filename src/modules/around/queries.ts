@@ -1,176 +1,129 @@
 /**
- * Server-side data fetching for the 'around' module - the public /around feed.
- * Called from RSC pages. Uses the server Supabase client.
- * RLS is the real authorization layer.
+ * Data access for the 'around' module — the map at /around.
  *
- * The map mixes categories (hostels, food, laundry…), so pin assembly lives
- * here rather than in any one domain module.
+ * WHY THIS FANS OUT INSTEAD OF USING ONE QUERY
+ * The map shows vendors, hostels and hotspots together. They live in three
+ * tables with three different RLS policies and three different shapes, so there
+ * is no single query that returns them. The three reads run in parallel and are
+ * normalised into one `NearbyPin` union here.
  *
- * Everything degrades to an empty result: /around is public and signed-out, so
- * a Supabase blip should render an empty map, not a 500.
+ * If this becomes a bottleneck the fix is a database view or an RPC that unions
+ * the three — NOT a client-side loop that fetches them one at a time.
+ *
+ * Replaces `NearbyPin` in src/mock/around.ts.
  */
-import 'server-only';
-import { cache } from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { distanceMetres, CAMPUS_POINT } from '@/lib/constants/areas';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+import { unwrapList } from '@/lib/query/helpers';
+import { toLatLng } from '@/modules/hotspots/queries';
 
-const configured = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-);
+/* eslint-disable @typescript-eslint/no-explicit-any -- see lib/query/helpers.ts */
+type Row = any;
+type Client = SupabaseClient<Database>;
 
-/** Pin categories the map legend understands. */
-export type PinCategory = 'hostel' | 'food' | 'laundry' | 'beauty' | 'hotspot' | 'event';
+export type PinKind = 'vendor' | 'hostel' | 'hotspot';
 
-export interface MapPin {
+export interface NearbyPin {
   id: string;
-  category: PinCategory;
+  kind: PinKind;
   name: string;
-  /** Pre-formatted for the tooltip, e.g. "400m" / "1.2km". */
-  distance: string;
-  href: string;
-  lat: number;
-  lng: number;
-  /** Renders the highlighted marker. Driven by `verified` for hostels, so the
-   *  emphasis means something rather than being editorial. */
-  featured?: boolean;
+  slug: string;
+  category: string | null;
+  area: string | null;
+  imageUrl: string | null;
+  position: { lat: number; lng: number };
+  /** Vendors and hostels only. */
+  priceKobo?: number | null;
+  rating?: number | null;
+  isVerified?: boolean;
+  /** Populated only when the query was a proximity search. */
+  distanceM?: number;
 }
 
-/** Metres → the short form the tooltip shows. */
-function formatDistance(m: number): string {
-  return m < 1000 ? `${Math.round(m / 50) * 50}m` : `${(m / 1000).toFixed(1)}km`;
+export interface AroundFilters {
+  kinds?: PinKind[];
+  area?: string;
+  category?: string;
 }
 
 /**
- * Hostels as map pins.
- *
- * `geo` is a PostGIS geography column, which PostgREST serialises as GeoJSON,
- * so coordinates arrive as [lng, lat] - note the order, it is the reverse of
- * Leaflet's [lat, lng] and silently puts every pin in the wrong hemisphere if
- * you get it backwards.
- *
- * Rows without coordinates are skipped rather than defaulted to campus: a pin
- * in the wrong place is worse than no pin.
+ * Everything on the map, unfiltered by distance. Rows with no `geo` are dropped
+ * — a pin without coordinates cannot be placed, and rendering it at 0,0 puts it
+ * in the Gulf of Guinea.
  */
-export async function listMapPins(origin?: { lat: number; lng: number }): Promise<MapPin[]> {
-  if (!configured) return [];
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('hostels')
-      .select('id, name, slug, geo, verified')
-      .not('geo', 'is', null)
-      .limit(60);
-    if (error || !data) return [];
+export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): Promise<NearbyPin[]> {
+  const kinds = filters.kinds ?? ['vendor', 'hostel', 'hotspot'];
 
-    const from = origin ?? { lat: CAMPUS_POINT.lat, lng: CAMPUS_POINT.lng };
+  const [vendors, hostels, hotspots] = await Promise.all([
+    kinds.includes('vendor')
+      ? db
+          .from('vendor_profiles')
+          .select('id, slug, business_name, category, area, logo_url, geo, rating_avg, verification_status')
+          .is('archived_at', null)
+      : Promise.resolve({ data: [], error: null }),
 
-    return data.flatMap((row): MapPin[] => {
-      const geo = row.geo as unknown as { coordinates?: [number, number] } | null;
-      const coords = geo?.coordinates;
-      if (!coords || coords.length !== 2) return [];
-      const [lng, lat] = coords;
+    kinds.includes('hostel')
+      ? db
+          .from('hostels')
+          .select('id, slug, name, area, geo, price_per_session_kobo, verified, hostel_images(url)')
+          .is('archived_at', null)
+      : Promise.resolve({ data: [], error: null }),
 
-      return [
-        {
-          id: row.id,
-          category: 'hostel',
-          name: row.name,
-          distance: formatDistance(distanceMetres(from, { lat, lng })),
-          href: `/hostels/${row.slug}`,
-          lat,
-          lng,
-          featured: row.verified,
-        },
-      ];
+    kinds.includes('hotspot')
+      ? db.from('hotspots').select('id, slug, name, category, area, image_url, geo').eq('is_active', true)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const pins: NearbyPin[] = [];
+
+  for (const r of unwrapList<Row>(vendors)) {
+    const position = toLatLng(r.geo);
+    if (!position) continue;
+    pins.push({
+      id: r.id,
+      kind: 'vendor',
+      name: r.business_name,
+      slug: r.slug,
+      category: r.category,
+      area: r.area,
+      imageUrl: r.logo_url,
+      position,
+      rating: r.rating_avg ? Number(r.rating_avg) : null,
+      isVerified: r.verification_status === 'verified',
     });
-  } catch {
-    return [];
   }
-}
 
-/* ─────────────────── Quick stats + resume booking ──────────────────── */
-
-/**
- * The three headline numbers on /around.
- *
- * These were hardcoded mock values ("3 rooms left", "240 going", "28 min").
- * They are now derived, and every one of them returns a real ZERO when there is
- * nothing to count - a fabricated number on a public feed is a claim we can't
- * back, and "0 rooms left" is information while "3 rooms left" from a mock is
- * a lie that survives into production.
- */
-export interface QuickStat {
-  value: number;
-  label: string;
-  /** Nothing recorded yet - the UI dims the tile instead of implying a real 0. */
-  empty: boolean;
-  accent?: boolean;
-}
-
-/** Total free rooms across every listed hostel. 0 before any stock exists. */
-export const countRoomsAvailable = cache(async (): Promise<number> => {
-  if (!configured) return 0;
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('hostel_availability')
-      .select('rooms_available');
-    if (error || !data) return 0;
-    return data.reduce((sum, r) => sum + Number(r.rooms_available ?? 0), 0);
-  } catch {
-    return 0;
+  for (const r of unwrapList<Row>(hostels)) {
+    const position = toLatLng(r.geo);
+    if (!position) continue;
+    pins.push({
+      id: r.id,
+      kind: 'hostel',
+      name: r.name,
+      slug: r.slug,
+      category: 'hostel',
+      area: r.area,
+      imageUrl: r.hostel_images?.[0]?.url ?? null,
+      position,
+      priceKobo: Number(r.price_per_session_kobo ?? 0),
+      isVerified: !!r.verified,
+    });
   }
-});
 
-/**
- * A booking the signed-in student started but hasn't completed, if any.
- *
- * Drives the "resume booking" nudge, which used to be a fixed mock hostel shown
- * to everyone - including signed-out visitors who had never booked anything.
- * Null is the common case and the card should not render at all for it.
- */
-export interface ResumeBooking {
-  hostelName: string;
-  hostelSlug: string;
-  pricePerSessionKobo: number | null;
-  roomsLeft: number;
-}
-
-export const getResumeBooking = cache(async (): Promise<ResumeBooking | null> => {
-  if (!configured) return null;
-  try {
-    const supabase = await createClient();
-    // RLS scopes bookings to the caller, so there is no student_id filter here:
-    // an anonymous caller simply gets no rows.
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('hostel_id, price_per_session_kobo, hostels(name, slug)')
-      .in('status', ['interested', 'requested', 'awaiting_payment'])
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data) return null;
-
-    const hostel = (Array.isArray(data.hostels) ? data.hostels[0] : data.hostels) as
-      | { name: string; slug: string }
-      | undefined;
-    if (!hostel) return null;
-
-    const { data: avail } = await supabase
-      .from('hostel_availability')
-      .select('rooms_available')
-      .eq('hostel_id', data.hostel_id)
-      .maybeSingle();
-
-    return {
-      hostelName: hostel.name,
-      hostelSlug: hostel.slug,
-      pricePerSessionKobo:
-        data.price_per_session_kobo == null ? null : Number(data.price_per_session_kobo),
-      roomsLeft: Number(avail?.rooms_available ?? 0),
-    };
-  } catch {
-    return null;
+  for (const r of unwrapList<Row>(hotspots)) {
+    const position = toLatLng(r.geo);
+    if (!position) continue;
+    pins.push({
+      id: r.id,
+      kind: 'hotspot',
+      name: r.name,
+      slug: r.slug,
+      category: r.category,
+      area: r.area,
+      imageUrl: r.image_url,
+      position,
+    });
   }
-});
+
+  return filters.area ? pins.filter((p) => p.area === filters.area) : pins;
+}

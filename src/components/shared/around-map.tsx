@@ -7,7 +7,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { MapPin } from '@/modules/around/queries';
+import type { MapPin } from '@/modules/around/server-queries';
 
 const Map = dynamic(() => import('./around-map-google'), {
   ssr: false,

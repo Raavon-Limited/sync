@@ -29,10 +29,8 @@ create table if not exists public.areas (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-
 create index if not exists areas_active_order_idx
   on public.areas (is_active, sort_order);
-
 -- Seed. These coordinates are the corrected set: the campus anchor was geocoded
 -- against OSM ("Kwara State University, Malete Road, Moro, Kwara") and the five
 -- areas were shifted by that same correction. Their positions relative to one
@@ -44,24 +42,20 @@ insert into public.areas (name, slug, lat, lng, sort_order) values
   ('Amao',        'amao',        8.7146, 4.4719, 4),
   ('Nifeskwasu',  'nifeskwasu',  8.7214, 4.4757, 5)
 on conflict (name) do nothing;
-
 -- Replace the CHECK with the FK. Every existing hostels row already satisfies
 -- this: the CHECK permitted exactly the five names seeded above, so the FK
 -- cannot fail to validate on an existing database.
 alter table public.hostels drop constraint if exists hostels_area_check;
-
 alter table public.hostels drop constraint if exists hostels_area_fkey;
 alter table public.hostels
   add constraint hostels_area_fkey
   foreign key (area) references public.areas (name)
   on update cascade;
-
 -- RLS: the location picker is public (signed-out users browse /around), so
 -- reads are open. There is deliberately NO write policy - areas are reference
 -- data, edited by an admin through the service role, exactly like the other
 -- admin-managed rows in this schema.
 alter table public.areas enable row level security;
-
 drop policy if exists "areas_select_active" on public.areas;
 create policy "areas_select_active" on public.areas
   for select using (is_active);

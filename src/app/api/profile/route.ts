@@ -15,11 +15,17 @@
  * it's dynamic by default.
  */
 import { createClient } from '@/lib/supabase/server';
-import type { Database } from '@/types/database';
+import type { Database } from '@/types/database.types';
 
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
-/** Columns a user is allowed to change about themselves. */
+/**
+ * Columns a user is allowed to change about themselves.
+ *
+ * The `satisfies` clause ties this whitelist to the generated schema, so
+ * renaming or dropping either column upstream fails the build here rather than
+ * silently no-op'ing a security boundary.
+ */
 const UPDATABLE = ['full_name', 'phone'] as const satisfies readonly (keyof ProfileUpdate)[];
 
 export async function GET() {
@@ -56,10 +62,10 @@ export async function PATCH(request: Request) {
   // Whitelist: silently drop anything that isn't user-editable. This is what
   // stops a client from escalating role / forcing verification_status.
   //
-  // Typed against the generated schema, so adding a column to UPDATABLE that
-  // isn't actually updatable is a compile error rather than a runtime 500.
-  // Values are narrowed too: these columns are text, so anything that isn't a
-  // string (or an explicit null to clear it) is dropped rather than forwarded.
+  // Values are narrowed as well as keys: these columns are text, so anything
+  // that isn't a string (or an explicit null to clear it) is dropped rather
+  // than forwarded. A cast here would type-check and still let a number or an
+  // object through to the database.
   const patch: ProfileUpdate = {};
   for (const key of UPDATABLE) {
     if (!(key in body)) continue;

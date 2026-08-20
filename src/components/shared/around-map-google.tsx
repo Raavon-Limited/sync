@@ -31,7 +31,7 @@ import {
   MAP_DEFAULT_VIEW as MAP_VIEW,
 } from '@/lib/constants/areas';
 import { useOptionalLocation } from '@/providers/location-provider';
-import type { MapPin } from '@/modules/around/queries';
+import type { MapPin } from '@/modules/around/server-queries';
 import { GOOGLE_MAP_ID, GoogleMapsProvider, MapUnavailable } from './google-maps-provider';
 
 /** Category label + dot colour (mirrored by the legend). */

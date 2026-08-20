@@ -3,10 +3,14 @@
  * Cross-module shared types belong in @/types.
  */
 
-/** Account roles. Signup only ever assigns student/vendor/landlord (the DB
- *  trigger derives landlord from vendor_category); admin/super_admin are
- *  granted server-side. Drives routing + the proxy gate. */
-export type Role = 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
+/** Account roles. Signup only ever assigns student/vendor/landlord/rider (the
+ *  DB trigger derives landlord from vendor_category and clamps everything else
+ *  to student); admin/super_admin are granted server-side and are unreachable
+ *  from the client whatever metadata it claims. Drives routing + the proxy gate.
+ *
+ *  Must stay in step with `profiles_role_check` in the database — the constraint
+ *  is the authority, this union is the app's mirror of it. */
+export type Role = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
 
 /** Business (non-student, non-admin) roles - both onboard and get verified the
  *  same way, and both key their handle off `business_name`. */
