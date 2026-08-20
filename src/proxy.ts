@@ -44,11 +44,11 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/checkout', roles: ALL },
   { prefix: '/wallet', roles: ALL },
   // Dashboards - role-specific. This is the only access difference.
-  { prefix: '/me', roles: ['student'] },
+  // { prefix: '/me', roles: ['student'] },
   // Both business roles onboard through the same wizard.
   { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
-  { prefix: '/vendor', roles: ['vendor'] },
-  { prefix: '/landlord', roles: ['landlord'] },
+  // { prefix: '/vendor', roles: ['vendor'] },
+  // { prefix: '/landlord', roles: ['landlord'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 

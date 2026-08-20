@@ -11,8 +11,10 @@
  *   - Full-width segmented search (SEARCH / MODULE / BUDGET / WHEN)
  *   - 3-column mosaic: Featured event / food + sponsored / laundry + hotspots
  *   - Bottom: hostel board + resume booking
- * DATA: mock from `@/mock/around`. DEV-ONLY 5s delay below so the
- *       BrandLoader stays on screen - remove when real queries land.
+ * DATA: real Supabase queries. Numbers that have no rows behind them yet render
+ *       as an explicit ZERO rather than a mock value - see QuickStats. A
+ *       fabricated "240 students going" on a public feed is a claim we can't
+ *       back, and it survives into production looking exactly like real data.
  */
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -24,13 +26,19 @@ import {
   HOTSPOTS_TRENDING,
   LAUNDRY_PROMO,
   MOCK_USER,
-  QUICK_STATS,
-  RESUME_BOOKING,
   SPONSORED_SLOT,
-  VERIFIED_SPOTS_COUNT,
 } from '@/mock/around';
 import { getCurrentUser, getFirstName } from '@/modules/auth/queries';
-import { formatNaira } from '@/lib/utils';
+import { countVerifiedHostels } from '@/modules/hostels/queries';
+import { countGoingTonight } from '@/modules/events/queries';
+import {
+  countRoomsAvailable,
+  getResumeBooking,
+  listMapPins,
+  type ResumeBooking,
+} from '@/modules/around/queries';
+import { ScopeBlurb, ScopeHeadline, ScopeSuffix } from './location-scope';
+import { formatKobo, formatNaira } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { FeaturedEventCarousel, FoodCarousel } from './featured-carousels';
 
@@ -39,15 +47,18 @@ export const metadata = {
   description: 'Events, food, laundry, hotspots - everything around your hostel, in one place.',
 };
 
-// DEV ONLY - artificial delay so the BrandLoader stays visible.
-const DEV_LOADER_DELAY_MS = 5000;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export default async function AroundPage() {
-  if (process.env.NODE_ENV !== 'production') await sleep(DEV_LOADER_DELAY_MS);
-
   // Personalise only when signed in; signed-out visitors see a generic greeting.
-  const firstName = getFirstName(await getCurrentUser());
+  // Every read is independent, so fire them together rather than in series.
+  const [user, verifiedSpots, mapPins, roomsAvailable, goingTonight, resume] = await Promise.all([
+    getCurrentUser(),
+    countVerifiedHostels(),
+    listMapPins(),
+    countRoomsAvailable(),
+    countGoingTonight(),
+    getResumeBooking(),
+  ]);
+  const firstName = getFirstName(user);
 
   const today = new Date();
   const dateLine = `${format(today, 'EEE').toUpperCase()} · ${format(today, 'MMM d').toUpperCase()} · ${MOCK_USER.campus.toUpperCase()}`;
@@ -59,7 +70,7 @@ export default async function AroundPage() {
         <p className="text-content-muted font-mono text-[11px] tracking-wider">{dateLine}</p>
         <span className="bg-lime text-ink inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium">
           <span className="bg-lime-deep h-1.5 w-1.5 rounded-full" />
-          {VERIFIED_SPOTS_COUNT} verified spots near you
+          {verifiedSpots} verified spots <ScopeSuffix />
         </span>
       </div>
 
@@ -78,16 +89,15 @@ export default async function AroundPage() {
             <br />
             in{' '}
             <span className="bg-lime text-ink box-decoration-clone px-1.5 leading-[1.1]">
-              your radius
+              <ScopeHeadline />
             </span>
             .
           </h1>
           <p className="text-content-muted text-lead mt-4 max-w-2xl">
-            Tonight&rsquo;s events, food near your hostel, who&rsquo;s free for braids, the plumber
-            4 minutes away. Everything Sync, in one place.
+            <ScopeBlurb />
           </p>
         </div>
-        <QuickStats />
+        <QuickStats roomsAvailable={roomsAvailable} goingTonight={goingTonight} />
       </header>
 
       {/* ─── Smart search row ───────────────────────────────────────── */}
@@ -99,12 +109,12 @@ export default async function AroundPage() {
           <div>
             <p className="eyebrow text-content-muted">On the map</p>
             <h2 id="around-map-heading" className="font-display text-section text-foreground mt-1">
-              Everything within your radius
+              Everything <ScopeSuffix />
             </h2>
           </div>
           <p className="text-content-muted text-xs">Tap a pin · distances</p>
         </div>
-        <AroundMap />
+        <AroundMap pins={mapPins} />
       </section>
 
       {/* ─── Feed - below the map ───────────────────────────────────── */}
@@ -115,7 +125,10 @@ export default async function AroundPage() {
         <SponsoredCard />
         <HotspotsCard />
         <HostelBoardCard />
-        <ResumeBookingCard />
+        {/* Only for someone who actually has an unfinished booking. This used to
+            render a fixed mock hostel for everyone, including signed-out
+            visitors who had never booked anything. */}
+        {resume && <ResumeBookingCard booking={resume} />}
       </div>
     </main>
   );
@@ -123,27 +136,54 @@ export default async function AroundPage() {
 
 /* ──────────────────── Subcomponents ──────────────────────────────── */
 
-function QuickStats() {
+/**
+ * The three headline numbers, all derived from real rows.
+ *
+ * A stat with nothing behind it shows 0 and dims, rather than borrowing a
+ * plausible-looking mock figure. Delivery time has no source at all yet - there
+ * is no orders-timing table - so it is explicitly marked pending instead of
+ * being invented.
+ */
+function QuickStats({
+  roomsAvailable,
+  goingTonight,
+}: {
+  roomsAvailable: number;
+  goingTonight: number;
+}) {
+  const stats = [
+    { value: roomsAvailable, label: 'rooms available', accent: roomsAvailable > 0 },
+    { value: goingTonight, label: 'students going tonight' },
+    // No delivery-time data exists yet. Shown as a dash, not a number.
+    { value: null, label: 'avg delivery time' },
+  ];
+
   return (
     <aside aria-label="Quick stats" className="flex flex-col gap-3">
       <p className="eyebrow text-content-muted">Quick stats</p>
       <div className="grid grid-cols-3 gap-3">
-        {QUICK_STATS.map((s) => (
-          <div
-            key={s.label}
-            className="border-line/5 bg-panel/70 flex flex-col text-center gap-1.5 rounded-xl border p-4"
-          >
-            <p
+        {stats.map((s) => {
+          const empty = s.value === null || s.value === 0;
+          return (
+            <div
+              key={s.label}
               className={cn(
-                'font-display text-[28px] leading-none tracking-tight whitespace-nowrap',
-                s.accent ? 'text-accent-fg' : 'text-foreground',
+                'border-line/5 bg-panel/70 flex flex-col gap-1.5 rounded-xl border p-4 text-center',
+                empty && 'opacity-60',
               )}
             >
-              {s.value}
-            </p>
-            <p className="text-content-muted text-[11px] leading-tight">{s.label}</p>
-          </div>
-        ))}
+              <p
+                className={cn(
+                  'font-display text-[28px] leading-none tracking-tight whitespace-nowrap',
+                  s.accent ? 'text-accent-fg' : 'text-foreground',
+                )}
+              >
+                {s.value ?? '—'}
+              </p>
+              <p className="text-content-muted text-[11px] leading-tight">{s.label}</p>
+            </div>
+          );
+        })}
       </div>
     </aside>
   );
@@ -161,9 +201,12 @@ function SmartSearch() {
         name="q"
         placeholder="Try 'jollof, fast wifi, no wahala'"
       />
-      <SearchCell label="Module" name="module" defaultValue="All" />
-      <SearchCell label="Budget" name="budget" defaultValue="₦ Any" />
-      <SearchCell label="When" name="when" defaultValue="Now" />
+      {/* Field names must match what /search reads off the URL. They used to be
+          `module` and `when`, which that page has no concept of, so those two
+          cells were submitted and then silently discarded. */}
+      <SearchCell label="Area" name="area" placeholder="Any area" />
+      <SearchCell label="Budget" name="budget" placeholder="₦ Any" />
+      <SearchCell label="Room type" name="roomType" placeholder="Any" />
       <div className="bg-surface-deep/50 flex items-center p-2 md:bg-transparent">
         <Button type="submit" size="md" className="w-full md:w-auto">
           <Search className="h-4 w-4" />
@@ -346,7 +389,13 @@ function HostelBoardCard({ className }: { className?: string }) {
   );
 }
 
-function ResumeBookingCard({ className }: { className?: string }) {
+function ResumeBookingCard({
+  booking,
+  className,
+}: {
+  booking: ResumeBooking;
+  className?: string;
+}) {
   return (
     <article
       className={cn(
@@ -369,15 +418,19 @@ function ResumeBookingCard({ className }: { className?: string }) {
       <div className="border-line/5 flex items-center gap-3 rounded-xl border p-3">
         <div className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-[#caa17a] via-[#a07a52] to-[#5e4530]" />
         <div className="min-w-0 flex-1">
-          <p className="text-foreground truncate text-sm font-medium">
-            {RESUME_BOOKING.hostelName}
-          </p>
+          <p className="text-foreground truncate text-sm font-medium">{booking.hostelName}</p>
           <p className="text-content-muted text-xs">
-            {RESUME_BOOKING.roomsLeft} rooms left · {formatNaira(RESUME_BOOKING.pricePerYear)}/yr
+            {booking.roomsLeft} rooms left
+            {booking.pricePerSessionKobo != null && (
+              // Prices are stored in KOBO; formatKobo does the divide. The old
+              // mock held naira, which is why formatNaira was correct there and
+              // would be a 100x overstatement here.
+              <> · {formatKobo(booking.pricePerSessionKobo)}/session</>
+            )}
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href={`/hostels/${RESUME_BOOKING.hostelSlug}`}>
+          <Link href={`/hostels/${booking.hostelSlug}`}>
             <Users className="hidden h-3.5 w-3.5 sm:inline" />
             Resume
           </Link>

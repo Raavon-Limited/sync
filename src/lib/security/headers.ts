@@ -16,9 +16,21 @@ const PAYSTACK_ORIGINS = 'https://js.paystack.co https://checkout.paystack.com';
 // Allow Supabase storage + signed URLs for images, and Supabase realtime / REST.
 const SUPABASE_ORIGINS = 'https://*.supabase.co https://*.supabase.in wss://*.supabase.co';
 
-// OpenStreetMap raster tiles for the AroundMap (Leaflet). The {s} subdomain
-// expands to a/b/c.tile.openstreetmap.org - all covered by the wildcard.
-const MAP_TILE_ORIGINS = 'https://*.tile.openstreetmap.org';
+// Google Maps JavaScript API, which backs every interactive map in the app.
+// Split by directive because the SDK pulls from four different origins:
+//   - maps.googleapis.com  the loader script itself, plus every tile/data XHR
+//   - maps.gstatic.com     sprites, control icons, the Google logo
+//   - *.googleapis.com     tile subdomains for vector/raster imagery
+//   - *.ggpht.com          Street View and place photography
+// `blob:` in worker-src is NOT optional: vector maps rasterise in a blob-backed
+// web worker, and without it the map renders as a blank grey box with only an
+// opaque worker error in the console.
+const GOOGLE_MAPS_SCRIPT = 'https://maps.googleapis.com';
+const GOOGLE_MAPS_IMG = 'https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com';
+const GOOGLE_MAPS_CONNECT = 'https://maps.googleapis.com';
+// The SDK injects a Google Fonts <link> for its own UI text.
+const GOOGLE_FONTS_STYLE = 'https://fonts.googleapis.com';
+const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';
 
 // Google Maps embed (event detail page's location preview iframe, using the
 // `output=embed` query format). Scoped to https://www.google.com only — not
@@ -44,11 +56,12 @@ const DEV_SCRIPT_RELAXATIONS = isDev ? `'unsafe-eval'` : '';
 
 export const contentSecurityPolicy = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS}`,
-  `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${MAP_TILE_ORIGINS}`,
-  `font-src 'self' data:`,
-  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
+  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_SCRIPT}`,
+  `style-src 'self' 'unsafe-inline' ${GOOGLE_FONTS_STYLE}`,
+  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${GOOGLE_MAPS_IMG}`,
+  `font-src 'self' data: ${GOOGLE_FONTS_FONT}`,
+  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_CONNECT}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
+  `worker-src 'self' blob:`,
   `frame-src ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_EMBED_ORIGIN}`,
   `frame-ancestors 'none'`,
   `base-uri 'self'`,

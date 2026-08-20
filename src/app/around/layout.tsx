@@ -12,7 +12,6 @@ import { MarketingHeader } from '@/components/layouts/marketing-header';
 import { ServicesDock } from '@/components/layouts/services-dock';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { LocationProvider } from './location-context';
 
 export default async function AroundLayout({ children }: { children: React.ReactNode }) {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -22,8 +21,10 @@ export default async function AroundLayout({ children }: { children: React.React
     | 'admin'
     | undefined;
 
+  // No LocationProvider here any more: it is mounted at the root so the chosen
+  // area scopes every route, not just this one, and survives leaving /around.
   return (
-    <LocationProvider>
+    <>
       <div className="bg-surface text-foreground flex min-h-screen flex-col">
         <MarketingHeader dockMode />
         <ServicesDock role={role} />
@@ -39,6 +40,6 @@ export default async function AroundLayout({ children }: { children: React.React
         {/* Chat float - only for signed-in users on the public feed. */}
         {user && <ChatWidget />}
       </div>
-    </LocationProvider>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import SearchStrip, { type SearchQuery } from "./components/SearchStrip";
 import FilterSidebar from "./components/FilterSidebar";
@@ -24,9 +25,42 @@ const EMPTY_QUERY: SearchQuery = {
   roomType: "",
 };
 
+/**
+ * `useSearchParams` opts the tree into client-side bailout, so Next requires a
+ * Suspense boundary above it. Without one the build errors on this route.
+ */
 export default function SearchPage() {
-  const [query, setQuery] = useState<SearchQuery>(DEFAULT_QUERY);
-  const [submitted, setSubmitted] = useState<SearchQuery>(DEFAULT_QUERY);
+  return (
+    <Suspense fallback={null}>
+      <SearchPageInner />
+    </Suspense>
+  );
+}
+
+function SearchPageInner() {
+  const params = useSearchParams();
+
+  // Seed from the URL so a search submitted anywhere in the app actually lands
+  // here. Previously this page ignored searchParams entirely and always opened
+  // on DEFAULT_QUERY - which is why searching "jollof" in the header dropped you
+  // on a hostel list for "UNILORIN PS", a campus this product doesn't even serve.
+  const q = params.get("q") ?? "";
+  const urlQuery = useMemo<SearchQuery>(
+    () => ({
+      area: params.get("area") ?? "",
+      budget: params.get("budget") ?? "",
+      roomType: params.get("roomType") ?? "",
+    }),
+    [params],
+  );
+
+  // A URL that carries any criterion wins. With none, fall back to the demo
+  // defaults rather than showing an empty screen on a bare /search visit.
+  const hasUrlCriteria = Boolean(q || urlQuery.area || urlQuery.budget || urlQuery.roomType);
+  const initial = hasUrlCriteria ? urlQuery : DEFAULT_QUERY;
+
+  const [query, setQuery] = useState<SearchQuery>(initial);
+  const [submitted, setSubmitted] = useState<SearchQuery>(initial);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("Best match");
   const [view, setView] = useState<ViewMode>("List");
@@ -94,6 +128,14 @@ export default function SearchPage() {
       if (filters.verifiedBy.includes("Sync team visit") && !l.verified) return false;
       if (submitted.area && !l.area.toLowerCase().includes(submitted.area.toLowerCase())) return false;
       if (submitted.roomType && !l.roomType.toLowerCase().includes(submitted.roomType.toLowerCase())) return false;
+      // Free-text `?q=` from the global SearchBar. There was no text filter at
+      // all before, so every q= submitted from a header search was dropped on
+      // arrival and the user got an unfiltered list with no explanation.
+      if (q) {
+        const needle = q.toLowerCase();
+        const haystack = `${l.name} ${l.area} ${l.roomType}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
       return true;
     });
 
@@ -102,7 +144,7 @@ export default function SearchPage() {
     if (sort === "Highest rated") list = [...list].sort((a, b) => b.rating - a.rating);
 
     return list;
-  }, [filters, sort, submitted]);
+  }, [filters, sort, submitted, q]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (

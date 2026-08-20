@@ -6,15 +6,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Check,
-  ChevronDown,
   ClipboardList,
   Compass,
   Heart,
   LayoutDashboard,
   LayoutGrid,
   LogIn,
-  MapPin,
   MessageCircle,
   Search,
   User,
@@ -22,28 +19,22 @@ import {
 } from 'lucide-react';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { SearchBar } from '@/components/shared/search-bar';
+import { LocationSelector } from '@/components/shared/location-selector';
 import { MODULES } from '@/config/modules';
-import { MALETE_AREAS } from '@/mock/around';
-import { useOptionalLocation } from '@/app/around/location-context';
 import { cn } from '@/lib/utils';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
 // silently drift out of sync with the proxy gate.
 import type { Role } from '@/modules/auth/types';
 
 interface ServicesDockProps {
-  location?: string;
   role?: Role;
 }
 
-export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockProps) {
+export function ServicesDock({ role }: ServicesDockProps) {
   const pathname = usePathname();
   const isFood = pathname.startsWith('/food');
-  const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const shared = useOptionalLocation();
-  const [localArea, setLocalArea] = useState(location);
-  const selected = shared ? shared.area : localArea;
-  const setSelected = shared ? shared.setArea : setLocalArea;
 
   const isActive = (path: string) => {
     const target = path.startsWith('/') ? path : `/${path}`;
@@ -100,14 +91,44 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
               : [{ href: '/login', label: 'Sign in', icon: LogIn }];
 
   const tabCount = (isFood ? 1 : 2) + accountTabs.length;
+
+  // Where "your profile" goes per role. Separate from `accountTabs` because the
+  // bottom bar drops the account tab in some modes (it's commented out in food,
+  // and admins only get a single Admin tab), so the sheet needs its own answer
+  // rather than reaching for a tab that may not be there.
+  const profile =
+    role === 'vendor'
+      ? { href: '/vendor', label: 'Your dashboard' }
+      : role === 'landlord'
+        ? { href: '/landlord', label: 'Your dashboard' }
+        : role === 'admin' || role === 'super_admin'
+          ? { href: '/admin', label: 'Admin dashboard' }
+          : role === 'student'
+            ? { href: '/me', label: 'Your profile' }
+            : { href: '/login', label: 'Sign in' };
   return (
     <>
-      {/* ── Desktop rail (md+) ─────────────────────────────────────── */}
-      <div className="border-line/5 hidden border-b md:block">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-3">
+      {/* ── Service rail ───────────────────────────────────────────────
+          The module links are desktop-only: on mobile the bottom tab bar and
+          the Browse sheet already cover navigation. The LOCATION control is not
+          desktop-only, though. It used to be, which left mobile with no visible
+          way to change area - the only route was Browse -> scroll to "Your
+          area", and on /food the Browse tab is hidden entirely, so there was no
+          route at all. The bar itself therefore renders at every width and only
+          its <nav> collapses. */}
+      <div className="border-line/5 border-b">
+        <div className="mx-auto flex max-w-7xl items-center justify-end gap-2 px-4 py-2 md:gap-3 md:px-6 md:py-3">
+          {/* Mobile-only search. The desktop header keeps its own centred
+              SearchBar; here the pair shares one row as [search][location].
+              `min-w-0` matters - without it the flex child refuses to shrink
+              below its content width and pushes the location pill off screen. */}
+          {/* h-9 overrides SearchBar's default h-12 (twMerge keeps the last
+              conflicting class) so it matches the location pill beside it. */}
+          <SearchBar className="h-9 min-w-0 flex-1 md:hidden" />
+
           <nav
             aria-label="Sync services"
-            className="-mx-1 flex flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-1 hidden flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden"
           >
             {MODULES.map(({ slug, label, icon: Icon }) => {
               const active = isActive(slug);
@@ -130,62 +151,9 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
             })}
           </nav>
 
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-label="Change location"
-              aria-haspopup="listbox"
-              aria-expanded={open}
-              className="border-line/15 hover:bg-ink/5 inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm"
-            >
-              <MapPin className="text-accent-fg h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-medium">{selected}</span>
-              <ChevronDown
-                className={cn('text-content-muted h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
-                aria-hidden="true"
-              />
-            </button>
-
-            {open && (
-              <>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  onClick={() => setOpen(false)}
-                  className="fixed inset-0 z-40 cursor-default"
-                />
-                <ul
-                  role="listbox"
-                  aria-label="Choose your area"
-                  className="border-line/10 bg-panel shadow-pop absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border py-1"
-                >
-                  {MALETE_AREAS.map((area) => {
-                    const isSelected = area === selected;
-                    return (
-                      <li key={area} role="option" aria-selected={isSelected}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelected(area);
-                            setOpen(false);
-                          }}
-                          className={cn(
-                            'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors',
-                            isSelected ? 'text-accent-fg font-medium' : 'text-foreground hover:bg-ink/5',
-                          )}
-                        >
-                          {area}
-                          {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </div>
+          {/* The one location control. Same component, same state, as the one
+              in the sheet below and anywhere else that scopes a feed. */}
+          <LocationSelector />
         </div>
       </div>
 
@@ -257,29 +225,42 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
             })}
           </div>
 
+          {/* Account. The bottom bar has no room for a profile tab in every
+              mode, so the sheet always carries one. */}
+          <div className="mt-5 px-4">
+            <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">
+              Account
+            </p>
+            <Link
+              href={profile.href}
+              onClick={() => setSheetOpen(false)}
+              aria-current={isActive(profile.href) ? 'page' : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-colors',
+                isActive(profile.href)
+                  ? 'bg-lime text-ink border-transparent font-medium'
+                  : 'border-line/10 text-content hover:bg-ink/5',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
+                  isActive(profile.href) ? 'bg-ink/10' : 'bg-ink/5',
+                )}
+              >
+                {role ? (
+                  <User className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                )}
+              </span>
+              <span className="font-medium">{profile.label}</span>
+            </Link>
+          </div>
+
           <div className="mt-5 px-4 pb-2">
             <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">Your area</p>
-            <div className="flex flex-wrap gap-2">
-              {MALETE_AREAS.map((area) => {
-                const isSelected = area === selected;
-                return (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => setSelected(area)}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
-                      isSelected
-                        ? 'bg-lime text-ink border-transparent font-medium'
-                        : 'border-line/15 text-content hover:bg-ink/5',
-                    )}
-                  >
-                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                    {area}
-                  </button>
-                );
-              })}
-            </div>
+            <LocationSelector variant="inline" onNavigate={() => setSheetOpen(false)} />
           </div>
         </SheetContent>
       </Sheet>

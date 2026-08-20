@@ -53,7 +53,8 @@ The complete list of routes and their access levels lives in **[ROUTE_MAP.md](RO
   messaging/live data)
 - **Forms & validation:** react-hook-form + Zod (shared schemas in `src/lib/validations`)
 - **Payments:** Paystack (escrow-style hold/release)
-- **Maps:** Leaflet (the `/around` map) · **Charts:** Recharts (dashboards)
+- **Maps:** Google Maps JS API via `@vis.gl/react-google-maps` (the `/around` map, food
+  delivery + tracking) · **Charts:** Recharts (dashboards)
 - **Rate limiting:** Upstash Redis
 
 ## Architecture notes

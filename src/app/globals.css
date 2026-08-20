@@ -387,23 +387,15 @@ input:-webkit-autofill:focus {
   border-radius: var(--radius-lg);
 }
 
-/* ─── AroundMap (Leaflet) custom markers ──────────────────────────── */
-.leaflet-container {
-  font: inherit;
-  background: var(--color-cream-deep);
-}
-
-/* Strip Leaflet's default white box around divIcons. */
-.leaflet-div-icon.amap-pin-wrap {
-  background: transparent;
-  border: 0;
-}
-
+/* ─── AroundMap (Google Maps) custom markers ──────────────────────────
+   These are the contents of <AdvancedMarker>. Centring on the coordinate is
+   done by the marker's `anchorPoint` (AdvancedMarkerAnchorPoint.CENTER), NOT by
+   a transform here - under Leaflet's divIcon it was the other way round, and
+   leaving both in place offsets every pin by half its own size. */
 .amap-pin {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transform: translate(-50%, -50%);
   background: #fff;
   color: #0e0e12;
   padding: 4px 10px;
@@ -451,7 +443,6 @@ input:-webkit-autofill:focus {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  transform: translate(-50%, -50%);
 }
 
 .amap-you__dot {
@@ -473,7 +464,6 @@ input:-webkit-autofill:focus {
 }
 
 .amap-campus {
-  transform: translate(-50%, -50%);
   background: rgba(197, 255, 74, 0.18);
   border: 1px dashed rgba(90, 120, 20, 0.7);
   color: #0e0e12;

@@ -7,7 +7,7 @@ import { ChevronDown, FileText, HelpCircle } from 'lucide-react'
 import { getDemoOrder, updateDemoOrderStatus, type DemoOrder } from '@/lib/demo-order'
 
 const TrackMap = dynamic(
-    () => import('./TrackLeaflet'),
+    () => import('./TrackMap'),
     {
         ssr: false,
         loading: () => (

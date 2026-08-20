@@ -17,13 +17,28 @@
 import { TooltipProvider } from '@radix-ui/react-tooltip';
 import { Toaster } from '@/components/ui/toast';
 import { ReduxProvider } from './redux-provider';
+import { LocationProvider } from './location-provider';
+import type { Area } from '@/lib/constants/areas';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  areas,
+}: {
+  children: React.ReactNode;
+  /** Service areas, fetched once in the root layout. */
+  areas?: Area[];
+}) {
   return (
     <ReduxProvider>
       <TooltipProvider delayDuration={150}>
-        {children}
-        <Toaster />
+        {/* Location sits at the root so one selection scopes every route and
+            survives navigating between shells. Mounted inside Redux so a future
+            slice can read it, and outside Toaster so toasts aren't re-rendered
+            by an area change. */}
+        <LocationProvider areas={areas}>
+          {children}
+          <Toaster />
+        </LocationProvider>
       </TooltipProvider>
     </ReduxProvider>
   );

@@ -13,6 +13,7 @@ import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/providers';
+import { listAreas } from '@/modules/areas/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
 
 const bricolage = Bricolage_Grotesque({
@@ -42,11 +43,16 @@ export const metadata: Metadata = {
     'Sync is the verified marketplace for Nigerian student life - hostels, food, events, beauty, trades, laundry and more, all in one place.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetched here, not in each shell, so the single root LocationProvider has the
+  // real list on first paint. listAreas() is React-cached (one query per
+  // request) and falls back to the built-in list if Supabase is unreachable.
+  const areas = await listAreas();
+
   return (
     <html
       lang="en"
@@ -64,7 +70,7 @@ export default function RootLayout({
       </head>
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
-        <Providers>{children}</Providers>
+        <Providers areas={areas}>{children}</Providers>
       </body>
     </html>
   );

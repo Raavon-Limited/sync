@@ -100,9 +100,33 @@ de-facto contract the real query must satisfy.
 ## 3. Database — what exists vs. what's needed
 
 Existing migrations: `0001_profiles` · `0002_login_method` · `0003_admins` ·
-`0004_seed_admin_roles`.
+`0004_seed_admin_roles` · `0005_landlord_role`.
 
 **`public.profiles` is the only domain table.** Everything else must be created.
+
+### Verified baseline (2026-08-14)
+
+The Supabase project previously hosted an unrelated product — **Klario**
+(`klario.finance`), a fintech beta waitlist. Its schema was left behind and has
+now been removed. Audited against the codebase, which touches exactly two
+database objects: `public.profiles` and the `login_method()` RPC.
+
+Removed (11 tables, all empty except one row of Klario email config):
+`audit_log` · `automation_runs` · `automations` · `beta_responses` ·
+`beta_signups` · `email_log` · `email_templates` · `newsletters` · `segments` ·
+`settings` · `submissions`, plus the `rls_auto_enable()` function and its event
+trigger — that one mattered, since an event trigger auto-enabling RLS would have
+silently locked every new table created in Phase 1.
+
+`public` now contains `profiles` and five functions
+(`create_admin`, `guard_profile_privileged_cols`, `handle_new_user`,
+`login_method`, `promote_to_admin`), plus `sync_landlord_role` once `0005` is
+applied. Anything else appearing in `public` is not ours.
+
+> Auth email sends from **`sync@raavon.com`** via Resend — a stand-in domain
+> until Sync's own is ready. Unrelated to Klario. The Supabase **Site URL and
+> redirect allowlist** are a separate setting and must always point at Sync's own
+> app, whatever domain the mail is sent from.
 
 `profiles` already carries: `role` (`student|vendor|admin|super_admin`),
 `vendor_category` (`landlord|food|beauty|laundry|tradesman`), `trade`,

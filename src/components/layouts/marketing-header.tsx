@@ -135,9 +135,18 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
       {dockMode ? (
         // App pages: logo · general search · cluster. The ServicesDock already
         // shows the active module, so the header carries the search instead.
-        <div className="mx-auto flex h-16 items-center gap-3 px-6 md:gap-5">
+        // `justify-between` is what pins the avatar + hamburger to the right
+        // edge on mobile. The search below is hidden at that width, and it was
+        // the `flex-1` spacer doing that job - without it the cluster bunched up
+        // against the logo. Padding matches the dock row (px-4) so the search
+        // and the logo share a left edge.
+        <div className="mx-auto flex h-16 items-center justify-between gap-3 px-4 md:gap-5 md:px-6">
           {logo}
-          <div className="flex-1">
+          {/* Desktop only. On mobile the search sits in the ServicesDock row
+              beside the location pill instead: the header already carries the
+              logo, avatar and hamburger, and the dock row was holding nothing
+              but a right-aligned pill, so pairing them reclaims a whole row. */}
+          <div className="hidden flex-1 md:block">
             <SearchBar className="mx-auto w-full max-w-lg" />
           </div>
           {rightCluster}

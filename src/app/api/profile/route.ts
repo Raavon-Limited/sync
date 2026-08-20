@@ -15,9 +15,12 @@
  * it's dynamic by default.
  */
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/types/database';
+
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 /** Columns a user is allowed to change about themselves. */
-const UPDATABLE = ['full_name', 'phone'] as const;
+const UPDATABLE = ['full_name', 'phone'] as const satisfies readonly (keyof ProfileUpdate)[];
 
 export async function GET() {
   const supabase = await createClient();
@@ -52,9 +55,16 @@ export async function PATCH(request: Request) {
 
   // Whitelist: silently drop anything that isn't user-editable. This is what
   // stops a client from escalating role / forcing verification_status.
-  const patch: Record<string, unknown> = {};
+  //
+  // Typed against the generated schema, so adding a column to UPDATABLE that
+  // isn't actually updatable is a compile error rather than a runtime 500.
+  // Values are narrowed too: these columns are text, so anything that isn't a
+  // string (or an explicit null to clear it) is dropped rather than forwarded.
+  const patch: ProfileUpdate = {};
   for (const key of UPDATABLE) {
-    if (key in body) patch[key] = body[key];
+    if (!(key in body)) continue;
+    const value = body[key];
+    if (value === null || typeof value === 'string') patch[key] = value;
   }
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: 'No updatable fields provided' }, { status: 400 });
