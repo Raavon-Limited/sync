@@ -54,7 +54,7 @@ export function QrScannerButton({ orderId, label, onScan }: Props) {
       <button
         type="button"
         onClick={() => { setOpen(true); setError(null) }}
-        className="w-full rounded-2xl bg-lime px-5 py-4 text-base font-black text-ink border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+        className="w-full rounded-2xl bg-lime px-5 py-4 text-base font-black text-ink border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
       >
         {label}
       </button>

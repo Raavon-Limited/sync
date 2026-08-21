@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, X } from "lucide-react";
+import { ZoneDropdown } from "./ZoneDropdown";
 
 const availableZones = [
     "Main Campus", "Engineering Hostel", "Medical Hostel", "Science Village",
@@ -27,10 +28,13 @@ export default function ZonePreferences() {
     };
     const removeAvoided = (zone: string) => setAvoided(avoided.filter((z) => z !== zone));
 
+    const remaining = (excludeList: string[], otherList: string[]) =>
+        availableZones.filter((z) => !excludeList.includes(z) && !otherList.includes(z));
+
     return (
         <div className="bg-panel rounded-xl border border-line/15 p-5 shadow-xs">
             <div className="flex items-center gap-2 mb-1">
-                <MapPin className="w-4 h-4 text-lime-deep dark:text-lime" />
+                <MapPin className="w-4 h-4 text-accent-fg" />
                 <h3 className="font-semibold text-content text-sm">Zone preferences</h3>
             </div>
             <p className="text-xs text-content-muted mb-4">
@@ -42,21 +46,18 @@ export default function ZonePreferences() {
                     <p className="text-xs font-medium text-content mb-2.5">Preferred zones</p>
                     <div className="flex flex-wrap gap-1.5 mb-2.5">
                         {preferred.map((zone) => (
-                            <span key={zone} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-lime/10 text-lime-deep dark:text-lime text-xs rounded-full">
+                            <span key={zone} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-lime/10 text-xs rounded-full text-accent-fg">
                                 {zone}
                                 <button onClick={() => removePreferred(zone)}><X className="w-3 h-3" /></button>
                             </span>
                         ))}
                     </div>
-                    <select
-                        onChange={(e) => { if (e.target.value) addPreferred(e.target.value); e.target.value = ""; }}
-                        className="w-full text-xs bg-surface border border-line/15 rounded-lg px-3 py-2 outline-none focus:border-lime/50 text-content"
-                    >
-                        <option value="">+ Add preferred zone</option>
-                        {availableZones.filter((z) => !preferred.includes(z) && !avoided.includes(z)).map((z) => (
-                            <option key={z} value={z}>{z}</option>
-                        ))}
-                    </select>
+                    <ZoneDropdown
+                        placeholder="+ Add preferred zone"
+                        options={remaining(preferred, avoided)}
+                        onSelect={addPreferred}
+                        accentClass="text-lime-deep dark:text-lime"
+                    />
                 </div>
 
                 <div>
@@ -70,15 +71,12 @@ export default function ZonePreferences() {
                         ))}
                         {avoided.length === 0 && <span className="text-xs text-content-muted">None selected</span>}
                     </div>
-                    <select
-                        onChange={(e) => { if (e.target.value) addAvoided(e.target.value); e.target.value = ""; }}
-                        className="w-full text-xs bg-surface border border-line/15 rounded-lg px-3 py-2 outline-none focus:border-lime/50 text-content"
-                    >
-                        <option value="">+ Add area to avoid</option>
-                        {availableZones.filter((z) => !preferred.includes(z) && !avoided.includes(z)).map((z) => (
-                            <option key={z} value={z}>{z}</option>
-                        ))}
-                    </select>
+                    <ZoneDropdown
+                        placeholder="+ Add area to avoid"
+                        options={remaining(avoided, preferred)}
+                        onSelect={addAvoided}
+                        accentClass="text-accent-fg"
+                    />
                 </div>
             </div>
         </div>

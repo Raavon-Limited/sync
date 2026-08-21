@@ -33,6 +33,7 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  MessageSquareText
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -218,6 +219,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           { href: '/rider', label: 'Dashboard', heading: 'Rider dashboard', icon: LayoutDashboard },
           { href: '/rider/orders', label: 'Orders', heading: 'Active & available orders', icon: ShoppingBag },
           { href: '/rider/history', label: 'History', heading: 'Delivery history', icon: ClipboardList },
+          { href: '/rider/schedule', label: 'Schedule', heading: 'Delivery schedule', icon: CalendarDays }
         ],
       },
       {
@@ -225,7 +227,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         items: [
           { href: '/rider/earnings', label: 'Earnings', heading: 'Your earnings', icon: Wallet },
           { href: '/rider/performance', label: 'Performance', heading: 'Your performance', icon: TrendingUp },
-          { href: '/rider/reviews', label: 'Reviews', heading: 'Reviews', icon: CalendarDays },
+          { href: '/rider/reviews', label: 'Reviews', heading: 'Reviews', icon: MessageSquareText },
         ],
       },
       {

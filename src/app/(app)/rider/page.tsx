@@ -101,7 +101,7 @@ export default async function RiderDashboard() {
                         <RecentOrdersList orders={recentOrders} />
                     </div>
 
-                    <GoOnlineBanner />
+                    {/* <GoOnlineBanner /> */}
                 </div>
 
                 <div className="lg:col-span-2 flex flex-col gap-4">

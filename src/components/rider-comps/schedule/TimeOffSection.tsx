@@ -20,7 +20,7 @@ export default function TimeOffSection({ className = "" }: { className?: string 
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-lime-deep dark:text-lime hover:underline"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-accent-fg bg-lime/10 rounded-full px-2.5 py-1 cursor-pointer"
                 >
                     <Plus className="w-3.5 h-3.5" />
                     Request
@@ -62,7 +62,7 @@ export default function TimeOffSection({ className = "" }: { className?: string 
                         </div>
                         <span
                             className={`text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${item.status === "Approved"
-                                ? "bg-lime/15 text-lime-deep dark:text-lime"
+                                ? "bg-lime/15 text-accent-fg"
                                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                                 }`}
                         >
