@@ -22,8 +22,8 @@ export default async function EarningsPage() {
     ])
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex flex-col gap-6 w-full">
+            <div className="flex items-start justify-between gap-4 flex-wrap w-full">
                 <div>
                     <p className="text-xs font-semibold text-content-muted">RIDER &gt; EARNINGS</p>
                     <h1 className="text-2xl font-black text-content mt-1">Earnings</h1>
@@ -40,21 +40,22 @@ export default async function EarningsPage() {
             </div>
 
             <EarningsStatCards summary={summary} />
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
-                {/* Earnings Overview */}
-                <div className="lg:col-span-3 flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch w-full">
+                {/* Earnings Overview - give it more room again */}
+                <div className="lg:col-span-3 w-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
                     <div className="flex items-center justify-between mb-4">
                         <p className="font-semibold text-content text-sm">Earnings overview</p>
-                        <span className="text-xs font-medium text-content-muted border border-line/15 rounded-lg px-2.5 py-1">Daily</span>
+                        <span className="text-xs font-medium text-content-muted border border-line/15 rounded-lg px-2.5 py-1">
+                            Daily
+                        </span>
                     </div>
-                    <div className="flex-1 min-h-[280px]">
+                    <div className="flex-1 min-h-[280px] w-full">
                         <EarningsOverviewChart data={summary.daily} />
                     </div>
                 </div>
 
                 {/* Earnings Breakdown */}
-                <div className="lg:col-span-2 flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
+                <div className="lg:col-span-2 w-full h-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
                     <div className="flex items-center justify-between mb-4 gap-2">
                         <p className="font-semibold text-content text-sm whitespace-nowrap">Earnings breakdown</p>
                         <a href="#" className="text-xs font-medium text-content-muted hover:text-content shrink-0">
@@ -62,8 +63,7 @@ export default async function EarningsPage() {
                         </a>
                     </div>
 
-                    {/* This is the only change needed */}
-                    <div className="flex-1 flex items-center">
+                    <div className="flex-1 min-h-0 w-full">
                         <EarningsBreakdownDonut total={summary.totalEarnings} items={summary.breakdown} />
                     </div>
                 </div>

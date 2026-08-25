@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clock, Copy, Check } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 
 const daysOfWeek = [
     { id: "mon", label: "Monday" }, { id: "tue", label: "Tuesday" }, { id: "wed", label: "Wednesday" },
@@ -23,6 +24,7 @@ const initialSchedule: Record<string, DaySchedule> = {
 export default function WeeklySchedule() {
     const [schedule, setSchedule] = useState(initialSchedule);
     const [copied, setCopied] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const toggleDay = (id: string) => {
         setSchedule((prev) => ({ ...prev, [id]: { ...prev[id], enabled: !prev[id].enabled } }));
@@ -40,6 +42,18 @@ export default function WeeklySchedule() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    async function handleSave() {
+        setIsSaving(true);
+        // No real backend endpoint for rider schedules yet — this is a demo
+        // save. Swap this block for a real server action / API call once
+        // rider_availability (or similar) exists in the schema.
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        setIsSaving(false);
+        toast("Schedule updated", {
+            description: "Your working hours have been saved.",
+        });
+    }
 
     return (
         <div className="bg-panel rounded-xl border border-line/15 p-5 shadow-xs">
@@ -110,8 +124,12 @@ export default function WeeklySchedule() {
 
             <div className="mt-4 pt-4 border-t border-line/10 flex items-center justify-between gap-3 flex-wrap">
                 <p className="text-xs text-content-muted">Changes apply from next Monday</p>
-                <button className="px-4 py-2 bg-lime hover:brightness-95 text-ink text-sm font-semibold rounded-lg transition-all">
-                    Save schedule
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-lime hover:brightness-95 text-ink text-sm font-semibold rounded-lg transition-all disabled:opacity-60"
+                >
+                    {isSaving ? "Saving…" : "Save schedule"}
                 </button>
             </div>
         </div>

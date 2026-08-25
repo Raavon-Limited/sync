@@ -19,38 +19,42 @@ export function EarningsBreakdownDonut({ total, items }: { total: number; items:
         .join(', ')
 
     return (
-        <div className="flex items-center gap-4 w-full min-w-0">
-            <div
-                className="relative rounded-full flex-shrink-0"
-                style={{
-                    width: 110,
-                    height: 110,
-                    minWidth: 110,
-                    minHeight: 110,
-                    background: `conic-gradient(${stops})`,
-                }}
-            >
+        <div className="flex flex-col h-full w-full min-w-0">
+            {/* Donut grows and fills all available height */}
+            <div className="flex items-center justify-center flex-1 min-h-0">
                 <div
-                    className="absolute rounded-full bg-panel flex flex-col items-center justify-center px-1 text-center"
-                    style={{ inset: 10 }}
+                    className="relative rounded-full flex-shrink-0"
+                    style={{
+                        width: 170,
+                        height: 170,
+                        background: `conic-gradient(${stops})`,
+                    }}
                 >
-                    <p className="text-sm font-black text-content leading-tight">₦{total.toLocaleString()}</p>
-                    <p className="text-[9px] text-content-muted mt-0.5">Total</p>
+                    <div
+                        className="absolute rounded-full bg-panel flex flex-col items-center justify-center px-1 text-center"
+                        style={{ inset: 16 }}
+                    >
+                        <p className="text-xl font-black text-content leading-tight">
+                            ₦{total.toLocaleString()}
+                        </p>
+                        <p className="text-[11px] text-content-muted mt-0.5">Total</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-2 gap-y-2.5 min-w-0 flex-1">
+            {/* Legend stays compact at the bottom */}
+            <div className="flex flex-col gap-2.5 pt-5">
                 {items.map(item => (
-                    <>
-                        <span key={`dot-${item.label}`} className={`h-2 w-2 rounded-full shrink-0 ${item.colorClass}`} />
-                        <span key={`label-${item.label}`} className="text-content text-sm truncate">{item.label}</span>
-                        <span key={`amount-${item.label}`} className="font-medium text-content text-sm whitespace-nowrap">
+                    <div key={item.label} className="flex items-center gap-2.5">
+                        <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${item.colorClass}`} />
+                        <span className="text-content text-sm flex-1 truncate">{item.label}</span>
+                        <span className="font-medium text-content text-sm whitespace-nowrap">
                             ₦{item.amount.toLocaleString()}
                         </span>
-                        <span key={`percent-${item.label}`} className="text-content-muted text-xs whitespace-nowrap text-right">
+                        <span className="text-content-muted text-xs whitespace-nowrap text-right w-10">
                             {item.percent}%
                         </span>
-                    </>
+                    </div>
                 ))}
             </div>
         </div>
