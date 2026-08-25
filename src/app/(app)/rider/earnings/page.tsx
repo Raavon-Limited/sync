@@ -40,9 +40,8 @@ export default async function EarningsPage() {
             </div>
 
             <EarningsStatCards summary={summary} />
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch w-full">
-                {/* Earnings Overview - give it more room again */}
-                <div className="lg:col-span-3 w-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-stretch">
+                <div className="w-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
                     <div className="flex items-center justify-between mb-4">
                         <p className="font-semibold text-content text-sm">Earnings overview</p>
                         <span className="text-xs font-medium text-content-muted border border-line/15 rounded-lg px-2.5 py-1">
@@ -54,21 +53,18 @@ export default async function EarningsPage() {
                     </div>
                 </div>
 
-                {/* Earnings Breakdown */}
-                <div className="lg:col-span-2 w-full h-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
+                <div className="w-full h-full flex flex-col rounded-xl border border-line/15 bg-panel shadow-xs px-5 py-5 min-w-0">
                     <div className="flex items-center justify-between mb-4 gap-2">
                         <p className="font-semibold text-content text-sm whitespace-nowrap">Earnings breakdown</p>
                         <a href="#" className="text-xs font-medium text-content-muted hover:text-content shrink-0">
                             View details
                         </a>
                     </div>
-
                     <div className="flex-1 min-h-0 w-full">
                         <EarningsBreakdownDonut total={summary.totalEarnings} items={summary.breakdown} />
                     </div>
                 </div>
             </div>
-
             <EarningsHistoryTable entries={history} />
         </div>
     )
