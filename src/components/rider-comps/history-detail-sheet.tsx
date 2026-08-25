@@ -149,7 +149,7 @@ export function HistoryDetailSheet({
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2.5 pt-1">
-                    <button className="flex items-center justify-center gap-2 rounded-xl border border-line/15 py-2.5 text-sm font-medium text-content hover:bg-content-muted/5 transition-colors">
+                    <button className="flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-content transition-colors bg-lime shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
                         <Flag size={14} />
                         Report an issue
                     </button>
