@@ -36,7 +36,7 @@ export default async function RiderLayout({ children }: { children: React.ReactN
 
     return (
         <div className="flex min-h-screen bg-surface">
-            <aside className="hidden md:block w-64 shrink-0 border-r border-line/10 px-4 py-6">
+            <aside className="hidden md:block w-64 shrink-0 border-r border-line/10 px-4 py-6 bg-panel">
                 <DashboardSidebar navKey="rider" profile={profile} />
             </aside>
             <main className="flex-1 min-w-0 px-4 py-6 md:px-8">
