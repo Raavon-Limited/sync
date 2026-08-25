@@ -1,57 +1,101 @@
 'use client'
 
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts'
 import type { EarningsDailyPoint } from '@/lib/rider/types'
 
 export function EarningsOverviewChart({ data }: { data: EarningsDailyPoint[] }) {
-    const width = 600
-    const height = 180
-    const max = Math.max(...data.map(d => d.amount), 1)
-    const stepX = width / (data.length - 1)
-
-    const points = data.map((d, i) => ({
-        x: i * stepX,
-        y: height - (d.amount / max) * (height - 10) - 5,
-    }))
-
-    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-    const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`
-
     return (
-        <div className="w-full h-full overflow-x-auto">
-            <svg
-                viewBox={`0 0 ${width} ${height + 24}`}
-                width="100%"
-                height="100%"
-                className="min-w-[420px]"
-                preserveAspectRatio="none"
-            >
-                <defs>
-                    <linearGradient id="earningsFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.25" className="text-lime" />
-                        <stop offset="100%" stopColor="currentColor" stopOpacity="0" className="text-lime" />
-                    </linearGradient>
-                </defs>
+        <div className="bg-panel rounded-2xl border border-line/15 p-5 shadow-xs flex flex-col h-full min-w-0 w-full overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-2 mb-4">
+                <h3 className="text-sm font-bold text-content">Earnings overview</h3>
 
-                <path d={areaPath} fill="url(#earningsFill)" />
-                <path d={linePath} fill="none" stroke="currentColor" strokeWidth={2} className="text-lime-deep dark:text-lime" />
+                <select className="text-[11px] border border-line/20 rounded-lg px-2.5 py-1 bg-panel text-content-muted font-medium outline-none">
+                    <option>Daily</option>
+                    <option>Weekly</option>
+                    <option>Monthly</option>
+                </select>
+            </div>
 
-                {points.map((p, i) => (
-                    <circle key={i} cx={p.x} cy={p.y} r={3} fill="currentColor" className="text-lime-deep dark:text-lime" />
-                ))}
-
-                {data.map((d, i) => (
-                    <text
-                        key={d.label}
-                        x={points[i].x}
-                        y={height + 16}
-                        textAnchor="middle"
-                        className="fill-current text-content-muted"
-                        fontSize={10}
+            {/* Chart */}
+            <div className="h-48 w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                        data={data}
+                        margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
                     >
-                        {d.label}
-                    </text>
-                ))}
-            </svg>
+                        <defs>
+                            <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#84cc16" stopOpacity={0.35} />
+                                <stop offset="100%" stopColor="#84cc16" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+
+                        <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke="#f0f0f0"
+                        />
+
+                        <XAxis
+                            dataKey="label"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#a1a1aa' }}
+                            dy={6}
+                        />
+
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#a1a1aa' }}
+                            tickFormatter={(value) => `₦${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`}
+                        />
+
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: '#ffffff',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(0,0,0,0.08)',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                                fontSize: '12px',
+                                padding: '10px 14px',
+                            }}
+                            formatter={(value: any) => [
+                                `₦${(Number(value) || 0).toLocaleString()}`,
+                                'Earnings',
+                            ]}
+                            labelStyle={{ color: '#71717a', marginBottom: 4 }}
+                        />
+
+                        <Area
+                            type="monotone"
+                            dataKey="amount"
+                            stroke="#65a30d"
+                            strokeWidth={2.5}
+                            fill="url(#earningsGradient)"
+                            activeDot={{
+                                r: 5,
+                                strokeWidth: 0,
+                                fill: '#65a30d',
+                            }}
+                            dot={{
+                                r: 3.5,
+                                fill: '#65a30d',
+                                strokeWidth: 0,
+                            }}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     )
 }
