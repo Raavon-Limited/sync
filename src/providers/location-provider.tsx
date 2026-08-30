@@ -26,7 +26,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -34,6 +36,7 @@ import {
 import { FALLBACK_AREAS, nearestArea, type Area } from '@/lib/constants/areas';
 import { useGeolocation, type Coords } from '@/hooks/use-geolocation';
 import { usePlaceName } from '@/hooks/use-place-name';
+import { readStandalone, subscribeStandalone } from '@/lib/pwa/use-install';
 
 export type LocationMode = 'all' | 'area' | 'near-me';
 
@@ -130,8 +133,30 @@ export function LocationProvider({
   /** Fetched server-side by the root layout so the first paint has the real list. */
   areas?: Area[];
 }) {
-  const [wantsNearMe, setWantsNearMe] = useState(false);
   const geo = useGeolocation();
+
+  /**
+   * Whether the user wants proximity mode.
+   *
+   * Three-valued on purpose. `null` means "hasn't decided", which is NOT the
+   * same as "no": in the installed PWA, launching from the home screen is
+   * itself the opt-in, so an undecided user defaults to near-me there and to
+   * off in a browser tab. Once they actually choose - by tapping "show my
+   * location", picking an area, or going back to all locations - their choice
+   * is recorded and the default stops applying.
+   *
+   * Deriving it this way, rather than setting state from the launch effect
+   * below, is what keeps that effect free of setState.
+   */
+  const [nearMeChoice, setNearMeChoice] = useState<boolean | null>(null);
+  const isStandalone = useSyncExternalStore(
+    subscribeStandalone,
+    readStandalone,
+    // The server cannot know, and guessing "installed" would ship the
+    // near-me default to every browser tab for one hydration frame.
+    () => false,
+  );
+  const wantsNearMe = nearMeChoice ?? isStandalone;
 
   // null = all locations. The user has chosen nothing yet, and that's fine.
   const storedArea = useSyncExternalStore(subscribeToArea, getStoredArea, getServerArea);
@@ -162,20 +187,55 @@ export function LocationProvider({
   const { place: placeName } = usePlaceName(coords, outsideServiceArea);
 
   const requestLocation = useCallback(() => {
-    setWantsNearMe(true);
+    setNearMeChoice(true);
     geo.request();
   }, [geo]);
 
   const showAllLocations = useCallback(() => {
-    setWantsNearMe(false);
+    setNearMeChoice(false);
     writeStoredArea(null);
   }, []);
 
   // Picking an area explicitly is an override - it always beats a fix.
   const setArea = useCallback((next: string | null) => {
-    setWantsNearMe(false);
+    setNearMeChoice(false);
     writeStoredArea(next);
   }, []);
+
+  /**
+   * One permission prompt at launch - INSTALLED PWA ONLY.
+   *
+   * Because this provider is mounted at the root, the single grant here scopes
+   * every map and every feed in the app: /around, the module pages, distance
+   * on each pin. Nothing else ever has to ask.
+   *
+   * WHY ONLY IN THE PWA, and not in a browser tab: `useGeolocation` refuses to
+   * auto-prompt for a good reason - a dialog that appears before the visitor
+   * has asked for anything gets dismissed, and a denial is STICKY. The browser
+   * will not ask again, so a drive-by prompt does not just fail, it burns
+   * "near me" for that person permanently. On the open web that trade is bad.
+   * In an installed app it is the opposite: launching from the home screen is
+   * an explicit act, asking on first run is the platform convention, and there
+   * is no address bar to explain the app another way.
+   *
+   * Deliberately conservative about when it fires:
+   *   - standalone display-mode only
+   *   - `geo.status === 'idle'` only, so a previous denial (which the hook
+   *     reads from the Permissions API without prompting) is never re-asked,
+   *     and an existing grant is not re-requested
+   *   - once per mount, via the ref - React 18 double-invokes effects in dev
+   *     and a second getCurrentPosition would be a second dialog
+   */
+  const autoAsked = useRef(false);
+  useEffect(() => {
+    if (autoAsked.current) return;
+    if (geo.status !== 'idle') return;
+    if (!isStandalone) return;
+    autoAsked.current = true;
+    // geo.request() only talks to the browser API - the resulting status
+    // change flows back through useGeolocation. No setState here.
+    geo.request();
+  }, [geo, isStandalone]);
 
   const value = useMemo<LocationValue>(
     () => ({
