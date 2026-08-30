@@ -27,7 +27,11 @@ export function BrandLoader({ label, inline, className }: BrandLoaderProps) {
       aria-busy="true"
       className={cn(
         'bg-ink text-cream flex flex-col items-center justify-center gap-8',
-        inline ? 'h-full w-full py-16' : 'min-h-screen w-full',
+        // min-h-dvh, not min-h-screen. 100vh on iOS Safari is the height with
+        // the toolbars HIDDEN, so the centring box is taller than what you can
+        // see and the loader sits visibly below centre. dvh tracks the visible
+        // viewport, which is what "centred" has to mean on a phone.
+        inline ? 'h-full w-full py-16' : 'min-h-dvh w-full',
         className,
       )}
     >

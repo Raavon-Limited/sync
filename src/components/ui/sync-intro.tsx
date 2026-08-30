@@ -83,11 +83,41 @@ export function SyncIntro({ className }: { className?: string }) {
     const word = pick('word');
     const wipe = pick('wipe');
     const tag = pick('tag');
+    const bg = pick('bg');
     if (!root || !stage || !mark || !gl || !gr || !ring || !ringg || !word || !wipe || !tag) return;
 
+    /**
+     * The viewBox tracks the element's real pixel box, rather than being a
+     * fixed 1920x1080.
+     *
+     * It used to be fixed, with preserveAspectRatio="meet". On a landscape
+     * desktop that is invisible, but on a portrait phone `meet` fits a 16:9
+     * box to the WIDTH and letterboxes it: on a 390x844 screen the whole
+     * lockup was scaled by 390/1920 = 0.20 and parked in a 219px-tall band in
+     * the middle. The mark came out ~34px and the tagline ~4px - which is why
+     * it read as tiny and off-centre rather than merely small.
+     *
+     * Matching the viewBox to the element makes one unit one CSS pixel. The
+     * lockup is then sized from the REAL short side, and cx/cy below are the
+     * true centre of the visible box at any aspect ratio.
+     */
+    let vbW = 1920;
+    let vbH = 1080;
+
+    function measure() {
+      const r = svg!.getBoundingClientRect();
+      // Guard against a 0x0 read before first paint, which would divide by zero.
+      vbW = Math.max(1, Math.round(r.width));
+      vbH = Math.max(1, Math.round(r.height));
+      svg!.setAttribute('viewBox', `0 0 ${vbW} ${vbH}`);
+      // The ink backdrop has to cover the new box, not the old 1920x1080.
+      bg?.setAttribute('width', String(vbW));
+      bg?.setAttribute('height', String(vbH));
+    }
+
     function layout() {
-      const W = svg!.viewBox.baseVal.width;
-      const H = svg!.viewBox.baseVal.height;
+      const W = vbW;
+      const H = vbH;
       // Mark diameter drives the whole lockup: cap height, gap and total
       // width all derive from it. 0.28 (the source value) put the lockup at
       // ~66% of viewport width - splash-sized, not hero-sized, is ~0.155.
@@ -173,33 +203,55 @@ export function SyncIntro({ className }: { className?: string }) {
       tag!.setAttribute('opacity', (g * 0.62).toFixed(3));
       tag!.setAttribute('y', (L.cy + L.D * 0.92 + (1 - g) * L.D * 0.09).toFixed(2));
       tag!.setAttribute('x', L.cx.toFixed(2));
-      tag!.setAttribute('font-size', (L.D * 0.125).toFixed(2));
+      // 0.16 of the mark, up from 0.125. Sized off the mark so it stays in
+      // proportion to the lockup at any scale, with an 11px floor so it is
+      // still legible on a small phone, where the mark itself is only ~60px.
+      // The lockup is ~4.19*D wide and this line is ~2.6*D at 0.16, so it
+      // cannot outgrow the wordmark above it.
+      tag!.setAttribute('font-size', Math.max(L.D * 0.16, 11).toFixed(2));
       tag!.setAttribute('letter-spacing', (L.D * 0.017).toFixed(3));
     }
 
+    // The last time rendered, so a resize can redraw the CURRENT frame rather
+    // than guessing one. The old handler hardcoded 80% of the runtime, which
+    // jumped the animation forward if you rotated the phone mid-play.
+    let lastT = 0;
+    let raf = 0;
+    const draw = (t: number) => {
+      lastT = t;
+      render(t);
+    };
+
+    measure();
+
     // Reduced motion: show the settled lockup, never animate it.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      render(T.hold[0]);
-      return;
+      draw(T.hold[0]);
+    } else {
+      let startTs: number | null = null;
+      const step = (ts: number) => {
+        if (startTs === null) startTs = ts;
+        const t = (ts - startTs) / 1000;
+        draw(Math.min(t, SYNC_INTRO_DURATION));
+        if (t < SYNC_INTRO_DURATION) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
     }
 
-    let raf = 0;
-    let startTs: number | null = null;
-    const step = (ts: number) => {
-      if (startTs === null) startTs = ts;
-      const t = (ts - startTs) / 1000;
-      render(Math.min(t, SYNC_INTRO_DURATION));
-      if (t < SYNC_INTRO_DURATION) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-
-    // Keep the lockup centred if the frame changes mid-play.
-    const onResize = () => render(SYNC_INTRO_DURATION * 0.8);
-    window.addEventListener('resize', onResize);
+    // Keep the lockup centred and correctly scaled if the frame changes -
+    // rotation, the iOS URL bar collapsing, a desktop window drag.
+    // ResizeObserver rather than window.resize: it fires for the ELEMENT, so
+    // it also catches the splash's own layout settling on first paint, which
+    // is when the 0x0 measurement above would otherwise stick.
+    const ro = new ResizeObserver(() => {
+      measure();
+      draw(lastT);
+    });
+    ro.observe(svg);
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
+      ro.disconnect();
     };
   }, [uid]);
 
@@ -213,7 +265,9 @@ export function SyncIntro({ className }: { className?: string }) {
         xmlns="http://www.w3.org/2000/svg"
         className="h-full w-full"
       >
-        <rect width="1920" height="1080" fill="#0E0E12" />
+        {/* Resized to the real viewBox on mount - see measure(). The initial
+            values only have to cover the first frame before that runs. */}
+        <rect id={uid + '-bg'} width="1920" height="1080" fill="#0E0E12" />
         <defs>
           <clipPath id={uid + '-wordclip'}>
             <rect id={uid + '-wipe'} x="-6" y="-40" width="0" height="200" />
