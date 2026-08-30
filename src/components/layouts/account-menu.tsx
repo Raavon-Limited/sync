@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
 import { RoleSwitcher } from './role-switcher';
 import { AddAccountItem } from './add-account-item';
@@ -59,7 +60,7 @@ export function AccountMenu({
         return;
       }
       setConfirmOpen(false);
-      router.push('/');
+      router.push(AFTER_SIGN_OUT);
       router.refresh();
     });
   }

@@ -11,6 +11,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { archiveAccount } from '@/modules/account/actions';
 
 export function DeleteAccountButton() {
@@ -27,7 +28,9 @@ export function DeleteAccountButton() {
       }
       toast('Account deleted. Log back in within 30 days to restore it.');
       setOpen(false);
-      router.push('/');
+      // archiveAccount() signs the session out too, so this is a sign-out exit
+      // like the other four - same destination.
+      router.push(AFTER_SIGN_OUT);
       router.refresh();
     });
   }

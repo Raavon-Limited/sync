@@ -22,6 +22,7 @@ import { DASHBOARD_NAV, type DashboardNavKey } from '@/config/dashboard-nav';
 import type { DashboardProfile } from './dashboard-profile';
 import { toast } from '@/components/ui/toast';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
 
 interface DashboardSidebarProps {
@@ -57,7 +58,7 @@ export function DashboardSidebar({ navKey, profile, onNavigate, topSlot }: Dashb
       toast(res.error);
       return;
     }
-    router.push('/');
+    router.push(AFTER_SIGN_OUT);
     router.refresh();
   }
 

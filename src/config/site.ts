@@ -20,3 +20,19 @@ export const SITE = {
     instagram: 'https://instagram.com/syncng',
   },
 } as const;
+
+/**
+ * Where a user lands after signing out.
+ *
+ * `/around`, NOT `/`. The marketing landing page is a web-only surface: it
+ * exists to explain the product to someone who has not signed up. Inside the
+ * app - and especially in the installed PWA, which has no address bar and no
+ * way back - the home is Around you, which is public and renders perfectly
+ * signed-out. Dropping someone onto the sales page after they log out of the
+ * PWA reads as being thrown out of the app.
+ *
+ * Same reasoning as the removal of the dashboard sidebar's "Home" link, which
+ * also pointed at `/`. Named rather than inlined because it was four copies of
+ * `router.push('/')` across four sign-out handlers, and they must not drift.
+ */
+export const AFTER_SIGN_OUT = '/around';

@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/components/ui/toast';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -75,7 +76,7 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
       toast(res.error);
       return;
     }
-    router.push('/');
+    router.push(AFTER_SIGN_OUT);
     router.refresh();
   }
 

@@ -19,6 +19,7 @@ import { toast } from '@/components/ui/toast';
 import { MODULES } from '@/config/modules';
 import SyncIcon from '@/components/brand/SyncIcon';
 import { SyncLogo } from '@/components/brand/sync-logo';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
 // silently drift out of sync with the proxy gate.
@@ -59,7 +60,7 @@ export function MobileMenu({
       toast(res.error);
       return;
     }
-    router.push('/');
+    router.push(AFTER_SIGN_OUT);
     router.refresh();
   }
 
