@@ -14,6 +14,21 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [...securityHeaders],
       },
+      {
+        // The service worker gets its own headers on top of the global set
+        // (Next applies every matching entry, so these are additive).
+        //
+        // no-store is the important one: a cached sw.js is how a broken worker
+        // survives a deploy and keeps serving stale assets to users who have no
+        // obvious way to clear it.
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          // Tighter than the site CSP: the worker only ever runs its own code.
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
     ];
   },
   images: {
