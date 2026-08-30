@@ -9,10 +9,21 @@
  * The student order tracker already promises "it releases automatically once
  * the hold matures". This is what keeps that promise.
  *
- * Vercel Cron example (vercel.json):
- *   { "crons": [{ "path": "/api/cron/release-escrow", "schedule": "0 * * * *" }] }
+ * SCHEDULED FROM GITHUB ACTIONS, not Vercel Cron.
+ * See .github/workflows/escrow-release.yml. This used to be a `crons` entry in
+ * vercel.json, but Vercel's Hobby plan caps cron jobs at once per DAY, and it
+ * does not downgrade an hourly expression - it rejects the deployment outright,
+ * before the deployment row is even created. That silently stopped every deploy
+ * on this project the moment vercel.json landed.
+ *
  * Hourly rather than daily: a vendor waiting on money notices a day, and the
- * work is bounded by how many holds actually matured in that hour.
+ * work is bounded by how many holds actually matured in that hour. That is
+ * worth keeping, so the schedule moved rather than being slowed down.
+ *
+ * The endpoint is unchanged and stays plan-agnostic: it authenticates on a
+ * bearer CRON_SECRET, so ANY scheduler can drive it. If this project moves to a
+ * Vercel plan that allows hourly crons, put the `crons` entry back and delete
+ * the workflow - nothing here needs to change.
  */
 import { createAdminClient } from '@/lib/supabase/admin';
 
