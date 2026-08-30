@@ -133,7 +133,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                                     Sending to {value.recipientName}
                                 </p>
                                 <p className="text-xs text-content-muted mt-0.5">
-                                    If it's for you, remove this recipient.
+                                    If it&rsquo;s for you, remove this recipient.
                                 </p>
                             </>
                         ) : (
@@ -166,7 +166,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                         </p>
 
                         <p className="text-xs text-content-muted">
-                            We'll send you a message to validate it
+                            We&rsquo;ll send you a message to validate it
                         </p>
                     </div>
 
@@ -269,7 +269,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                                         onClick={applySearchedAddress}
                                         className="w-full py-3.5 rounded-2xl bg-lime text-ink font-bold text-sm cursor-pointer border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
                                     >
-                                        Use "{searchQuery}"
+                                        Use &ldquo;{searchQuery}&rdquo;
                                     </button>
                                 )}
                                 <button
@@ -317,7 +317,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                                 placeholder="Phone number"
                             />
                             <p className="text-xs text-content-muted leading-relaxed">
-                                By sharing the recipient's details, you are solely responsible for
+                                By sharing the recipient&rsquo;s details, you are solely responsible for
                                 obtaining their consent and informing them on how their data is processed.
                             </p>
 
@@ -370,7 +370,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                         <div className="px-5 pb-6 space-y-4">
 
                             <p className="text-sm text-content-muted">
-                                We'll send a verification code to this phone number.
+                                We&rsquo;ll send a verification code to this phone number.
                             </p>
 
                             <input

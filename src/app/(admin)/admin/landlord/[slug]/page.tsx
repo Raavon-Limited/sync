@@ -15,7 +15,7 @@ import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 

@@ -40,7 +40,9 @@ export function HeroHighlights({ pool }: { pool: Highlight[] }) {
   if (!big) return null;
 
   return (
-    <div className="flex flex-col gap-3">
+    // min-w-0: this is a grid item, and without it the 3-up thumbnail row below
+    // sets a min-content floor that widens the whole hero track on a phone.
+    <div className="flex min-w-0 flex-col gap-3">
       {/* Big highlight card */}
       <Link
         href={big.href}

@@ -18,7 +18,7 @@ import { getLandlordDashboard } from './(components)/landlord-data';
 
 export const metadata: Metadata = { title: 'Landlord dashboard' };
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 export default async function Page() {
   const user = await getCurrentUser();

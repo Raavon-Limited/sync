@@ -20,7 +20,7 @@ import type { PendingRequestItem } from '@/components/dashboard/pending-request-
 import type { RevenueDatum } from '@/components/dashboard/revenue-bar-chart';
 import { fetchRevenueSeries } from '@/components/dashboard/fetch-revenue';
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 const naira = (kobo: number) => `₦${Math.round(kobo / 100).toLocaleString('en-NG')}`;
 

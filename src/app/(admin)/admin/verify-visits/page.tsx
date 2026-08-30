@@ -13,7 +13,7 @@ import { VisitsQueue, type AdminVisit, type UnvisitedHostel } from './(component
 
 export const metadata: Metadata = { title: 'Verification visits — Admin' };
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 export default async function Page() {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);

@@ -99,11 +99,20 @@ export default async function LandingPage() {
           className="-z-20 object-cover"
         />
         <div aria-hidden="true" className="bg-surface/55 absolute inset-0 -z-10" />
-        <div className="mx-auto grid min-h-[72vh] max-w-7xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12">
+        {/* `min-w-0` on the grid AND its columns is load-bearing on a phone.
+            A grid track's automatic minimum is its content's MIN-CONTENT width,
+            so one unbreakable child - the pill below, or a nowrap word in the
+            headline - widens the whole track past the viewport. Everything then
+            lays out in that too-wide box, which is why the headline stopped
+            wrapping and the sub-heading ran off the right edge. */}
+        <div className="mx-auto grid min-h-[72vh] w-full max-w-7xl min-w-0 items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12">
           {/* Left - headline */}
-          <div className="text-center md:text-left">
-            <p className="text-ink bg-lime/90 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium">
-              <span className="bg-lime-deep h-2 w-2 rounded-full" />
+          <div className="min-w-0 text-center md:text-left">
+            {/* flex-wrap + wrap-break-word: "412 verified hostels · KWASU,
+                Malete" is wider than a 375px screen and must be allowed to
+                take two lines rather than set the column's width. */}
+            <p className="text-ink bg-lime/90 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full px-3 py-1 text-sm font-medium wrap-break-word">
+              <span className="bg-lime-deep h-2 w-2 shrink-0 rounded-full" />
               {showcase.verifiedHostelCount} verified hostels · {SITE.launchMarket}
             </p>
             <HeroHeadline />
@@ -129,7 +138,7 @@ export default async function LandingPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="eyebrow text-accent-fg">Featured · This week</p>
-              <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">
+              <h2 className="font-display text-section text-foreground mt-2 capitalize">
                 Hostels students love
               </h2>
             </div>
@@ -166,7 +175,7 @@ export default async function LandingPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="eyebrow text-accent-fg">Around you · right now</p>
-              <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">
+              <h2 className="font-display text-section text-foreground mt-2 capitalize">
                 More than just a room.
               </h2>
             </div>
@@ -268,7 +277,7 @@ export default async function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1fr_1.2fr] md:gap-16">
           <div>
             <p className="eyebrow text-accent-fg">FAQ</p>
-            <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">Good questions.</h2>
+            <h2 className="font-display text-section text-foreground mt-2 capitalize">Good questions.</h2>
           </div>
           <Accordion type="single" collapsible className="w-full">
             {FAQS.map((f, i) => (

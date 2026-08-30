@@ -157,6 +157,23 @@ html {
   color: var(--color-content);
 }
 
+/* Nothing may scroll the page sideways.
+ *
+ * `clip` rather than `hidden`: `overflow-x: hidden` on the root makes the
+ * document a scroll container, which silently kills `position: sticky` on
+ * every header, sidebar rail and map control in the app. `clip` cuts the
+ * overflow without creating that container, so sticky keeps working.
+ *
+ * This is a BACKSTOP, not a fix - it hides a too-wide element rather than
+ * making it fit, and a clipped element is still unreachable. Anything found
+ * overflowing gets fixed at the source as well.
+ */
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   font-family: var(--font-body);
   font-size: var(--text-body);

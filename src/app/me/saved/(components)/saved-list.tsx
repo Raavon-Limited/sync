@@ -27,7 +27,7 @@ import { useSession } from '@/providers/session-provider';
 
 const db = () => createClient();
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 /** Where each entity type lives, and how it becomes a card. */
 const RESOLVERS: Record<

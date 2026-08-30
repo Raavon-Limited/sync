@@ -22,7 +22,7 @@ import {
 
 export const metadata: Metadata = { title: 'Settings — Admin' };
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 /** jsonb comes back parsed; render it as the scalar it is, not as JSON. */
 function scalar(value: unknown): string {

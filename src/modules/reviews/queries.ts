@@ -16,7 +16,7 @@ import { unwrapList } from '@/lib/query/helpers';
 import type { PendingReview, Review, ReviewSubjectType, ReviewSourceType } from './types';
 
 type Client = SupabaseClient<Database>;
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 const toReview = (r: Row): Review => ({
   id: r.id,

@@ -16,7 +16,7 @@ import type {
   EditorialStats,
 } from '@/app/(admin)/admin/editorial/admin-editorialTypes';
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 /**
  * "Scheduled" is not a stored status. It is `published` with a publish time

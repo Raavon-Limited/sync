@@ -23,7 +23,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 export interface QuickStat {
   value: string;

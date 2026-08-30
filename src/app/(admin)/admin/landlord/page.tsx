@@ -19,7 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const metadata: Metadata = { title: 'Landlords — Admin' };
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 const BADGE: Record<string, string> = {
   verified: 'bg-emerald-500/10 text-emerald-600',

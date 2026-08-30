@@ -21,7 +21,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 const naira = (kobo: number) => Math.round(kobo / 100);
 
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 export interface LandingHostel {
   slug: string;

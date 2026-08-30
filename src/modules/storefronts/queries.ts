@@ -25,7 +25,7 @@ import type {
 } from './types';
 
 type Client = SupabaseClient<Database>;
-type Row = Record<string, any>;
+import type { Row } from '@/lib/supabase/row';
 
 /**
  * Coordinates come from the plain `lat`/`lng` columns, never from `geo`.

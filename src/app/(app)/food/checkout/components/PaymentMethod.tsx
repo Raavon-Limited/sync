@@ -52,7 +52,7 @@ export default function PaymentMethod({
                 </h2>
 
                 <p className="text-sm text-content-muted mt-1">
-                    Choose how you'd like to pay.
+                    Choose how you&rsquo;d like to pay.
                 </p>
 
             </div>
