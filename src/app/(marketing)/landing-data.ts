@@ -60,7 +60,43 @@ export interface LandingShowcase {
   hotspot: { slug: string; name: string; meta: string } | null;
 }
 
+/**
+ * The empty shop window.
+ *
+ * Every card on the landing page already hides itself when its datum is null,
+ * so this renders a complete, honest page with no rows behind it - not a
+ * broken one.
+ */
+const EMPTY_SHOWCASE: LandingShowcase = {
+  highlights: [],
+  hostels: [],
+  verifiedHostelCount: 0,
+  event: null,
+  food: null,
+  hotspot: null,
+};
+
+/**
+ * Wraps the real read so a Supabase outage degrades the landing page rather
+ * than taking it down.
+ *
+ * Its siblings (around-data, around/server-queries) already do this; this one
+ * did not - and it is the PUBLIC HOME PAGE, the least acceptable place in the
+ * app to throw. It also fails the production BUILD rather than just a request:
+ * `/` is prerendered, so an unreachable database or a missing
+ * SUPABASE_SERVICE_ROLE_KEY aborts `next build` outright. That is exactly what
+ * it did on CI, where no .env.local exists.
+ */
 export async function getLandingShowcase(): Promise<LandingShowcase> {
+  try {
+    return await readLandingShowcase();
+  } catch (err) {
+    console.error('[landing] showcase read failed, rendering empty:', err);
+    return EMPTY_SHOWCASE;
+  }
+}
+
+async function readLandingShowcase(): Promise<LandingShowcase> {
   const db = createAdminClient();
   const now = new Date().toISOString();
 

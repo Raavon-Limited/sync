@@ -1,34 +1,106 @@
 name: CI
 
-# Runs on every PR into main and on pushes to main.
-# The "build" job's name becomes the status check you mark as Required
-# under Settings → Branches → main branch protection.
+# Quality gate for every PR into main and every push to main.
+#
+# WHERE DEPLOYS HAPPEN: Vercel, through its own Git integration - not here.
+# There is deliberately no deploy job in this file. Vercel already builds every
+# branch as a Preview and every push to main as Production; adding a second
+# deploy from Actions would either double-build or race the first one. The job
+# of this workflow is to tell you a commit is BAD before Vercel ships it, and
+# to be the thing you mark Required under
+# Settings -> Branches -> main -> Require status checks.
+#
+# Three parallel jobs rather than one sequential one, so a type error and a
+# lint error are reported together instead of one hiding behind the other, and
+# each shows up as its own check on the PR.
+
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  # Lets you re-run the gate by hand from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+# One run per branch. Pushing twice in quick succession cancels the first run
+# rather than paying for a result nobody will read. `main` is excluded from
+# cancellation via the ref check: a push to main should always finish, because
+# its result is the record of whether main is green.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Least privilege: nothing here writes to the repo.
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Lint & build
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       # NODE_ENV is left unset so devDependencies (eslint, tailwind, etc.)
-      # install — npm skips them when NODE_ENV=production.
-      - name: Install dependencies
-        run: npm ci
+      # install - npm skips them when NODE_ENV=production.
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Lint
-        run: npm run lint
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # `next build` type-checks too, but it does so last and after several
+      # minutes of bundling. This fails in under a minute on the common case.
+      - run: npm run typecheck
 
-      - name: Build
-        run: npm run build
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Next's own compilation cache. Keyed on the lockfile plus source, so a
+      # source-only change still restores most of the previous compile.
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+
+      # NO SECRETS ARE REQUIRED HERE, and that is deliberate.
+      #
+      # Every server read degrades to an empty result when Supabase is not
+      # configured, so the whole app builds and prerenders all 77 pages with no
+      # environment at all. That is what you want from a check build: it proves
+      # the code compiles and renders, and it cannot leak a key into a log or a
+      # fork's PR.
+      #
+      # It does NOT prove the queries are right - only Vercel's build, which
+      # has the real environment, does that. If you ever want this build to be
+      # representative instead, add NEXT_PUBLIC_SUPABASE_URL and
+      # NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as repository secrets and pass
+      # them via `env:` below. Both are public by definition - they ship inside
+      # the browser bundle - so they are safe here. SUPABASE_SERVICE_ROLE_KEY
+      # is NOT: never put it in a workflow that runs on pull_request, where a
+      # fork can read it.
+      - run: npm run build
