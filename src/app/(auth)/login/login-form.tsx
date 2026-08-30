@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { readStandalone } from '@/lib/pwa/use-install';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -27,14 +28,49 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Matches Supabase's default OTP resend window, so resends never hit its limit.
 const RESEND_COOLDOWN = 60;
 
+/**
+ * Where signing in lands you.
+ *
+ * Everyone has a dashboard and it is reachable everywhere - the header's user
+ * menu on desktop, the hamburger drawer inside the dashboard itself, and the
+ * bottom bar's "You" tab on mobile. What differs is only the DEFAULT landing
+ * spot, and it differs by surface rather than by role:
+ *
+ *   web     -> your dashboard. Signing in on a website is an administrative
+ *              act; you came to do something with your account.
+ *   PWA     -> /around. Home in the installed app is the feed, the same place
+ *              the bottom bar's Home tab and signing out both go. Opening an
+ *              app from the home screen and landing on a settings surface
+ *              reads as the wrong screen.
+ *
+ * Students used to land on /around on BOTH, which meant the web had no route
+ * into the dashboard except hunting for the user menu.
+ *
+ * Admins are exempt: /admin is their only surface, so there is no second
+ * destination to choose between.
+ */
 function destFor(role: string | undefined, handle?: string, next?: string) {
+  // An explicit ?next= always wins - it is the page they actually asked for.
   if (next) return next;
-  // Vendors land on their personalised handle root (/<business-name>); the proxy
-  // rewrites it to the right per-type dashboard - generic /vendor or /landlord -
-  // so we never hardcode the wrong one. Falls back to /vendor if no handle.
-  if (role === 'vendor') return handle ? `/${handle}` : '/vendor';
   if (role === 'admin' || role === 'super_admin') return '/admin';
-  return '/around';
+
+  // The personalised handle root (/<name>). The proxy rewrites it to the right
+  // per-type dashboard - /me, /vendor, /landlord - so we never hardcode the
+  // wrong one.
+  //
+  // The fallback, for an account with no handle yet, has to name the role's own
+  // root EXPLICITLY. The proxy gates each dashboard prefix by role
+  // (`/me` -> student, `/vendor` -> vendor, `/landlord` -> landlord), so a
+  // catch-all of '/me' would bounce a landlord straight back out of the page we
+  // had just sent them to.
+  const roots: Record<string, string> = {
+    vendor: '/vendor',
+    landlord: '/landlord',
+    rider: '/rider',
+  };
+  const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/me');
+
+  return readStandalone() ? '/around' : dashboard;
 }
 
 type Step = 'email' | 'password' | 'otp';
