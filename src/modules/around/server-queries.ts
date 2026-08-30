@@ -12,7 +12,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { distanceMetres, CAMPUS_POINT } from '@/lib/constants/areas';
+import { distanceMetres, formatDistance, CAMPUS_POINT } from '@/lib/constants/areas';
 
 const configured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
@@ -25,7 +25,14 @@ export interface MapPin {
   id: string;
   category: PinCategory;
   name: string;
-  /** Pre-formatted for the tooltip, e.g. "400m" / "1.2km". */
+  /**
+   * Pre-formatted for the tooltip, e.g. "400m" / "1.2km", measured from campus.
+   *
+   * This is the FALLBACK, not the final answer. The server has no way to know
+   * where the browser is, so every visitor gets the same campus-relative
+   * figure; once the user shares a fix, <AroundMapGoogle> recomputes each pin
+   * from their real lat/lng and this string is not shown.
+   */
   distance: string;
   href: string;
   lat: number;
@@ -33,11 +40,6 @@ export interface MapPin {
   /** Renders the highlighted marker. Driven by `verified` for hostels, so the
    *  emphasis means something rather than being editorial. */
   featured?: boolean;
-}
-
-/** Metres → the short form the tooltip shows. */
-function formatDistance(m: number): string {
-  return m < 1000 ? `${Math.round(m / 50) * 50}m` : `${(m / 1000).toFixed(1)}km`;
 }
 
 /**

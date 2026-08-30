@@ -14,7 +14,7 @@
  */
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 
 // Read as full static literals: Next inlines `process.env.NEXT_PUBLIC_*` at
@@ -38,6 +38,43 @@ export const googleMapsConfigured = API_KEY.length > 0;
 export const GOOGLE_MAP_ID =
   MAP_ID || (process.env.NODE_ENV === 'development' ? 'DEMO_MAP_ID' : '');
 
+/**
+ * Google's own handling of a rejected key is to paint the map grey and drop a
+ * white "This page can't load Google Maps correctly / Do you own this website?"
+ * dialog on top of it - unstyled, un-dismissable, and addressed to us rather
+ * than to the person holding the phone.
+ *
+ * The Maps JS API calls `window.gm_authFailure` when that happens, so we take
+ * it over and swap in our own panel instead. The causes are all Cloud console
+ * settings, never code: the Maps JavaScript API not enabled on the project,
+ * billing not enabled, or an HTTP-referrer restriction that doesn't list the
+ * origin you're loading from (a LAN IP like http://192.168.x.x:3000 when
+ * testing on a phone is the usual one - localhost being allowed does not cover
+ * it). The real reason is always printed to the browser console by Google.
+ */
+declare global {
+  interface Window {
+    gm_authFailure?: () => void;
+  }
+}
+
+function useMapsAuthFailure(): boolean {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const previous = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      setFailed(true);
+      previous?.();
+    };
+    return () => {
+      window.gm_authFailure = previous;
+    };
+  }, []);
+
+  return failed;
+}
+
 export function GoogleMapsProvider({
   children,
   fallback = null,
@@ -46,7 +83,9 @@ export function GoogleMapsProvider({
   /** Rendered instead of the map when no API key is configured. */
   fallback?: ReactNode;
 }) {
-  if (!googleMapsConfigured) return <>{fallback}</>;
+  const authFailed = useMapsAuthFailure();
+
+  if (!googleMapsConfigured || authFailed) return <>{fallback}</>;
 
   return (
     // 'marker' is what Advanced Markers live in. Naming it here loads it with
@@ -70,9 +109,11 @@ export function MapUnavailable({ className }: { className?: string }) {
         'border-line/10 bg-surface-deep flex h-full w-full items-center justify-center rounded-2xl border p-6'
       }
     >
-      <p className="text-content-muted max-w-64 text-center text-sm">
+      <p className="text-content-muted max-w-72 text-center text-sm">
         {process.env.NODE_ENV === 'development'
-          ? 'Map unavailable: set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local.'
+          ? googleMapsConfigured
+            ? 'Map unavailable: Google rejected the API key. Check the browser console - usually the Maps JavaScript API is not enabled on the project, billing is off, or the key’s HTTP-referrer list does not include this origin.'
+            : 'Map unavailable: set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local.'
           : 'The map is unavailable right now.'}
       </p>
     </div>

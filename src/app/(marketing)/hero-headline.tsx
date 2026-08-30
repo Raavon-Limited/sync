@@ -24,7 +24,7 @@ export function HeroHeadline() {
       initial={reduce ? false : { opacity: 0, y: 16 }}
       animate={reduce ? undefined : { opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: EASE }}
-      className="font-display text-foreground mt-4 text-[44px] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
+      className="font-display text-foreground mt-4 text-[clamp(2rem,9.5vw,44px)] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
     >
       {/* Only the band animates - the words are visible from the first frame.
           The wipe is CSS inside SyncTagline (see the band-wipe keyframe), not

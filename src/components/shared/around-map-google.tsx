@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AdvancedMarker,
@@ -28,6 +28,8 @@ import {
   AREA_ZOOM,
   areaCoords,
   CAMPUS_POINT as MAP_CAMPUS_POINT,
+  distanceMetres,
+  formatDistance,
   MAP_DEFAULT_VIEW as MAP_VIEW,
 } from '@/lib/constants/areas';
 import { useOptionalLocation } from '@/providers/location-provider';
@@ -175,6 +177,25 @@ function LocateControl() {
  *  has coordinates, not an error. */
 export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
   const router = useRouter();
+  const loc = useOptionalLocation();
+  const here = loc?.coords;
+
+  /**
+   * Distances, measured from the user when we know where they are.
+   *
+   * The server can only measure from campus - it never sees the browser's GPS -
+   * so every pin arrived reading its distance from the campus gate no matter
+   * who was looking. Once a fix lands, every label is recomputed from the real
+   * lat/lng here; without one, the server's campus figure stands.
+   */
+  const shownPins = useMemo(() => {
+    if (!here) return pins;
+    const from = { lat: here.lat, lng: here.lng };
+    return pins.map((pin) => ({
+      ...pin,
+      distance: formatDistance(distanceMetres(from, { lat: pin.lat, lng: pin.lng })),
+    }));
+  }, [pins, here]);
 
   return (
     <figure className="flex flex-col gap-4">
@@ -206,7 +227,7 @@ export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
 
             <YouAreHere />
 
-            {pins.map((pin) => (
+            {shownPins.map((pin) => (
               <AdvancedMarker
                 key={pin.id}
                 position={{ lat: pin.lat, lng: pin.lng }}

@@ -14,7 +14,7 @@ export function AboutCta() {
       <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
         <h2
           id="about-cta-heading"
-          className="font-display text-foreground text-[44px] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
+          className="font-display text-foreground text-[clamp(2rem,9.5vw,44px)] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
         >
           <SyncTagline />
         </h2>

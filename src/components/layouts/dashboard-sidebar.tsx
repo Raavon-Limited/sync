@@ -15,9 +15,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SITE } from '@/config/site';
 import { SyncLogo } from '@/components/brand/sync-logo';
 import { DASHBOARD_NAV, type DashboardNavKey } from '@/config/dashboard-nav';
 import type { DashboardProfile } from './dashboard-profile';
@@ -64,11 +63,14 @@ export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSideb
     <div className="flex h-full flex-col gap-5">
       {/* Wordmark + role, with the mode toggle pinned to the edge */}
       <div className="flex items-center justify-between gap-2 px-2">
+        {/* Points at the dashboard root, NOT `/`. The landing page is a web-only
+            surface; from inside a dashboard the lockup should return you to your
+            own overview, the way it does in any app. */}
         <Link
-          href="/"
+          href={toHref(rootHref)}
           onClick={onNavigate}
           className="text-content"
-          aria-label={`${SITE.name} home`}
+          aria-label={`${brandLabel} overview`}
         >
           {/* The kit's dashboard lockup: mark + wordmark + role tag. */}
           <SyncLogo height={18} role={brandLabel} />
@@ -99,17 +101,12 @@ export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSideb
       </div>
 
       {/* Grouped nav */}
+      {/* No "Home" link here. It pointed at `/`, the marketing landing page,
+          which is a web-only surface - inside the app (and in the installed
+          PWA) home is /around, reached from the bottom tab bar. Sending a
+          signed-in user to the landing page from their dashboard was a way out
+          of the product, not navigation. */}
       <nav aria-label={`${brandLabel} navigation`} className="flex flex-1 flex-col gap-5">
-        {/* Back to the public home page (outside the dashboard). */}
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="text-content hover:bg-ink/5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
-        >
-          <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="flex-1 truncate">Home</span>
-        </Link>
-
         {sections.map((section, i) => (
           <div key={section.label ?? i} className="flex flex-col gap-1">
             {section.label && (

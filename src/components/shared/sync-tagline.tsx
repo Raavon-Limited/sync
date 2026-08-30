@@ -130,7 +130,15 @@ export function SyncTagline({
     // hero column and "Sync" was clipped by the card beside it. The line may
     // break - but only BETWEEN the groups below, so a separator can never land
     // at the start of a line on its own.
-    <span className={className}>
+    //
+    // `max-w-full` + `wrap-break-word` is the floor under that. The headline is set
+    // at 44px on phones, and the groups below are individually nowrap, so on a
+    // narrow screen a single word that cannot fit its line had nothing to do but
+    // run off the side and push the whole page into horizontal scroll - which is
+    // what it was doing on /about. `wrap-break-word` (overflow-wrap) only splits
+    // a word when it will not fit a line ALONE, so normal-width screens are
+    // untouched and a 320px one gets a broken word instead of a broken layout.
+    <span className={cn('block max-w-full wrap-break-word', className)}>
       <span className="whitespace-nowrap">
         <Stroked clipId={strokeId}>Connect</Stroked>
         <Dot />

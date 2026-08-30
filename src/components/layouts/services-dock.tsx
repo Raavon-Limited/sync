@@ -19,6 +19,7 @@ import {
 
 import { SearchBar } from '@/components/shared/search-bar';
 import { LocationSelector } from '@/components/shared/location-selector';
+import SyncIcon, { type SyncIconName } from '@/components/brand/SyncIcon';
 import { MODULES } from '@/config/modules';
 import { cn } from '@/lib/utils';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
@@ -43,10 +44,15 @@ export function ServicesDock({ role }: ServicesDockProps) {
 
 
 
+  // `iconName` is the brand-kit section/role icon. It is OPTIONAL because the
+  // kit only draws sections and roles - there is no kit icon for Saved,
+  // Chats, Orders, Search, Inbox or Admin, which are account actions. Those
+  // fall back to lucide until the kit covers them.
   const accountTabs: {
     href: string;
     label: string;
     icon: LucideIcon;
+    iconName?: SyncIconName;
     badge?: number;
   }[] =
     isFood
@@ -66,7 +72,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
           ? [
               { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
               { href: '/landlord/inbox',    label: 'Inbox',    icon: MessageCircle, badge: 2 },
-              { href: '/landlord',          label: 'You',      icon: LayoutDashboard },
+              { href: '/landlord',          label: 'You',      icon: LayoutDashboard, iconName: 'landlord' },
             ]
           : role === 'admin' || role === 'super_admin'
             ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
@@ -74,7 +80,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
               ? [
                   { href: '/me/saved',    label: 'Saved',  icon: Heart },
                   { href: '/me/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
-                  { href: '/me',          label: 'You',    icon: User },
+                  { href: '/me',          label: 'You',    icon: User, iconName: 'student' },
                 ]
               : [{ href: '/login', label: 'Sign in', icon: LogIn }];
 
@@ -86,6 +92,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
       href: isFood ? '/food' : '/around',
       label: 'Home',
       icon: isFood ? UtensilsCrossed : Compass,
+      iconName: (isFood ? 'food' : 'around-you') as SyncIconName,
       badge: undefined as number | undefined,
     },
     ...accountTabs,
@@ -163,6 +170,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
             href={t.href}
             label={t.label}
             icon={t.icon}
+            iconName={t.iconName}
             badge={t.badge}
             active={isActive(t.href)}
           />
@@ -188,6 +196,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
             href={t.href}
             label={t.label}
             icon={t.icon}
+            iconName={t.iconName}
             badge={t.badge}
             active={isActive(t.href)}
           />
@@ -204,10 +213,28 @@ function tabClass(active: boolean) {
   );
 }
 
-function TabIcon({ icon: Icon, active, badge }: { icon: LucideIcon; active: boolean; badge?: number }) {
+function TabIcon({
+  icon: Icon,
+  iconName,
+  active,
+  badge,
+}: {
+  icon: LucideIcon;
+  iconName?: SyncIconName;
+  active: boolean;
+  badge?: number;
+}) {
   return (
     <span className="relative">
-      <Icon className={cn('h-5 w-5', active && 'text-lime-deep dark:text-lime')} aria-hidden="true" />
+      {/* Kit icon where one exists - it follows currentColor, so the active
+          colour below applies to it exactly as it does to the lucide one. */}
+      <span className={cn(active && 'text-lime-deep dark:text-lime')}>
+        {iconName ? (
+          <SyncIcon name={iconName} size={20} />
+        ) : (
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        )}
+      </span>
       {badge ? (
         <span className="bg-lime text-ink absolute -top-1.5 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold">
           {badge > 99 ? '99+' : badge}
@@ -221,18 +248,20 @@ function TabLink({
   href,
   label,
   icon,
+  iconName,
   active,
   badge,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
+  iconName?: SyncIconName;
   active: boolean;
   badge?: number;
 }) {
   return (
     <Link href={href} aria-current={active ? 'page' : undefined} className={tabClass(active)}>
-      <TabIcon icon={icon} active={active} badge={badge} />
+      <TabIcon icon={icon} iconName={iconName} active={active} badge={badge} />
       <span>{label}</span>
     </Link>
   );

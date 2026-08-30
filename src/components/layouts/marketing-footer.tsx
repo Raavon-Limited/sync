@@ -1,6 +1,6 @@
 /**
- * MarketingFooter - rich dark footer for the public route group. Multi-column
- * link grid, brand tagline, social, a disclaimer block, and an animated
+ * MarketingFooter - dark footer for the public route group. A brand row, one
+ * full-width "Before you start" link band, a disclaimer block, and an animated
  * morphing ambient glow behind it. Merges seamlessly with the dark CTA above.
  */
 import Link from 'next/link';
@@ -10,13 +10,7 @@ import { SyncLogo } from '@/components/brand/sync-logo';
 import { SITE } from '@/config/site';
 // Shared with the signed-in AppFooter, so the same pages are reachable from
 // both shells. See config/footer-nav.
-import {
-  COMPANY_LINKS,
-  HELP_LINKS,
-  LEGAL_LINKS,
-  PRODUCT_LINKS,
-  type FooterLink,
-} from '@/config/footer-nav';
+import { HELP_LINKS } from '@/config/footer-nav';
 
 const SOCIALS = [
   { href: SITE.socials.x, label: 'X', initials: 'X' },
@@ -33,15 +27,19 @@ export function MarketingFooter() {
       />
 
       <div className="mx-auto max-w-7xl px-6 py-16 md:py-20">
-        {/* Main grid */}
-        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          {/* Brand column */}
+        {/* Brand row. The Product / Company / Legal columns that used to sit
+            beside it are gone: they repeated the header and the services dock,
+            and on a phone they were three collapsed accordions. "Before you
+            start" below is the footer's one link set. */}
+        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-6">
             <Link href="/" className="text-cream w-fit" aria-label={`${SITE.name} home`}>
               <SyncLogo height={22} />
             </Link>
-            <p className="text-cream/70 max-w-xs text-sm">{SITE.description}</p>
+            <p className="text-cream/70 max-w-sm text-sm">{SITE.description}</p>
+          </div>
 
+          <div className="flex flex-col gap-8 sm:flex-row sm:gap-12 md:shrink-0">
             <div>
               <p className="eyebrow text-cream/40">Get started</p>
               <Button asChild size="lg" className="mt-3">
@@ -69,15 +67,11 @@ export function MarketingFooter() {
               </div>
             </div>
           </div>
-
-          <FooterCol title="Product" items={PRODUCT_LINKS} />
-          <FooterCol title="Company" items={COMPANY_LINKS} />
-          <FooterCol title="Legal" items={LEGAL_LINKS} />
         </div>
 
         {/* Before you start - a full-width band, so these read as the footer's own
             row rather than a stack hanging off the Get Sync button. */}
-        <div className="border-cream/10 mt-16 border-t pt-8">
+        <div className="border-cream/10 mt-14 border-t pt-8">
           <p className="eyebrow text-cream/40">Before you start</p>
           <ul className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
             {HELP_LINKS.map((l) => (
@@ -137,28 +131,5 @@ export function MarketingFooter() {
         </div>
       </div>
     </footer>
-  );
-}
-
-/**
- * A plain, always-open link column. This used to be a `<details>` accordion on
- * mobile, which meant a phone footer was three chevrons and nothing else - the
- * links were there but nobody opened them. Four links per column is not enough
- * content to be worth hiding, so they are always visible at every width.
- */
-function FooterCol({ title, items }: { title: string; items: FooterLink[] }) {
-  return (
-    <div className="border-cream/10 border-t pt-6 md:border-none md:pt-0">
-      <p className="eyebrow text-cream/40">{title}</p>
-      <ul className="mt-4 space-y-3 text-sm">
-        {items.map(({ href, label }) => (
-          <li key={label}>
-            <Link href={href} className="text-cream/70 hover:text-lime transition-colors">
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }

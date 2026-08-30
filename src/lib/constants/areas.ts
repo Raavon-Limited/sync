@@ -97,6 +97,20 @@ export function distanceMetres(
 }
 
 /**
+ * Metres -> the short form a pin label shows, e.g. "400m" / "1.2km".
+ *
+ * Lives here, beside `distanceMetres`, rather than in the server query that
+ * first needed it: the map recomputes distances in the browser once the user
+ * shares a GPS fix, and that code cannot import a `server-only` module. One
+ * formatter means a pin can't read "400m" server-side and "0.4km" client-side.
+ */
+export function formatDistance(metres: number): string {
+  return metres < 1000
+    ? `${Math.round(metres / 50) * 50}m`
+    : `${(metres / 1000).toFixed(1)}km`;
+}
+
+/**
  * How far from an area centre we still consider someone to be "in" it.
  *
  * Sync only serves Malete/KWASU. Without a ceiling, `nearestArea` returns the
