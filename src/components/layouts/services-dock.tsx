@@ -1,7 +1,6 @@
 // components/ServicesDock.tsx
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
@@ -10,15 +9,14 @@ import {
   Compass,
   Heart,
   LayoutDashboard,
-  LayoutGrid,
   LogIn,
   MessageCircle,
   Search,
+  Sparkles,
   User,
   UtensilsCrossed,
 } from 'lucide-react';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { SearchBar } from '@/components/shared/search-bar';
 import { LocationSelector } from '@/components/shared/location-selector';
 import { MODULES } from '@/config/modules';
@@ -34,7 +32,6 @@ interface ServicesDockProps {
 export function ServicesDock({ role }: ServicesDockProps) {
   const pathname = usePathname();
   const isFood = pathname.startsWith('/food');
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   const isActive = (path: string) => {
     const target = path.startsWith('/') ? path : `/${path}`;
@@ -44,16 +41,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
     return pathname === target || pathname?.startsWith(`${target}/`);
   };
 
-  const onModule = MODULES.some((m) => m.slug !== 'around' && m.slug !== 'food' && isActive(m.slug));
 
-  const FOOD_CATEGORIES = [
-    'Jollof',
-    'Swallow',
-    'Fast Food',
-    'Breakfast',
-    'Drinks',
-    'Dessert',
-  ];
 
   const accountTabs: {
     href: string;
@@ -90,22 +78,22 @@ export function ServicesDock({ role }: ServicesDockProps) {
                 ]
               : [{ href: '/login', label: 'Sign in', icon: LogIn }];
 
-  const tabCount = (isFood ? 1 : 2) + accountTabs.length;
+  // The bar is [ ...left, AI, ...right ]. Home is just the first tab rather
+  // than a special case, so the split stays correct for every role - admins
+  // get two tabs, students four - and the AI button is always the middle.
+  const tabs = [
+    {
+      href: isFood ? '/food' : '/around',
+      label: 'Home',
+      icon: isFood ? UtensilsCrossed : Compass,
+      badge: undefined as number | undefined,
+    },
+    ...accountTabs,
+  ];
+  const split = Math.ceil(tabs.length / 2);
+  const leftTabs = tabs.slice(0, split);
+  const rightTabs = tabs.slice(split);
 
-  // Where "your profile" goes per role. Separate from `accountTabs` because the
-  // bottom bar drops the account tab in some modes (it's commented out in food,
-  // and admins only get a single Admin tab), so the sheet needs its own answer
-  // rather than reaching for a tab that may not be there.
-  const profile =
-    role === 'vendor'
-      ? { href: '/vendor', label: 'Your dashboard' }
-      : role === 'landlord'
-        ? { href: '/landlord', label: 'Your dashboard' }
-        : role === 'admin' || role === 'super_admin'
-          ? { href: '/admin', label: 'Admin dashboard' }
-          : role === 'student'
-            ? { href: '/me', label: 'Your profile' }
-            : { href: '/login', label: 'Sign in' };
   return (
     <>
       {/* ── Service rail ───────────────────────────────────────────────
@@ -130,7 +118,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
             aria-label="Sync services"
             className="-mx-1 hidden flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden"
           >
-            {MODULES.map(({ slug, label, icon: Icon }) => {
+            {MODULES.map(({ slug, label }) => {
               const active = isActive(slug);
               return (
                 <Link
@@ -138,13 +126,12 @@ export function ServicesDock({ role }: ServicesDockProps) {
                   href={`/${slug}`}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm transition-colors',
+                    'inline-flex h-9 shrink-0 items-center rounded-full px-3 text-sm transition-colors',
                     active
                       ? 'bg-lime text-ink font-medium'
                       : 'text-foreground hover:bg-ink/5 border-line/15 border',
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="whitespace-nowrap">{label}</span>
                 </Link>
               );
@@ -157,113 +144,55 @@ export function ServicesDock({ role }: ServicesDockProps) {
         </div>
       </div>
 
-      {/* ── Mobile bottom tab bar + module sheet (<md) ─────────────── */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <nav
-          aria-label="Primary"
-          className="bg-panel border-line/10 fixed inset-x-0 bottom-0 z-40 grid h-16 border-t md:hidden"
-          style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}
-        >
-          {/* Home tab */}
+      {/* ── Mobile bottom tab bar (<md) ──────────────────────────────
+          Floating: inset from the edges and rounded, rather than a full-width
+          bar welded to the bottom. `bottom` includes env(safe-area-inset-bottom)
+          so it clears the iPhone home indicator instead of sitting under it.
+
+          The AI button is the centre of the bar by construction: the tabs are
+          split into two halves around it, so it stays centred whatever the
+          role-dependent tab count is. */}
+      <nav
+        aria-label="Primary"
+        className="border-line/10 bg-panel/95 shadow-pop fixed inset-x-4 z-40 flex h-16 items-center justify-around rounded-full border backdrop-blur md:hidden"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      >
+        {leftTabs.map((t) => (
           <TabLink
-            href={isFood ? '/food' : '/around'}
-            label="Home"
-            icon={isFood ? UtensilsCrossed : Compass}
-            active={isFood ? pathname === '/food' : pathname === '/around'}
+            key={t.href}
+            href={t.href}
+            label={t.label}
+            icon={t.icon}
+            badge={t.badge}
+            active={isActive(t.href)}
           />
+        ))}
 
-          {/* Browse sheet trigger — hidden when in food (food has Search instead) */}
-          {!isFood && (
-            <SheetTrigger asChild>
-              <button type="button" className={tabClass(onModule)}>
-                <TabIcon icon={LayoutGrid} active={onModule} />
-                <span>Browse</span>
-              </button>
-            </SheetTrigger>
+        {/* Ask Sync. Raised out of the bar so it reads as the primary action
+            rather than a fifth tab. */}
+        <Link
+          href="/ai"
+          aria-label="Ask Sync"
+          aria-current={isActive('/ai') ? 'page' : undefined}
+          className={cn(
+            'bg-lime text-ink -mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-lg ring-4 transition-transform active:scale-95',
+            isActive('/ai') ? 'ring-lime/30' : 'ring-surface',
           )}
+        >
+          <Sparkles className="h-6 w-6" aria-hidden="true" />
+        </Link>
 
-          {accountTabs.map((t) => (
-            <TabLink
-              key={t.href}
-              href={t.href}
-              label={t.label}
-              icon={t.icon}
-              badge={t.badge}
-              active={isActive(t.href)}
-            />
-          ))}
-        </nav>
-
-        {/* Browse sheet — only relevant outside food */}
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle className="font-display text-content text-lg">
-              Browse Sync
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="grid grid-cols-3 gap-3 px-4">
-            {MODULES.map(({ slug, label, icon: Icon }) => {
-              const active = isActive(slug);
-              return (
-                <Link
-                  key={slug}
-                  href={`/${slug}`}
-                  onClick={() => setSheetOpen(false)}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex flex-col items-center gap-2 rounded-2xl border p-4 text-center text-sm transition-colors',
-                    active
-                      ? 'bg-lime text-ink border-transparent font-medium'
-                      : 'border-line/10 text-content hover:bg-ink/5',
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Account. The bottom bar has no room for a profile tab in every
-              mode, so the sheet always carries one. */}
-          <div className="mt-5 px-4">
-            <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">
-              Account
-            </p>
-            <Link
-              href={profile.href}
-              onClick={() => setSheetOpen(false)}
-              aria-current={isActive(profile.href) ? 'page' : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-colors',
-                isActive(profile.href)
-                  ? 'bg-lime text-ink border-transparent font-medium'
-                  : 'border-line/10 text-content hover:bg-ink/5',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                  isActive(profile.href) ? 'bg-ink/10' : 'bg-ink/5',
-                )}
-              >
-                {role ? (
-                  <User className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <LogIn className="h-4 w-4" aria-hidden="true" />
-                )}
-              </span>
-              <span className="font-medium">{profile.label}</span>
-            </Link>
-          </div>
-
-          <div className="mt-5 px-4 pb-2">
-            <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">Your area</p>
-            <LocationSelector variant="inline" onNavigate={() => setSheetOpen(false)} />
-          </div>
-        </SheetContent>
-      </Sheet>
+        {rightTabs.map((t) => (
+          <TabLink
+            key={t.href}
+            href={t.href}
+            label={t.label}
+            icon={t.icon}
+            badge={t.badge}
+            active={isActive(t.href)}
+          />
+        ))}
+      </nav>
     </>
   );
 }

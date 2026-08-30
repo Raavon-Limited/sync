@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120" role="img" aria-label="Loading">
+  <style>
+    .house { stroke-dasharray: 152; stroke-dashoffset: 152; animation: sync-draw 1.8s ease-in-out infinite; }
+    .pulse { transform-box: fill-box; transform-origin: center bottom; animation: sync-pulse 1.8s ease-in-out infinite; }
+    @keyframes sync-draw { 0% { stroke-dashoffset:152 } 45%,72% { stroke-dashoffset:0 } 100% { stroke-dashoffset:-152 } }
+    @keyframes sync-pulse { 0%,42% { opacity:0; transform: translateY(8px) } 58%,76% { opacity:1; transform: translateY(0) } 100% { opacity:0; transform: translateY(-6px) } }
+    @media (prefers-reduced-motion: reduce) { .house { animation:none; stroke-dashoffset:0 } .pulse { animation:none; opacity:1 } }
+  </style>
+  <path class="house" d="M 25,82 L 25,55 L 50,36 L 75,55 L 75,82" fill="none" stroke="#0E0E12" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path class="pulse" d="M 34,30 L 50,18 L 66,30" fill="none" stroke="#C5FF4A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

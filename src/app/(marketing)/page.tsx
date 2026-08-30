@@ -7,8 +7,9 @@
  *          authenticated app.
  * BUILT HERE:
  *   1. Hero with verified-count eyebrow, two-line headline with lime
- *      underline on the action word, smart-search row (Area / Budget /
- *      Room type → Search), and a 1-big-image + 3-thumbnail preview block.
+ *      underline on the action word, and a 1-big-image + 3-thumbnail
+ *      preview block. (The smart-search row was removed - the landing page
+ *      sends people to Around you rather than filtering hostels inline.)
  *   1b. <LandingAboutTeaser> - condensed brand essay linking into /about.
  *   2. "Hostels students love" - featured rail of 3 <ListingCard>s.
  *   3. "How it works" - 3-step explainer.
@@ -22,7 +23,6 @@ import {
   ArrowRight,
   BadgeCheck,
   ChevronDown,
-  Search,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -34,6 +34,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { getCurrentUser } from '@/modules/auth/queries';
+import { getMyTestimonial } from '@/modules/testimonials/queries';
 import { HeroHeadline } from './hero-headline';
 import { HeroHighlights } from './hero-highlights';
 import { Newsletter } from './newsletter';
@@ -65,7 +67,11 @@ const FAQS = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Both reads are independent, so fire them together. getMyTestimonial
+  // returns null for a signed-out visitor, which the form handles.
+  const [user, mine] = await Promise.all([getCurrentUser(), getMyTestimonial()]);
+
   return (
     <>
       {/* ─── Hero (static background image + 2-column content) ───────── */}
@@ -95,29 +101,6 @@ export default function LandingPage() {
 
           {/* Right - cross-service highlight (shuffles per load) */}
           <HeroHighlights />
-        </div>
-      </section>
-
-      {/* ─── Full-width search row (under the hero) ──────────────────── */}
-      <section className="border-line/5 bg-panel/70 border-b backdrop-blur">
-        <div className="mx-auto w-full max-w-7xl px-6 py-5">
-          <form
-            action="/hostels"
-            method="get"
-            className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center"
-          >
-            <div className="shadow-card divide-line/5 bg-panel grid w-full flex-1 grid-cols-1 divide-y overflow-hidden rounded-2xl sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              <SearchCell label="Area / Campus" name="campus" defaultValue="Safari, Malete" />
-              <SearchCell label="Budget" name="budget" defaultValue="₦100k–₦150k" />
-              <SearchCell label="Room type" name="type" defaultValue="Self-contain" />
-            </div>
-            <Button type="submit" size="lg" className="w-full shrink-0 sm:w-auto sm:px-7">
-              Search <Search className="h-4 w-4" />
-            </Button>
-          </form>
-          <p className="text-content-muted mt-2 text-xs">
-            ↓ Single search · instant filtered results
-          </p>
         </div>
       </section>
 
@@ -253,7 +236,7 @@ export default function LandingPage() {
       <Comparison />
 
       {/* ─── Testimonials ────────────────────────────────────────────── */}
-      <Testimonials />
+      <Testimonials signedIn={Boolean(user)} mine={mine} />
 
       {/* ─── FAQ ─────────────────────────────────────────────────────── */}
       <section className="px-6 pt-12">
@@ -343,34 +326,5 @@ export default function LandingPage() {
         </div>
       </section>
     </>
-  );
-}
-
-/** Single cell in the segmented search row. Eyebrow label above, value below. */
-function SearchCell({
-  label,
-  name,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  defaultValue: string;
-}) {
-  const id = `search-${name}`;
-  return (
-    <label
-      htmlFor={id}
-      className="focus-within:bg-surface/40 bg-panel flex cursor-text flex-col gap-0.5 px-5 py-3 transition-colors"
-    >
-      <span className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
-        {label}
-      </span>
-      <input
-        id={id}
-        name={name}
-        defaultValue={defaultValue}
-        className="text-foreground placeholder:text-content-muted bg-transparent text-sm font-medium outline-none"
-      />
-    </label>
   );
 }

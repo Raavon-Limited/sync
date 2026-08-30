@@ -178,7 +178,7 @@ export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
 
   return (
     <figure className="flex flex-col gap-4">
-      <div className="border-line/10 relative isolate h-[72vh] min-h-104 w-full overflow-hidden rounded-2xl border lg:h-[calc(100dvh-8rem)]">
+      <div className="border-line/10 relative isolate h-[72vh] min-h-104 w-full overflow-hidden border-y md:rounded-2xl md:border lg:h-[calc(100dvh-8rem)]">
         <GoogleMapsProvider fallback={<MapUnavailable />}>
           <Map
             mapId={GOOGLE_MAP_ID}

@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SyncLogo } from '@/components/brand/sync-logo';
 import { SITE } from '@/config/site';
 
 const PRODUCT = [
@@ -20,12 +21,25 @@ const COMPANY = [
   { href: '/about', label: 'About' },
   { href: '/for-vendors', label: 'For landlords' },
   { href: '/how-it-works', label: 'How it works' },
+  { href: '/how-verification-works', label: 'How verification works' },
   { href: '/around', label: 'Around you' },
 ];
 const LEGAL = [
-  { href: '#', label: 'Privacy Policy' },
-  { href: '#', label: 'Terms of Service' },
-  { href: '#', label: 'Cookie Policy' },
+  { href: '/legal/privacy', label: 'Privacy Policy' },
+  { href: '/legal/terms', label: 'Terms of Service' },
+  { href: '/legal/cookies', label: 'Cookie Policy' },
+  { href: '/legal/data-protection', label: 'Data Protection' },
+];
+// The questions people ask before signing up. These get their own full-width band
+// across the footer rather than a cramped stack beside the Get Sync button.
+const HELP = [
+  { href: '/about', label: 'About Sync' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/how-verification-works', label: 'How verification works' },
+  { href: '/legal/privacy', label: 'Privacy Policy' },
+  { href: '/legal/terms', label: 'Terms of Service' },
+  { href: '/legal/cookies', label: 'Cookie Policy' },
+  { href: '/legal/data-protection', label: 'Data Protection' },
 ];
 const SOCIALS = [
   { href: SITE.socials.x, label: 'X', initials: 'X' },
@@ -46,13 +60,9 @@ export function MarketingFooter() {
         <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand column */}
           <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="flex items-center gap-1">
-                <span className="bg-cream block h-2.5 w-2.5 rounded-full" />
-                <span className="bg-lime block h-2 w-2 rounded-full" />
-              </span>
-              <span className="font-display text-card text-cream">{SITE.name}</span>
-            </div>
+            <Link href="/" className="text-cream w-fit" aria-label={`${SITE.name} home`}>
+              <SyncLogo height={22} />
+            </Link>
             <p className="text-cream/70 max-w-xs text-sm">{SITE.description}</p>
 
             <div>
@@ -88,8 +98,27 @@ export function MarketingFooter() {
           <FooterCol title="Legal" items={LEGAL} />
         </div>
 
+        {/* Before you start - a full-width band, so these read as the footer's own
+            row rather than a stack hanging off the Get Sync button. */}
+        <div className="border-cream/10 mt-16 border-t pt-8">
+          <p className="eyebrow text-cream/40">Before you start</p>
+          <ul className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+            {HELP.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="text-cream/70 hover:text-lime group flex items-center justify-between gap-4 text-sm transition-colors"
+                >
+                  {l.label}
+                  <ArrowUpRight className="text-cream/25 group-hover:text-lime h-4 w-4 shrink-0 transition-colors" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {/* Disclaimer */}
-        <div className="border-cream/10 mt-16 border-t pt-10">
+        <div className="border-cream/10 mt-12 border-t pt-10">
           <p className="eyebrow text-cream/40">Disclaimer</p>
           <div className="text-cream/50 mt-4 flex flex-col gap-4 text-xs leading-relaxed md:max-w-4xl">
             <p>
@@ -120,11 +149,7 @@ export function MarketingFooter() {
         {/* Brand + operator + copyright (footer end) - centered on mobile */}
         <div className="border-cream/10 mt-12 flex flex-col items-center gap-4 border-t pt-8 text-center md:flex-row md:items-center md:justify-between md:text-left">
           <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
-            <span aria-hidden="true" className="flex items-center gap-1">
-              <span className="bg-surface block h-2 w-2 rounded-full" />
-              <span className="bg-lime block h-1.5 w-1.5 rounded-full" />
-            </span>
-            <span className="font-display text-card">{SITE.name}</span>
+            <SyncLogo height={18} className="text-cream" />
             <span className="text-cream/50 text-sm">
               Operated by <span className="text-cream/80">{SITE.legalName}</span>
             </span>
@@ -138,17 +163,17 @@ export function MarketingFooter() {
   );
 }
 
+/**
+ * A plain, always-open link column. This used to be a `<details>` accordion on
+ * mobile, which meant a phone footer was three chevrons and nothing else - the
+ * links were there but nobody opened them. Four links per column is not enough
+ * content to be worth hiding, so they are always visible at every width.
+ */
 function FooterCol({ title, items }: { title: string; items: { href: string; label: string }[] }) {
   return (
-    <details className="group border-cream/10 border-t pt-4 md:border-none md:pt-0">
-      {/* Mobile: tappable header that toggles the list. Hidden on desktop. */}
-      <summary className="flex cursor-pointer list-none items-center justify-between md:hidden [&::-webkit-details-marker]:hidden">
-        <span className="eyebrow text-cream/40">{title}</span>
-        <ChevronDown className="text-cream/40 h-4 w-4 transition-transform group-open:rotate-180" />
-      </summary>
-      {/* Desktop: static title (the summary is hidden at md+). */}
-      <p className="eyebrow text-cream/40 mb-4 hidden md:block">{title}</p>
-      <ul className="mt-4 space-y-3 text-sm group-open:block md:mt-0 md:block!">
+    <div className="border-cream/10 border-t pt-6 md:border-none md:pt-0">
+      <p className="eyebrow text-cream/40">{title}</p>
+      <ul className="mt-4 space-y-3 text-sm">
         {items.map(({ href, label }) => (
           <li key={label}>
             <Link href={href} className="text-cream/70 hover:text-lime transition-colors">
@@ -157,6 +182,6 @@ function FooterCol({ title, items }: { title: string; items: { href: string; lab
           </li>
         ))}
       </ul>
-    </details>
+    </div>
   );
 }

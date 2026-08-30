@@ -20,6 +20,7 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Share, MoreVertical, Plus, Smartphone } from 'lucide-react';
@@ -32,19 +33,20 @@ import { SITE } from '@/config/site';
  * Routes that stay open in a normal browser tab.
  *
  * Matched as prefixes, except '/' which must match exactly or it would open
- * everything. Auth is included on purpose: without it nobody could sign up or
- * reset a password on a laptop, which would strand anyone whose phone install
- * failed. Remove those two lines if you want the funnel to be install-first.
+ * everything.
+ *
+ * AUTH IS DELIBERATELY NOT HERE. Every student module (/hostels, /food,
+ * /events, ...) is gated in proxy.ts for ALL roles, so a signed-out visitor
+ * clicking a hostel is redirected SERVER-SIDE to /login before any client code
+ * runs. Allowlisting /login therefore defeated the whole gate: the redirect
+ * landed on a permitted page and the install prompt never appeared. Leaving
+ * auth gated means that redirect lands somewhere the gate still covers.
  */
 const WEB_ROUTES = [
   '/', // landing
   '/about',
   '/for-vendors',
   '/how-it-works',
-  '/login',
-  '/signup',
-  '/verify',
-  '/403',
 ];
 
 function isWebRoute(pathname: string): boolean {
@@ -67,12 +69,17 @@ export function InstallGate() {
       className="bg-surface fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-6"
     >
       <div className="flex w-full max-w-sm flex-col items-center text-center">
-        <span className="bg-ink mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
-          <span className="flex items-center gap-1">
-            <span className="bg-cream block h-2.5 w-2.5 rounded-full" />
-            <span className="bg-lime block h-2 w-2 rounded-full" />
-          </span>
-        </span>
+        {/* The real mark from the logo kit, not a rebuild of it. The kit's
+            rules forbid redrawing or recolouring it, and the tile already
+            carries its own Ink ground and corner radius. */}
+        <Image
+          src="/logo-kit/svg/sync-mark-01-monogram-tile.svg"
+          alt=""
+          width={64}
+          height={64}
+          className="mb-6 h-16 w-16 rounded-2xl"
+          priority
+        />
 
         <h1
           id="install-gate-title"

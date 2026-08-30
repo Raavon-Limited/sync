@@ -21,7 +21,12 @@ interface BeforeInstallPromptEvent extends Event {
 
 const STANDALONE_QUERY = '(display-mode: standalone)';
 
-function readStandalone(): boolean {
+/**
+ * Exported so callers can choose their own SSR default. useIsStandalone
+ * assumes `true` on the server (so the install gate never blocks SSR HTML);
+ * the boot splash needs the opposite assumption and builds its own store.
+ */
+export function readStandalone(): boolean {
   try {
     // `navigator.standalone` is the iOS-only legacy flag; iOS Safari does not
     // report display-mode reliably on older versions, so check both.
@@ -32,7 +37,7 @@ function readStandalone(): boolean {
   }
 }
 
-function subscribeStandalone(cb: () => void) {
+export function subscribeStandalone(cb: () => void) {
   const mq = window.matchMedia(STANDALONE_QUERY);
   mq.addEventListener('change', cb);
   return () => mq.removeEventListener('change', cb);

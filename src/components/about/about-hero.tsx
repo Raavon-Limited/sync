@@ -3,7 +3,7 @@
  * display headline ("Stop walking. / Start Syncing." with a lime Highlight
  * on "Syncing."), and a single lead question. No CTA - let it breathe.
  */
-import { Highlight } from '@/components/shared/highlight';
+import { SyncTagline } from '@/components/shared/sync-tagline';
 import { Reveal } from '@/components/shared/reveal';
 
 export function AboutHero() {
@@ -16,11 +16,7 @@ export function AboutHero() {
             id="about-hero-heading"
             className="font-display text-foreground mt-6 text-[44px] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
           >
-            Stop walking.
-            <br />
-            <span className="italic">
-              Start <Highlight>Syncing.</Highlight>
-            </span>
+            <SyncTagline />
           </h1>
           <p className="text-foreground/80 text-lead mt-6 max-w-[640px]">
             It started with a question we couldn&rsquo;t stop asking:{' '}

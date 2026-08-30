@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
   List,
   Megaphone,
+  MessageSquareQuote,
   Newspaper,
   Settings,
   ShieldCheck,
@@ -159,6 +160,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         items: [
           { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
           { href: '/admin/editorial', label: 'Editorial', icon: Newspaper },
+          { href: '/admin/reviews', label: 'Reviews', icon: MessageSquareQuote },
         ],
       },
       {

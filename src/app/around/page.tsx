@@ -114,7 +114,9 @@ export default async function AroundPage() {
           </div>
           <p className="text-content-muted text-xs">Tap a pin · distances</p>
         </div>
-        <AroundMap pins={mapPins} />
+        {/* Full-bleed on mobile: -mx-6 cancels the page gutter so the map runs
+            edge to edge, while the heading above keeps its alignment. */}
+        <AroundMap className="-mx-6 md:mx-0" pins={mapPins} />
       </section>
 
       {/* ─── Feed - below the map ───────────────────────────────────── */}

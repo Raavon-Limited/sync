@@ -11,7 +11,7 @@ export const SITE = {
   description:
     'Sync is the verified marketplace for Nigerian student life - hostels, food, events, beauty, trades, laundry and more.',
   launchMarket: 'KWASU, Malete',
-  url: 'https://sync.ng',
+  url: 'https://www.letsyncyou.com',
   support: {
     email: 'support@sync.ng',
   },

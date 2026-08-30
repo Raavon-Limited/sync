@@ -38,14 +38,16 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'en-NG',
     dir: 'ltr',
 
+    // Straight from the brand kit (public/logo-kit2/pwa). Its README is explicit
+    // that the two families are NOT interchangeable: the plain icons have their
+    // rounded corners baked in, the maskable ones are full bleed with the mark
+    // inside the 80% safe zone. Using a plain icon as maskable double-rounds it;
+    // using a maskable one as plain leaves it floating in dead space.
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      // 'maskable' lets Android crop to whatever shape the launcher uses
-      // (circle, squircle, rounded square) without clipping the mark. Its art
-      // is inset to the safe zone, so it must be a SEPARATE file from 'any' -
-      // declaring one icon as both makes it look shrunken on some launchers.
-      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-192-maskable.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

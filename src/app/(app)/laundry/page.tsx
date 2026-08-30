@@ -2,21 +2,21 @@
  * ROUTE: /laundry
  * ACCESS: authenticated student
  * PURPOSE: Laundry vendor list + pickup scheduler. Pick a vendor, choose pickup/dropoff times, pay on completion (escrow).
- * BUILT HERE: Vendor cards, slot picker, address form.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * STATUS: Coming soon. The route exists because /laundry is in the module
+ *         registry and therefore in the nav - a nav entry that 404s is worse
+ *         than one that says "not yet". Replace <ComingSoon /> with the real
+ *         screen when the module is built.
  */
 import type { Metadata } from 'next';
+
+import { ComingSoon } from '@/components/shared/coming-soon';
+import { getModule } from '@/config/modules';
 
 export const metadata: Metadata = { title: 'Laundry' };
 
 export default function Page() {
-  return (
-    <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/laundry</p>
-      <h1 className="font-display text-section text-content">Laundry</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
-    </section>
-  );
+  // Registry is the single source of truth for label + tagline + icon.
+  const mod = getModule('laundry')!;
+
+  return <ComingSoon title={mod.label} tagline={mod.tagline} iconName={mod.iconName} />;
 }

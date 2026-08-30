@@ -10,7 +10,6 @@
  */
 import { MarketingHeader } from './marketing-header';
 import { ServicesDock } from './services-dock';
-import { ChatWidget } from '@/components/chat/chat-widget';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
@@ -26,12 +25,9 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <MarketingHeader dockMode />
       <ServicesDock role={role} />
 
-      <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-6 pb-24 md:px-6 md:pb-12">
+      <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-6 md:pb-12">
         {children}
       </main>
-
-      {/* Chat float - signed-in users only. */}
-      {user && <ChatWidget />}
     </div>
   );
 }

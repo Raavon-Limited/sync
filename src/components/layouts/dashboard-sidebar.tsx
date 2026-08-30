@@ -18,6 +18,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SITE } from '@/config/site';
+import { SyncLogo } from '@/components/brand/sync-logo';
 import { DASHBOARD_NAV, type DashboardNavKey } from '@/config/dashboard-nav';
 import type { DashboardProfile } from './dashboard-profile';
 import { toast } from '@/components/ui/toast';
@@ -63,12 +64,15 @@ export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSideb
     <div className="flex h-full flex-col gap-5">
       {/* Wordmark + role, with the mode toggle pinned to the edge */}
       <div className="flex items-center justify-between gap-2 px-2">
-        <div className="flex items-baseline gap-2">
-          <Link href="/" onClick={onNavigate} className="font-display text-card text-content">
-            {SITE.name}
-          </Link>
-          <span className="eyebrow text-content-muted">{brandLabel}</span>
-        </div>
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="text-content"
+          aria-label={`${SITE.name} home`}
+        >
+          {/* The kit's dashboard lockup: mark + wordmark + role tag. */}
+          <SyncLogo height={18} role={brandLabel} />
+        </Link>
         <ThemeToggle className="text-content shrink-0" />
       </div>
 

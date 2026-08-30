@@ -17,6 +17,7 @@ import { listAreas } from '@/modules/areas/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
 import { RegisterSW } from '@/components/pwa/register-sw';
 import { InstallGate } from '@/components/pwa/install-gate';
+import { Cursor } from '@/components/ui/cursor';
 
 const bricolage = Bricolage_Grotesque({
   variable: '--font-bricolage',
@@ -109,6 +110,8 @@ export default async function RootLayout({
             WEB_ROUTES. Sits AFTER Providers so it overlays the app, and
             outside it so an area change never re-renders the gate. */}
         <InstallGate />
+        {/* Renders nothing on touch devices or under reduced motion. */}
+        <Cursor />
       </body>
     </html>
   );

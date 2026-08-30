@@ -8,6 +8,7 @@
  * `children`; the form pane fills its width (inputs are full-width).
  */
 import Link from 'next/link';
+import { SyncLogo } from '@/components/brand/sync-logo';
 import { SITE } from '@/config/site';
 
 export function AuthLayout({
@@ -26,8 +27,8 @@ export function AuthLayout({
     <div className="bg-surface text-content flex h-dvh flex-col overflow-hidden md:grid md:grid-cols-2">
       {/* Brand + dynamic heading: top band on mobile, left column on desktop. */}
       <aside className="bg-ink text-cream flex shrink-0 flex-col gap-6 p-6 md:h-dvh md:justify-between md:gap-8 md:p-10">
-        <Link href="/" className="font-display text-card w-fit">
-          {SITE.name}
+        <Link href="/" className="text-cream w-fit" aria-label={`${SITE.name} home`}>
+          <SyncLogo height={20} />
         </Link>
         <div>
           <p className="eyebrow text-lime">{eyebrow}</p>

@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { toast } from '@/components/ui/toast';
 import { MODULES } from '@/config/modules';
-import { SITE } from '@/config/site';
+import SyncIcon from '@/components/brand/SyncIcon';
+import { SyncLogo } from '@/components/brand/sync-logo';
 import { signOut } from '@/modules/auth/actions';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
 // silently drift out of sync with the proxy gate.
@@ -89,11 +90,7 @@ export function MobileMenu({
               className="flex items-center gap-2"
               aria-label="Sync home"
             >
-              <span aria-hidden="true" className="flex items-center gap-1">
-                <span className="bg-foreground block h-2 w-2 rounded-full" />
-                <span className="bg-accent-fg block h-1.5 w-1.5 rounded-full" />
-              </span>
-              <span className="font-display text-card text-foreground">{SITE.name}</span>
+              <SyncLogo height={20} className="text-foreground" />
             </Link>
             <div className="flex items-center gap-1">
               <ThemeToggle />
@@ -112,14 +109,18 @@ export function MobileMenu({
           {/* Nav links - large, tappable, every module */}
           <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-6 py-8">
             <ul className="flex flex-col">
-              {MODULES.map(({ slug, label, tagline, icon: Icon }) => (
+              {MODULES.map(({ slug, label, tagline, iconName }) => (
                 <li key={slug} className="border-line/5 border-b last:border-b-0">
                   <Link
                     href={`/${slug}`}
                     onClick={close}
                     className="hover:text-accent-fg flex items-center gap-4 py-4 transition-colors"
                   >
-                    <Icon className="text-accent-fg h-5 w-5 shrink-0" aria-hidden="true" />
+                    {/* Brand-kit section icon: follows currentColor, so it
+                        inverts with the theme and never needs a colour picked. */}
+                    <span className="text-accent-fg shrink-0">
+                      <SyncIcon name={iconName} size={20} />
+                    </span>
                     <span className="flex-1">
                       <span className="font-display text-card block leading-tight">{label}</span>
                       <span className="text-content-muted text-xs">{tagline}</span>

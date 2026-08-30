@@ -10,7 +10,6 @@
 import Link from 'next/link';
 import { MarketingHeader } from '@/components/layouts/marketing-header';
 import { ServicesDock } from '@/components/layouts/services-dock';
-import { ChatWidget } from '@/components/chat/chat-widget';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 
 export default async function AroundLayout({ children }: { children: React.ReactNode }) {
@@ -28,8 +27,8 @@ export default async function AroundLayout({ children }: { children: React.React
       <div className="bg-surface text-foreground flex min-h-screen flex-col">
         <MarketingHeader dockMode />
         <ServicesDock role={role} />
-        <div className="flex-1 pb-16 md:pb-0">{children}</div>
-        <footer className="border-line/5 mt-12 border-t pb-16 md:pb-0">
+        <div className="flex-1 md:pb-0">{children}</div>
+        <footer className="border-line/5 mt-12 border-t pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0">
           <div className="text-content-muted mx-auto flex max-w-7xl items-center justify-between px-6 py-6 text-xs">
             <span>© {new Date().getFullYear()} Sync</span>
             <Link href="/" className="hover:text-foreground transition-colors">
@@ -37,8 +36,6 @@ export default async function AroundLayout({ children }: { children: React.React
             </Link>
           </div>
         </footer>
-        {/* Chat float - only for signed-in users on the public feed. */}
-        {user && <ChatWidget />}
       </div>
     </>
   );

@@ -1,12 +1,18 @@
 /**
- * HeroHeadline - the landing headline with a single restrained flourish:
- * the whole block fades up on load, then a lime marker stroke wipes across
- * "Start Syncing." left-to-right. Minimalist - one motion, slow and clean.
- * Honours prefers-reduced-motion (renders static, stroke already drawn).
+ * HeroHeadline - the landing headline with a single restrained flourish: the
+ * whole block fades up on load, then the slanted lime band wipes across "Sync"
+ * left-to-right. Minimalist - one motion, slow and clean.
+ * Honours prefers-reduced-motion (renders static, band already drawn).
+ *
+ * The copy and its treatment live in <SyncTagline> so the landing hero, the
+ * about hero and the about CTA cannot drift apart. Only the wipe is here,
+ * because only this instance animates.
  */
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
+
+import { SyncTagline } from '@/components/shared/sync-tagline';
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
@@ -20,22 +26,10 @@ export function HeroHeadline() {
       transition={{ duration: 0.6, ease: EASE }}
       className="font-display text-foreground mt-4 text-[44px] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
     >
-      Stop walking.
-      <br />
-      Start{' '}
-      {/* Lime highlight with ink text on "Syncing." only - constant in light &
-          dark (no clash), matching the /around "your radius" treatment. */}
-      <span className="text-ink relative isolate inline-block px-1.5">
-        <motion.span
-          aria-hidden="true"
-          initial={reduce ? false : { scaleX: 0 }}
-          animate={reduce ? undefined : { scaleX: 1 }}
-          transition={{ delay: 0.5, duration: 0.65, ease: EASE }}
-          style={{ originX: 0 }}
-          className="bg-lime absolute inset-0 -z-10 rounded-[3px]"
-        />
-        Syncing.
-      </span>
+      {/* Only the band animates - the words are visible from the first frame.
+          The wipe is CSS inside SyncTagline (see the band-wipe keyframe), not
+          framer, so the blob clip and its reveal stay in one file. */}
+      <SyncTagline animateBand={!reduce} />
     </motion.h1>
   );
 }
