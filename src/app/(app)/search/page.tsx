@@ -40,7 +40,6 @@ function toListing(h: Hostel): Listing {
   };
 }
 import { Button } from "@/components/ui";
-import { cn } from "@/lib/utils";
 
 const DEFAULT_QUERY: SearchQuery = {
   area: "UNILORIN PS",

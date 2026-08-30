@@ -18,8 +18,43 @@ const configured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
 
-/** PostgREST rows are shaped by the select string, not the generated types. */
-type Row = Record<string, any>;
+/**
+ * Row shapes for the pin queries.
+ *
+ * PostgREST returns whatever the select string asked for, not the generated
+ * table type, so these are declared by hand. Coordinates are typed loosely
+ * because a numeric column can arrive as a string over the wire; every read
+ * goes through Number() and a Number.isFinite guard below.
+ */
+type Coord = number | string | null;
+interface StorefrontRow {
+  id: string;
+  slug: string;
+  name: string;
+  lat: Coord;
+  lng: Coord;
+  vendor: {
+    business_name: string | null;
+    category: string | null;
+    verification_status: string | null;
+    archived_at: string | null;
+  } | null;
+}
+interface HostelRow {
+  id: string;
+  name: string;
+  slug: string;
+  lat: Coord;
+  lng: Coord;
+  verified: boolean | null;
+}
+interface HotspotRow {
+  id: string;
+  name: string;
+  slug: string;
+  lat: Coord;
+  lng: Coord;
+}
 
 /** Pin categories the map legend understands.
  *
@@ -113,7 +148,7 @@ export async function listMapPins(origin?: { lat: number; lng: number }): Promis
 
     const pins: MapPin[] = [];
 
-    for (const row of (storefronts.data ?? []) as Row[]) {
+    for (const row of (storefronts.data ?? []) as unknown as StorefrontRow[]) {
       // The brand may be archived even when the branch row is not.
       const vendor = row.vendor;
       if (!vendor || vendor.archived_at) continue;
@@ -134,7 +169,7 @@ export async function listMapPins(origin?: { lat: number; lng: number }): Promis
       });
     }
 
-    for (const row of (hostels.data ?? []) as Row[]) {
+    for (const row of (hostels.data ?? []) as unknown as HostelRow[]) {
       const lat = Number(row.lat);
       const lng = Number(row.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
@@ -150,7 +185,7 @@ export async function listMapPins(origin?: { lat: number; lng: number }): Promis
       });
     }
 
-    for (const row of (hotspots.data ?? []) as Row[]) {
+    for (const row of (hotspots.data ?? []) as unknown as HotspotRow[]) {
       const lat = Number(row.lat);
       const lng = Number(row.lng);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
