@@ -10,7 +10,11 @@
  * `guard_service_request_cols` trigger freezes `agreed_kobo` once the request
  * leaves `requested`/`quoted`, so neither side can rewrite the deal afterwards.
  *
- * That is why `/workmanship/request` is a request form rather than a checkout.
+ * That is why the vendor detail page offers "Request" rather than a checkout:
+ * there is no price to charge yet. There is no open job board — a request
+ * names its vendor (`service_requests.vendor_id` is NOT NULL), so students
+ * hire a specific pro from /workmanship/[slug] rather than posting a job for
+ * anyone to bid on.
  */
 'use client';
 

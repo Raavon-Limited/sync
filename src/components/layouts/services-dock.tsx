@@ -23,7 +23,7 @@ import {
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { MODULES } from '@/config/modules';
-import { MALETE_AREAS } from '@/mock/around';
+import { useAreas } from '@/modules/hostels/hooks';
 import { useOptionalLocation } from '@/app/around/location-context';
 import { cn } from '@/lib/utils';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
@@ -35,14 +35,23 @@ interface ServicesDockProps {
   role?: Role;
 }
 
-export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockProps) {
+export function ServicesDock({ location, role }: ServicesDockProps) {
   const pathname = usePathname();
+  // `public.areas` — created by 0007_areas precisely to replace the hardcoded
+  // list this used to import. Falls back to an empty picker rather than a
+  // stale one: an area that no longer exists filters to nothing, silently.
+  const { data: areas = [] } = useAreas();
+  const areaNames = areas.map((a) => a.name);
   const isFood = pathname.startsWith('/food');
   const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const shared = useOptionalLocation();
   const [localArea, setLocalArea] = useState(location);
-  const selected = shared ? shared.area : localArea;
+  // Falls back to the first real area only for the LABEL, so the picker never
+  // reads blank while `areas` is loading. Nothing is filtered until the
+  // student actually chooses — seeding a filter from an arbitrary first area
+  // silently hid every other part of campus.
+  const selected = (shared ? shared.area : localArea) || areaNames[0] || 'Choose area';
   const setSelected = shared ? shared.setArea : setLocalArea;
 
   const isActive = (path: string) => {
@@ -161,7 +170,7 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
                   aria-label="Choose your area"
                   className="border-line/10 bg-panel shadow-pop absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border py-1"
                 >
-                  {MALETE_AREAS.map((area) => {
+                  {areaNames.map((area) => {
                     const isSelected = area === selected;
                     return (
                       <li key={area} role="option" aria-selected={isSelected}>
@@ -260,7 +269,7 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
           <div className="mt-5 px-4 pb-2">
             <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">Your area</p>
             <div className="flex flex-wrap gap-2">
-              {MALETE_AREAS.map((area) => {
+              {areaNames.map((area) => {
                 const isSelected = area === selected;
                 return (
                   <button

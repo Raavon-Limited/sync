@@ -26,11 +26,13 @@ import { signOut } from '@/modules/auth/actions';
 
 interface DashboardSidebarProps {
   navKey: DashboardNavKey;
+  /** Optional block above the nav — the vendor store switcher. */
+  topSlot?: React.ReactNode;
   profile: DashboardProfile;
   onNavigate?: () => void;
 }
 
-export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSidebarProps) {
+export function DashboardSidebar({ navKey, profile, onNavigate, topSlot }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { brandLabel, sections, rootHref } = DASHBOARD_NAV[navKey];
@@ -93,6 +95,8 @@ export function DashboardSidebar({ navKey, profile, onNavigate }: DashboardSideb
           </div>
         )}
       </div>
+
+      {topSlot && <div className="px-1">{topSlot}</div>}
 
       {/* Grouped nav */}
       <nav aria-label={`${brandLabel} navigation`} className="flex flex-1 flex-col gap-5">

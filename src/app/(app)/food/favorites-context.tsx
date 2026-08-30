@@ -1,115 +1,118 @@
 /**
- * FavoritesContext - shares saved/favorited food items between FoodCards
- * (where the heart icon lives) and the /food/favorites ("Saved") page.
+ * Favourites — the heart on a card, and the Saved page.
  *
- * Persists to localStorage so favorites survive a page refresh. Components
- * read the context when present and fall back to local state when it isn't -
- * see `useOptionalFavorites`, mirroring the LocationContext pattern.
+ * WAS LOCALSTORAGE, NOW THE DATABASE
+ *   Hearts persisted to `localStorage` under 'sync:food:favorites', so they
+ *   vanished on another device and never reached `public.favorites` — which is
+ *   what /me/saved reads. Tapping a heart looked like it worked and saved
+ *   nothing durable.
+ *
+ * ENTITY, NOT SLUG
+ *   `favorites` stores (entity_type, entity_id). The old shape was keyed by
+ *   `slug`, which is not an id and is not unique across types — a vendor and a
+ *   listing can share one. Cards now pass what they actually are.
+ *
+ * A KNOWN GAP, WRITTEN DOWN RATHER THAN WORKED AROUND
+ *   `favorites.entity_type` allows 'vendor' but not 'storefront' — the table
+ *   predates branches. Favouriting a branch therefore saves the BRAND, so a
+ *   student who hearts the Tanke shop sees the business, not that location.
+ *   Fixing it means widening the check constraint; it is not worked around here
+ *   because a silent approximation is worse than a documented one.
  */
-'use client'
+'use client';
 
-import {
-    createContext,
-    useContext,
-    useEffect,
-    useState,
-    type ReactNode,
-} from 'react'
-import type { StaticImageData } from 'next/image'
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
+import type { StaticImageData } from 'next/image';
+import { useFavorites as useFavoriteRows, useToggleFavorite } from '@/modules/food/hooks';
+import { useSession } from '@/providers/session-provider';
+
+export type FavoriteEntity = 'vendor' | 'listing' | 'event' | 'service' | 'hotspot';
 
 export interface FavoriteFood {
-    slug: string
-    image: StaticImageData | string
-    name: string
-    tags: string[]
-    rating: string
-    reviewCount?: number
-    location: string
-    time: string
-    category?: string
-    isFree?: boolean
-    deliveryTime?: string
-    discount?: string
-    status?: 'open' | 'closed' | 'delivery-only'
+  /** What this is, and its uuid. Required — the row cannot be written without them. */
+  entityType: FavoriteEntity;
+  entityId: string;
+  slug: string;
+  image: StaticImageData | string;
+  name: string;
+  tags: string[];
+  rating: string;
+  reviewCount?: number;
+  location: string;
+  time: string;
+  category?: string;
+  isFree?: boolean;
+  deliveryTime?: string;
+  discount?: string;
+  /**
+   * Mirrors FoodCard's VendorStatus. 'paused' is a cooldown — open, but not
+   * taking orders for a few minutes. A saved card holds a snapshot, so this
+   * is only ever as fresh as the moment it was favourited.
+   */
+  status?: 'open' | 'closed' | 'delivery-only' | 'paused';
 }
 
 interface FavoritesValue {
-    favorites: FavoriteFood[]
-    isFavorite: (slug: string) => boolean
-    toggleFavorite: (food: FavoriteFood) => boolean // returns the new state (true = added)
-    removeFavorite: (slug: string) => void
+  /** ids currently favourited, by entity id. */
+  favoriteIds: Set<string>;
+  isFavorite: (entityId: string) => boolean;
+  /** Returns the new state (true = added), optimistically. */
+  toggleFavorite: (food: FavoriteFood) => boolean;
+  removeFavorite: (entityId: string, entityType: FavoriteEntity) => void;
+  isReady: boolean;
 }
 
-const STORAGE_KEY = 'sync:food:favorites'
-
-const FavoritesContext = createContext<FavoritesValue | null>(null)
+const FavoritesContext = createContext<FavoritesValue | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
-    const [favorites, setFavorites] = useState<FavoriteFood[]>([])
-    const [hydrated, setHydrated] = useState(false)
+  const { isAuthenticated } = useSession();
+  // RLS scopes this to the caller, so no user filter is needed.
+  const { data: rows = [], isLoading } = useFavoriteRows();
+  const toggle = useToggleFavorite();
 
-    // Load from localStorage once on mount (client-only)
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY)
-            if (raw) setFavorites(JSON.parse(raw))
-        } catch {
-            // ignore corrupt storage
-        } finally {
-            setHydrated(true)
-        }
-    }, [])
+  const favoriteIds = useMemo(
+    () => new Set((rows as { entity_id: string }[]).map((r) => r.entity_id)),
+    [rows],
+  );
 
-    // Persist whenever favorites change, after initial hydration
-    useEffect(() => {
-        if (!hydrated) return
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites))
-        } catch {
-            // ignore write failures (e.g. storage full/disabled)
-        }
-    }, [favorites, hydrated])
+  const isFavorite = useCallback((entityId: string) => favoriteIds.has(entityId), [favoriteIds]);
 
-    function isFavorite(slug: string) {
-        return favorites.some((f) => f.slug === slug)
-    }
+  const toggleFavorite = useCallback(
+    (food: FavoriteFood) => {
+      // Signed out: there is no row to write. Report unchanged rather than
+      // showing a filled heart that will be gone on reload.
+      if (!isAuthenticated) return false;
+      const next = !favoriteIds.has(food.entityId);
+      toggle.mutate({ entityType: food.entityType, entityId: food.entityId });
+      return next;
+    },
+    [isAuthenticated, favoriteIds, toggle],
+  );
 
-    function toggleFavorite(food: FavoriteFood) {
-        const alreadySaved = isFavorite(food.slug)
-        setFavorites((prev) =>
-            alreadySaved
-                ? prev.filter((f) => f.slug !== food.slug)
-                : [...prev, food],
-        )
-        return !alreadySaved
-    }
+  const removeFavorite = useCallback(
+    (entityId: string, entityType: FavoriteEntity) => {
+      if (!isAuthenticated || !favoriteIds.has(entityId)) return;
+      // toggle_favorite is a toggle: calling it on a favourited row removes it.
+      toggle.mutate({ entityType, entityId });
+    },
+    [isAuthenticated, favoriteIds, toggle],
+  );
 
-    function removeFavorite(slug: string) {
-        setFavorites((prev) => prev.filter((f) => f.slug !== slug))
-    }
+  const value = useMemo<FavoritesValue>(
+    () => ({ favoriteIds, isFavorite, toggleFavorite, removeFavorite, isReady: !isLoading }),
+    [favoriteIds, isFavorite, toggleFavorite, removeFavorite, isLoading],
+  );
 
-    return (
-        <FavoritesContext.Provider
-            value={{ favorites, isFavorite, toggleFavorite, removeFavorite }}
-        >
-            {children}
-        </FavoritesContext.Provider>
-    )
+  return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
 }
 
-/** Returns the context if a provider is mounted, else null. */
-export function useOptionalFavorites() {
-    return useContext(FavoritesContext)
-}
-
-/**
- * Throws if used outside a provider - use this on pages (like /food/favorites)
- * that require the context to exist, rather than degrading gracefully.
- */
 export function useFavorites() {
-    const ctx = useContext(FavoritesContext)
-    if (!ctx) {
-        throw new Error('useFavorites must be used within a FavoritesProvider')
-    }
-    return ctx
+  const ctx = useContext(FavoritesContext);
+  if (!ctx) throw new Error('useFavorites must be used inside <FavoritesProvider>');
+  return ctx;
+}
+
+/** For cards that may render outside the provider. */
+export function useOptionalFavorites() {
+  return useContext(FavoritesContext);
 }

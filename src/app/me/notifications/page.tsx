@@ -1,65 +1,69 @@
 /**
  * ROUTE: /me/notifications
  * ACCESS: authenticated student
- * PURPOSE: Notification inbox with preferences toggle. Realtime updates via Supabase channels.
- * BUILT HERE: Notification list, mark-all-read, per-channel <Switch> preferences.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * PURPOSE: Notification inbox, live over Supabase channels.
+ *
+ * PREFERENCES ARE NOT PERSISTED, AND THE UI SAYS SO
+ *   There is no notification-preferences table in this schema — only
+ *   `public.devices`, which holds push tokens. The toggles below are local
+ *   state, and the tab states that plainly rather than pretending a switch was
+ *   saved. Silently discarding a preference someone set is worse than telling
+ *   them it is not wired yet.
  */
-"use client";
+'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/shared';
 import { Switch } from '@/components/ui';
-import { 
-  Bell, 
-  Home, 
-  Shirt, 
-  Ticket, 
-  Settings, 
-  CheckCheck, 
+import {
+  Bell,
+  Home,
+  Shirt,
+  Ticket,
+  Settings,
+  CheckCheck,
   Clock,
-  Info
+  Info,
+  ShoppingBag,
+  MessageCircle,
+  Wallet,
+  Star,
+  ShieldCheck,
+  Megaphone,
 } from 'lucide-react';
+import { formatRelative } from '@/lib/utils';
+import {
+  useNotifications,
+  useMarkNotificationsRead,
+  useNotificationsRealtime,
+} from '@/modules/messaging/hooks';
+import type { NotificationKind } from '@/modules/messaging/types';
 
-interface NotificationItem {
-  id: string;
-  type: 'Hostel' | 'Laundry' | 'Event' | 'System';
-  title: string;
-  description: string;
-  time: string;
-  isUnread: boolean;
-}
+/**
+ * One icon per real notification kind. The previous four-way union (Hostel /
+ * Laundry / Event / System) could not represent most of what the database
+ * actually emits — an order or a payment alert had nowhere to land.
+ */
+const KIND_ICON: Record<NotificationKind, React.ReactNode> = {
+  booking: <Home className="h-4 w-4 text-lime" />,
+  order: <ShoppingBag className="h-4 w-4 text-lime" />,
+  message: <MessageCircle className="h-4 w-4 text-lime" />,
+  payment: <Wallet className="h-4 w-4 text-lime" />,
+  verification: <ShieldCheck className="h-4 w-4 text-lime" />,
+  delivery: <Shirt className="h-4 w-4 text-lime" />,
+  review: <Star className="h-4 w-4 text-lime" />,
+  promotion: <Megaphone className="h-4 w-4 text-lime" />,
+  system: <Info className="h-4 w-4 text-content-muted" />,
+};
 
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'inbox' | 'preferences'>('inbox');
   
-  // Mock notifications array state to allow "marking as read"
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: "nt-1",
-      type: "Hostel",
-      title: "Application Reviewed",
-      description: "Your accommodation request for Tanke Crescent Lodge · Room 4B has been reviewed by management.",
-      time: "10 mins ago",
-      isUnread: true,
-    },
-    {
-      id: "nt-2",
-      type: "Laundry",
-      title: "Order Progress Update",
-      description: "Your 8kg Mixed Express Wash has transitioned to the [Washing] cycle.",
-      time: "2 hours ago",
-      isUnread: true,
-    },
-    {
-      id: "nt-3",
-      type: "Event",
-      title: "Ticket Confirmed",
-      description: "Payment successful! Your gate ticket for Tech Innovation Hub Summit is ready for download.",
-      time: "1 day ago",
-      isUnread: false,
-    },
-  ]);
+  // Live: `notifications` is in the realtime publication, so a new alert
+  // arrives without a refresh.
+  useNotificationsRealtime();
+  const { data: notifications = [], isLoading } = useNotifications({ pageSize: 50 });
+  const markRead = useMarkNotificationsRead();
 
   // Channel preference toggle states
   const [prefs, setPrefs] = useState({
@@ -69,20 +73,15 @@ export default function NotificationsPage() {
     systemAlerts: false,
   });
 
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
-  };
+  // No argument marks everything; the RPC returns how many it touched.
+  const handleMarkAllRead = () => markRead.mutate(undefined);
 
-  const getIcon = (type: NotificationItem['type']) => {
-    switch (type) {
-      case 'Hostel': return <Home className="h-4 w-4 text-lime" />;
-      case 'Laundry': return <Shirt className="h-4 w-4 text-lime" />;
-      case 'Event': return <Ticket className="h-4 w-4 text-lime" />;
-      case 'System': return <Info className="h-4 w-4 text-content-muted" />;
-    }
-  };
+  const getIcon = (kind: NotificationKind) => KIND_ICON[kind] ?? KIND_ICON.system;
 
-  const unreadCount = notifications.filter(n => n.isUnread).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => n.isUnread).length,
+    [notifications],
+  );
 
   return (
     <section className="flex flex-col gap-3">
@@ -141,7 +140,13 @@ export default function NotificationsPage() {
       {/* Main Content Area */}
       <section className="mt-6">
         {activeTab === 'inbox' ? (
-          notifications.length === 0 ? (
+          isLoading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-ink/5 h-20 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <EmptyState
               title="Inbox is totally clear"
               description="No new updates or alerts are registered to your account right now."
@@ -158,7 +163,7 @@ export default function NotificationsPage() {
                   }`}
                 >
                   <div className="bg-ink/5 border-line/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border">
-                    {getIcon(notification.type)}
+                    {getIcon(notification.kind)}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -167,11 +172,11 @@ export default function NotificationsPage() {
                         {notification.title}
                       </h4>
                       <span className="font-body text-[11px] text-content-muted flex items-center gap-1 shrink-0">
-                        <Clock className="h-3 w-3" /> {notification.time}
+                        <Clock className="h-3 w-3" /> {formatRelative(notification.createdAt)}
                       </span>
                     </div>
                     <p className="font-body text-xs text-content-muted mt-1 leading-relaxed max-w-2xl">
-                      {notification.description}
+                      {notification.body}
                     </p>
                   </div>
                 </div>
@@ -184,6 +189,10 @@ export default function NotificationsPage() {
             <div>
               <h3 className="font-display text-base font-medium text-content">Notification Routing</h3>
               <p className="font-body text-xs text-content-muted mt-0.5">Toggle where and how you receive real-time campus module updates.</p>
+              <p className="font-body text-xs text-amber-600 mt-2">
+                These toggles are not saved yet — there is no preferences store behind them, so
+                they reset when you leave the page.
+              </p>
             </div>
 
             <div className="border-line/5 border-t pt-4 flex flex-col gap-5">

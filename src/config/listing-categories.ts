@@ -1,16 +1,15 @@
 /**
- * Food listing categories.
+ * DEPRECATED - superseded by the `listing_categories` table.
  *
- * Configuration, not data — it lived in `src/mock/listings.ts` only because
- * that is where it was first written. There is no `listing_categories` table:
- * `listings.category` is free text with an index, and this is the list the
- * vendor UI offers. If categories ever need per-campus curation or admin
- * editing, promote this to a table; until then a constant is the honest shape.
+ * This was a food-only constant, which broke the moment a clothing vendor was
+ * onboarded. Categories are now data: a shared platform taxonomy keyed by
+ * vendor type, plus per-vendor custom categories. See the
+ * `20260820120000_category_taxonomy` migration and `useListingCategories()`.
  *
- * 'All' is a UI filter sentinel and is never persisted.
+ * Kept only as a seed reference for the food set. Nothing should import it -
+ * delete once you have confirmed no branch still does.
  */
-export const LISTING_CATEGORIES = [
-  'All',
+export const LEGACY_FOOD_CATEGORIES = [
   'Rice',
   'Soups',
   'Grills',
@@ -19,10 +18,3 @@ export const LISTING_CATEGORIES = [
   'Beans',
   'Specials',
 ] as const;
-
-export type ListingCategory = (typeof LISTING_CATEGORIES)[number];
-
-/** The categories a listing can actually be saved with. */
-export const SELECTABLE_LISTING_CATEGORIES = LISTING_CATEGORIES.filter(
-  (c) => c !== 'All',
-) as Exclude<ListingCategory, 'All'>[];

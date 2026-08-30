@@ -2,17 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Upload } from "lucide-react";
-import { ARTICLE_CATEGORIES } from "../admin-editorialConstants";
 import type { NewArticleFormValues } from "../admin-editorialTypes";
+import type { PublishMode } from "@/modules/admin/editorial-actions";
 import { Input, Button, Textarea, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Checkbox } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 interface NewArticleModalProps {
   open: boolean;
   onClose: () => void;
-  onPublish: (values: NewArticleFormValues) => void;
-  onSaveDraft: (values: NewArticleFormValues) => void;
-  onSchedule: (values: NewArticleFormValues) => void;
+  categories: string[];
+  /** Rejects by throwing; the message is shown in the footer. */
+  onSubmit: (values: NewArticleFormValues, mode: PublishMode) => Promise<void>;
 }
 
 const INITIAL_FORM: NewArticleFormValues = {
@@ -22,13 +22,30 @@ const INITIAL_FORM: NewArticleFormValues = {
   content: "",
   featuredImage: null,
   markAsFeatured: false,
+  publishAt: "",
 };
 
-export function NewArticleModal({ open, onClose, onPublish, onSaveDraft, onSchedule,
-}: NewArticleModalProps) {
+export function NewArticleModal({ open, onClose, categories, onSubmit }: NewArticleModalProps) {
   const [form, setForm] = useState<NewArticleFormValues>(INITIAL_FORM);
   const [isVisible, setIsVisible] = useState(false);
+  const [busy, setBusy] = useState<PublishMode | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // The write can fail — a duplicate slug, a rejected upload, a scheduled time
+  // in the past. Closing optimistically would hide all of it.
+  async function submit(mode: PublishMode) {
+    setError(null);
+    setBusy(mode);
+    try {
+      await onSubmit(form, mode);
+      handleClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the article");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   // Smooth entrance interpolation
   useEffect(() => {
@@ -125,7 +142,7 @@ export function NewArticleModal({ open, onClose, onPublish, onSaveDraft, onSched
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent className="w-[--radix-select-trigger-width]">
-                {ARTICLE_CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat} value={cat} className="">
                     {cat}
                   </SelectItem>
@@ -158,6 +175,19 @@ export function NewArticleModal({ open, onClose, onPublish, onSaveDraft, onSched
               placeholder="Write your article content here..."
               rows={6}
               className="w-full bg-surface-deep/40 border border-line/15 outline-none! ring-0! rounded-md px-3 py-2  text-content placeholder:text-content-muted/50 resize-none transition-colors focus:border-line/40 focus:bg-surface-deep/70 font-sans leading-relaxed" />
+          </div>
+
+          {/* Publish time — only Schedule reads it, but it has to be set
+              before Schedule can mean anything. */}
+          <div className="space-y-1.5">
+            <label className="block text-[12px] uppercase tracking-widest font-bold text-content-muted/90">
+              Publish At <span className="normal-case tracking-normal font-medium text-content-muted/60">(for Schedule)</span>
+            </label>
+            <Input
+              type="datetime-local"
+              value={form.publishAt}
+              onChange={(e) => updateField("publishAt", e.target.value)}
+              className="w-full bg-surface-deep/40 border-line/15 text-content h-9 transition-colors focus:border-line/40 focus:bg-surface-deep/70" />
           </div>
 
           {/* file Attachments */}
@@ -208,30 +238,36 @@ export function NewArticleModal({ open, onClose, onPublish, onSaveDraft, onSched
         </div>
 
         {/* Form Control Strip */}
-        <div className="flex items-center justify-start gap-2 px-2 md:px-6 py-4 border-t border-line/15 shrink-0 bg-surface-deep/10">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onPublish(form)}
-            className="bg-lime text-ink font-semibold text-xs hover:opacity-90 transition-opacity md:px-4 h-9 shadow-sm cursor-pointer" >
-            Publish Now
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onSaveDraft(form)}
-            className="bg-panel border-line/15 text-content text-xs hover:bg-surface-deep md:px-4 h-9 cursor-pointer" >
-            Save as Draft
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onSchedule(form)}
-            className="bg-panel border-line/15 text-content text-xs hover:bg-surface-deep md:px-4 h-9 cursor-pointer" >
-            Schedule
-          </Button>
+        <div className="flex flex-col gap-2 px-2 md:px-6 py-4 border-t border-line/15 shrink-0 bg-surface-deep/10">
+          {error && <p className="text-xs font-medium text-coral">{error}</p>}
+          <div className="flex items-center justify-start gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => submit("publish")}
+              className="bg-lime text-ink font-semibold text-xs hover:opacity-90 transition-opacity md:px-4 h-9 shadow-sm cursor-pointer" >
+              {busy === "publish" ? "Publishing..." : "Publish Now"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => submit("draft")}
+              className="bg-panel border-line/15 text-content text-xs hover:bg-surface-deep md:px-4 h-9 cursor-pointer" >
+              {busy === "draft" ? "Saving..." : "Save as Draft"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy !== null}
+              onClick={() => submit("schedule")}
+              className="bg-panel border-line/15 text-content text-xs hover:bg-surface-deep md:px-4 h-9 cursor-pointer" >
+              {busy === "schedule" ? "Scheduling..." : "Schedule"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

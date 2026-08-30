@@ -7,7 +7,10 @@ interface ArticleCategoryBadgeProps {
   category: ArticleCategory;
 }
 
-const CATEGORY_STYLES: Record<ArticleCategory, string> = {
+// Categories come from `articles.tags`, so this is a palette for the ones we
+// expect, not the set of ones allowed. Anything unrecognised falls back to the
+// neutral style rather than rendering as an unstyled pill.
+const CATEGORY_STYLES: Record<string, string> = {
   "Business Tips": "bg-surface-deep text-content border-line/15",
   "Market Trends": "bg-purple-500/10 dark:bg-purple-400/10 text-purple-600 dark:text-purple-400 border-purple-500/20 dark:border-purple-400/20",
   "Safety & Compliance": "bg-coral/10 text-coral border-coral/20",
@@ -15,12 +18,14 @@ const CATEGORY_STYLES: Record<ArticleCategory, string> = {
   "Customer Insights": "bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-500/20 dark:border-amber-400/20",
 };
 
+const NEUTRAL = "bg-surface-deep text-content border-line/15";
+
 export function ArticleCategoryBadge({ category }: ArticleCategoryBadgeProps) {
   return (
     <span
       className={cn(
         "inline-flex items-center text-eyebrow font-semibold px-2 py-0.5 rounded-full border shrink-0 whitespace-nowrap",
-        CATEGORY_STYLES[category]
+        CATEGORY_STYLES[category] ?? NEUTRAL
       )} >
       {category}
     </span>

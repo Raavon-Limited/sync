@@ -16,7 +16,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
 
     const link = document.createElement('a');
     link.href = attachment.url;
-    link.download = attachment.file.name;
+    link.download = attachment.name;
 
     document.body.appendChild(link);
     link.click();
@@ -35,7 +35,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
       >
         <img
           src={attachment.url}
-          alt={attachment.file.name}
+          alt={attachment.name}
           className="block max-h-[360px] max-w-[320px] object-cover transition-transform duration-200 group-hover:scale-[1.02]"
         />
 
@@ -68,7 +68,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         </div>
 
         <div className="absolute right-2 bottom-2 left-2 rounded-lg bg-black/50 px-2.5 py-1.5 text-left backdrop-blur-sm">
-          <p className="truncate text-xs font-medium text-white">{attachment.file.name}</p>
+          <p className="truncate text-xs font-medium text-white">{attachment.name}</p>
         </div>
       </Button>
     );
@@ -89,7 +89,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-slate-900">{attachment.file.name}</p>
+          <p className="truncate text-sm font-medium text-slate-900">{attachment.name}</p>
 
           <p className="mt-0.5 text-xs text-violet-600">Audio attachment</p>
         </div>
@@ -114,10 +114,10 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         </div>
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-900">{attachment.file.name}</p>
+          <p className="truncate text-sm font-medium text-slate-900">{attachment.name}</p>
 
           <p className="mt-0.5 text-xs text-orange-600 uppercase">
-            {attachment.file.name.split('.').pop() || 'FILE'}
+            {attachment.name.split('.').pop() || 'FILE'}
           </p>
         </div>
       </Button>

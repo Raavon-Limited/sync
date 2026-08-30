@@ -7,14 +7,11 @@
 
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const data = [
-  { month: 'Jan', amount: 28_500 },
-  { month: 'Feb', amount: 31_200 },
-  { month: 'Mar', amount: 22_800 },
-  { month: 'Apr', amount: 41_000 },
-  { month: 'May', amount: 36_400 },
-  { month: 'Jun', amount: 48_900 },
-];
+/**
+ * Falls back to an empty six-month frame when no data is passed, so the axis
+ * still renders rather than the chart collapsing. Callers supply real months.
+ */
+const EMPTY_FRAME: SpendDatum[] = [];
 
 type SpendDatum = { month: string; amount: number };
 type BarShapeProps = { x?: number; y?: number; width?: number; height?: number; fill?: string };
@@ -50,7 +47,7 @@ const CustomTooltip = ({ active, payload }: TooltipPayload) => {
   );
 };
 
-export function SpendChart() {
+export function SpendChart({ data = EMPTY_FRAME }: { data?: SpendDatum[] }) {
   const total = data.reduce((sum, d) => sum + d.amount, 0);
 
   return (

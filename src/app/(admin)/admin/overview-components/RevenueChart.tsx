@@ -12,12 +12,23 @@ const PADDING = { top: 20, right: 20, bottom: 36, left: 60 };
 const CHART_W = W - PADDING.left - PADDING.right;
 const CHART_H = H - PADDING.top - PADDING.bottom;
 
+/** Rounds an axis step up to the nearest 1, 2 or 5 times a power of ten. */
+function niceStep(raw: number) {
+  if (!(raw > 0)) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  return ([1, 2, 5, 10].map(f => f * mag).find(v => v >= raw) ?? mag * 10);
+}
+
 export function RevenueChart({ data }: RevenueChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const maxVal = Math.max(...data.map(d => d.revenue));
-  const yMax = Math.ceil(maxVal / 20000) * 20000;
-  const yTicks = [0, 20000, 40000, 60000, 80000].filter(t => t <= yMax + 10000);
+  // The axis was pinned to a fixed 20,000 step with a hardcoded tick list,
+  // which only ever fit the mock numbers: real revenue of ₦0 made yMax zero
+  // and every bar height NaN, and revenue in the millions ran off the top.
+  const maxVal = Math.max(0, ...data.map(d => d.revenue));
+  const step = niceStep(maxVal / 4);
+  const yMax = Math.max(step * 4, step);
+  const yTicks = Array.from({ length: 5 }, (_, i) => i * (yMax / 4));
 
   const barWidth = CHART_W / data.length;
   const barPad = barWidth * 0.25;

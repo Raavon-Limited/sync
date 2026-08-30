@@ -1,22 +1,20 @@
 /**
  * ROUTE: /beauty
- * ACCESS: authenticated student
- * PURPOSE: Beauty professionals directory - stylists, nail techs, barbers. Filter by service type.
- * BUILT HERE: Service-type <Chip>s, <ListingCard> grid.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * ACCESS: public to browse; signing in is required to request.
+ * PURPOSE: Browse beauty services and send a request to a vendor.
+ *
+ * All three service verticals share one browser — see
+ * components/services/services-browser. The vertical is the only difference.
  */
 import type { Metadata } from 'next';
+import { ServicesBrowser } from '@/components/services/services-browser';
 
 export const metadata: Metadata = { title: 'Beauty' };
 
 export default function Page() {
   return (
     <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/beauty</p>
-      <h1 className="font-display text-section text-content">Beauty</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+      <ServicesBrowser vertical="beauty" />
     </section>
   );
 }

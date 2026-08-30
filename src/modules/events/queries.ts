@@ -30,6 +30,32 @@ export interface SyncEvent {
   venue: string | null;
   startsAt: string;
   createdAt: string;
+  coverUrl: string | null;
+  category: string | null;
+  description: string | null;
+}
+
+/**
+ * What an event SELLS, as opposed to what somebody already bought.
+ *
+ * `tickets.tier` and `price_kobo` are snapshots on an issued ticket, so before
+ * this existed there was no way to show a price to someone who had not already
+ * paid. See 20260824100000_event_ticket_tiers.
+ */
+export interface TicketTier {
+  id: string;
+  eventId: string;
+  name: string;
+  description: string | null;
+  priceKobo: number;
+  /** null = uncapped. */
+  quantity: number | null;
+  /** Recounted from issued tickets by trigger, never written by a client. */
+  sold: number;
+  /** false when capped and full. Uncapped tiers are always available. */
+  isAvailable: boolean;
+  remaining: number | null;
+  sortOrder: number;
 }
 
 export type TicketStatus = 'valid' | 'used' | 'refunded';
@@ -58,7 +84,28 @@ const toEvent = (r: Row): SyncEvent => ({
   venue: r.venue,
   startsAt: r.starts_at,
   createdAt: r.created_at,
+  coverUrl: r.cover_url ?? null,
+  category: r.category ?? null,
+  description: r.description ?? null,
 });
+
+const toTier = (r: Row): TicketTier => {
+  const quantity = r.quantity ?? null;
+  const sold = r.sold ?? 0;
+  return {
+    id: r.id,
+    eventId: r.event_id,
+    name: r.name,
+    description: r.description ?? null,
+    priceKobo: Number(r.price_kobo ?? 0),
+    quantity,
+    sold,
+    // An uncapped tier never sells out; a capped one does exactly when it fills.
+    isAvailable: quantity == null || sold < quantity,
+    remaining: quantity == null ? null : Math.max(0, quantity - sold),
+    sortOrder: r.sort_order ?? 0,
+  };
+};
 
 const toTicket = (r: Row): Ticket => ({
   id: r.id,
@@ -93,6 +140,18 @@ export async function fetchEventBySlug(db: Client, slug: string): Promise<SyncEv
   return r ? toEvent(r) : null;
 }
 
+/** What this event sells. Public — a listing without prices is not a listing. */
+export async function fetchEventTiers(db: Client, eventId: string): Promise<TicketTier[]> {
+  return unwrapList<Row>(
+    await db
+      .from('event_ticket_tiers')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+  ).map(toTier);
+}
+
 /** RLS scopes this to the caller — `tickets_select_own`. */
 export async function fetchMyTickets(
   db: Client,
@@ -115,4 +174,24 @@ export async function fetchTicket(db: Client, id: string): Promise<Ticket | null
     await db.from('tickets').select('*, event:events(name, venue, starts_at)').eq('id', id).maybeSingle(),
   );
   return r ? toTicket(r) : null;
+}
+
+/**
+ * Buys tickets from wallet balance.
+ *
+ * `reference` is CALLER-SUPPLIED and must be stable for one attempt: replaying
+ * it returns the same tickets instead of buying more. Generate one per checkout,
+ * not per render, or a re-render becomes a second purchase.
+ */
+export async function purchaseTickets(
+  db: Client,
+  input: { tierId: string; quantity: number; reference: string },
+): Promise<string[]> {
+  const { data, error } = await db.rpc('purchase_tickets', {
+    p_tier_id: input.tierId,
+    p_quantity: input.quantity,
+    p_reference: input.reference,
+  });
+  if (error) throw error;
+  return (data ?? []) as string[];
 }

@@ -9,6 +9,7 @@
  * additive, so both can coexist while the screens move across one at a time.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { resolvePrimaryStorefrontId } from '@/modules/storefronts/queries';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
 import type { FoodOrder, OrderStatus } from '@/modules/food/types';
@@ -59,6 +60,14 @@ export interface Promotion {
   id: string;
   code: string | null;
   name: string;
+  /** Listing this campaign promotes. Null = store-wide. */
+  listingId: string | null;
+  /** Snapshot of the listing name for display, joined at read time. */
+  listingName?: string | null;
+  /** Campaign kind. Distinct from discountType, which is the discount maths. */
+  promotionType: string | null;
+  /** Vendor-set daily spend cap, in kobo. */
+  dailyBudgetKobo: number | null;
   description: string | null;
   discountType: 'percent' | 'fixed';
   discountValue: number;
@@ -112,6 +121,10 @@ const toPromotion = (r: Row): Promotion => ({
   id: r.id,
   code: r.code,
   name: r.name,
+  listingId: r.listing_id,
+  listingName: r.listing?.name ?? null,
+  promotionType: r.promotion_type,
+  dailyBudgetKobo: r.daily_budget_kobo == null ? null : Number(r.daily_budget_kobo),
   description: r.description,
   discountType: r.discount_type,
   discountValue: r.discount_value,
@@ -218,10 +231,19 @@ export async function upsertListing(
     name: string;
     category: string;
     priceKobo: number;
+    /** Which branch stocks it. Defaults to the vendor's primary branch. */
+    storefrontId?: string;
   },
 ): Promise<VendorListing> {
+  // storefront_id is NOT NULL: a listing is stocked AT a branch. A vendor
+  // editing an existing item keeps its branch; a new item without an explicit
+  // branch lands on the primary one.
+  const storefrontId =
+    input.storefrontId ?? (input.id ? undefined : await resolvePrimaryStorefrontId(db, input.vendorId));
+
   const payload = {
     vendor_id: input.vendorId,
+    ...(storefrontId ? { storefront_id: storefrontId } : {}),
     name: input.name,
     description: input.description ?? null,
     category: input.category,
@@ -267,18 +289,31 @@ export async function deleteListings(db: Client, ids: string[]) {
 
 // ── Order inbox ────────────────────────────────────────────────────────────
 
+/**
+ * The vendor's order queue.
+ *
+ * SCOPE BY BRANCH WHEN ONE IS ACTIVE, BY BRAND OTHERWISE.
+ *   Filtering on `vendor_id` alone returns EVERY branch's orders merged, which
+ *   is wrong for a vendor working one location — and returns nothing at all for
+ *   an invited manager, whose uid is not the vendor's. Passing `storefrontId`
+ *   fixes both: RLS (orders_select_own) already lets branch staff read their own
+ *   branch's orders, so the same call works for owner and manager alike.
+ */
 export async function fetchVendorOrders(
   db: Client,
   vendorId: string,
-  opts: { status?: OrderStatus } & PageParams = {},
+  opts: { status?: OrderStatus; storefrontId?: string } & PageParams = {},
 ): Promise<FoodOrder[]> {
   const [from, to] = toRange(opts);
   let q = db
     .from('orders')
     .select('*, order_items(*)')
-    .eq('vendor_id', vendorId)
     .order('placed_at', { ascending: false })
     .range(from, to);
+
+  q = opts.storefrontId
+    ? q.eq('storefront_id', opts.storefrontId)
+    : q.eq('vendor_id', vendorId);
 
   if (opts.status) q = q.eq('status', opts.status);
 
@@ -294,12 +329,43 @@ export async function updateOrderStatus(
   db: Client,
   orderId: string,
   status: OrderStatus,
+  reason?: string,
 ): Promise<FoodOrder> {
+  // Cancelling is NOT a status write. A plain update leaves the escrow hold
+  // sitting at 'held', and the hourly release cron then pays the vendor in
+  // full for an order that never happened — see 20260829100000. Cancelling
+  // and refunding have to be one transaction, which is what the RPC is.
+  if (status === 'cancelled') return cancelOrder(db, orderId, reason);
+
   const patch: Database['public']['Tables']['orders']['Update'] = { status };
   if (status === 'delivered') patch.delivered_at = new Date().toISOString();
 
   const row = unwrap<Row>(
     await db.from('orders').update(patch).eq('id', orderId).select('*, order_items(*)').single(),
+  );
+  return toOrder(row);
+}
+
+/**
+ * Cancel an order and refund the student in full, in one transaction.
+ *
+ * The refund is automatic and needs no staff: the vendor gave up the sale, so
+ * there is nothing to arbitrate. Disputes remain for the contested cases.
+ * Idempotent server-side, so a second tap costs nothing.
+ */
+export async function cancelOrder(
+  db: Client,
+  orderId: string,
+  reason?: string,
+): Promise<FoodOrder> {
+  const { error } = await db.rpc('cancel_order', {
+    p_order_id: orderId,
+    p_reason: reason,
+  });
+  if (error) throw error;
+
+  const row = unwrap<Row>(
+    await db.from('orders').select('*, order_items(*)').eq('id', orderId).single(),
   );
   return toOrder(row);
 }
@@ -310,7 +376,7 @@ export async function fetchMyPromotions(db: Client, vendorId: string): Promise<P
   const rows = unwrapList<Row>(
     await db
       .from('promotions')
-      .select('*')
+      .select('*, listing:listings(name)')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: false }),
   );
@@ -354,6 +420,12 @@ export async function upsertPromotion(
     starts_at: input.startsAt ?? new Date().toISOString(),
     ends_at: input.endsAt ?? null,
     is_active: input.isActive ?? true,
+    // null = store-wide. The DB trigger rejects a listing the caller does not
+    // own, so a forged id fails loudly rather than silently promoting someone
+    // else's product.
+    listing_id: input.listingId ?? null,
+    promotion_type: input.promotionType ?? null,
+    daily_budget_kobo: input.dailyBudgetKobo ?? null,
   };
 
   const row = input.id
@@ -366,4 +438,142 @@ export async function upsertPromotion(
 export async function deletePromotion(db: Client, id: string) {
   const { error } = await db.from('promotions').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ── Listing images (Supabase Storage) ──────────────────────────────────────
+
+export const MEDIA_BUCKET = 'public-media';
+
+/** 5 MB, matching the bucket's own `file_size_limit`. Checked here too so the
+ *  user gets a sentence instead of an opaque storage error. */
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+
+/**
+ * Uploads a listing photo and returns its public URL.
+ *
+ * PUBLIC URL, NOT SIGNED - unlike chat attachments. A listing photo appears on
+ * pages a signed-out visitor can already see, so a permanent URL is the point.
+ * Signing them would mean every storefront render burns a round trip minting
+ * links that expire.
+ *
+ * The path starts with the uploader's uuid because the `public_media_insert_own`
+ * policy authorizes on the first segment - a vendor can only write under their
+ * own folder, so one vendor cannot overwrite another's photo.
+ */
+export async function uploadListingImage(
+  db: Client,
+  input: { userId: string; file: File },
+): Promise<string> {
+  if (!ACCEPTED_IMAGE_TYPES.includes(input.file.type)) {
+    throw new Error('Please choose a JPEG, PNG, WebP or AVIF image.');
+  }
+  if (input.file.size > MAX_IMAGE_BYTES) {
+    throw new Error('That image is over 5MB. Please choose a smaller one.');
+  }
+
+  const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+  const token = crypto.randomUUID().slice(0, 8);
+  const path = `${input.userId}/listings/${token}-${safeName}`;
+
+  const { error } = await db.storage.from(MEDIA_BUCKET).upload(path, input.file, {
+    contentType: input.file.type,
+    // The random prefix makes collisions vanishingly unlikely; an unexpected one
+    // should fail rather than silently replace someone's photo.
+    upsert: false,
+  });
+  if (error) throw error;
+
+  const { data } = db.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+
+  return data.publicUrl;
+}
+
+// ── Listing categories ─────────────────────────────────────────────────────
+
+export interface ListingCategory {
+  id: string;
+  vendorCategory: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  /** False for the shared platform taxonomy, true for this vendor's own. */
+  isCustom: boolean;
+}
+
+const toCategory = (r: Row): ListingCategory => ({
+  id: r.id,
+  vendorCategory: r.vendor_category,
+  name: r.name,
+  slug: r.slug,
+  sortOrder: r.sort_order,
+  isCustom: r.vendor_id !== null,
+});
+
+/**
+ * The categories a given vendor may file a listing under: the shared platform
+ * taxonomy for their business type, plus any they have added themselves.
+ *
+ * One query, not two. `or()` keeps it a single round trip, and the RLS policy
+ * already prevents another vendor's custom categories from coming back.
+ */
+export async function fetchListingCategories(
+  db: Client,
+  input: { vendorCategory: string; vendorId?: string },
+): Promise<ListingCategory[]> {
+  const ownership = input.vendorId
+    ? `vendor_id.is.null,vendor_id.eq.${input.vendorId}`
+    : 'vendor_id.is.null';
+
+  const rows = unwrapList<Row>(
+    await db
+      .from('listing_categories')
+      .select('*')
+      .eq('vendor_category', input.vendorCategory)
+      .eq('is_active', true)
+      .or(ownership)
+      .order('sort_order', { ascending: true }),
+  );
+
+  return rows.map(toCategory);
+}
+
+/**
+ * Creates a custom category for this vendor.
+ *
+ * `vendor_category` is taken from the vendor's storefront rather than the
+ * caller: a trigger rejects a mismatch anyway, and deriving it here means the
+ * UI cannot get it wrong.
+ */
+export async function createListingCategory(
+  db: Client,
+  input: { vendorId: string; vendorCategory: string; name: string },
+): Promise<ListingCategory> {
+  const name = input.name.trim();
+
+  if (!name) throw new Error('Category name is required.');
+
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (!slug) throw new Error('Please use letters or numbers in the category name.');
+
+  const row = unwrap<Row>(
+    await db
+      .from('listing_categories')
+      .insert({
+        vendor_id: input.vendorId,
+        vendor_category: input.vendorCategory,
+        name,
+        slug,
+        // Custom categories sort after the platform set.
+        sort_order: 1000,
+      })
+      .select()
+      .single(),
+  );
+
+  return toCategory(row);
 }

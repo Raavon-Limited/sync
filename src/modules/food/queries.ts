@@ -15,6 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
+import { resolvePrimaryStorefrontId } from '@/modules/storefronts/queries';
 import type {
   Cart,
   CheckoutResult,
@@ -44,6 +45,10 @@ const toVendor = (r: Row): FoodVendor => ({
   ratingCount: r.rating_count ?? 0,
   isAcceptingOrders: r.is_accepting_orders ?? true,
   isVerified: r.verification_status === 'verified',
+  opensAt: r.opens_at ?? null,
+  closesAt: r.closes_at ?? null,
+  publicPhone: r.public_phone ?? null,
+  businessAddress: r.business_address ?? null,
 });
 
 const toListing = (r: Row): FoodListing => ({
@@ -53,11 +58,50 @@ const toListing = (r: Row): FoodListing => ({
   description: r.description,
   category: r.category,
   priceKobo: Number(r.price_kobo ?? 0),
-  stock: r.stock ?? 0,
+  // Catalogue defaults. A listing read outside a store has no store terms, so
+  // it reports itself available and untracked; `toStoreListing` below overlays
+  // the real ones when a store is in scope.
+  stock: null,
   sold: r.sold ?? 0,
   status: r.status,
+  isAvailable: r.status === 'Active',
   imageUrl: r.image_url,
 });
+
+/**
+ * A catalogue row seen through one store: its price, its stock and whether
+ * that store can sell it at all.
+ *
+ * The overlay is the point of the shared catalogue — the name, photo and
+ * description are the business's and are edited once, while price and stock
+ * belong to the location standing in front of the student.
+ */
+const toStoreListing = (r: Row, sl: Row | undefined): FoodListing => ({
+  ...toListing(r),
+  priceKobo: Number(sl?.price_kobo ?? r.price_kobo ?? 0),
+  stock: sl?.stock ?? null,
+  isAvailable: !!sl?.is_available,
+});
+
+/**
+ * No vendor embed. `orders.vendor_id` is a FK to public.profiles — NOT to
+ * vendor_profiles — so `vendor:vendor_profiles!orders_vendor_id_fkey(...)`
+ * asked PostgREST for a relationship that does not exist and failed the whole
+ * query with "Could not find a relationship". Routing it through profiles
+ * instead would parse, then return null forever, because profiles is readable
+ * only for your own row. Storefront names are therefore joined in code below.
+ */
+const ORDER_SELECT = '*, order_items(*)';
+
+/** vendor_profiles.id === profiles.id === orders.vendor_id, and vendor_profiles
+ *  is publicly readable, so this is a plain lookup rather than an embed. */
+async function attachVendorNames(db: Client, rows: Row[]): Promise<Row[]> {
+  const ids = [...new Set(rows.map((r) => r.vendor_id).filter(Boolean))];
+  if (!ids.length) return rows;
+  const { data } = await db.from('vendor_profiles').select('id, business_name').in('id', ids);
+  const names = new Map((data ?? []).map((v: Row) => [v.id, v.business_name]));
+  return rows.map((r) => ({ ...r, vendor: { business_name: names.get(r.vendor_id) ?? null } }));
+}
 
 const toOrder = (r: Row): FoodOrder => ({
   id: r.id,
@@ -85,13 +129,13 @@ const toOrder = (r: Row): FoodOrder => ({
   })),
 });
 
-/** PostGIS returns geography as GeoJSON when selected through PostgREST. */
-function toLatLng(geo: Row): { lat: number; lng: number } | null {
-  if (!geo?.coordinates || geo.coordinates.length < 2) return null;
-  // GeoJSON is [longitude, latitude] — the reverse of how everyone says it.
-  const [lng, lat] = geo.coordinates;
-  return { lat, lng };
-}
+/*
+ * `toLatLng` lived here and always returned null: it read `geo.coordinates`,
+ * but a geography column comes back over PostgREST as WKB hex. Its last caller
+ * (delivery tracking) now reads the plain lat/lng columns, so it is gone rather
+ * than left as a trap for the next person. Vendor location belongs to a BRANCH
+ * now — see modules/storefronts.
+ */
 
 // ── Browse ─────────────────────────────────────────────────────────────────
 
@@ -121,6 +165,171 @@ export async function fetchVendorBySlug(db: Client, slug: string): Promise<FoodV
   return row ? toVendor(row) : null;
 }
 
+/**
+ * Resolve a storefront route slug to a BRANCH.
+ *
+ * `/food/[slug]` used to resolve a vendor_profiles row and then list every
+ * listing that brand owned — which merged all of its branches into one menu the
+ * moment a vendor had more than one. Since listings are per branch, the page
+ * has to resolve a branch.
+ *
+ * Brand slugs still work: they land on the primary branch, which is exactly
+ * what a link to "the business" should mean, and keeps older links alive.
+ */
+export async function resolveStorefrontBySlug(
+  db: Client,
+  slug: string,
+): Promise<{ storefrontId: string; vendorId: string; branchName: string } | null> {
+  const branch = unwrapMaybe<Row>(
+    await db
+      .from('storefronts')
+      .select('id, vendor_id, name')
+      .eq('slug', slug)
+      .is('archived_at', null)
+      .maybeSingle(),
+  );
+  if (branch) {
+    return { storefrontId: branch.id, vendorId: branch.vendor_id, branchName: branch.name };
+  }
+
+  // Not a branch slug — try the brand, and use its primary branch.
+  const brand = unwrapMaybe<Row>(
+    await db.from('vendor_profiles').select('id').eq('slug', slug).maybeSingle(),
+  );
+  if (!brand) return null;
+
+  const primary = unwrapMaybe<Row>(
+    await db
+      .from('storefronts')
+      .select('id, vendor_id, name')
+      .eq('vendor_id', brand.id)
+      .is('archived_at', null)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  );
+  return primary
+    ? { storefrontId: primary.id, vendorId: primary.vendor_id, branchName: primary.name }
+    : null;
+}
+
+/** What THIS branch sells. Not the brand's whole catalogue. */
+/**
+ * What one store sells.
+ *
+ * READS storefront_listings, NOT listings.storefront_id. Since the shared
+ * catalogue (20260829090000) an item belongs to the BUSINESS and
+ * `storefront_listings` says which stores carry it — so filtering on
+ * `listings.storefront_id` would show only the items that happened to be
+ * created at this store and miss every one it was later opted into.
+ *
+ * Sold-out items are returned, not filtered out. A menu that silently drops
+ * this evening's finished dish looks like the vendor stopped selling it;
+ * showing it greyed with "Sold out" is the information the student wants.
+ */
+export async function fetchStorefrontMenu(
+  db: Client,
+  storefrontId: string,
+): Promise<FoodListing[]> {
+  const carried = unwrapList<Row>(
+    await db
+      .from('storefront_listings')
+      .select('listing_id, price_kobo, stock, is_available')
+      .eq('storefront_id', storefrontId)
+      .eq('is_listed', true),
+  );
+  if (!carried.length) return [];
+
+  // Joined in code: `storefront_listings` embeds would be a third table in a
+  // PostgREST relationship chain, and embeds on this schema have bitten us
+  // repeatedly. Two plain reads are cheaper than one silent empty result.
+  const byListing = new Map(carried.map((c) => [c.listing_id as string, c]));
+
+  const rows = unwrapList<Row>(
+    await db
+      .from('listings')
+      .select('*')
+      .in('id', [...byListing.keys()])
+      .is('archived_at', null)
+      .neq('status', 'Archived')
+      .order('created_at', { ascending: false }),
+  );
+
+  return rows.map((r) => toStoreListing(r, byListing.get(r.id as string)));
+}
+
+/** Food branches, with their brand. Discovery lists BRANCHES, not brands. */
+export async function fetchFoodStorefronts(
+  db: Client,
+  opts: { area?: string } & PageParams = {},
+): Promise<
+  Array<{
+    id: string;
+    /** The BRAND behind this branch — what `favorites` can currently store. */
+    vendorId: string;
+    slug: string;
+    branchName: string;
+    pausedUntil: string | null;
+    area: string | null;
+    isAcceptingOrders: boolean;
+    businessName: string | null;
+    logoUrl: string | null;
+    coverUrl: string | null;
+    ratingAvg: number;
+    ratingCount: number;
+  }>
+> {
+  const [from, to] = toRange(opts);
+  let q = db
+    .from('storefronts')
+    .select('id, slug, name, area, is_accepting_orders, vendor_id')
+    .is('archived_at', null)
+    .range(from, to);
+  if (opts.area) q = q.eq('area', opts.area);
+
+  const branches = unwrapList<Row>(await q);
+  if (!branches.length) return [];
+
+  // vendor_profiles is publicly readable, so this is a plain lookup rather than
+  // an embed — storefronts.vendor_id points at it, but PostgREST embeds on this
+  // schema have bitten us three times now.
+  const ids = [...new Set(branches.map((b) => b.vendor_id))];
+  const brands = unwrapList<Row>(
+    await db
+      .from('vendor_profiles')
+      .select('id, business_name, logo_url, cover_url, rating_avg, rating_count, category, archived_at')
+      .in('id', ids),
+  );
+  const byId = new Map(brands.map((b) => [b.id, b]));
+
+  return branches
+    .filter((b) => {
+      const brand = byId.get(b.vendor_id);
+      return brand && brand.category === 'food' && !brand.archived_at;
+    })
+    .map((b) => {
+      const brand = byId.get(b.vendor_id)!;
+      return {
+        id: b.id,
+        vendorId: b.vendor_id,
+        slug: b.slug,
+        branchName: b.name,
+        area: b.area ?? null,
+        isAcceptingOrders: b.is_accepting_orders ?? true,
+        // A cooldown is separate from the manual switch: the store is open,
+        // it is just briefly not taking orders. The card needs both to say
+        // "back in 8 min" rather than "closed".
+        pausedUntil: b.paused_until ?? null,
+        businessName: brand.business_name ?? null,
+        logoUrl: brand.logo_url ?? null,
+        coverUrl: brand.cover_url ?? null,
+        ratingAvg: Number(brand.rating_avg ?? 0),
+        ratingCount: brand.rating_count ?? 0,
+      };
+    });
+}
+
 export async function fetchVendorMenu(db: Client, vendorId: string): Promise<FoodListing[]> {
   const rows = unwrapList<Row>(
     await db
@@ -144,12 +353,22 @@ export async function fetchOrCreateCart(
   db: Client,
   vendorId: string,
   studentId: string,
+  /**
+   * The BRANCH this cart belongs to. Optional so callers holding only a brand
+   * still work; they get the primary branch, matching what a brand link
+   * resolves to. Pass it explicitly once the UI knows which branch is open —
+   * carts_one_open_per_storefront_idx is per branch, and two branches of one
+   * brand are deliberately two carts.
+   */
+  storefrontId?: string,
 ): Promise<Cart> {
+  const branchId = storefrontId ?? (await resolvePrimaryStorefrontId(db, vendorId));
+
   const existing = unwrapMaybe<Row>(
     await db
       .from('carts')
       .select('id, vendor_id, cart_items(*, listing:listings(name, image_url))')
-      .eq('vendor_id', vendorId)
+      .eq('storefront_id', branchId)
       .eq('status', 'open')
       .maybeSingle(),
   );
@@ -162,7 +381,7 @@ export async function fetchOrCreateCart(
   const created = unwrap<Row>(
     await db
       .from('carts')
-      .insert({ vendor_id: vendorId, student_id: studentId })
+      .insert({ vendor_id: vendorId, student_id: studentId, storefront_id: branchId })
       .select('id, vendor_id, cart_items(*, listing:listings(name, image_url))')
       .single(),
   );
@@ -283,24 +502,27 @@ export async function fetchMyOrders(
   const [from, to] = toRange(opts);
   let q = db
     .from('orders')
-    .select('*, order_items(*), vendor:vendor_profiles!orders_vendor_id_fkey(business_name)')
+    .select(ORDER_SELECT)
     .order('placed_at', { ascending: false })
     .range(from, to);
 
   if (opts.status) q = q.eq('status', opts.status);
 
-  return unwrapList<Row>(await q).map(toOrder);
+  const rows = await attachVendorNames(db, unwrapList<Row>(await q));
+  return rows.map(toOrder);
 }
 
 export async function fetchOrder(db: Client, orderId: string): Promise<FoodOrder | null> {
   const row = unwrapMaybe<Row>(
     await db
       .from('orders')
-      .select('*, order_items(*), vendor:vendor_profiles!orders_vendor_id_fkey(business_name)')
+      .select(ORDER_SELECT)
       .eq('id', orderId)
       .maybeSingle(),
   );
-  return row ? toOrder(row) : null;
+  if (!row) return null;
+  const [withVendor] = await attachVendorNames(db, [row]);
+  return toOrder(withVendor);
 }
 
 export async function fetchOrderEvents(db: Client, orderId: string): Promise<OrderEvent[]> {
@@ -339,7 +561,13 @@ export async function fetchDeliveryTracking(
     orderId: row.order_id,
     riderId: row.rider_id,
     status: row.status,
-    riderPosition: toLatLng(row.current_geo),
+    // lat/lng, not `current_geo`: the geography column reads back as WKB hex
+    // over PostgREST, so the old `toLatLng(row.current_geo)` was null for every
+    // rider and the map never showed one. See 20260825090000_rider_coords.
+    riderPosition:
+      typeof row.lat === 'number' && typeof row.lng === 'number'
+        ? { lat: row.lat, lng: row.lng }
+        : null,
     lastSeenAt: row.last_seen_at,
   };
 }

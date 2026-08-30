@@ -56,6 +56,69 @@ export function useOpenOrderConversation() {
   });
 }
 
+/** Pre-order counterpart of `useOpenOrderConversation`, keyed by listing. */
+export function useOpenListingConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (listingId: string) => api.openListingConversation(db(), listingId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.conversations.all });
+    },
+  });
+}
+
+/**
+ * The remaining conversation doors. Each mirrors `useOpenOrderConversation`:
+ * one RPC, invalidate the conversation list, return the thread id so the caller
+ * can open it. Written out rather than generated from a helper — the shared
+ * version needed a type annotation that referenced the client factory
+ * circularly, and four small functions are clearer than fighting that.
+ */
+
+/** Landlord, about an existing booking. */
+export function useOpenBookingConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (bookingId: string) => api.openBookingConversation(db(), bookingId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.conversations.all });
+    },
+  });
+}
+
+/** Landlord, before booking — the hostel equivalent of the listing door. */
+export function useOpenHostelConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (hostelId: string) => api.openHostelConversation(db(), hostelId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.conversations.all });
+    },
+  });
+}
+
+/** Vendor, about a beauty / laundry / workmanship request. */
+export function useOpenServiceConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) => api.openServiceConversation(db(), requestId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.conversations.all });
+    },
+  });
+}
+
+/** Rider, about a delivery. Errors until dispatch has assigned one. */
+export function useOpenDeliveryConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => api.openDeliveryConversation(db(), orderId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.conversations.all });
+    },
+  });
+}
+
 // ── Messages ───────────────────────────────────────────────────────────────
 
 export function useMessages(conversationId: string | undefined) {
@@ -83,18 +146,52 @@ export function useSendMessage(conversationId: string) {
   const key = qk.messages.byConversation(conversationId);
 
   return useMutation({
-    mutationFn: (input: {
+    /**
+     * Files are uploaded to Storage FIRST, then the message row is written with
+     * their paths. That order matters: a message row referencing an object that
+     * failed to upload renders as a permanently broken attachment, whereas an
+     * orphaned object costs a few KB and is invisible to the user. Fail toward
+     * the harmless side.
+     *
+     * Uploads run in parallel — a voice note plus two photos should not take
+     * three sequential round trips on a campus connection.
+     */
+    mutationFn: async (input: {
       body?: string;
       kind?: 'text' | 'image' | 'file' | 'voice';
-      attachments?: Parameters<typeof api.sendMessage>[1]['attachments'];
-    }) =>
-      api.sendMessage(db(), {
+      files?: File[];
+    }) => {
+      const files = input.files ?? [];
+
+      const uploaded = files.length
+        ? await Promise.all(
+            files.map((file) =>
+              api.uploadAttachment(db(), { userId: userId!, conversationId, file }),
+            ),
+          )
+        : [];
+
+      // Derive the kind from the payload when the caller did not say. A voice
+      // note is an audio attachment with no body; the UI needs the distinction
+      // to pick a waveform over a file chip.
+      const kind =
+        input.kind ??
+        (uploaded.length === 0
+          ? 'text'
+          : uploaded[0].mimeType.startsWith('audio/')
+            ? 'voice'
+            : uploaded[0].mimeType.startsWith('image/')
+              ? 'image'
+              : 'file');
+
+      return api.sendMessage(db(), {
         conversationId,
         senderId: userId!,
-        kind: input.kind,
+        kind,
         body: input.body,
-        attachments: input.attachments,
-      }),
+        attachments: uploaded,
+      });
+    },
 
     async onMutate(input) {
       await qc.cancelQueries({ queryKey: key });
@@ -229,5 +326,26 @@ export function useUnreadCounts() {
     queryKey: qk.unreadCounts.all,
     queryFn: () => api.fetchUnreadCounts(db()),
     refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Signed URLs for a thread's attachments, keyed by storage path.
+ *
+ * Separate from `useMessages` on purpose: signed URLs expire, so they have a
+ * different cache lifetime from the messages themselves. Folding them into the
+ * message query would mean either refetching whole threads to refresh links, or
+ * serving links that have quietly gone stale.
+ */
+export function useAttachmentUrls(paths: string[]) {
+  const key = [...paths].sort().join('|');
+
+  return useQuery({
+    queryKey: ['attachment-urls', key] as const,
+    queryFn: () => api.getAttachmentUrls(db(), paths),
+    enabled: paths.length > 0,
+    // Links are issued for an hour; refresh well before they lapse.
+    staleTime: 45 * 60_000,
+    gcTime: 60 * 60_000,
   });
 }

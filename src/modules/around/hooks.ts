@@ -19,3 +19,15 @@ export function useNearbyPins(filters: AroundFilters = {}) {
     staleTime: 5 * 60_000,
   });
 }
+
+/**
+ * The area board. Two minutes: busyness and cooldowns move on that order, and
+ * the underlying RPC scans a week of orders, so this is not free.
+ */
+export function useCampusPulse() {
+  return useQuery({
+    queryKey: ['around', 'pulse'] as const,
+    queryFn: () => api.fetchCampusPulse(db()),
+    staleTime: 2 * 60_000,
+  });
+}

@@ -26,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { useBankAccounts, useAddBankAccount } from '@/modules/payments/hooks';
 import { DateRangePicker, DateRange } from '@/components/shared/date-range-picker';
 import { Modal } from '@/components/shared/custom-modal';
 import { DataTable } from '@/components/data-table/data-table';
@@ -339,12 +341,23 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('1Y');
   const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null); // 👈 new
-  // Add this state near the top of EarningsPage
-  const [accountDetails, setAccountDetails] = useState({
-    bankName: data.bankName,
-    accountNumber: data.accountNumber,
-    accountHolderName: data.accountHolderName,
-  });
+  /**
+   * The payout account, from `bank_accounts` — not local state.
+   *
+   * This used to be a `useState` seeded from props, so "Save Changes" updated
+   * the screen and nothing else: reload the page and the old account was back,
+   * because nothing was ever written. The table has existed since
+   * 20260817090300 and had no writer.
+   */
+  const { data: bankAccounts = [] } = useBankAccounts();
+  const addAccount = useAddBankAccount();
+  const defaultAccount = bankAccounts.find((a) => a.isDefault) ?? bankAccounts[0] ?? null;
+
+  const accountDetails = {
+    bankName: defaultAccount?.bankName ?? 'No account added',
+    accountNumber: defaultAccount?.accountNumber ?? '—',
+    accountHolderName: defaultAccount?.accountName ?? '—',
+  };
 
   const handleWithdrawClick = () => setWithdrawOpen(true);
 
@@ -374,11 +387,20 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
         open={changeAccountOpen}
         onClose={() => setChangeAccountOpen(false)}
         onSave={(updated) =>
-          setAccountDetails({
-            bankName: updated.bankName,
-            accountNumber: updated.accountNumber,
-            accountHolderName: updated.holderName,
-          })
+          addAccount.mutate(
+            {
+              bankCode: updated.bankCode,
+              bankName: updated.bankName,
+              accountNumber: updated.accountNumber,
+              // Server-resolved, never typed — see ChangeAccountDialog.
+              accountName: updated.holderName,
+              isDefault: true,
+            },
+            {
+              onSuccess: () => toast.success('Payout account saved'),
+              onError: (e) => toast.error(e.message || 'Could not save the account'),
+            },
+          )
         }
         current={{
           bankName: accountDetails.bankName,

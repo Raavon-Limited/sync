@@ -306,3 +306,52 @@ export async function updateRequestStatus(
   );
   return toRequest(row);
 }
+
+/**
+ * A service vendor by slug, for the `/[vertical]/[slug]` pro pages.
+ *
+ * Reads `vendor_profiles` with no category filter on purpose: a vendor's
+ * category is what they registered as, while the page they are viewed on is
+ * decided by the services they list. A laundry vendor who also does ironing
+ * should not 404 on the laundry page because of a registration field.
+ */
+export async function fetchServiceVendorBySlug(
+  db: Client,
+  slug: string,
+): Promise<{
+  id: string;
+  slug: string;
+  businessName: string;
+  tagline: string | null;
+  bio: string | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  area: string | null;
+  address: string | null;
+  publicPhone: string | null;
+  ratingAvg: number;
+  ratingCount: number;
+  isVerified: boolean;
+  isAcceptingOrders: boolean;
+} | null> {
+  const r = unwrapMaybe<Row>(
+    await db.from('vendor_profiles').select('*').eq('slug', slug).is('archived_at', null).maybeSingle(),
+  );
+  if (!r) return null;
+  return {
+    id: r.id,
+    slug: r.slug,
+    businessName: r.business_name,
+    tagline: r.tagline ?? null,
+    bio: r.bio ?? null,
+    logoUrl: r.logo_url ?? null,
+    coverUrl: r.cover_url ?? null,
+    area: r.area ?? null,
+    address: r.business_address ?? null,
+    publicPhone: r.public_phone ?? null,
+    ratingAvg: Number(r.rating_avg ?? 0),
+    ratingCount: r.rating_count ?? 0,
+    isVerified: r.verification_status === 'verified',
+    isAcceptingOrders: r.is_accepting_orders ?? true,
+  };
+}

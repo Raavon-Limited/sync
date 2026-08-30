@@ -10,30 +10,7 @@
  * client <DashboardSidebar> - that avoids passing icon components across the
  * server→client boundary.
  */
-import {
-  AlertOctagon,
-  BarChart3,
-  Bell,
-  Bookmark,
-  Building2,
-  CalendarDays,
-  ClipboardCheck,
-  ClipboardList,
-  Inbox,
-  LayoutDashboard,
-  List,
-  Megaphone,
-  Newspaper,
-  Settings,
-  ShieldCheck,
-  ShoppingBag,
-  Sparkles,
-  Star,
-  TicketIcon,
-  TrendingUp,
-  Users,
-  Wallet,
-} from 'lucide-react';
+import { AlertOctagon, BarChart3, Bell, Bookmark, Building2, CalendarDays, ClipboardCheck, ClipboardList, Inbox, LayoutDashboard, List, Megaphone, Newspaper, Settings, ShieldCheck, ShoppingBag, Sparkles, Star, Store, TicketIcon, TrendingUp, Users, Wallet } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student';
@@ -99,6 +76,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/vendor', label: 'Overview', icon: LayoutDashboard },
+          { href: '/vendor/stores', label: 'Stores', icon: Store },
           { href: '/vendor/listings', label: 'Listings', icon: List },
           { href: '/vendor/orders', label: 'Orders', icon: ShoppingBag },
           { href: '/vendor/inbox', label: 'Inbox', icon: Inbox },

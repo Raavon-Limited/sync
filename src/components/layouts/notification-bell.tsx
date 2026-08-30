@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, formatRelative } from '@/lib/utils';
-import { OPEN_CHAT_EVENT } from '@/mock/student';
+import { OPEN_CHAT_EVENT } from '@/lib/chat-events';
 import {
   useNotifications,
   useMarkNotificationsRead,

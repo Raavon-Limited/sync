@@ -276,3 +276,48 @@ export async function signOut(): Promise<AuthResult> {
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
+
+/**
+ * Wear a different hat.
+ *
+ * The authorisation lives in `switch_role`, which refuses any role not in the
+ * caller's own `profiles.roles`. Doing that check here instead would put a
+ * privilege boundary in a client-callable action, where the only thing between
+ * a student and `admin` would be this file.
+ */
+export async function switchRole(role: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('switch_role', { p_role: role });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Add a second kind of account to the one you are already signed in to.
+ *
+ * WHY THIS EXISTS
+ *   Signing up again with the same email cannot work — Supabase auth is keyed
+ *   on email, so a second signup is refused as "already registered" and the
+ *   form sends you to /login. That is correct and also a dead end: there was
+ *   no way, anywhere in the app, to become a vendor once you were a student.
+ *
+ * CLAIM THEN WEAR
+ *   `claim_role` adds the hat, `switch_role` puts it on. Both are checked in
+ *   the database: claim refuses staff roles and a second business profile,
+ *   switch refuses anything you do not hold. If the switch half fails the
+ *   claim still stands — you hold the role and are simply not wearing it,
+ *   which the account switcher can fix. The reverse order could grant a role
+ *   nobody asked for, so it is deliberately claim-first.
+ *
+ * The caller sends business roles on to /onboarding, which is where the
+ * vendor_profiles row is actually created. Holding the role is permission to
+ * set a business up, not a business.
+ */
+export async function claimRole(role: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error: claimError } = await supabase.rpc('claim_role', { p_role: role });
+  if (claimError) throw new Error(claimError.message);
+
+  const { error: switchError } = await supabase.rpc('switch_role', { p_role: role });
+  if (switchError) throw new Error(switchError.message);
+}

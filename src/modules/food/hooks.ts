@@ -342,3 +342,41 @@ export function useOrderRealtime(orderId: string | undefined) {
     ],
   });
 }
+
+/** Resolves a route slug to a branch. Accepts branch or brand slugs. */
+export function useResolvedStorefront(slug: string | undefined) {
+  return useQuery({
+    queryKey: qk.vendorProfile.detail(`resolve:${slug ?? ''}`),
+    queryFn: () => api.resolveStorefrontBySlug(db(), slug!),
+    enabled: !!slug,
+  });
+}
+
+/** What one branch sells. Replaces useVendorMenu for storefront pages. */
+export function useStorefrontMenu(storefrontId: string | undefined) {
+  return useQuery({
+    queryKey: qk.listings.list({ storefrontId: storefrontId ?? '' }),
+    queryFn: () => api.fetchStorefrontMenu(db(), storefrontId!),
+    enabled: !!storefrontId,
+  });
+}
+
+/** Food branches for the browse page. Lists locations, not businesses. */
+export function useFoodStorefronts(opts: { area?: string } & PageParams = {}) {
+  return useQuery({
+    queryKey: qk.storefronts.nearby({ category: 'food', ...opts }),
+    queryFn: () => api.fetchFoodStorefronts(db(), opts),
+  });
+}
+
+/** The brand behind a branch, by id rather than slug. */
+export function useFoodVendorById(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: qk.vendorProfile.detail(vendorId ?? ''),
+    queryFn: async () => {
+      const rows = await api.fetchFoodVendors(db(), { pageSize: 100 });
+      return rows.find((v) => v.id === vendorId) ?? null;
+    },
+    enabled: !!vendorId,
+  });
+}

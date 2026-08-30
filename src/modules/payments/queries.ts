@@ -291,3 +291,87 @@ export async function fetchMySubscription(db: Client): Promise<Subscription | nu
     cancelAtPeriodEnd: r.cancel_at_period_end,
   };
 }
+
+// -- Order payment ------------------------------------------------------------
+
+/**
+ * Moves an order's total from the student's wallet into platform escrow.
+ *
+ * Idempotent by `ORDER_<id>`, so a retry after a dropped connection returns the
+ * original transaction rather than charging again. Raises with a readable
+ * reason when the balance is short — surface it, do not swallow it.
+ */
+export async function payOrderFromWallet(db: Client, orderId: string): Promise<string> {
+  const { data, error } = await db.rpc('pay_order_from_wallet', { p_order_id: orderId });
+  if (error) throw error;
+  return data as string;
+}
+
+/**
+ * Releases a hold to the vendor. Callable by the PAYER (confirming delivery) or
+ * the service role once the hold matures — never the vendor.
+ */
+export async function releaseOrderEscrow(db: Client, orderId: string): Promise<string> {
+  const { data, error } = await db.rpc('release_order_escrow', { p_order_id: orderId });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Subscribes the calling vendor to a plan, paying from wallet balance. */
+export async function subscribeToPlan(db: Client, planId: string): Promise<string> {
+  const { data, error } = await db.rpc('subscribe_to_plan', { p_plan_id: planId });
+  if (error) throw error;
+  return data as string;
+}
+
+// ── Withdrawals ─────────────────────────────────────────────────────────────
+
+export interface PayoutRequest {
+  id: string;
+  amountKobo: number;
+  status: 'pending' | 'processing' | 'paid' | 'failed' | 'cancelled';
+  bankAccountId: string;
+  failureReason: string | null;
+  requestedAt: string;
+  settledAt: string | null;
+}
+
+const toPayout = (r: Row): PayoutRequest => ({
+  id: r.id,
+  amountKobo: Number(r.amount_kobo ?? 0),
+  status: r.status,
+  bankAccountId: r.bank_account_id,
+  failureReason: r.failure_reason ?? null,
+  requestedAt: r.requested_at,
+  settledAt: r.settled_at ?? null,
+});
+
+/** RLS scopes this to the caller, so no owner filter is needed or wanted. */
+export async function fetchPayoutRequests(db: Client): Promise<PayoutRequest[]> {
+  return unwrapList<Row>(
+    await db.from('payout_requests').select('*').order('requested_at', { ascending: false }),
+  ).map(toPayout);
+}
+
+/**
+ * Ask for money out. Every rule — minimum, available balance, a verified
+ * destination, a frozen wallet — is checked inside `request_withdrawal`, under
+ * a row lock. Re-checking here would be a courtesy that two simultaneous taps
+ * could still walk past.
+ */
+export async function requestWithdrawal(
+  db: Client,
+  input: { amountKobo: number; bankAccountId: string },
+): Promise<string> {
+  const { data, error } = await db.rpc('request_withdrawal', {
+    p_amount_kobo: input.amountKobo,
+    p_bank_account_id: input.bankAccountId,
+  });
+  if (error) throw new Error(error.message);
+  return data as unknown as string;
+}
+
+export async function cancelWithdrawal(db: Client, requestId: string): Promise<void> {
+  const { error } = await db.rpc('cancel_withdrawal', { p_request_id: requestId });
+  if (error) throw new Error(error.message);
+}

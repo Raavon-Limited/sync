@@ -1,22 +1,32 @@
 /**
  * ROUTE: /hostels/[slug]
- * ACCESS: authenticated student
- * PURPOSE: Hostel detail + booking flow. Gallery, amenities, location, reviews, and a sticky booking sidebar (rent + caution + 5% Sync verified-listing fee → Paystack escrow).
- * BUILT HERE: <ImageGallery>, amenities grid, <MapPlaceholder>, <ReviewCard> list, booking sidebar.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * ACCESS: public to browse; signing in is required to book or message.
+ * PURPOSE: Hostel detail + booking flow. Gallery, amenities, rooms, and the two
+ *          actions that matter — request a room, or ask the landlord first.
+ *
+ * The shell stays a server component so metadata renders on the server; the
+ * detail itself is a client island reading hostels + hostel_availability.
  */
 import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { fetchHostelBySlug } from '@/modules/hostels/queries';
+import { HostelDetail } from './(components)/hostel-detail';
 
-export const metadata: Metadata = { title: 'Hostel detail' };
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-export default function Page() {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const hostel = await fetchHostelBySlug(await createClient(), slug);
+  return { title: hostel ? `${hostel.name} — ${hostel.area}` : 'Hostel' };
+}
+
+export default async function Page({ params }: Props) {
+  const { slug } = await params;
   return (
     <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/hostels/[slug]</p>
-      <h1 className="font-display text-section text-content">Hostel detail</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+      <HostelDetail slug={slug} />
     </section>
   );
 }

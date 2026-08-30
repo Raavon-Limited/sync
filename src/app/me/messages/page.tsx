@@ -1,22 +1,27 @@
 /**
  * ROUTE: /me/messages
  * ACCESS: authenticated student
- * PURPOSE: Student↔vendor conversations. Realtime via Supabase channels (modules/messaging).
- * BUILT HERE: Conversation list, message thread, composer.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * PURPOSE: Every thread the student is a party to — vendors, landlords, riders
+ *          and service providers — with realtime delivery.
+ *
+ * The shell stays a server component for metadata; the panel is a client island
+ * reading modules/messaging, the same hooks the floating widget uses.
  */
 import type { Metadata } from 'next';
+import { MessagesPanel } from './(components)/messages-panel';
 
 export const metadata: Metadata = { title: 'Messages' };
 
 export default function Page() {
   return (
-    <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/me/messages</p>
-      <h1 className="font-display text-section text-content">Messages</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+    <section className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-content-muted font-mono text-sm tracking-wide">/ME/MESSAGES</h1>
+        <h2 className="font-display text-content mt-2 text-3xl font-medium">
+          Your <span className="text-lime">Messages</span>
+        </h2>
+      </div>
+      <MessagesPanel />
     </section>
   );
 }

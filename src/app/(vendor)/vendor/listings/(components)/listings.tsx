@@ -1,17 +1,18 @@
 'use client';
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Listing } from '@/modules/vendor/types';
-import { LISTING_CATEGORIES } from '@/config/listing-categories';
 import { koboToNaira, nairaToKobo } from '@/lib/query/helpers';
 import {
   useMyListings,
   useUpsertListing,
   useDeleteListings,
   useArchiveListings,
+  useListingCategories,
 } from '@/modules/vendor/hooks';
 import type { VendorListing } from '@/modules/vendor/queries';
 import { ListingStatsBar } from './listings-stats-bar';
@@ -27,6 +28,8 @@ import {
   EditModal,
 } from './listings-modal';
 import { useModalStore } from '@/store';
+import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
+import { useStoreListings, useSetSoldOut } from '@/modules/storefronts/hooks';
 
 /**
  * Fetched once with archived included, then filtered in memory.
@@ -62,6 +65,7 @@ function toUiListing(row: VendorListing): Listing {
 }
 
 export default function ListingsPage() {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [category, setCategory] = useState('All');
   const [status, setStatus] = useState('All Status');
@@ -69,9 +73,35 @@ export default function ListingsPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
   const { data: rows, isLoading, isError, error } = useMyListings(LIST_FILTERS);
+
+  // Stock and availability are per store, so the grid shows the store the
+  // vendor is currently working in — the one in the switcher above.
+  const { activeId, storefronts: managed } = useActiveStorefront();
+  const { data: storeListings = [] } = useStoreListings(activeId ?? undefined);
+  const storeTerms = useMemo(
+    () => new Map(storeListings.map((sl) => [sl.listingId, sl])),
+    [storeListings],
+  );
+  const activeStoreName = managed.find((m) => m.id === activeId)?.name ?? null;
+  const soldOutIds = useMemo(
+    () => new Set(storeListings.filter((sl) => sl.isListed && sl.stock === 0).map((sl) => sl.listingId)),
+    [storeListings],
+  );
+  const setSoldOut = useSetSoldOut();
   const upsert = useUpsertListing();
   const remove = useDeleteListings();
   const archive = useArchiveListings(LIST_FILTERS);
+
+  /*
+   * Filter chips come from this vendor's taxonomy, not a constant - a clothing
+   * vendor must not be offered Rice. 'All' is a UI sentinel and is never a
+   * stored category.
+   */
+  const { data: categories = [] } = useListingCategories();
+  const categoryOptions = useMemo(
+    () => ['All', ...categories.map((c) => c.name)],
+    [categories],
+  );
 
   const listings = useMemo(() => (rows ?? []).map(toUiListing), [rows]);
 
@@ -199,6 +229,36 @@ export default function ListingsPage() {
     );
   };
 
+  /**
+   * Sold out is per store, so this needs one. Without an active store there is
+   * nothing to mark, and silently doing nothing is how the ⋯ menu got its
+   * reputation.
+   */
+  const handleToggleSoldOut = (listing: Listing, soldOut: boolean) => {
+    if (!activeId) {
+      toast.error('Pick a store first');
+      return;
+    }
+    setSoldOut.mutate(
+      { storefrontId: activeId, listingId: listing.id, soldOut },
+      {
+        onSuccess: () =>
+          toast.success(soldOut ? `${listing.name} marked sold out` : `${listing.name} is back`),
+        onError: (e) => toast.error(e.message || 'Could not update'),
+      },
+    );
+  };
+
+  /**
+   * Promote was the other no-op on this card. Promotions are created on their
+   * own page against a vendor-wide code, so this hands over rather than
+   * pretending a listing-scoped campaign exists — `promotions` has no
+   * listing_id.
+   */
+  const handlePromote = (listing: Listing) => {
+    router.push(`/vendor/promotions?listing=${encodeURIComponent(listing.id)}`);
+  };
+
   const handleDelete = (listing: Listing) => {
     remove.mutate([listing.id], {
       onSuccess: () => {
@@ -267,10 +327,10 @@ export default function ListingsPage() {
         </p>
       )}
 
-      <ListingStatsBar listings={listings} />
+      <ListingStatsBar listings={listings} soldOutIds={soldOutIds} />
 
       <ListingFilters
-        categories={[...LISTING_CATEGORIES]}
+        categories={categoryOptions}
         selectedCategory={category}
         onCategoryChange={setCategory}
         selectedStatus={status}
@@ -315,10 +375,16 @@ export default function ListingsPage() {
               key={listing.id}
               listing={listing}
               selected={selectedIds.has(listing.id)}
+              storeStock={storeTerms.get(listing.id)?.stock}
+              storeCarries={storeTerms.get(listing.id)?.isListed ?? false}
+              storeName={activeStoreName}
               onToggleSelect={toggleSelect}
               onEdit={openEditListing}
-              onPromote={() => {}}
-              onMore={() => {}}
+              onPromote={handlePromote}
+              onDuplicate={handleDuplicate}
+              onArchive={(l) => openArchiveListings([l.id])}
+              onDelete={openDeleteListing}
+              onToggleSoldOut={handleToggleSoldOut}
             />
           ))}
           {filtered.length === 0 && (

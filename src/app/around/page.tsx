@@ -11,28 +11,23 @@
  *   - Full-width segmented search (SEARCH / MODULE / BUDGET / WHEN)
  *   - 3-column mosaic: Featured event / food + sponsored / laundry + hotspots
  *   - Bottom: hostel board + resume booking
- * DATA: mock from `@/mock/around`. DEV-ONLY 5s delay below so the
- *       BrandLoader stays on screen - remove when real queries land.
+ * DATA: real, from ./around-data. The hostel-board card is gone: there is no
+ *       posts table of any kind behind it, and inventing one to fill a card
+ *       would make a small social network the biggest feature on this page.
+ * DEV-ONLY 5s delay below so the BrandLoader stays on screen.
  */
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ArrowRight, ChevronDown, Plus, Search, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AroundMap } from '@/components/shared/around-map';
-import {
-  HOSTEL_BOARD,
-  HOTSPOTS_TRENDING,
-  LAUNDRY_PROMO,
-  MOCK_USER,
-  QUICK_STATS,
-  RESUME_BOOKING,
-  SPONSORED_SLOT,
-  VERIFIED_SPOTS_COUNT,
-} from '@/mock/around';
+import { SITE } from '@/config/site';
+import { getAroundData, type AroundData } from './around-data';
 import { getCurrentUser, getFirstName } from '@/modules/auth/queries';
 import { formatNaira } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { FeaturedEventCarousel, FoodCarousel } from './featured-carousels';
+import { CampusPulse } from './(components)/campus-pulse';
 
 export const metadata = {
   title: 'Around you',
@@ -47,10 +42,15 @@ export default async function AroundPage() {
   if (process.env.NODE_ENV !== 'production') await sleep(DEV_LOADER_DELAY_MS);
 
   // Personalise only when signed in; signed-out visitors see a generic greeting.
-  const firstName = getFirstName(await getCurrentUser());
+  const user = await getCurrentUser();
+  const firstName = getFirstName(user);
+  const data = await getAroundData(user?.id);
 
   const today = new Date();
-  const dateLine = `${format(today, 'EEE').toUpperCase()} · ${format(today, 'MMM d').toUpperCase()} · ${MOCK_USER.campus.toUpperCase()}`;
+  // The campus was a hardcoded string on a mock user. It is the same campus
+  // for everyone using this build, so it lives in site config rather than
+  // pretending to be personal data.
+  const dateLine = `${format(today, 'EEE').toUpperCase()} · ${format(today, 'MMM d').toUpperCase()} · ${SITE.launchMarket.toUpperCase()}`;
 
   return (
     <main className="mx-auto flex max-w-7xl flex-col px-6 pt-8 pb-12">
@@ -59,7 +59,7 @@ export default async function AroundPage() {
         <p className="text-content-muted font-mono text-[11px] tracking-wider">{dateLine}</p>
         <span className="bg-lime text-ink inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium">
           <span className="bg-lime-deep h-1.5 w-1.5 rounded-full" />
-          {VERIFIED_SPOTS_COUNT} verified spots near you
+          {data.verifiedSpots} verified spots near you
         </span>
       </div>
 
@@ -87,7 +87,7 @@ export default async function AroundPage() {
             4 minutes away. Everything Sync, in one place.
           </p>
         </div>
-        <QuickStats />
+        <QuickStats stats={data.quickStats} />
       </header>
 
       {/* ─── Smart search row ───────────────────────────────────────── */}
@@ -111,11 +111,21 @@ export default async function AroundPage() {
       <div className="mt-10 grid items-start gap-5 sm:grid-cols-2">
         <FeaturedEventCarousel />
         <FoodCarousel />
-        <LaundryCard />
-        <SponsoredCard />
-        <HotspotsCard />
-        <HostelBoardCard />
-        <ResumeBookingCard />
+        {data.laundry && <LaundryCard laundry={data.laundry} />}
+        {/* No live banner means no advert. An empty ad slot is honest; a
+            hardcoded one is an advert nobody sold. */}
+        {data.sponsored && <SponsoredCard sponsored={data.sponsored} />}
+        {data.hotspots.length > 0 && <HotspotsCard hotspots={data.hotspots} />}
+        {/* HostelBoardCard removed - see the header note. */}
+        {data.resumeBooking && <ResumeBookingCard booking={data.resumeBooking} />}
+      </div>
+
+      {/* The rest of this page is about the student's own radius. This is the
+          other locations: where else on campus is busy, what is open there,
+          and what people are actually buying. Real data, unlike its
+          neighbours above. */}
+      <div className="mt-10">
+        <CampusPulse />
       </div>
     </main>
   );
@@ -123,12 +133,12 @@ export default async function AroundPage() {
 
 /* ──────────────────── Subcomponents ──────────────────────────────── */
 
-function QuickStats() {
+function QuickStats({ stats }: { stats: AroundData['quickStats'] }) {
   return (
     <aside aria-label="Quick stats" className="flex flex-col gap-3">
       <p className="eyebrow text-content-muted">Quick stats</p>
       <div className="grid grid-cols-3 gap-3">
-        {QUICK_STATS.map((s) => (
+        {stats.map((s) => (
           <div
             key={s.label}
             className="border-line/5 bg-panel/70 flex flex-col text-center gap-1.5 rounded-xl border p-4"
@@ -205,7 +215,13 @@ function SearchCell({
   );
 }
 
-function LaundryCard({ className }: { className?: string }) {
+function LaundryCard({
+  laundry,
+  className,
+}: {
+  laundry: NonNullable<AroundData['laundry']>;
+  className?: string;
+}) {
   return (
     <article
       className={cn(
@@ -218,24 +234,26 @@ function LaundryCard({ className }: { className?: string }) {
           Laundry · Pickup today
         </p>
         <h3 className="font-display text-foreground mt-3 text-[22px] leading-tight font-semibold tracking-[-0.02em]">
-          {LAUNDRY_PROMO.headlineParts.lead}
+          Drop a bag,
           <br />
-          {LAUNDRY_PROMO.headlineParts.tail}{' '}
-          <span className="text-accent-fg italic">{LAUNDRY_PROMO.headlineParts.accent}</span>
+          get it back{' '}
+          <span className="text-accent-fg italic">clean.</span>
         </h3>
         <div className="mt-4 flex flex-wrap gap-1.5">
           <span className="bg-panel text-foreground rounded-full px-3 py-1 text-xs">
-            {formatNaira(LAUNDRY_PROMO.perPiecePrice)} / piece
+            from {formatNaira(laundry.perPieceNaira)} / piece
           </span>
           <span className="bg-panel text-foreground rounded-full px-3 py-1 text-xs">
-            {LAUNDRY_PROMO.pickupLine}
+            {laundry.vendorName}
           </span>
         </div>
       </div>
       <div className="flex items-end justify-between">
-        <p className="text-content-muted text-xs">Next slot · {LAUNDRY_PROMO.nextSlot}</p>
+        {/* "Next slot 4pm" needed a booking calendar, which laundry does not
+            have — service_requests carries a single scheduled_for, not slots. */}
+        <p className="text-content-muted text-xs">Cheapest listed price</p>
         <Button asChild size="sm">
-          <Link href="/laundry">
+          <Link href={`/laundry/${laundry.slug}`}>
             Schedule <ArrowRight />
           </Link>
         </Button>
@@ -244,7 +262,13 @@ function LaundryCard({ className }: { className?: string }) {
   );
 }
 
-function SponsoredCard({ className }: { className?: string }) {
+function SponsoredCard({
+  sponsored,
+  className,
+}: {
+  sponsored: NonNullable<AroundData['sponsored']>;
+  className?: string;
+}) {
   return (
     <article className={cn('bg-ink text-cream flex flex-col gap-4 rounded-2xl p-5', className)}>
       <header className="flex items-center justify-between">
@@ -252,45 +276,45 @@ function SponsoredCard({ className }: { className?: string }) {
           Sponsored
         </span>
         <span className="bg-surface text-foreground rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider">
-          {SPONSORED_SLOT.brand}
+          {sponsored.brand}
         </span>
       </header>
-      <h3 className="font-display text-[22px] leading-tight font-semibold tracking-[-0.02em]">
-        <span className="text-lime italic">{SPONSORED_SLOT.headlineLead}</span>
-        <br />
-        {SPONSORED_SLOT.headlineTail.split(/(Saturday\.)/).map((part, i) =>
-          part === 'Saturday.' ? (
-            <span key={i} className="text-lime italic">
-              {part}
-            </span>
-          ) : (
-            part
-          ),
-        )}
+      {/* The old headline was split on the literal string "Saturday." to
+          italicise it. A banner staff write cannot be styled by guessing at
+          its wording, so the title carries the emphasis and the subtitle is
+          plain. */}
+      <h3 className="font-display text-lime text-[22px] leading-tight font-semibold tracking-[-0.02em] italic">
+        {sponsored.brand}
       </h3>
-      <p className="text-cream/70 text-xs">{SPONSORED_SLOT.body}</p>
+      <p className="text-cream/70 text-xs">{sponsored.body}</p>
       <Button asChild variant="primary" size="sm" className="mt-auto self-start">
-        <Link href={SPONSORED_SLOT.ctaHref}>
-          {SPONSORED_SLOT.ctaLabel} <ArrowRight />
+        <Link href={sponsored.ctaHref}>
+          {sponsored.ctaLabel} <ArrowRight />
         </Link>
       </Button>
     </article>
   );
 }
 
-function HotspotsCard({ className }: { className?: string }) {
+function HotspotsCard({
+  hotspots,
+  className,
+}: {
+  hotspots: AroundData['hotspots'];
+  className?: string;
+}) {
   return (
     <article className={cn('bg-panel shadow-card flex flex-col gap-3 rounded-2xl p-5', className)}>
       <header className="flex items-center justify-between">
         <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
-          Hot spots · {HOTSPOTS_TRENDING.length} trending
+          Hot spots · {hotspots.length} trending
         </p>
         <span aria-hidden="true" className="text-[14px]">
           🔥
         </span>
       </header>
       <ul className="divide-line/5 -mx-1 divide-y">
-        {HOTSPOTS_TRENDING.map((h) => (
+        {hotspots.map((h) => (
           <li key={h.slug}>
             <Link
               href={`/hotspots/${h.slug}`}
@@ -300,10 +324,9 @@ function HotspotsCard({ className }: { className?: string }) {
                 <p className="text-foreground truncate text-sm font-medium">{h.name}</p>
                 <p className="text-content-muted truncate text-xs">{h.meta}</p>
               </div>
-              <span className="bg-lime text-ink inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                <span className="bg-lime-deep h-1 w-1 rounded-full" />
-                {h.hereCount} here
-              </span>
+              {/* "84 here now" needed check-ins, and nothing records them.
+                  Removed rather than replaced with a plausible number. */}
+              <ArrowRight className="text-content-muted size-3.5 shrink-0" />
             </Link>
           </li>
         ))}
@@ -312,41 +335,13 @@ function HotspotsCard({ className }: { className?: string }) {
   );
 }
 
-function HostelBoardCard({ className }: { className?: string }) {
-  return (
-    <article className={cn('bg-panel shadow-card flex flex-col gap-3 rounded-2xl p-5', className)}>
-      <header className="flex items-center justify-between">
-        <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
-          Hostel board · {HOSTEL_BOARD.hostel}
-        </p>
-        <button
-          type="button"
-          aria-label="New post"
-          className="text-content-muted hover:text-foreground hover:bg-ink/5 inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-      </header>
-      <ul className="divide-line/5 -mx-1 divide-y">
-        {HOSTEL_BOARD.posts.map((p) => (
-          <li key={p.id}>
-            <Link
-              href="/me/messages"
-              className="hover:bg-ink/[0.02] flex items-center justify-between gap-3 rounded-md px-1 py-3"
-            >
-              <p className="text-foreground truncate text-sm">{p.title}</p>
-              <p className="text-content-muted shrink-0 text-xs">
-                {p.author} · {p.age}
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </article>
-  );
-}
-
-function ResumeBookingCard({ className }: { className?: string }) {
+function ResumeBookingCard({
+  booking,
+  className,
+}: {
+  booking: NonNullable<AroundData['resumeBooking']>;
+  className?: string;
+}) {
   return (
     <article
       className={cn(
@@ -370,14 +365,14 @@ function ResumeBookingCard({ className }: { className?: string }) {
         <div className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-[#caa17a] via-[#a07a52] to-[#5e4530]" />
         <div className="min-w-0 flex-1">
           <p className="text-foreground truncate text-sm font-medium">
-            {RESUME_BOOKING.hostelName}
+            {booking.hostelName}
           </p>
           <p className="text-content-muted text-xs">
-            {RESUME_BOOKING.roomsLeft} rooms left · {formatNaira(RESUME_BOOKING.pricePerYear)}/yr
+            {booking.roomsLeft} rooms left · {formatNaira(booking.priceNaira)}/session
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href={`/hostels/${RESUME_BOOKING.hostelSlug}`}>
+          <Link href={`/hostels/${booking.hostelSlug}`}>
             <Users className="hidden h-3.5 w-3.5 sm:inline" />
             Resume
           </Link>

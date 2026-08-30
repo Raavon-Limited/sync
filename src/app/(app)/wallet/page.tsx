@@ -1,22 +1,15 @@
 /**
  * ROUTE: /wallet
  * ACCESS: authenticated student
- * PURPOSE: Student wallet - balance, top-ups, payouts (e.g. workmanship refunds), transaction history.
- * BUILT HERE: Balance card, top-up CTA, transaction list with stage chips.
- * TODO: implement the full screen once dependent modules + data are wired.
+ *
+ * REDIRECT, NOT A SECOND IMPLEMENTATION
+ *   The student wallet already exists at /me/wallet, wired to the ledger. A
+ *   second wallet screen would be two places to fix every balance bug, and two
+ *   screens that can disagree about how much money someone has. This route is
+ *   kept because links to it exist; it points at the real one.
  */
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = { title: 'Wallet' };
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return (
-    <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/wallet</p>
-      <h1 className="font-display text-section text-content">Wallet</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
-    </section>
-  );
+  redirect('/me/wallet');
 }

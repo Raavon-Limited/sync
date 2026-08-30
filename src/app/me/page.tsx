@@ -3,12 +3,11 @@ import { ArrowRight, Star, MessageCircle, Check, Search, Plus } from 'lucide-rea
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BookingBillboard } from './(components)/BillboardComponent';
-import { HostelCardList } from './(components)/HostelCard';
+import { HostelCardListLive } from './(components)/HostelCard';
 import { UsageSummary } from './(components)/UsageSummary';
 import { BookingsTracker } from './(components)/BookingsTracker';
 import { EventsTicketsSummary } from './(components)/EventsTickets';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
-import { hostels } from '@/mock/hostels';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -71,7 +70,7 @@ export default async function Page() {
             </Button>
           </div>
 
-          <HostelCardList hostels={hostels.slice(0, 3)} />
+          <HostelCardListLive limit={3} />
 
           <Button
             asChild
@@ -127,9 +126,11 @@ export default async function Page() {
       {/* Recommendations */}
       <section>
         <h2 className="text-content-muted mb-4 font-mono text-sm tracking-wide">
-          PICKED FOR YOU . BASED ON TANKE + 250K
+          {/* The old heading claimed personalisation ("BASED ON TANKE + 250K")
+              that nothing computes. Recently listed is what this actually is. */}
+          RECENTLY LISTED
         </h2>
-        <HostelCardList hostels={hostels.slice(0, 3)} />
+        <HostelCardListLive limit={3} />
       </section>
     </section>
   );

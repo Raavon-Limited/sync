@@ -29,6 +29,9 @@ export interface DashboardProfile {
    * proxy uses, so sidebar links and the proxy rewrite always agree.
    */
   handle?: string;
+  /** The hat being worn, and every hat held — feeds the account switcher. */
+  role?: string;
+  roles?: string[];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -67,9 +70,24 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
           email: user?.email,
         }) ?? undefined);
 
+  /**
+   * The hats this account holds, for the switcher in the account menu. Spread
+   * into every branch below: computing it inside one of them is how the
+   * switcher ends up appearing on the vendor dashboard and nowhere else.
+   *
+   * The fallback covers the window before `profiles.roles` exists — the column
+   * arrives in 20260830090000, and until then everyone holds exactly the role
+   * they are wearing, which makes the switcher correctly render nothing.
+   */
+  const hats = {
+    role: profile?.role,
+    roles: profile?.roles ?? (profile?.role ? [profile.role] : []),
+  };
+
   switch (navKey) {
     case 'vendor':
       return {
+        ...hats,
         eyebrow: verified ? 'Verified vendor' : 'Vendor',
         name,
         email,
@@ -82,6 +100,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
       };
     case 'landlord':
       return {
+        ...hats,
         eyebrow: verified ? 'Verified landlord' : 'Landlord',
         name,
         email,
@@ -92,6 +111,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
       };
     case 'admin':
       return {
+        ...hats,
         eyebrow: profile?.role === 'super_admin' ? 'Super admin' : 'Admin',
         name,
         email,
@@ -99,6 +119,6 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
       };
     case 'student':
     default:
-      return { eyebrow: 'Student', name, email, initial, handle };
+      return { ...hats, eyebrow: 'Student', name, email, initial, handle };
   }
 }

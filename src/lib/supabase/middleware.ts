@@ -55,5 +55,25 @@ export async function updateSession(request: NextRequest) {
       (user.user_metadata?.role as string | undefined);
   }
 
-  return { response, user, role };
+  // MANAGING A STORE IS NOT THE SAME AS BEING A VENDOR.
+  // Someone invited to run a branch keeps their own role - usually 'student' -
+  // so the `/vendor` gate would bounce them off the dashboard they were just
+  // given access to. Ask the membership table instead of the role.
+  //
+  // Deliberately conditional: only for /vendor requests, and only when the role
+  // gate has already failed. Every other request pays nothing for this.
+  let isStorefrontStaff = false;
+  if (user && role !== 'vendor' && request.nextUrl.pathname.startsWith('/vendor')) {
+    // Runs as the user: storefront_staff_read lets them see their own rows.
+    const { data: membership } = await supabase
+      .from('storefront_staff')
+      .select('id')
+      .eq('user_id', user.id)
+      .is('revoked_at', null)
+      .limit(1)
+      .maybeSingle();
+    isStorefrontStaff = !!membership;
+  }
+
+  return { response, user, role, isStorefrontStaff };
 }

@@ -88,11 +88,29 @@ export function SignupForm({ next }: { next?: string }) {
   async function onSubmit(values: SignupInput) {
     const res = await signUp(values);
     if (!res.ok) {
-      toast(res.error);
-      // Existing account → send them to login (with their email preserved).
       if (res.alreadyRegistered) {
-        router.push(`/login?email=${encodeURIComponent(values.email)}`);
+        /*
+         * Auth is keyed on email, so a second signup with the same address can
+         * never succeed — and the old message ("account exists, please log in")
+         * read as a refusal when the thing the person wants is genuinely
+         * possible. You do not make a second account to sell; you add a
+         * business account to the one you have, from the account menu.
+         *
+         * The intended role rides along so /login can say so specifically
+         * rather than making them work it out.
+         */
+        const wantsBusiness = values.role !== 'student';
+        toast(
+          wantsBusiness
+            ? 'You already have an account with this email. Sign in, then add a business account from the menu under your avatar.'
+            : 'You already have an account with this email. Sign in to continue.',
+        );
+        router.push(
+          `/login?email=${encodeURIComponent(values.email)}${wantsBusiness ? '&add=vendor' : ''}`,
+        );
+        return;
       }
+      toast(res.error);
       return;
     }
     router.push(`/verify?email=${encodeURIComponent(values.email)}`);

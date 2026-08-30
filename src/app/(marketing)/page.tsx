@@ -14,7 +14,8 @@
  *   3. "How it works" - 3-step explainer.
  *   4. Verification trust band + landlord CTA.
  *
- * DATA: mock from `@/mock/hostels` until Supabase + RLS are wired.
+ * DATA: real, from ./landing-data. Cards hide when there is nothing to show
+ *       rather than advertising something that does not exist.
  */
 import Link from 'next/link';
 import Image from 'next/image';
@@ -42,8 +43,8 @@ import { Testimonials } from './testimonials';
 import { Comparison } from './comparison';
 import { HowItWorks } from './how-it-works';
 import { LandingAboutTeaser } from '@/components/landing/landing-about-teaser';
-import { FEATURED_HOSTELS, HOSTEL_STATS } from '@/mock/hostels';
-import { FEATURED_EVENT, FEATURED_FOOD, HOTSPOTS_TRENDING } from '@/mock/around';
+
+import { getLandingShowcase } from './landing-data';
 import { SITE } from '@/config/site';
 
 const FAQS = [
@@ -65,7 +66,13 @@ const FAQS = [
   },
 ];
 
-export default function LandingPage() {
+// Real rows, so the shop window changes when the platform does. Revalidated
+// rather than request-scoped: this page is public and heavily hit, and an
+// hour-old "next event" is still true.
+export const revalidate = 3600;
+
+export default async function LandingPage() {
+  const showcase = await getLandingShowcase();
   return (
     <>
       {/* ─── Hero (static background image + 2-column content) ───────── */}
@@ -85,7 +92,7 @@ export default function LandingPage() {
           <div className="text-center md:text-left">
             <p className="text-ink bg-lime/90 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium">
               <span className="bg-lime-deep h-2 w-2 rounded-full" />
-              {HOSTEL_STATS.verifiedCount} verified hostels · {HOSTEL_STATS.market}
+              {showcase.verifiedHostelCount} verified hostels · {SITE.launchMarket}
             </p>
             <HeroHeadline />
             <p className="text-foreground text-lead mx-auto mt-5 max-w-lg font-semibold md:mx-0">
@@ -94,7 +101,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right - cross-service highlight (shuffles per load) */}
-          <HeroHighlights />
+          <HeroHighlights pool={showcase.highlights} />
         </div>
       </section>
 
@@ -141,11 +148,11 @@ export default function LandingPage() {
               href="/hostels"
               className="text-foreground hover:text-accent-fg inline-flex shrink-0 items-center gap-1 self-end text-xs whitespace-nowrap sm:self-auto sm:text-sm"
             >
-              See all {HOSTEL_STATS.verifiedCount} <ArrowRight className="h-4 w-4" />
+              See all {showcase.verifiedHostelCount} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURED_HOSTELS.map((h) => (
+            {showcase.hostels.map((h) => (
               <ListingCard
                 key={h.slug}
                 href={`/hostels/${h.slug}`}
@@ -153,9 +160,10 @@ export default function LandingPage() {
                 location={h.location}
                 image={h.image}
                 price={{ amount: h.pricePerSession, unit: '/ session' }}
-                rating={{ value: h.rating, count: h.reviewCount }}
+                /* No `rating` prop: see landing-data. Zero stars is not the
+                   same as no reviews. */
                 verified={h.verified}
-                ribbon={h.ribbon}
+                ribbon={h.ribbon ?? undefined}
                 amenities={h.amenities}
               />
             ))}
@@ -181,67 +189,78 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {/* Event */}
+            {/* Event. Hidden when nothing is scheduled — an empty slot is
+                better than advertising a party that is not happening. */}
+            {showcase.event && (
             <Link
-              href={`/events/${FEATURED_EVENT.slug}`}
+              href={`/events/${showcase.event.slug}`}
               className="bg-ink text-cream group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5 dark:border dark:border-dotted dark:border-cream/30"
             >
               <span className="bg-lime text-ink inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
                 <span className="bg-ink h-1.5 w-1.5 rounded-full" />
-                {FEATURED_EVENT.when}
+                {showcase.event.when}
               </span>
               <div>
                 <p className="text-cream/50 font-mono text-[10px] tracking-wider uppercase">
                   Event
                 </p>
-                <p className="font-display mt-1 text-xl leading-tight">
-                  {FEATURED_EVENT.title}{' '}
-                  <span className="text-lime italic">{FEATURED_EVENT.performer}</span>
-                </p>
-                <p className="text-cream/70 mt-1 text-xs">{FEATURED_EVENT.venue}</p>
+                {/* The mock split a title from a "performer" to italicise the
+                    act. `events` has no performer column, so the name carries
+                    itself rather than being cut at an arbitrary word. */}
+                <p className="font-display mt-1 text-xl leading-tight">{showcase.event.title}</p>
+                <p className="text-cream/70 mt-1 text-xs">{showcase.event.venue}</p>
               </div>
             </Link>
+            )}
 
             {/* Food */}
+            {showcase.food && (
             <Link
-              href={`/food/${FEATURED_FOOD.slug}`}
+              href={`/food/${showcase.food.slug}`}
               className="bg-panel shadow-card group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5"
             >
               <span className="border-line/15 text-foreground inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs">
-                {FEATURED_FOOD.etaMinutes} min delivery
+                {/* Was "28 min delivery". Nothing computes an ETA, so the
+                    card says what is true: it is open. */}
+                Taking orders
               </span>
               <div>
                 <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
                   Food
                 </p>
                 <p className="font-display text-foreground mt-1 text-xl leading-tight">
-                  {FEATURED_FOOD.name}
+                  {showcase.food.name}
                 </p>
                 <p className="text-content-muted mt-1 text-xs">
-                  ★ {FEATURED_FOOD.rating} · {FEATURED_FOOD.cuisine}
+                  {showcase.food.rating !== null && `★ ${showcase.food.rating.toFixed(1)} · `}
+                  {showcase.food.meta}
                 </p>
               </div>
             </Link>
+            )}
 
             {/* Hot spot */}
+            {showcase.hotspot && (
             <Link
-              href={`/hotspots/${HOTSPOTS_TRENDING[0].slug}`}
+              href={`/hotspots/${showcase.hotspot.slug}`}
               className="bg-surface-deep group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5"
             >
               <span className="bg-lime text-ink inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
                 <span className="bg-lime-deep h-1.5 w-1.5 rounded-full" />
-                {HOTSPOTS_TRENDING[0].hereCount} here
+                {/* "84 here" needed check-ins, which nothing records. */}
+                Trending
               </span>
               <div>
                 <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
                   Hot spot
                 </p>
                 <p className="font-display text-foreground mt-1 text-xl leading-tight">
-                  {HOTSPOTS_TRENDING[0].name}
+                  {showcase.hotspot.name}
                 </p>
-                <p className="text-content-muted mt-1 text-xs">{HOTSPOTS_TRENDING[0].meta}</p>
+                <p className="text-content-muted mt-1 text-xs">{showcase.hotspot.meta}</p>
               </div>
             </Link>
+            )}
           </div>
         </div>
       </section>

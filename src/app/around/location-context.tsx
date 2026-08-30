@@ -9,7 +9,7 @@
 'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { MALETE_AREAS } from '@/mock/around';
+
 
 interface LocationValue {
   area: string;
@@ -19,7 +19,9 @@ interface LocationValue {
 const LocationContext = createContext<LocationValue | null>(null);
 
 export function LocationProvider({ children }: { children: ReactNode }) {
-  const [area, setArea] = useState<string>(MALETE_AREAS[0]);
+  // Empty until the picker sets one. Seeding from a hardcoded first area
+  // meant every signed-in student silently started filtered to Safari.
+  const [area, setArea] = useState<string>('');
   return <LocationContext.Provider value={{ area, setArea }}>{children}</LocationContext.Provider>;
 }
 

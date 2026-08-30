@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, ChevronRight, Plus, Wallet } from 'lucide-react';
 import {
   Button,
@@ -33,44 +33,119 @@ import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { openWalletTopup } from '@/lib/paystack/client';
-import { walletBalance, walletStats, walletTransactions, type WalletTxn } from '@/mock/student';
+import { useQueryClient } from '@tanstack/react-query';
+import { useWallet, useWalletTransactions } from '@/modules/payments/hooks';
+import { qk } from '@/lib/query/keys';
+import type { LedgerKind, WalletTransaction } from '@/modules/payments/types';
+
+/** Card shape this panel renders. The ledger row is narrower than this. */
+interface WalletTxn {
+  id: string;
+  label: string;
+  sub: string;
+  amount: number;
+  direction: 'in' | 'out';
+  date: string;
+  status: 'completed' | 'pending';
+  counterparty: string;
+  accountNumber: string;
+  bank: string;
+  reference: string;
+  method: string;
+  time: string;
+  fee: number;
+}
+
+const KIND_LABEL: Record<LedgerKind, string> = {
+  order_payment: 'Order payment',
+  order_refund: 'Refund',
+  escrow_hold: 'Held in escrow',
+  escrow_release: 'Escrow released',
+  wallet_topup: 'Top-up',
+  wallet_withdrawal: 'Withdrawal',
+  payout: 'Payout',
+  commission: 'Commission',
+  delivery_fee: 'Delivery fee',
+  subscription_charge: 'Subscription',
+  adjustment: 'Adjustment',
+};
+
+/**
+ * Ledger row -> card.
+ *
+ * STATUS IS ALWAYS 'completed', AND THAT IS CORRECT.
+ * A ledger entry only exists once money has actually moved. Money that has not
+ * is in escrow, which the wallet reports separately as `pendingKobo`. Marking
+ * ledger rows "pending" would misrepresent what the ledger is.
+ *
+ * counterparty / account / bank are NOT in the ledger — it records movements,
+ * not the parties' bank details. Showing the narrative beats inventing a name.
+ */
+function toCard(t: WalletTransaction): WalletTxn {
+  const when = new Date(t.createdAt);
+  return {
+    id: String(t.id),
+    label: KIND_LABEL[t.kind] ?? t.kind,
+    sub: t.narrative || KIND_LABEL[t.kind] || '',
+    amount: Math.abs(t.amountKobo) / 100,
+    direction: t.direction,
+    date: when.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }),
+    status: 'completed',
+    counterparty: t.narrative || '—',
+    accountNumber: '—',
+    bank: '—',
+    reference: t.reference ?? '—',
+    method: KIND_LABEL[t.kind] ?? 'Sync wallet',
+    time: when.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+    // The ledger records commission as its OWN entry rather than a field on the
+    // transaction it came from, so a per-row fee is not derivable here.
+    fee: 0,
+  };
+}
 
 const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
 const QUICK = [1_000, 5_000, 10_000, 20_000];
 
 export function WalletPanel() {
   const isMobile = useMediaQuery('(max-width: 767px)');
-  const [balance, setBalance] = useState(walletBalance);
-  const [added, setAdded] = useState(walletStats.addedThisMonth);
-  const [txns, setTxns] = useState<WalletTxn[]>(walletTransactions);
+  const qc = useQueryClient();
+  const { data: wallet, isLoading: walletLoading } = useWallet();
+  const { data: ledger = [], isLoading: txnsLoading } = useWalletTransactions({ pageSize: 50 });
+
+  const balance = (wallet?.balanceKobo ?? 0) / 100;
+  const txns = useMemo(() => ledger.map(toCard), [ledger]);
+
+  // "This month" is derived from the ledger rather than stored: a running
+  // counter drifts the moment a transaction is reversed.
+  const { added, spent } = useMemo(() => {
+    const now = new Date();
+    let inK = 0;
+    let outK = 0;
+    for (const t of ledger) {
+      const d = new Date(t.createdAt);
+      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) continue;
+      if (t.direction === 'in') inK += Math.abs(t.amountKobo);
+      else outK += Math.abs(t.amountKobo);
+    }
+    return { added: inK / 100, spent: outK / 100 };
+  }, [ledger]);
+
+  const isLoading = walletLoading || txnsLoading;
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<WalletTxn | null>(null);
 
-  /** Dev/demo fallback: credit locally when Paystack isn't configured yet. */
-  function creditLocally(value: number) {
-    setBalance((b) => b + value);
-    setAdded((a) => a + value);
-    setTxns((prev) => [
-      {
-        id: `local-${prev.length}`,
-        label: 'Top-up',
-        sub: 'Sync wallet',
-        amount: value,
-        direction: 'in',
-        date: 'Just now',
-        status: 'completed',
-        counterparty: 'You',
-        accountNumber: 'Sync wallet',
-        bank: 'Sync',
-        reference: `SYNC-TP-LOCAL${prev.length}`,
-        method: 'Sync wallet',
-        time: 'Just now',
-        fee: 0,
-      },
-      ...prev,
-    ]);
+  /**
+   * Dev/demo path: the API reports `mock` when Paystack is not configured. The
+   * server still writes the ledger entry, so the wallet is refetched rather
+   * than patched locally — a local patch would disagree with the ledger the
+   * moment anything else moved money.
+   */
+  function refreshWallet() {
+    // Transactions are nested under the wallet key, so this covers both the
+    // balance and the ledger list.
+    qc.invalidateQueries({ queryKey: qk.wallet.all });
   }
 
   async function addFunds(e: React.FormEvent) {
@@ -95,7 +170,7 @@ export function WalletPanel() {
 
       // No Paystack keys yet → behave like the previous mock top-up.
       if (data.mock) {
-        creditLocally(value);
+        refreshWallet();
         toast(`${naira(value)} added to your wallet.`);
         setAmount('');
         setOpen(false);
@@ -149,7 +224,7 @@ export function WalletPanel() {
         <Card className="border-line/10 border bg-transparent p-5">
           <p className="text-content-muted font-mono text-xs tracking-wide">SPENT THIS MONTH</p>
           <p className="text-content mt-1 text-2xl font-bold">
-            {naira(walletStats.spentThisMonth)}
+            {naira(spent)}
           </p>
         </Card>
       </div>
@@ -158,6 +233,17 @@ export function WalletPanel() {
       <div className="flex flex-col gap-3">
         <h2 className="text-content-muted font-mono text-sm tracking-wide">TRANSACTIONS</h2>
         <Card className="border-line/10 divide-line/5 divide-y border bg-transparent">
+          {isLoading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={`sk-${i}`} className="bg-ink/5 m-3 h-12 animate-pulse rounded-lg" />
+            ))}
+
+          {!isLoading && txns.length === 0 && (
+            <p className="text-content-muted p-6 text-center text-sm">
+              No transactions yet. Money moves here when you top up or pay for an order.
+            </p>
+          )}
+
           {txns.map((t) => {
             const inbound = t.direction === 'in';
             return (

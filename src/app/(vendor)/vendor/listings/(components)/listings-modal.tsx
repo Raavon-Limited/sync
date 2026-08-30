@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SELECTABLE_LISTING_CATEGORIES } from '@/config/listing-categories';
+import { CategoryField } from './category-field';
 import { Listing } from '@/modules/vendor/types';
-import { AppSelect } from '@/components/shared/app-select';
+import { ListingImageField } from './listing-image-field';
+import { StoreAvailability } from './store-availability';
 
 function Modal({
   open,
@@ -157,6 +158,11 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
       {' '}
       <h2 className="font-display text-ink text-lg font-semibold">Edit listing</h2>
       <div className="mt-4 flex flex-col gap-3">
+        <ListingImageField
+          value={form.imageUrl ?? ''}
+          onChange={(url) => set('imageUrl', url)}
+        />
+
         <Field label="Name">
           <Input
             value={form.name}
@@ -164,29 +170,28 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
             className="input-clean"
           />
         </Field>
-        <AppSelect
-          label="Category"
+        <CategoryField
           value={form.category}
-          onValueChange={(value) => set('category', value)}
-          options={[...SELECTABLE_LISTING_CATEGORIES]}
+          onChange={(name) => set('category', name)}
         />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Price (₦)">
-            <Input
-              type="number"
-              value={form.price}
-              onChange={(e) => set('price', Number(e.target.value))}
-              className="input-clean"
-            />
-          </Field>
-          <Field label="Stock">
-            <Input
-              type="number"
-              value={form.stock}
-              onChange={(e) => set('stock', Number(e.target.value))}
-              className="input-clean"
-            />
-          </Field>
+        <Field label="Price (₦)">
+          <Input
+            type="number"
+            value={form.price}
+            onChange={(e) => set('price', Number(e.target.value))}
+            className="input-clean"
+          />
+          <p className="text-content-muted mt-1 text-xs">
+            The catalogue price. A store can charge something else below.
+          </p>
+        </Field>
+
+        {/* The Stock field that used to sit here wrote `listings.stock`, which
+            no student-facing read consults since the shared catalogue landed —
+            a vendor could set it to 40 and watch nothing change. Stock is per
+            store, and this is where it lives. */}
+        <div className="border-line/10 border-t pt-3">
+          <StoreAvailability listingId={form.id} catalogueNaira={form.price} />
         </div>
       </div>
       <div className="mt-6 flex justify-end gap-3">
@@ -204,7 +209,9 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
 // ── Add new listing modal ────────────────────────────────────────
 const EMPTY: Omit<Listing, 'id' | 'sold'> = {
   name: '',
-  category: 'Rice',
+  // No default: the correct category depends on the vendor's business type, and
+  // pre-selecting a food one is how a clothing listing ends up under 'Rice'.
+  category: '',
   price: 0,
   stock: 0,
   status: 'Active',
@@ -229,6 +236,7 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
     const e: Record<string, string> = {};
 
     if (!form.name.trim()) e.name = 'Name is required';
+    if (!form.category) e.category = 'Pick a category';
     if (form.price <= 0) e.price = 'Price must be greater than 0';
     if (form.stock < 0) e.stock = 'Stock cannot be negative';
 
@@ -266,6 +274,11 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
       <h2 className="font-display text-ink text-lg font-semibold">Add new listing</h2>
 
       <div className="mt-4 flex flex-col gap-3">
+        <ListingImageField
+          value={form.imageUrl ?? ''}
+          onChange={(url) => set('imageUrl', url)}
+        />
+
         <Field label="Product name" error={errors.name}>
           <Input
             placeholder="e.g. Jollof Rice"
@@ -275,11 +288,10 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
           />
         </Field>
 
-        <AppSelect
-          label="Category"
+        <CategoryField
           value={form.category}
-          onValueChange={(value) => set('category', value)}
-          options={[...SELECTABLE_LISTING_CATEGORIES]}
+          onChange={(name) => set('category', name)}
+          error={errors.category}
         />
 
         <div className="grid grid-cols-2 gap-3">
@@ -293,10 +305,15 @@ export function AddListingModal({ open, onAdd, onClose }: AddListingModalProps) 
             />
           </Field>
 
-          <Field label="Stock" error={errors.stock}>
+          {/* Still meaningful on create: `carry_listing_at_home_store` seeds
+              this into the new item's home store, mapping 0 to null. Blank
+              therefore means "cooked to order", which is the common case and
+              is why the placeholder no longer says 0 — a literal 0 used to
+              mean the listing was born sold out. */}
+          <Field label="Opening stock" error={errors.stock}>
             <Input
               type="number"
-              placeholder="0"
+              placeholder="Leave blank if you cook to order"
               value={form.stock || ''}
               onChange={(e) => set('stock', Number(e.target.value))}
               className={cn('input-clean', errors.stock && 'border-red-400')}

@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { HIGHLIGHTS, type Highlight } from '@/mock/highlights';
+import type { Highlight } from './landing-data';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -22,18 +22,22 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function HeroHighlights() {
-  const [items, setItems] = useState<Highlight[]>(HIGHLIGHTS.slice(0, 4));
+export function HeroHighlights({ pool }: { pool: Highlight[] }) {
+  const [items, setItems] = useState<Highlight[]>(pool.slice(0, 4));
 
   useEffect(() => {
     // Intentional post-mount shuffle: server + first paint render the pool in
     // order (so hydration matches), then we randomise client-side so each load
     // features a different service. This is the one valid case for set-in-effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setItems(shuffle(HIGHLIGHTS).slice(0, 4));
-  }, []);
+    setItems(shuffle(pool).slice(0, 4));
+  }, [pool]);
 
   const [big, ...thumbs] = items;
+
+  // The pool is real rows now, so it can legitimately be empty on a new
+  // deployment. Rendering nothing beats crashing on `big.href`.
+  if (!big) return null;
 
   return (
     <div className="flex flex-col gap-3">

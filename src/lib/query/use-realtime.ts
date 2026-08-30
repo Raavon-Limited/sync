@@ -24,7 +24,7 @@
  */
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
@@ -38,7 +38,12 @@ export interface RealtimeBinding {
 }
 
 export interface UseRealtimeOptions {
-  /** Stable, unique per subscription. Two mounts with one name share a channel. */
+  /**
+   * Logical name for the subscription, e.g. `orders:vendor:<id>`.
+   *
+   * It does NOT have to be globally unique — a per-instance suffix is appended
+   * internally. See the note on topic collisions in the effect below.
+   */
   channel: string;
   bindings: RealtimeBinding[];
   /** Invalidated on any matching change. */
@@ -68,11 +73,35 @@ export function useRealtime({
   const bindingsRef = useRef(bindings);
   bindingsRef.current = bindings;
 
+  /*
+   * A per-instance suffix, so two components asking for the same logical channel
+   * do not collide.
+   *
+   * THE BUG THIS FIXES
+   * `supabase.channel(topic)` is a GET-OR-CREATE: given a topic that already has
+   * an open channel, it hands back that same channel rather than a new one.
+   * Calling `.on()` on an already-subscribed channel throws
+   *   "cannot add `postgres_changes` callbacks ... after `subscribe()`".
+   *
+   * That fired on /vendor/inbox because ChatWidget (mounted globally in the
+   * dashboard shell) and the inbox both call `useConversationsRealtime()`, so
+   * both computed `conversations:<userId>`. React StrictMode's double-invoked
+   * effects in development made it reproduce every time: the cleanup's
+   * `removeChannel` is asynchronous, so the remount could still see the old
+   * channel registered.
+   *
+   * `useId` is stable across renders and unique per component instance, which is
+   * exactly the property needed. Colons are stripped because the topic is
+   * interpolated into Realtime's own `realtime:<topic>` namespace.
+   */
+  const instanceId = useId().replace(/:/g, '');
+  const topic = `${channel}::${instanceId}`;
+
   useEffect(() => {
     if (!enabled) return;
 
     const supabase = createClient();
-    const ch = supabase.channel(channel);
+    const ch = supabase.channel(topic);
 
     for (const binding of bindingsRef.current) {
       ch.on(
@@ -100,5 +129,5 @@ export function useRealtime({
       // Without this the socket survives the component and accumulates.
       supabase.removeChannel(ch);
     };
-  }, [channel, enabled, queryClient]);
+  }, [topic, enabled, queryClient]);
 }

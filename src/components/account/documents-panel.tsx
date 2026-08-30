@@ -1,76 +1,194 @@
 /**
- * DocumentsPanel - vendor/landlord verification documents. Renders the uploaded
- * document list with per-document status badges + an upload/re-upload action,
- * alongside the overall verification timeline. Lives in account/ because it's
- * surfaced as a section of the Settings page. Driven by mock data for now
- * (src/mock/document.ts); wire to real uploads + signed-URL previews once the
- * storage layer lands.
+ * Verification documents — what the vendor has uploaded and where each stands.
+ *
+ * REQUIRED TYPES ARE CONFIG; UPLOADS ARE DATA
+ *   `verification_documents` holds what has been uploaded. It cannot say what
+ *   SHOULD be uploaded — that is a product decision, so the required set lives
+ *   here as a constant and each row is matched to it by `doc_type`. A required
+ *   type with no row is 'not_uploaded', which is exactly what the status enum
+ *   already allows for.
+ *
+ * THE TIMELINE IS DERIVED, NOT SCRIPTED
+ *   The mock listed events like "Bank Verification Pending — 28 May 2026" that
+ *   nothing produced. Real progress is just the required documents and their
+ *   statuses, so the timeline is computed from them. An invented date on a
+ *   verification screen is the kind of thing someone plans around.
+ *
+ * UPLOADS GO TO A PRIVATE BUCKET
+ *   `verification-docs` is private, owner-and-staff only, pathed by user id.
+ *   These are ID documents; nothing here produces a public URL.
  */
-import { CheckCircle2, Circle, Clock, FileText, Upload } from 'lucide-react';
+'use client';
+
+import { useMemo, useRef, useState } from 'react';
+import { CheckCircle2, Circle, Clock, FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { Badge, Button, Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { DOC_ICON_COLOUR, INITIAL_DOCS, INITIAL_TIMELINE } from '@/mock/document';
-import type { DocStatus } from '@/modules/vendor/types';
+import { createClient } from '@/lib/supabase/client';
+import { useMyDocuments, useUploadDocument } from '@/modules/verification/hooks';
+import { useSession } from '@/providers/session-provider';
+import type { DocStatus, DocumentItem } from '@/modules/vendor/types';
 
-const STATUS: Record<
-  DocStatus,
-  { label: string; variant: 'accent' | 'warning' | 'neutral' | 'outline'; action: string }
-> = {
-  approved: { label: 'Approved', variant: 'accent', action: 'View' },
-  under_review: { label: 'Under review', variant: 'neutral', action: 'View' },
-  needs_action: { label: 'Needs action', variant: 'warning', action: 'Re-upload' },
-  not_uploaded: { label: 'Not uploaded', variant: 'outline', action: 'Upload' },
+/** What Sync asks every vendor for. Product config, not database state. */
+const REQUIRED_DOCS: { docType: string; title: string; description: string; colour: string }[] = [
+  {
+    docType: 'gov_id',
+    title: 'Government ID',
+    description: "National ID card, Driver's licence, or International passport",
+    colour: 'bg-violet-50 text-violet-500',
+  },
+  {
+    docType: 'biz_reg',
+    title: 'Business registration',
+    description: 'CAC certificate or business name registration',
+    colour: 'bg-blue-50 text-blue-500',
+  },
+  {
+    docType: 'proof_address',
+    title: 'Proof of address',
+    description: 'A utility bill or tenancy agreement from the last 3 months',
+    colour: 'bg-amber-50 text-amber-500',
+  },
+];
+
+const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
+  approved: { label: 'Approved', cls: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },
+  under_review: { label: 'Under review', cls: 'bg-amber-500/10 text-amber-600', icon: Clock },
+  needs_action: { label: 'Needs action', cls: 'bg-rose-500/10 text-rose-600', icon: AlertCircle },
+  not_uploaded: { label: 'Not uploaded', cls: 'bg-ink/5 text-content-muted', icon: Circle },
 };
 
 export function DocumentsPanel() {
+  const { userId } = useSession();
+  const { data: docs = [], isLoading } = useMyDocuments();
+  const upload = useUploadDocument();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const items = useMemo<DocumentItem[]>(
+    () =>
+      REQUIRED_DOCS.map((req) => {
+        const found = docs.find((d) => d.docType === req.docType);
+        return {
+          id: req.docType,
+          title: req.title,
+          description: req.description,
+          status: (found?.status ?? 'not_uploaded') as DocStatus,
+          uploadedAt: found?.uploadedAt
+            ? new Date(found.uploadedAt).toLocaleDateString('en-NG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : undefined,
+          actionMessage: found?.actionMessage ?? undefined,
+        };
+      }),
+    [docs],
+  );
+
+  const approved = items.filter((i) => i.status === 'approved').length;
+
+  async function handleFile(docType: string, title: string, file: File) {
+    if (!userId) return;
+    setBusy(docType);
+    setError(null);
+    try {
+      // Pathed by user id — the bucket policy scopes reads to the owner and staff.
+      const path = `${userId}/${docType}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+      const { error: upErr } = await createClient()
+        .storage.from('verification-docs')
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+
+      // The hook fills ownerId from the session; passing it here would be
+      // a second source of truth for who is uploading.
+      await upload.mutateAsync({ docType, title, storagePath: path });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-ink/5 h-20 animate-pulse rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-      {/* Document list */}
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        {INITIAL_DOCS.map((doc) => {
-          const status = STATUS[doc.status];
+    <div className="flex flex-col gap-4">
+      <p className="text-content-muted text-sm">
+        {approved} of {REQUIRED_DOCS.length} approved.
+        {approved < REQUIRED_DOCS.length && ' Verification completes when all three are.'}
+      </p>
+
+      {error && <p className="text-coral text-sm">{error}</p>}
+
+      <div className="flex flex-col gap-3">
+        {items.map((item, i) => {
+          const meta = STATUS_META[item.status];
+          const Icon = meta.icon;
+          const req = REQUIRED_DOCS[i];
           return (
-            <Card key={doc.id} className="border-line/10 border bg-transparent">
-              <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+            <Card key={item.id} className="border-line/10 border bg-transparent">
+              <CardContent className="flex flex-wrap items-center gap-3 p-4">
                 <span
-                  className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-                    DOC_ICON_COLOUR[doc.id] ?? 'bg-ink/5 text-content-muted',
-                  )}
+                  className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', req.colour)}
                 >
-                  <FileText className="h-5 w-5" aria-hidden="true" />
+                  <FileText className="size-5" />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-content text-sm font-medium">{doc.title}</p>
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  </div>
-                  <p className="text-content-muted mt-1 text-xs">{doc.description}</p>
-                  {doc.uploadedAt && (
-                    <p className="text-content-muted mt-2 font-mono text-[11px] tracking-wide">
-                      UPLOAD {doc.uploadedAt.toUpperCase()}
-                    </p>
+                  <p className="text-content flex items-center gap-2 text-sm font-medium">
+                    {item.title}
+                    <Badge className={cn('gap-1', meta.cls)}>
+                      <Icon className="size-3" />
+                      {meta.label}
+                    </Badge>
+                  </p>
+                  <p className="text-content-muted text-xs">{item.description}</p>
+                  {item.uploadedAt && (
+                    <p className="text-content-muted text-xs">Uploaded {item.uploadedAt}</p>
                   )}
-                  {doc.actionMessage && (
-                    <p
-                      className={cn(
-                        'mt-2 text-xs',
-                        doc.status === 'needs_action' ? 'text-coral' : 'text-content-muted',
-                      )}
-                    >
-                      {doc.actionMessage}
-                    </p>
+                  {/* Only a reviewer sets this, and it is the one thing the
+                      vendor must act on. */}
+                  {item.actionMessage && (
+                    <p className="text-coral mt-1 text-xs">{item.actionMessage}</p>
                   )}
                 </div>
 
+                <input
+                  ref={(el) => {
+                    inputs.current[item.id] = el;
+                  }}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(ev) => {
+                    const f = ev.target.files?.[0];
+                    if (f) void handleFile(item.id, item.title, f);
+                    ev.target.value = '';
+                  }}
+                />
                 <Button
-                  variant={doc.status === 'needs_action' ? 'primary' : 'outline'}
-                  size="sm"
-                  className="shrink-0 self-start"
+                  variant="outline"
+                  className="gap-1"
+                  disabled={busy === item.id || item.status === 'approved'}
+                  onClick={() => inputs.current[item.id]?.click()}
                 >
-                  <Upload className="h-4 w-4" />
-                  {status.action}
+                  {busy === item.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
+                  {item.status === 'not_uploaded' ? 'Upload' : 'Replace'}
                 </Button>
               </CardContent>
             </Card>
@@ -78,55 +196,26 @@ export function DocumentsPanel() {
         })}
       </div>
 
-      {/* Verification timeline */}
-      <aside className="w-full shrink-0 lg:w-80">
-        <h3 className="text-content-muted mb-3 font-mono text-sm tracking-wide">
-          VERIFICATION TIMELINE
-        </h3>
-        <Card className="border-line/10 border bg-transparent">
-          <CardContent className="flex flex-col gap-0 p-5">
-            {INITIAL_TIMELINE.map((event, i) => {
-              const Icon = event.done ? CheckCircle2 : event.active ? Clock : Circle;
-              const last = i === INITIAL_TIMELINE.length - 1;
-              return (
-                <div key={event.label} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <Icon
-                      className={cn(
-                        'h-4 w-4 shrink-0',
-                        event.done
-                          ? 'text-lime-deep'
-                          : event.active
-                            ? 'text-coral'
-                            : 'text-content-muted',
-                      )}
-                      aria-hidden="true"
-                    />
-                    {!last && <span className="bg-line/10 my-1 w-px flex-1" />}
-                  </div>
-                  <div className={cn('min-w-0', last ? 'pb-0' : 'pb-5')}>
-                    <p
-                      className={cn(
-                        'text-sm',
-                        event.done || event.active
-                          ? 'text-content font-medium'
-                          : 'text-content-muted',
-                      )}
-                    >
-                      {event.label}
-                    </p>
-                    {event.date && (
-                      <p className="text-content-muted mt-0.5 font-mono text-[11px] tracking-wide">
-                        {event.date.toUpperCase()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </aside>
+      {/* Derived from the documents above — no scripted dates. */}
+      <div className="border-line/10 flex flex-col gap-2 rounded-xl border p-4">
+        <p className="text-content-muted font-mono text-xs tracking-wide">PROGRESS</p>
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center gap-2 text-sm">
+            {item.status === 'approved' ? (
+              <CheckCircle2 className="size-4 text-emerald-600" />
+            ) : item.status === 'under_review' ? (
+              <Clock className="size-4 text-amber-600" />
+            ) : (
+              <Circle className="text-content-muted size-4" />
+            )}
+            <span
+              className={item.status === 'approved' ? 'text-content-muted' : 'text-content'}
+            >
+              {item.title} — {STATUS_META[item.status].label.toLowerCase()}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

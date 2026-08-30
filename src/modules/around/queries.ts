@@ -14,6 +14,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
+import type { AreaPulse } from './types';
 import { unwrapList } from '@/lib/query/helpers';
 import { toLatLng } from '@/modules/hotspots/queries';
 
@@ -47,9 +48,20 @@ export interface AroundFilters {
 }
 
 /**
- * Everything on the map, unfiltered by distance. Rows with no `geo` are dropped
- * — a pin without coordinates cannot be placed, and rendering it at 0,0 puts it
- * in the Gulf of Guinea.
+ * Everything on the map, unfiltered by distance. Rows with no coordinates are
+ * dropped — a pin without them cannot be placed, and rendering it at 0,0 puts
+ * it in the Gulf of Guinea.
+ *
+ * COORDINATES COME FROM lat/lng, NOT geo.
+ *   A geography column reads back over PostgREST as WKB hex, so the previous
+ *   `toLatLng(r.geo)` resolved to null for every row and this map rendered ZERO
+ *   pins — silently, because "no coordinates" and "unreadable coordinates" look
+ *   identical to the filter below.
+ *
+ * VENDOR PINS COME FROM STOREFRONTS.
+ *   A vendor's location is a property of a BRANCH, not the brand: a business
+ *   with three shops is three pins in three places. vendor_profiles.geo was
+ *   superseded by storefronts and is deliberately not read here.
  */
 export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): Promise<NearbyPin[]> {
   const kinds = filters.kinds ?? ['vendor', 'hostel', 'hotspot'];
@@ -57,44 +69,52 @@ export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): 
   const [vendors, hostels, hotspots] = await Promise.all([
     kinds.includes('vendor')
       ? db
-          .from('vendor_profiles')
-          .select('id, slug, business_name, category, area, logo_url, geo, rating_avg, verification_status')
+          .from('storefronts')
+          .select(
+            'id, slug, name, area, lat, lng, vendor:vendor_profiles!storefronts_vendor_id_fkey(business_name, category, logo_url, rating_avg, verification_status, archived_at)',
+          )
           .is('archived_at', null)
       : Promise.resolve({ data: [], error: null }),
 
     kinds.includes('hostel')
       ? db
           .from('hostels')
-          .select('id, slug, name, area, geo, price_per_session_kobo, verified, hostel_images(url)')
+          .select('id, slug, name, area, lat, lng, price_per_session_kobo, verified, hostel_images(url)')
           .is('archived_at', null)
       : Promise.resolve({ data: [], error: null }),
 
     kinds.includes('hotspot')
-      ? db.from('hotspots').select('id, slug, name, category, area, image_url, geo').eq('is_active', true)
+      ? db
+          .from('hotspots')
+          .select('id, slug, name, category, area, image_url, lat, lng')
+          .eq('is_active', true)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
   const pins: NearbyPin[] = [];
 
   for (const r of unwrapList<Row>(vendors)) {
-    const position = toLatLng(r.geo);
-    if (!position) continue;
+    const position = toLatLng(r);
+    // The brand may be archived even when the branch row is not.
+    if (!position || !r.vendor || r.vendor.archived_at) continue;
     pins.push({
       id: r.id,
       kind: 'vendor',
-      name: r.business_name,
+      // Brand name is what a student recognises; the branch name is the
+      // distinguishing part, so both appear when there is more than one.
+      name: r.vendor.business_name ?? r.name,
       slug: r.slug,
-      category: r.category,
+      category: r.vendor.category,
       area: r.area,
-      imageUrl: r.logo_url,
+      imageUrl: r.vendor.logo_url,
       position,
-      rating: r.rating_avg ? Number(r.rating_avg) : null,
-      isVerified: r.verification_status === 'verified',
+      rating: r.vendor.rating_avg ? Number(r.vendor.rating_avg) : null,
+      isVerified: r.vendor.verification_status === 'verified',
     });
   }
 
   for (const r of unwrapList<Row>(hostels)) {
-    const position = toLatLng(r.geo);
+    const position = toLatLng(r);
     if (!position) continue;
     pins.push({
       id: r.id,
@@ -111,7 +131,7 @@ export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): 
   }
 
   for (const r of unwrapList<Row>(hotspots)) {
-    const position = toLatLng(r.geo);
+    const position = toLatLng(r);
     if (!position) continue;
     pins.push({
       id: r.id,
@@ -126,4 +146,20 @@ export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): 
   }
 
   return filters.area ? pins.filter((p) => p.area === filters.area) : pins;
+}
+
+// -- Campus pulse -------------------------------------------------------------
+
+/**
+ * What is happening across every area with a live store.
+ *
+ * One RPC rather than a fan-out like `fetchNearbyPins` above: the numbers are
+ * aggregates over orders, and computing them here would mean reading order
+ * rows into the client — which RLS would rightly refuse, and which would be
+ * the wrong shape of question to ask even if it did not.
+ */
+export async function fetchCampusPulse(db: Client): Promise<AreaPulse[]> {
+  const { data, error } = await db.rpc('campus_pulse');
+  if (error) throw error;
+  return (data ?? []) as unknown as AreaPulse[];
 }

@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { qk } from '@/lib/query/keys';
 import type { PageParams } from '@/lib/query/helpers';
@@ -33,15 +33,42 @@ export function useEvent(slug: string | undefined) {
 
 export function useMyTickets(filters: { status?: TicketStatus } & PageParams = {}) {
   return useQuery({
-    queryKey: [...qk.events.all, 'tickets', filters] as const,
+    queryKey: qk.tickets.mine(filters as Record<string, unknown>),
     queryFn: () => api.fetchMyTickets(db(), filters),
   });
 }
 
 export function useTicket(id: string | undefined) {
   return useQuery({
-    queryKey: [...qk.events.all, 'ticket', id ?? ''] as const,
+    queryKey: [...qk.tickets.all, 'detail', id ?? ''] as const,
     queryFn: () => api.fetchTicket(db(), id!),
     enabled: !!id,
+  });
+}
+
+/**
+ * The tiers an event sells. Separate from `useEvent` because the detail page
+ * needs both and they change at different rates — an event's name is static,
+ * its availability is not.
+ */
+export function useEventTiers(eventId: string | undefined) {
+  return useQuery({
+    queryKey: [...qk.events.all, 'tiers', eventId ?? ''] as const,
+    queryFn: () => api.fetchEventTiers(db(), eventId!),
+    enabled: !!eventId,
+  });
+}
+
+/** Buys one tier's worth of tickets. See purchaseTickets on the reference. */
+export function usePurchaseTickets() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { tierId: string; quantity: number; reference: string }) =>
+      api.purchaseTickets(db(), input),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.tickets.all });
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.events.all });
+    },
   });
 }
