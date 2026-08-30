@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SyncLogo } from '@/components/brand/sync-logo';
+import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
 import { SITE } from '@/config/site';
 // Shared with the signed-in AppFooter, so the same pages are reachable from
 // both shells. See config/footer-nav.
@@ -20,6 +21,11 @@ const SOCIALS = [
 export function MarketingFooter() {
   return (
     <footer className="bg-ink text-cream relative isolate overflow-hidden">
+      {/* The townscape, in cream outline on the Ink surface. Sits UNDER the
+          glow below (both are -z-10, this one first in source order), so the
+          lime bloom reads as light falling across the drawing. */}
+      <DoodleBackdrop tile={560} className="text-cream/6" />
+
       {/* Animated morphing ambient glow */}
       <div
         aria-hidden="true"
