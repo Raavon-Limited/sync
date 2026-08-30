@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { SITE } from '@/config/site';
 import type { Plan, PlanId } from './types';
 
 interface Props {
@@ -18,7 +19,9 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
 
   const handleClick = () => {
     if (plan.cta === 'contact') {
-      window.location.href = 'mailto:sales@sync.ng';
+      // From config, not hardcoded: this was `sales@sync.ng`, a second address
+      // on a domain we no longer own, so every enterprise enquiry bounced.
+      window.location.href = `mailto:${SITE.support.email}`;
       return;
     }
     if (!isCurrent) {

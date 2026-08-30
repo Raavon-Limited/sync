@@ -13,7 +13,16 @@ export const SITE = {
   launchMarket: 'KWASU, Malete',
   url: 'https://www.letsyncyou.com',
   support: {
-    email: 'support@sync.ng',
+    /**
+     * The one public address. Was support@sync.ng, on a domain the product no
+     * longer uses - it appeared on all four legal pages, so anyone exercising
+     * a data-protection right was writing to a mailbox at the wrong company.
+     *
+     * There is deliberately no second address here. sales@ was hardcoded in
+     * the vendor plan card and pointed at the same dead domain; one inbox that
+     * is read beats two that are not.
+     */
+    email: 'hello@letsyncyou.com',
   },
   socials: {
     x: 'https://x.com/syncng',

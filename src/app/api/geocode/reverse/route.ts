@@ -13,13 +13,20 @@
  * Consistent with the rule in src/store/api/base-api.ts - clients talk to our
  * own /api, never to third parties directly.
  */
+import { SITE } from '@/config/site';
 
 /** ~110m at the equator. Enough to name a neighbourhood, not enough to place
  *  someone at an address. Also makes the cache key stable as the user moves. */
 const COORD_PRECISION = 3;
 
-/** Nominatim's usage policy requires a real identifier. */
-const USER_AGENT = 'Sync/1.0 (https://sync.ng; campus marketplace)';
+/**
+ * Nominatim's usage policy requires a real identifier that they can use to
+ * reach us. Built from SITE.url rather than hardcoded: it read `sync.ng`, a
+ * domain we no longer own, which under that policy is grounds for being
+ * blocked - and we would never have been told, because the contact route
+ * pointed nowhere.
+ */
+const USER_AGENT = `Sync/1.0 (${SITE.url}; campus marketplace; ${SITE.support.email})`;
 
 /** Zoom 14 ≈ suburb level - the granularity we actually want to show. */
 const NOMINATIM = 'https://nominatim.openstreetmap.org/reverse';

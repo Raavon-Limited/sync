@@ -35,7 +35,12 @@ type HookPayload = {
 export async function POST(req: Request) {
   const hookSecret = process.env.SEND_EMAIL_HOOK_SECRET;
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? 'Sync <no-reply@sync.ng>';
+  // EMAIL_FROM is the real setting; this fallback only covers a misconfigured
+  // deploy. It was `no-reply@sync.ng` - a domain we no longer use, which Resend
+  // would reject as an unverified sender, so a missing EMAIL_FROM failed with a
+  // sender error rather than anything that names the actual problem.
+  // NOTE: letsyncyou.com must be a verified domain in Resend for this to send.
+  const from = process.env.EMAIL_FROM ?? 'Sync <no-reply@letsyncyou.com>';
   if (!hookSecret || !apiKey) {
     return Response.json({ error: 'Email hook not configured' }, { status: 500 });
   }
