@@ -77,7 +77,15 @@ export function MobileMenu({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-screen w-screen flex-col md:hidden">
+        {/* h-dvh, NOT h-screen.
+            `h-screen` is 100vh, which on iOS Safari means the height with the
+            browser toolbars HIDDEN - taller than what you can actually see. The
+            overlay therefore ran off the bottom of the screen and took the
+            sticky CTA footer with it: the nav scrolled fine, but the buttons
+            were never reachable because they were below the fold, outside the
+            one element that scrolls. `dvh` tracks the visible viewport as the
+            toolbars collapse, so the footer stays on screen. */}
+        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-dvh w-full flex-col md:hidden">
           <Dialog.Title className="sr-only">Menu</Dialog.Title>
           <Dialog.Description className="sr-only">
             Sync navigation, account actions, and theme toggle.
@@ -144,8 +152,13 @@ export function MobileMenu({
             </Link>
           </nav>
 
-          {/* Sticky auth/CTA footer */}
-          <div className="border-line/5 bg-surface flex shrink-0 flex-col gap-2 border-t px-6 py-5">
+          {/* Sticky auth/CTA footer.
+              pb clears the iOS home indicator, which otherwise sits on top of
+              the bottom button. */}
+          <div
+            className="border-line/5 bg-surface flex shrink-0 flex-col gap-2 border-t px-6 pt-5"
+            style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+          >
             {signedIn ? (
               <>
                 <div className="flex items-center gap-3 pb-1">
@@ -157,32 +170,39 @@ export function MobileMenu({
                     <p className="text-content-muted truncate text-xs">{email}</p>
                   </div>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  onClick={close}
-                  className="text-foreground border-foreground/20 hover:bg-foreground/10"
-                >
-                  <Link href={dashboardHref}>
-                    <LayoutDashboard />
-                    {role === 'admin' ? 'Admin' : 'Dashboard'}
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleSignOut}
-                  className="text-coral border-coral/30 hover:bg-coral/10"
-                >
-                  <LogOut /> Sign out
-                </Button>
+                {/* Two actions, so they share one row instead of stacking -
+                    half the footer height, and nothing gets pushed off. */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    onClick={close}
+                    className="text-foreground border-foreground/20 hover:bg-foreground/10 min-w-0 flex-1"
+                  >
+                    <Link href={dashboardHref}>
+                      <LayoutDashboard />
+                      <span className="truncate">
+                        {role === 'admin' ? 'Admin' : 'Dashboard'}
+                      </span>
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handleSignOut}
+                    className="text-coral border-coral/30 hover:bg-coral/10 min-w-0 flex-1"
+                  >
+                    <LogOut /> <span className="truncate">Sign out</span>
+                  </Button>
+                </div>
               </>
             ) : (
-              <>
-                <Button asChild size="lg" onClick={close}>
+              <div className="flex items-center gap-2">
+                <Button asChild size="lg" onClick={close} className="min-w-0 flex-1">
                   <Link href="/signup?role=vendor&category=landlord">
-                    List a property <ArrowRight />
+                    <span className="truncate">List a property</span>
+                    <ArrowRight />
                   </Link>
                 </Button>
                 <Button
@@ -190,11 +210,13 @@ export function MobileMenu({
                   variant="outline"
                   size="lg"
                   onClick={close}
-                  className="text-foreground border-foreground/20 hover:bg-foreground/10"
+                  className="text-foreground border-foreground/20 hover:bg-foreground/10 min-w-0 flex-1"
                 >
-                  <Link href="/login">Sign in / Sign up</Link>
+                  <Link href="/login">
+                    <span className="truncate">Sign in</span>
+                  </Link>
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </Dialog.Content>
