@@ -7,7 +7,17 @@
  * Authorization (role=vendor) is enforced by the proxy (middleware).
  */
 import { DashboardShell } from '@/components/layouts/dashboard-shell';
+import { ActiveStorefrontProvider } from '@/modules/storefronts/active-storefront';
+import { StoreSwitcher } from './(components)/store-switcher';
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell navKey="vendor">{children}</DashboardShell>;
+  // The provider wraps BOTH the switcher and the pages: they have to agree on
+  // which branch is active, and two providers would be two answers.
+  return (
+    <ActiveStorefrontProvider>
+      <DashboardShell navKey="vendor" sidebarSlot={<StoreSwitcher />}>
+        {children}
+      </DashboardShell>
+    </ActiveStorefrontProvider>
+  );
 }

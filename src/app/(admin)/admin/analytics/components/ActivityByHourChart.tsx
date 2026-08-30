@@ -10,8 +10,12 @@ const CH = H - P.top - P.bottom;
 export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const maxVal = Math.max(...data.map(d => d.users));
-  const yMax = Math.ceil(maxVal / 200) * 200;
+  const maxVal = Math.max(0, ...data.map(d => d.users));
+  // A campus does not do hundreds of orders an hour on day one, so the axis
+  // has to fit small numbers as well as large ones. The floor of 4 also keeps
+  // yMax off zero, which every position below divides by.
+  const yStep = maxVal > 800 ? 200 : maxVal > 80 ? 20 : maxVal > 8 ? 2 : 1;
+  const yMax = Math.max(Math.ceil(maxVal / (yStep * 4)) * yStep * 4, 4);
   const yTicks = Array.from({ length: 5 }, (_, i) => i * (yMax / 4));
 
   function xPos(i: number) { return P.left + (i / (data.length - 1)) * CW; }

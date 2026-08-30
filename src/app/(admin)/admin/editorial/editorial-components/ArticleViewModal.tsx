@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { X, Calendar, Eye, User, Pencil, ArrowLeft } from "lucide-react";
+import { X, Calendar, User, Pencil, ArrowLeft } from "lucide-react";
 import { ArticleStatusBadge } from "./ArticleStatusBadge";
 import { ArticleCategoryBadge } from "./ArticleCategoryBadge";
 import type { Article } from "../admin-editorialTypes";
@@ -137,10 +137,6 @@ export function ArticleViewModal({ article, onClose, onEdit }: ArticleViewModalP
               <span className="flex items-center gap-1.5">
                 <Calendar size={13} className="text-content-muted/50" />
                 {article.date}
-              </span>
-              <span className="flex items-center gap-1.5 font-mono">
-                <Eye size={13} className="text-content-muted/50" />
-                {article.views.toLocaleString()} views
               </span>
             </div>
 

@@ -128,7 +128,7 @@ export function AttachmentViewer({
     const link = document.createElement('a');
 
     link.href = attachment.url;
-    link.download = attachment.file.name;
+    link.download = attachment.name;
 
     document.body.appendChild(link);
     link.click();
@@ -167,18 +167,18 @@ export function AttachmentViewer({
    * for the current audio/video MIME type.
    */
   const canPlayMedia = () => {
-    if (!attachment.file.type) return true;
+    if (!attachment.mimeType) return true;
 
     if (attachment.type === 'audio') {
       const audio = document.createElement('audio');
 
-      return audio.canPlayType(attachment.file.type) !== '';
+      return audio.canPlayType(attachment.mimeType) !== '';
     }
 
     if (attachment.type === 'video') {
       const video = document.createElement('video');
 
-      return video.canPlayType(attachment.file.type) !== '';
+      return video.canPlayType(attachment.mimeType) !== '';
     }
 
     return true;
@@ -191,7 +191,7 @@ export function AttachmentViewer({
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview ${attachment.file.name}`}
+      aria-label={`Preview ${attachment.name}`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -202,10 +202,10 @@ export function AttachmentViewer({
       <div className="absolute top-0 right-0 left-0 z-20 flex items-center justify-between px-4 py-3 sm:px-6">
         <div className="min-w-0">
           <p className="max-w-[60vw] truncate text-sm font-medium text-white">
-            {attachment.file.name}
+            {attachment.name}
           </p>
 
-          <p className="mt-0.5 text-xs text-white/60">{attachment.file.type || 'File'}</p>
+          <p className="mt-0.5 text-xs text-white/60">{attachment.mimeType || 'File'}</p>
         </div>
 
         <div className="flex items-center gap-1">
@@ -258,7 +258,7 @@ export function AttachmentViewer({
         <div className="flex max-h-[85vh] max-w-[90vw] items-center justify-center">
           <img
             src={attachment.url}
-            alt={attachment.file.name}
+            alt={attachment.name}
             className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
           />
         </div>
@@ -270,7 +270,7 @@ export function AttachmentViewer({
           {!mediaSupported || mediaError ? (
             <UnsupportedMedia
               type="video"
-              fileName={attachment.file.name}
+              fileName={attachment.name}
               onOpen={openAttachment}
               onDownload={downloadAttachment}
             />
@@ -299,7 +299,7 @@ export function AttachmentViewer({
           {!mediaSupported || mediaError ? (
             <UnsupportedMedia
               type="audio"
-              fileName={attachment.file.name}
+              fileName={attachment.name}
               onOpen={openAttachment}
               onDownload={downloadAttachment}
             />
@@ -310,10 +310,10 @@ export function AttachmentViewer({
               </div>
 
               <h3 className="text-ink max-w-full truncate text-base font-semibold">
-                {attachment.file.name}
+                {attachment.name}
               </h3>
 
-              <p className="text-muted mt-1 text-xs">{attachment.file.type || 'Audio file'}</p>
+              <p className="text-muted mt-1 text-xs">{attachment.mimeType || 'Audio file'}</p>
 
               <audio
                 key={attachment.id}
@@ -352,11 +352,11 @@ export function AttachmentViewer({
       {/* DOCUMENT */}
       {attachment.type === 'document' && (
         <div className="flex max-h-[90vh] w-full max-w-4xl flex-col items-center">
-          {attachment.file.type === 'application/pdf' ? (
+          {attachment.mimeType === 'application/pdf' ? (
             <div className="h-[75vh] w-full overflow-hidden rounded-xl bg-white shadow-2xl">
               <iframe
                 src={attachment.url}
-                title={attachment.file.name}
+                title={attachment.name}
                 className="h-full w-full border-0"
               />
             </div>
@@ -367,10 +367,10 @@ export function AttachmentViewer({
               </div>
 
               <h3 className="text-ink max-w-full truncate text-base font-semibold">
-                {attachment.file.name}
+                {attachment.name}
               </h3>
 
-              <p className="text-muted mt-1 text-xs">{attachment.file.type || 'Document'}</p>
+              <p className="text-muted mt-1 text-xs">{attachment.mimeType || 'Document'}</p>
 
               <div className="mt-6 flex justify-center gap-2">
                 <button

@@ -83,7 +83,7 @@ export async function proxy(request: NextRequest) {
     return guarded ? redirectToLogin(request, pathname) : NextResponse.next({ request });
   }
 
-  const { response, user, role: trustedRole } = await updateSession(request);
+  const { response, user, role: trustedRole, isStorefrontStaff } = await updateSession(request);
 
   // Personalised dashboard handles: /<handle>/<page> → the real /me or /vendor
   // page, but ONLY when <handle> is the signed-in user's own handle (private).
@@ -132,9 +132,17 @@ export async function proxy(request: NextRequest) {
   // user_metadata - so a user can't self-assign a role to reach /admin.
   const role = (trustedRole as Role | undefined) ?? 'student';
   if (!guarded.roles.includes(role)) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/403';
-    return NextResponse.rewrite(url);
+    // One exception: a branch manager. They are invited to run a storefront and
+    // keep their own role - usually 'student' - so a pure role gate would send
+    // them to /403 on the dashboard they were just granted. Membership is
+    // resolved server-side against storefront_staff, never from a claim the
+    // client can set, and RLS still decides what they may see once inside.
+    const isInvitedManager = guarded.prefix === '/vendor' && isStorefrontStaff;
+    if (!isInvitedManager) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/403';
+      return NextResponse.rewrite(url);
+    }
   }
 
   return response;

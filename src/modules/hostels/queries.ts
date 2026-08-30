@@ -12,7 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
-import type { Area, Booking, Hostel, Inspection, NearbyHostel } from './types';
+import type { Area, Availability, Booking, Hostel, Inspection, NearbyHostel } from './types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- see lib/query/helpers.ts */
 type Row = any;
@@ -77,6 +77,52 @@ const HOSTEL_SELECT = `
   hostel_rooms(id, label, price_per_session_kobo, is_listed)
 `;
 
+/**
+ * Availability comes from a VIEW that cannot be embedded.
+ *
+ * `toHostel` reads `r.availability?.rooms_available` and friends, but
+ * HOSTEL_SELECT never asked for them and PostgREST cannot infer a relationship
+ * between `hostels` and `hostel_availability` (a grouped view has no FK), so
+ * those three fields were silently undefined on every hostel ever fetched.
+ *
+ * The view also speaks a DIFFERENT vocabulary from the domain type:
+ *   view:  draft | closed      | ending_soon | active
+ *   type:  draft | full        | filling_up  | available
+ * so even a working embed would have produced values nothing matches on. The
+ * translation lives here, once.
+ */
+const AVAILABILITY_FROM_VIEW: Record<string, Availability> = {
+  draft: 'draft',
+  closed: 'full',
+  ending_soon: 'filling_up',
+  active: 'available',
+};
+
+async function attachAvailability(db: Client, rows: Row[]): Promise<Row[]> {
+  const ids = rows.map((r) => r.id).filter(Boolean);
+  if (!ids.length) return rows;
+
+  const { data } = await db
+    .from('hostel_availability')
+    .select('hostel_id, rooms_total, rooms_available, availability')
+    .in('hostel_id', ids);
+
+  const byId = new Map((data ?? []).map((a: Row) => [a.hostel_id, a]));
+  return rows.map((r) => {
+    const a = byId.get(r.id);
+    return a
+      ? {
+          ...r,
+          availability: {
+            rooms_total: a.rooms_total,
+            rooms_available: a.rooms_available,
+            availability: AVAILABILITY_FROM_VIEW[a.availability] ?? undefined,
+          },
+        }
+      : r;
+  });
+}
+
 // ── Reference data ─────────────────────────────────────────────────────────
 
 export async function fetchAreas(db: Client): Promise<Area[]> {
@@ -139,11 +185,11 @@ export async function fetchHostelBySlug(db: Client, slug: string): Promise<Hoste
   );
   if (!row) return null;
 
-  const availability = unwrapMaybe<Row>(
-    await db.from('hostel_availability').select('*').eq('hostel_id', row.id).maybeSingle(),
-  );
-
-  return toHostel({ ...row, availability });
+  // Was reading the view directly and passing its raw vocabulary through, so
+  // `availability` arrived as 'active' / 'ending_soon' — values the Availability
+  // type does not contain. Same helper as the list, same translation.
+  const [withAvailability] = await attachAvailability(db, [row]);
+  return toHostel(withAvailability);
 }
 
 /** PostGIS proximity search. `hostels_near` was created in 0006. */

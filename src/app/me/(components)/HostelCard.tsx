@@ -1,7 +1,23 @@
 'use client';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { Hostel } from '@/mock/hostels';
+import Link from 'next/link';
+import { useHostels } from '@/modules/hostels/hooks';
+
+/**
+ * The card's own shape. The domain hostel carries rooms, images and
+ * availability; this strip needs four fields, so it takes the four.
+ */
+export interface Hostel {
+  id: string;
+  slug?: string;
+  name: string;
+  /** Naira, not kobo — this component formats for display. */
+  price: number;
+  distanceMinutes: number;
+  landmark: string;
+  imageUrl?: string;
+}
 
 interface HostelCardListProps {
   hostels: Hostel[];
@@ -51,6 +67,53 @@ function HostelCard({ hostel, onSelect }: { hostel: Hostel; onSelect?: (id: stri
         </CardDescription>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Fetches its own hostels when none are passed. The dashboard used to hand it
+ * `hostels.slice(0, 3)` from a mock module; now the default is real.
+ */
+export function HostelCardListLive({ limit = 3 }: { limit?: number }) {
+  const { data = [], isLoading } = useHostels({ pageSize: limit });
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: limit }).map((_, i) => (
+          <div key={i} className="bg-ink/5 h-48 animate-pulse rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!data.length) {
+    return (
+      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
+        No hostels listed yet.
+      </p>
+    );
+  }
+
+  const cards: Hostel[] = data.slice(0, limit).map((h) => ({
+    id: h.id,
+    slug: h.slug,
+    name: h.name,
+    price: h.pricePerSessionKobo / 100,
+    // Not a column on `hostels`; 0 renders as "—" rather than a guess.
+    distanceMinutes: h.distanceMinutes ?? 0,
+    landmark: h.landmark ?? h.area,
+    imageUrl: h.images[0]?.url,
+  }));
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {cards.map((h) => (
+        <Link key={h.id} href={`/hostels/${h.slug ?? h.id}`}>
+          <HostelCard hostel={h} />
+        </Link>
+      ))}
+    </div>
   );
 }
 

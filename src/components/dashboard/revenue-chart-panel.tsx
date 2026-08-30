@@ -15,15 +15,16 @@ import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui';
 import { RevenueBarChart, type RevenueDatum } from './revenue-bar-chart';
 import { REVENUE_PERIODS, getPeriodConfig, type RevenuePeriod } from './revenue-period';
-import { fetchRevenueMock } from './fetch-revenue-mock';
+import { fetchRevenueSeries } from './fetch-revenue';
 
 interface RevenueChartPanelProps {
   initialData: RevenueDatum[];
   initialPeriod?: RevenuePeriod;
   /**
-   * Swap this for the real API call once the backend endpoint exists, e.g.
-   *   (period) => fetch(`/api/vendor/revenue?period=${period}`).then(r => r.json())
-   * Defaults to the bundled mock so the dropdown is usable today.
+   * Overridable, but the default is the real thing. It used to default to a
+   * Math.random() mock, and because RoleDashboard never passed this prop, the
+   * chart went from true to fictional the moment anyone changed the period.
+   * A default that lies is worse than a required prop.
    */
   fetchRevenue?: (period: RevenuePeriod) => Promise<RevenueDatum[]>;
 }
@@ -31,11 +32,15 @@ interface RevenueChartPanelProps {
 export function RevenueChartPanel({
   initialData,
   initialPeriod = 'weekly',
-  fetchRevenue = fetchRevenueMock,
+  fetchRevenue = fetchRevenueSeries,
 }: RevenueChartPanelProps) {
   const [period, setPeriod] = useState<RevenuePeriod>(initialPeriod);
   const [data, setData] = useState<RevenueDatum[]>(initialData);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Retry needs a value that actually changes — re-setting `period` to itself
+  // is a no-op React bails out of, so the effect would never re-run.
+  const [reloadKey, setReloadKey] = useState(0);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const fetchRevenueRef = useRef(fetchRevenue);
@@ -65,13 +70,19 @@ export function RevenueChartPanel({
     }
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
     fetchRevenueRef
       .current(period)
       .then((result) => {
         if (!cancelled) setData(result);
       })
       .catch(() => {
-        if (!cancelled) setData([]);
+        // An empty chart and a failed fetch look identical, and one of them
+        // says the vendor earned nothing. Say which it was.
+        if (!cancelled) {
+          setData([]);
+          setFailed(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +90,7 @@ export function RevenueChartPanel({
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, reloadKey]);
 
   const config = getPeriodConfig(period);
   const currentLabel = REVENUE_PERIODS.find((p) => p.value === period)?.label ?? 'Weekly';
@@ -127,7 +138,20 @@ export function RevenueChartPanel({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <RevenueBarChart data={data} unit={config.unit} loading={loading} />
+        {failed ? (
+          <p className="text-content-muted py-10 text-center text-sm">
+            Could not load revenue for this period.{' '}
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-accent-fg underline underline-offset-2"
+            >
+              Retry
+            </button>
+          </p>
+        ) : (
+          <RevenueBarChart data={data} unit={config.unit} loading={loading} />
+        )}
       </CardContent>
     </Card>
   );

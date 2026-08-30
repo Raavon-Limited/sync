@@ -112,7 +112,13 @@ export function ChatWindow({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMatch, setActiveMatch] = useState(0);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  /*
+   * The composer's pending list. Every entry here was just picked from the file
+   * input or recorded, so the File is guaranteed - unlike a RECEIVED attachment,
+   * which lives in Storage and has only a signed URL. Encoding that at the
+   * source means AttachmentPreview needs no cast.
+   */
+  const [attachments, setAttachments] = useState<(Attachment & { file: File })[]>([]);
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
   const [previewAttachments, setPreviewAttachments] = useState<Attachment[]>([]);
 
@@ -265,7 +271,7 @@ export function ChatWindow({
       filesToAdd = filesToAdd.slice(0, remainingSlots);
     }
 
-    const newAttachments: Attachment[] = filesToAdd.map((file) => ({
+    const newAttachments: (Attachment & { file: File })[] = filesToAdd.map((file) => ({
       id: crypto.randomUUID(),
       file,
       type,
@@ -519,7 +525,7 @@ export function ChatWindow({
                           >
                             <img
                               src={image.url}
-                              alt={image.file.name}
+                              alt={image.name}
                               className="block max-h-[380px] max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                             />
                           </button>
@@ -556,7 +562,7 @@ export function ChatWindow({
                               >
                                 <img
                                   src={image.url}
-                                  alt={image.file.name}
+                                  alt={image.name}
                                   className="block h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                                 />
 
@@ -590,7 +596,7 @@ export function ChatWindow({
                               <Video className="size-8 text-slate-700" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}
@@ -600,7 +606,7 @@ export function ChatWindow({
                               <Music className="size-8 text-violet-600" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}
@@ -610,7 +616,7 @@ export function ChatWindow({
                               <FileText className="size-8 text-orange-600" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}

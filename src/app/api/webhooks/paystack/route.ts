@@ -16,6 +16,7 @@
  * TODO: dispatch verified events to modules/payments/actions.ts handlers.
  */
 import crypto from 'node:crypto';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyTransaction } from '@/lib/paystack/server';
 
@@ -74,14 +75,36 @@ async function handleChargeSuccess(data: unknown) {
   const meta = verified.metadata as { purpose?: string; userId?: string } | undefined;
   if (meta?.purpose !== 'wallet_topup' || !meta.userId) return;
 
-  const naira = verified.amount / 100;
-  // TODO (needs the wallet schema): credit idempotently, e.g.
-  //   insert into wallet_transactions (reference, user_id, amount, ...) -- reference UNIQUE
-  //     on conflict (reference) do nothing;  -- ignore replays
-  //   update wallets set balance = balance + amount where user_id = ...;
-  // Use the service-role client (@/lib/supabase/admin) since this runs outside
-  // any user session. Until the table exists, log so the flow is observable.
-  console.info('paystack wallet_topup verified', { reference, userId: meta.userId, naira });
+  // The AMOUNT COMES FROM PAYSTACK, never from the webhook body or the client.
+  // `verified` is the re-fetched transaction, so a forged payload cannot inflate
+  // a credit even if it somehow passed the signature check.
+  const amountKobo = verified.amount;
+  if (!Number.isFinite(amountKobo) || amountKobo <= 0) {
+    console.error('paystack wallet_topup: non-positive amount', { reference, amountKobo });
+    return;
+  }
+
+  // Idempotent by reference inside the RPC — Paystack retries, and a second
+  // delivery must not credit twice. Service role: this runs outside any session.
+  const admin = createAdminClient();
+  const { error } = await admin.rpc('credit_wallet_topup', {
+    p_user_id: meta.userId,
+    p_amount_kobo: amountKobo,
+    p_reference: reference,
+  });
+
+  if (error) {
+    // Throwing here would return a non-2xx and make Paystack retry, which is
+    // what we want for a transient failure — the RPC is safe to replay.
+    console.error('paystack wallet_topup credit failed', { reference, error: error.message });
+    throw new Error(`credit_wallet_topup failed: ${error.message}`);
+  }
+
+  console.info('paystack wallet_topup credited', {
+    reference,
+    userId: meta.userId,
+    naira: amountKobo / 100,
+  });
 }
 
 function verifySignature(raw: string, signature: string, secret: string): boolean {

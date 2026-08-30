@@ -10,9 +10,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { CheckCircle2, Clock, ListOrdered, Truck, XCircle } from 'lucide-react';
 import { useVendorOrders } from '@/modules/vendor/hooks';
+import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
 
 export function VendorOrderStats() {
-  const { data: orders = [] } = useVendorOrders();
+  // Same filter as the table below it: counts that disagree with the rows
+  // they sit above are worse than no counts.
+  const { activeId } = useActiveStorefront();
+  const { data: orders = [] } = useVendorOrders({ storefrontId: activeId ?? undefined });
 
   const count = (fn: (s: string) => boolean) => orders.filter((o) => fn(o.status)).length;
 

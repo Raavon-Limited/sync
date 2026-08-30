@@ -21,6 +21,8 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { signOut } from '@/modules/auth/actions';
+import { RoleSwitcher } from './role-switcher';
+import { AddAccountItem } from './add-account-item';
 
 interface AccountMenuProps {
   name: string;
@@ -30,6 +32,9 @@ interface AccountMenuProps {
   /** Omit for roles without a profile page (e.g. vendor/admin). */
   profileHref?: string;
   settingsHref: string;
+  /** The hat being worn, and every hat held. Omit to hide the switcher. */
+  role?: string;
+  roles?: string[];
 }
 
 export function AccountMenu({
@@ -39,6 +44,8 @@ export function AccountMenu({
   avatarUrl,
   profileHref,
   settingsHref,
+  role,
+  roles,
 }: AccountMenuProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -79,6 +86,16 @@ export function AccountMenu({
             <p className="text-content-muted truncate text-xs">{email}</p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {/* The switcher renders nothing below two roles, so this block is
+              the "my accounts" section whether you have one hat or two: switch
+              between what you hold, or add what you do not. */}
+          {role && roles && roles.length > 0 && (
+            <>
+              <RoleSwitcher role={role} roles={roles} />
+              <AddAccountItem roles={roles} />
+              <DropdownMenuSeparator />
+            </>
+          )}
           {profileHref && (
             <DropdownMenuItem asChild>
               <Link href={profileHref}>

@@ -1,3 +1,6 @@
+// Client component: reads useEvents / useMyTickets, and /me/page.tsx is a server component.
+'use client';
+
 /**
  * Events & tickets building blocks for the student tracking hub. EventRow and
  * TicketCard are shared between the dashboard summary (this file's
@@ -7,12 +10,38 @@ import { ArrowRight, CalendarDays, MapPin, TicketIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Badge, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import {
-  studentEvents,
-  studentTickets,
-  type StudentEvent,
-  type StudentTicket,
-} from '@/mock/student';
+import { useEvents, useMyTickets } from '@/modules/events/hooks';
+
+/** Card shapes this file renders. Both are narrower than the domain rows. */
+export type EventStatus = 'upcoming' | 'attended';
+/** Matches the tickets table: refunded exists in the DB even though the
+ *  earlier mock union omitted it. */
+export type TicketStatus = 'valid' | 'used' | 'refunded';
+
+export interface StudentEvent {
+  id: string;
+  name: string;
+  venue: string;
+  date: string;
+  time: string;
+  status: EventStatus;
+}
+
+export interface StudentTicket {
+  id: string;
+  eventName: string;
+  reference: string;
+  date: string;
+  venue: string;
+  type: string;
+  price: number;
+  status: TicketStatus;
+}
+
+const dayLabel = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : '—';
+const timeLabel = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }) : '—';
 
 function naira(n: number) {
   return n === 0 ? 'Free' : `₦${n.toLocaleString('en-NG')}`;
@@ -77,8 +106,30 @@ export function TicketCard({ ticket }: { ticket: StudentTicket }) {
 
 /** Compact dashboard section: a few upcoming events + held tickets. */
 export function EventsTicketsSummary({ basePath = '/me' }: { basePath?: string }) {
-  const upcomingEvents = studentEvents.filter((e) => e.status === 'upcoming').slice(0, 3);
-  const heldTickets = studentTickets.filter((t) => t.status === 'valid').slice(0, 2);
+  // `upcomingOnly` filters server-side on starts_at, so "upcoming" is decided
+  // by the database clock rather than the browser's.
+  const { data: events = [] } = useEvents({ upcomingOnly: true, pageSize: 3 });
+  const { data: tickets = [] } = useMyTickets({ status: 'valid', pageSize: 2 });
+
+  const upcomingEvents: StudentEvent[] = events.slice(0, 3).map((e) => ({
+    id: e.id,
+    name: e.name,
+    venue: e.venue ?? '—',
+    date: dayLabel(e.startsAt),
+    time: timeLabel(e.startsAt),
+    status: 'upcoming',
+  }));
+
+  const heldTickets: StudentTicket[] = tickets.slice(0, 2).map((t) => ({
+    id: t.id,
+    eventName: t.eventName ?? 'Event',
+    reference: t.reference,
+    date: dayLabel(t.eventStartsAt),
+    venue: t.eventVenue ?? '—',
+    type: t.tier ?? 'General',
+    price: t.priceKobo / 100,
+    status: t.status,
+  }));
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">

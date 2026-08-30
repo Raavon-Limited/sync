@@ -8,6 +8,7 @@
  * Sign in / List a property buttons).
  */
 import { AppFooter } from '@/components/layouts/app-footer';
+import { ChatWidget } from '@/components/chat/chat-widget';
 import { MarketingHeader } from '@/components/layouts/marketing-header';
 import { ServicesDock } from '@/components/layouts/services-dock';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
@@ -33,6 +34,10 @@ export default async function AroundLayout({ children }: { children: React.React
             reachable from here too. */}
         <AppFooter dockOffset />
       </div>
+
+      {/* Live messaging, signed-in only - /around is public, and a signed-out
+          visitor should not open a Realtime channel. */}
+      {user && <ChatWidget />}
     </>
   );
 }

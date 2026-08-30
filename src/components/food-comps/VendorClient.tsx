@@ -24,6 +24,8 @@ interface MenuItem {
 interface MenuSection { title: string; items: MenuItem[] }
 
 interface Props {
+    /** vendor_profiles.id — the cart is keyed by it, not by the display name. */
+    vendorId: string
     vendorName: string
     tagline: string
     location: string
@@ -45,7 +47,7 @@ const NAV_H = 63
 type MobileView = "menu" | "cart"
 
 export default function VendorClient({
-    vendorName, tagline, location, rating, reviews,
+    vendorId, vendorName, tagline, location, rating, reviews,
     deliveryTime, deliveryFee, time, heroImage, menu, storeInfo
 }: Props) {
 
@@ -133,6 +135,7 @@ export default function VendorClient({
         for (let i = 0; i < itemQty; i++) {
             addItem(
                 {
+                    id: vendorId,
                     slug: vendorName.toLowerCase().replace(/\s+/g, "-"),
                     name: vendorName,
                     image: typeof heroImage === "string" ? heroImage : (heroImage as { src: string }).src,

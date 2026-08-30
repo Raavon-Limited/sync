@@ -29,6 +29,8 @@ export interface ChatContact {
   lastMessage: string;
   timeAgo: string;
   unreadCount?: number;
+  /** Set when the thread has unseen activity but no exact count is known. */
+  hasUnread?: boolean;
   isOnline?: boolean;
 }
 

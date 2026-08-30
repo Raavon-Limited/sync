@@ -12,12 +12,19 @@ import {
     CardContent,
     CardFooter,
 } from "@/components/ui/card"
-import { useOptionalFavorites, type FavoriteFood } from "@/app/(app)/food/favorites-context"
+import { useOptionalFavorites, type FavoriteFood, type FavoriteEntity } from "@/app/(app)/food/favorites-context"
 import { toast } from "@/components/ui/toast"
 
-type VendorStatus = "open" | "closed" | "delivery-only"
+// "paused" is a store on a cooldown: open, but briefly not taking orders and
+// back on its own in a few minutes. Showing that as "closed" would lose the
+// customer for the sake of ten minutes.
+type VendorStatus = "open" | "closed" | "delivery-only" | "paused"
 
 interface FoodCardProps {
+    /** What this card represents, for favouriting. Without it the heart is
+     *  local-only, because `favorites` is keyed by (entity_type, entity_id). */
+    entityId?: string
+    entityType?: FavoriteEntity
     slug: string
     image: StaticImageData | string
     name: string
@@ -43,6 +50,10 @@ const statusConfig: Record<VendorStatus, { label: string; className: string }> =
         label: "Closed",
         className: "bg-red-100 text-red-700 border border-red-300 dark:border-line/10",
     },
+    paused: {
+        label: "Busy - back shortly",
+        className: "bg-amber-100 text-amber-700 border border-amber-300 dark:border-line/10",
+    },
     "delivery-only": {
         label: "Delivery only",
         className: "bg-blue-100 text-blue-700 border border-blue-300 dark:border-line/10",
@@ -50,6 +61,8 @@ const statusConfig: Record<VendorStatus, { label: string; className: string }> =
 }
 
 export default function FoodCards({
+    entityId,
+    entityType,
     slug,
     image,
     name,
@@ -69,7 +82,9 @@ export default function FoodCards({
 
     const favorites = useOptionalFavorites()
     const [localFavourited, setLocalFavourited] = useState(false)
-    const isFavourited = favorites ? favorites.isFavorite(slug) : localFavourited
+    // Falls back to local state when the card was not told what it is.
+    const canPersist = !!favorites && !!entityId && !!entityType
+    const isFavourited = canPersist ? favorites!.isFavorite(entityId!) : localFavourited
 
     function toggleFavourite(e: React.MouseEvent) {
         // Prevent the card link from firing when tapping the heart
@@ -78,12 +93,13 @@ export default function FoodCards({
 
         let next: boolean
 
-        if (favorites) {
+        if (canPersist) {
             const item: FavoriteFood = {
+                entityId: entityId!, entityType: entityType!,
                 slug, image, name, tags, rating, reviewCount,
                 location, time, category, isFree, deliveryTime, discount, status,
             }
-            next = favorites.toggleFavorite(item)
+            next = favorites!.toggleFavorite(item)
         } else {
             next = !localFavourited
             setLocalFavourited(next)

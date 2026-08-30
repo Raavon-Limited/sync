@@ -152,3 +152,12 @@ export function useUpdateServiceRequestStatus() {
     },
   });
 }
+
+/** A service vendor by slug, for the pro detail pages. */
+export function useServiceVendor(slug: string | undefined) {
+  return useQuery({
+    queryKey: qk.vendorProfile.detail(slug ?? ''),
+    queryFn: () => api.fetchServiceVendorBySlug(db(), slug!),
+    enabled: !!slug,
+  });
+}

@@ -130,7 +130,9 @@ export function useDeleteListings() {
 
 // ── Order inbox ────────────────────────────────────────────────────────────
 
-export function useVendorOrders(filters: { status?: OrderStatus } & PageParams = {}) {
+export function useVendorOrders(
+  filters: { status?: OrderStatus; storefrontId?: string } & PageParams = {},
+) {
   const { userId: vendorId } = useSession();
   return useQuery({
     queryKey: qk.orders.vendorInbox(filters),
@@ -150,14 +152,18 @@ export function useVendorOrders(filters: { status?: OrderStatus } & PageParams =
 export function useUpdateOrderStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { orderId: string; status: OrderStatus }) =>
-      api.updateOrderStatus(db(), input.orderId, input.status),
+    // `reason` is only read when cancelling; it ends up on the refund's
+    // ledger narrative, which is what the customer sees on their statement.
+    mutationFn: (input: { orderId: string; status: OrderStatus; reason?: string }) =>
+      api.updateOrderStatus(db(), input.orderId, input.status, input.reason),
     onSuccess(order) {
       qc.setQueryData(qk.orders.detail(order.id), order);
       qc.invalidateQueries({ queryKey: qk.orders.vendorInbox() });
       qc.invalidateQueries({ queryKey: qk.orders.events(order.id) });
       // Delivering an order releases escrow, so earnings change.
-      if (order.status === 'delivered') {
+      // Delivering releases escrow and cancelling refunds it — both move
+      // money, so both invalidate the wallet.
+      if (order.status === 'delivered' || order.status === 'cancelled') {
         qc.invalidateQueries({ queryKey: qk.earnings.all });
         qc.invalidateQueries({ queryKey: qk.wallet.all });
       }
@@ -213,12 +219,23 @@ export function useDeletePromotion() {
  * Mount once on the vendor dashboard shell, not per widget: each mount is a
  * socket.
  */
-export function useVendorOrdersRealtime() {
+/**
+ * `storefrontId` narrows the socket to one branch. A manager MUST pass it —
+ * a `vendor_id=eq.` filter matches nothing for them, so without it their queue
+ * would never update live even though the initial fetch worked.
+ */
+export function useVendorOrdersRealtime(storefrontId?: string) {
   const { userId: vendorId } = useSession();
+  const scope = storefrontId ?? vendorId;
   useRealtime({
-    channel: `orders:vendor:${vendorId ?? 'none'}`,
-    enabled: !!vendorId,
-    bindings: [{ table: 'orders', filter: `vendor_id=eq.${vendorId}` }],
+    channel: `orders:${storefrontId ? 'storefront' : 'vendor'}:${scope ?? 'none'}`,
+    enabled: !!scope,
+    bindings: [
+      {
+        table: 'orders',
+        filter: storefrontId ? `storefront_id=eq.${storefrontId}` : `vendor_id=eq.${vendorId}`,
+      },
+    ],
     invalidate: [qk.orders.all, qk.earnings.all, qk.notifications.all],
   });
 }
@@ -234,5 +251,69 @@ export function useVendorRequestsRealtime() {
     enabled: !!vendorId,
     bindings: [{ table: 'service_requests', filter: `vendor_id=eq.${vendorId}` }],
     invalidate: [qk.serviceRequests.all, qk.notifications.all],
+  });
+}
+
+/**
+ * Uploads a listing photo, returning its public URL.
+ *
+ * Deliberately separate from `useUpsertListing`: the image is uploaded when the
+ * vendor picks it, so they see the preview and any "too large" error while
+ * still filling the form - not after pressing Save, when a rejected file would
+ * mean re-entering everything.
+ */
+export function useUploadListingImage() {
+  const { userId } = useSession();
+
+  return useMutation({
+    mutationFn: (file: File) => api.uploadListingImage(db(), { userId: userId!, file }),
+  });
+}
+
+// ── Listing categories ─────────────────────────────────────────────────────
+
+/**
+ * Categories this vendor can file a listing under.
+ *
+ * The vendor's business type comes from their storefront, so a clothing vendor
+ * gets Tops/Bottoms/Footwear and a food vendor gets Rice/Soups/Grills - without
+ * either screen knowing which is which.
+ */
+export function useListingCategories() {
+  const { userId } = useSession();
+  const { data: storefront } = useMyStorefront();
+  const vendorCategory = storefront?.category;
+
+  return useQuery({
+    queryKey: qk.listingCategories.forVendor(vendorCategory ?? '', userId ?? undefined),
+    queryFn: () =>
+      api.fetchListingCategories(db(), {
+        vendorCategory: vendorCategory!,
+        vendorId: userId ?? undefined,
+      }),
+    // Waits for the storefront: without the business type there is no correct
+    // list to show, and guessing "food" is how a clothing vendor ends up
+    // filing shirts under Soups.
+    enabled: !!vendorCategory,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Adds a category of the vendor's own, for the long tail the shared set misses. */
+export function useCreateListingCategory() {
+  const { userId } = useSession();
+  const { data: storefront } = useMyStorefront();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) =>
+      api.createListingCategory(db(), {
+        vendorId: userId!,
+        vendorCategory: storefront!.category,
+        name,
+      }),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.listingCategories.all });
+    },
   });
 }

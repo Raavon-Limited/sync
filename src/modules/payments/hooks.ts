@@ -146,3 +146,98 @@ export function useMySubscription() {
     queryFn: () => api.fetchMySubscription(db()),
   });
 }
+
+/**
+ * Nigerian bank list for the payout form.
+ *
+ * Goes through `/api/banks` rather than a constant because a payout needs a
+ * `bank_code`, and the authoritative list lives with Paystack. Cached for the
+ * session — banks change on the order of months.
+ */
+export function useBanks() {
+  return useQuery({
+    queryKey: ['banks'] as const,
+    queryFn: async (): Promise<Array<{ name: string; code: string; slug: string }>> => {
+      const res = await fetch('/api/banks');
+      const payload = (await res.json()) as {
+        banks?: Array<{ name: string; code: string; slug: string }>;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(payload.error ?? 'Could not load banks');
+      return payload.banks ?? [];
+    },
+    staleTime: 24 * 60 * 60_000,
+    gcTime: 24 * 60 * 60_000,
+  });
+}
+
+/** Pays an order from wallet balance. See payOrderFromWallet for idempotency. */
+export function usePayOrderFromWallet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => api.payOrderFromWallet(db(), orderId),
+    onSuccess() {
+      // Balance, statement and the order itself all moved.
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.orders.all });
+    },
+  });
+}
+
+/** Student confirming delivery, which releases the vendor's money. */
+export function useReleaseOrderEscrow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => api.releaseOrderEscrow(db(), orderId),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.orders.all });
+    },
+  });
+}
+
+/** Plan change. Refuses server-side on insufficient balance or a non-vendor. */
+export function useSubscribeToPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => api.subscribeToPlan(db(), planId),
+    onSuccess() {
+      // Balance, statement and the subscription itself all moved.
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.subscription.all });
+    },
+  });
+}
+
+// ── Withdrawals ─────────────────────────────────────────────────────────────
+
+export function usePayoutRequests() {
+  return useQuery({
+    queryKey: [...qk.wallet.all, 'payouts'] as const,
+    queryFn: () => api.fetchPayoutRequests(db()),
+  });
+}
+
+export function useRequestWithdrawal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { amountKobo: number; bankAccountId: string }) =>
+      api.requestWithdrawal(db(), input),
+    onSuccess() {
+      // The wallet is debited on request, so the balance is stale immediately.
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.earnings.all });
+    },
+  });
+}
+
+export function useCancelWithdrawal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.cancelWithdrawal(db(), id),
+    onSuccess() {
+      qc.invalidateQueries({ queryKey: qk.wallet.all });
+      qc.invalidateQueries({ queryKey: qk.earnings.all });
+    },
+  });
+}

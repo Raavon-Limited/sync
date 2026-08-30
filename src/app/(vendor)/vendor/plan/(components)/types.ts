@@ -1,6 +1,14 @@
 // ─── Plan ─────────────────────────────────────────────────────────────────────
 
-export type PlanId = 'starter' | 'growth' | 'professional' | 'enterprise';
+/**
+ * `plans.code` — data, not a compile-time enum.
+ *
+ * This was 'starter' | 'growth' | 'professional' | 'enterprise'. The database
+ * seeds 'free', 'growth', 'pro': two of the four never existed, and adding a
+ * plan meant editing TypeScript. Widened so the plan list is whatever the
+ * table says.
+ */
+export type PlanId = string;
 
 export interface PlanFeature {
   label: string;

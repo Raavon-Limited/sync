@@ -1,3 +1,6 @@
+// Client component: reads useMyBookings, and /me/page.tsx is a server component.
+'use client';
+
 /**
  * BookingsTracker - the student's hostel bookings with a countdown to when each
  * one ends (or to move-in for upcoming ones). This is the core "track the
@@ -9,7 +12,69 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Badge, Button, Card } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { studentBookings, type BookingStatus, type StudentBooking } from '@/mock/student';
+import { useMyBookings } from '@/modules/hostels/hooks';
+import type { Booking, BookingStatus as DomainBookingStatus } from '@/modules/hostels/types';
+
+/** What this card renders. Unchanged from the shape it was built against. */
+export type BookingStatus = 'active' | 'awaiting' | 'ending_soon' | 'upcoming' | 'completed';
+
+export interface StudentBooking {
+  id: string;
+  property: string;
+  room: string;
+  area: string;
+  status: BookingStatus;
+  moveIn: string;
+  endDate: string;
+  daysLeft: number;
+  pricePerSession: number;
+  image: string;
+}
+
+const dayLabel = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+const daysBetween = (iso?: string | null) => {
+  if (!iso) return 0;
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86_400_000));
+};
+
+/**
+ * The card's four states are about TIME (has it started, is it ending soon).
+ * The database's seven are about the BOOKING LIFECYCLE (requested, awaiting
+ * payment, confirmed…). They are different questions, so the lifecycle decides
+ * first and the dates only refine a confirmed stay.
+ */
+function toCardStatus(b: Booking): BookingStatus {
+  const terminal: DomainBookingStatus[] = ['completed', 'cancelled', 'expired'];
+  if (terminal.includes(b.status)) return 'completed';
+  // 'awaiting' is the card's word for "we are waiting on the student to pay",
+  // which is exactly what awaiting_payment means.
+  if (b.status === 'awaiting_payment') return 'awaiting';
+  if (b.status !== 'confirmed') return 'upcoming';
+  if (b.moveIn && new Date(b.moveIn).getTime() > Date.now()) return 'upcoming';
+  return daysBetween(b.endDate) <= 30 ? 'ending_soon' : 'active';
+}
+
+function toCard(b: Booking): StudentBooking {
+  const status = toCardStatus(b);
+  return {
+    id: b.id,
+    property: b.hostelName ?? 'Hostel',
+    room: b.roomLabel ?? 'Room not assigned',
+    area: b.hostelArea ?? '—',
+    status,
+    moveIn: dayLabel(b.moveIn),
+    endDate: dayLabel(b.endDate),
+    // Counting down to move-in before it starts, to the end date after.
+    daysLeft: status === 'upcoming' ? daysBetween(b.moveIn) : daysBetween(b.endDate),
+    pricePerSession: (b.pricePerSessionKobo ?? 0) / 100,
+    // The card falls back to a placeholder when this is empty; no hostel in the
+    // database carries an image yet.
+    image: b.hostelImageUrl ?? '',
+  };
+}
 
 const STATUS: Record<
   BookingStatus,
@@ -74,9 +139,23 @@ export function BookingCard({ booking: b }: { booking: StudentBooking }) {
 }
 
 export function BookingsTracker({ basePath = '/me' }: { basePath?: string }) {
+  const { data: bookings = [], isLoading } = useMyBookings();
+  const cards = bookings.map(toCard);
+
   return (
     <div className="flex flex-col gap-3">
-      {studentBookings.map((b) => (
+      {isLoading &&
+        Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="bg-ink/5 h-28 animate-pulse rounded-xl" />
+        ))}
+
+      {!isLoading && cards.length === 0 && (
+        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
+          No bookings yet. Browse hostels to request a room.
+        </p>
+      )}
+
+      {cards.map((b) => (
         <BookingCard key={b.id} booking={b} />
       ))}
 

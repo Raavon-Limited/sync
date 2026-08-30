@@ -85,7 +85,7 @@ export function ChatMediaDialog({
                       >
                         <img
                           src={image.url}
-                          alt={image.file.name}
+                          alt={image.name}
                           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
                       </button>
@@ -117,7 +117,7 @@ export function ChatMediaDialog({
 
                             <span className="min-w-0 flex-1">
                               <span className="text-ink block truncate text-sm font-medium">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
 
                               <span className="text-muted block text-xs capitalize">

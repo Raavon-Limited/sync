@@ -8,6 +8,11 @@ const CW = W - P.left - P.right;
 const CH = H - P.top - P.bottom;
 
 function nice(max: number, steps: number) {
+  // Real data can be all zeros (a window of free orders, an empty series).
+  // log10(0) is -Infinity, which walks straight into a divide-by-zero and an
+  // SVG path full of NaN. The mock data could never be zero, so this never
+  // showed up until the numbers came from the database.
+  if (!(max > 0)) return steps;
   const raw  = max / steps;
   const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
   const nice = [1,2,5,10].map(f => f * mag).find(v => v >= raw) ?? mag * 10;
@@ -17,8 +22,8 @@ function nice(max: number, steps: number) {
 export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const maxRev  = Math.max(...data.map(d => d.revenue));
-  const maxOrd  = Math.max(...data.map(d => d.orders));
+  const maxRev  = Math.max(0, ...data.map(d => d.revenue));
+  const maxOrd  = Math.max(0, ...data.map(d => d.orders));
   const revMax  = nice(maxRev, 4);
   const ordMax  = nice(maxOrd, 4);
   const revStep = revMax / 4;

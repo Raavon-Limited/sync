@@ -63,6 +63,17 @@ export interface Conversation {
   counterpartId: string | null;
   lastMessageAt: string;
   lastMessagePreview: string | null;
+  /**
+   * True when the thread has activity the caller has not seen.
+   *
+   * Derived from `last_message_at > my last_read_at`, which is exact and free -
+   * both values are already in the row. A precise unread COUNT is not: it needs
+   * a per-conversation aggregate compared against a per-participant timestamp,
+   * which PostgREST cannot express and which therefore wants an RPC. Until that
+   * exists, a truthful boolean beats a fabricated number.
+   */
+  hasUnread: boolean;
+  /** Exact per-thread count. 0 until the RPC above exists - see `hasUnread`. */
   unreadCount: number;
 }
 

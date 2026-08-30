@@ -1,22 +1,28 @@
 /**
  * ROUTE: /hotspots/[slug]
- * ACCESS: authenticated student
- * PURPOSE: Single hotspot - story, gallery, hours, location, reviews.
- * BUILT HERE: <ImageGallery>, body content, hours/contact block, <ReviewCard> list.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * ACCESS: public
+ * PURPOSE: One hotspot — photo, hours, address and directions.
  */
 import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { fetchHotspotBySlug } from '@/modules/hotspots/queries';
+import { HotspotDetail } from './(components)/hotspot-detail';
 
-export const metadata: Metadata = { title: 'Hot spot' };
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-export default function Page() {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const h = await fetchHotspotBySlug(await createClient(), slug);
+  return { title: h?.name ?? 'Hotspot' };
+}
+
+export default async function Page({ params }: Props) {
+  const { slug } = await params;
   return (
     <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/hotspots/[slug]</p>
-      <h1 className="font-display text-section text-content">Hot spot</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+      <HotspotDetail slug={slug} />
     </section>
   );
 }

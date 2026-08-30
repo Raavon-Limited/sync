@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { formatDate } from '@/lib/utils';
 import { koboToNaira } from '@/lib/query/helpers';
 import { useVendorOrders, useVendorOrdersRealtime } from '@/modules/vendor/hooks';
+import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
 import type { FoodOrder, OrderStatus } from '@/modules/food/types';
 import type { Order } from '@/types/order';
 import { OrdersTable } from './orders-table';
@@ -50,9 +51,14 @@ function toRow(o: FoodOrder): Order {
 }
 
 export function VendorOrdersView() {
-  useVendorOrdersRealtime();
+  // Both the socket and the query are scoped to the branch in the switcher,
+  // so the rows and the live updates cannot describe different places.
+  const { activeId } = useActiveStorefront();
+  useVendorOrdersRealtime(activeId ?? undefined);
 
-  const { data: orders, isLoading, isError, error } = useVendorOrders();
+  const { data: orders, isLoading, isError, error } = useVendorOrders({
+    storefrontId: activeId ?? undefined,
+  });
   const rows = useMemo(() => (orders ?? []).map(toRow), [orders]);
 
   if (isError) {
@@ -81,5 +87,5 @@ export function VendorOrdersView() {
     );
   }
 
-  return <OrdersTable data={rows} />;
+  return <OrdersTable data={rows} orders={orders ?? []} />;
 }

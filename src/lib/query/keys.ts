@@ -55,6 +55,14 @@ export const qk = {
     list: (f?: ListFilters) => [...qk.vendorProfile.all, 'list', f ?? {}] as const,
     mine: () => [...qk.vendorProfile.all, 'mine'] as const,
   },
+  storefronts: {
+    all: ['storefronts'] as const,
+    /** Branches owned by the signed-in vendor. */
+    mine: () => [...qk.storefronts.all, 'mine'] as const,
+    detail: (idOrSlug: string) => [...qk.storefronts.all, 'detail', idOrSlug] as const,
+    byVendor: (vendorId: string) => [...qk.storefronts.all, 'vendor', vendorId] as const,
+    nearby: (f?: ListFilters) => [...qk.storefronts.all, 'nearby', f ?? {}] as const,
+  },
   riderProfile: {
     all: ['rider-profile'] as const,
     mine: () => [...qk.riderProfile.all, 'mine'] as const,
@@ -65,6 +73,11 @@ export const qk = {
   },
 
   // ── Catalogue ────────────────────────────────────────────────────────────
+  listingCategories: {
+    all: ['listing-categories'] as const,
+    forVendor: (vendorCategory: string, vendorId?: string) =>
+      [...qk.listingCategories.all, vendorCategory, vendorId ?? 'platform'] as const,
+  },
   listings: {
     all: ['listings'] as const,
     lists: () => [...qk.listings.all, 'list'] as const,
@@ -89,6 +102,12 @@ export const qk = {
     all: ['events'] as const,
     list: (f?: ListFilters) => [...qk.events.all, 'list', f ?? {}] as const,
     detail: (slug: string) => [...qk.events.all, 'detail', slug] as const,
+  },
+  /** The caller's own tickets. Separate from `events` so buying one does not
+   *  invalidate every event listing. */
+  tickets: {
+    all: ['tickets'] as const,
+    mine: (f?: ListFilters) => [...qk.tickets.all, 'mine', f ?? {}] as const,
   },
   hotspots: {
     all: ['hotspots'] as const,

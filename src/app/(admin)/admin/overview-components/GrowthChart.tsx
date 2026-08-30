@@ -15,12 +15,17 @@ const CH = H - P.top - P.bottom;
 export function GrowthChart({ data }: GrowthChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
 
-  const maxVal = Math.max(...data.map(d => d.users));
-  const yMax   = Math.ceil(maxVal / 2500) * 2500;
+  // A campus platform does not start with thousands of users, so the 2,500
+  // step the mock data implied would flatten every real reading to the axis.
+  const maxVal = Math.max(0, ...data.map(d => d.users));
+  const rawStep = maxVal / 4;
+  const mag = rawStep > 0 ? Math.pow(10, Math.floor(Math.log10(rawStep))) : 1;
+  const step = [1, 2, 5, 10].map(f => f * mag).find(v => v >= rawStep) ?? mag * 10;
+  const yMax   = Math.max(step * 4, 4);
   const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((yMax / 4) * i));
 
   const pts = data.map((d, i) => ({
-    x: P.left + (i / (data.length - 1)) * CW,
+    x: P.left + (i / Math.max(data.length - 1, 1)) * CW,
     y: P.top + CH - (d.users / yMax) * CH,
     ...d,
   }));

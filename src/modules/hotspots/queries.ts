@@ -28,11 +28,15 @@ export interface Hotspot {
   isFeatured: boolean;
 }
 
-/** GeoJSON is [longitude, latitude] — the reverse of how everyone says it. */
-export function toLatLng(geo: Row): { lat: number; lng: number } | null {
-  if (!geo?.coordinates || geo.coordinates.length < 2) return null;
-  const [lng, lat] = geo.coordinates;
-  return { lat, lng };
+/**
+ * Coordinates come from the plain `lat`/`lng` columns, never from `geo`.
+ * A geography column reads back over PostgREST as WKB hex, so `geo.coordinates`
+ * is always undefined — a reader written against it fails silently and simply
+ * never renders a pin. See 20260824090000_hostel_hotspot_coords.
+ */
+export function toLatLng(r: Row): { lat: number; lng: number } | null {
+  if (typeof r?.lat !== 'number' || typeof r?.lng !== 'number') return null;
+  return { lat: r.lat, lng: r.lng };
 }
 
 const toHotspot = (r: Row): Hotspot => ({
@@ -44,7 +48,7 @@ const toHotspot = (r: Row): Hotspot => ({
   imageUrl: r.image_url,
   address: r.address,
   area: r.area,
-  position: toLatLng(r.geo),
+  position: toLatLng(r),
   opensAt: r.opens_at,
   closesAt: r.closes_at,
   isFeatured: r.is_featured,

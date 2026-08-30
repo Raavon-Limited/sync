@@ -7,7 +7,9 @@
  */
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useMyReviews, usePendingReviews, useSubmitReview } from '@/modules/reviews/hooks';
+import type { PendingReview as DomainPending } from '@/modules/reviews/types';
 import { EmptyState, ReviewCard } from '@/components/shared'; // Added the official ReviewCard import
 import { Star, MessageSquare, Calendar, Send } from 'lucide-react';
 
@@ -17,6 +19,8 @@ interface PendingReview {
   title: string;
   provider: string;
   date: string;
+  /** Carried through so the submit RPC knows what is being reviewed. */
+  source: DomainPending;
 }
 
 // Updated data properties to align nicely with global shared ReviewCard structures
@@ -37,61 +41,72 @@ export default function MyReviewsPage() {
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
 
-  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([
-    {
-      id: "pr-1",
-      type: "Hostel",
-      title: "Tanke Crescent Lodge · Room 4B",
-      provider: "Hostel Management",
-      date: "Session Ended June 2026",
-    },
-    {
-      id: "pr-2",
-      type: "Laundry",
-      title: "8kg Mixed Express Wash",
-      provider: "QuickWash Hub",
-      date: "Completed June 18, 2026",
-    }
-  ]);
+  const { data: pending = [], isLoading: lp } = usePendingReviews();
+  const { data: posted = [], isLoading: lr } = useMyReviews();
+  const submit = useSubmitReview();
+  const [error, setError] = useState<string | null>(null);
+  const isLoading = lp || lr;
 
-  const [postedReviews, setPostedReviews] = useState<MockPostedReview[]>([
-    {
-      id: "rev-1",
-      title: "Glamour Touch Salon · Box Braids",
-      subtitle: "Verified Review · Beauty",
-      rating: 5,
-      content: "Absolutely amazing experience. The stylist was fast, highly professional, and the atmosphere was super comfortable. Definitely coming back!",
-      date: "May 14, 2026",
-    },
-    {
-      id: "rev-2",
-      title: "Tech Innovation Hub Summit",
-      subtitle: "Verified Review · Event",
-      rating: 4,
-      content: "Great speaker lineup and superb organization. The check-in ticketing system was completely seamless. Knocked off one star just because the acoustics in the hall could be better.",
-      date: "April 21, 2026",
-    }
-  ]);
+  const day = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const pendingReviews = useMemo<PendingReview[]>(
+    () =>
+      pending.map((p) => ({
+        id: `${p.sourceType}:${p.sourceId}`,
+        // The source is what the student recognises: an order, a stay, a job.
+        type: p.sourceType === 'service_request' ? 'Service' : p.sourceType === 'booking' ? 'Hostel' : 'Order',
+        title: p.label,
+        // The counterparty's name needs a disclosure RPC (profiles is
+        // own-row-only), so the subject kind is shown instead of a fake name.
+        provider: p.subjectType === 'hostel' ? 'Hostel' : p.subjectType === 'rider' ? 'Rider' : 'Vendor',
+        date: `Completed ${day(p.occurredAt)}`,
+        source: p,
+      })),
+    [pending],
+  );
+
+  const postedReviews = useMemo<MockPostedReview[]>(
+    () =>
+      posted.map((r) => ({
+        id: r.id,
+        title: r.title ?? 'Review',
+        subtitle: `Verified Review · ${r.subjectType}`,
+        rating: r.rating,
+        content: r.body ?? '',
+        date: day(r.createdAt),
+      })),
+    [posted],
+  );
 
   const handleSubmitReview = (item: PendingReview) => {
     if (rating === 0) return;
+    setError(null);
 
-    const newReview: MockPostedReview = {
-      id: `rev-${Date.now()}`,
-      title: item.title,
-      subtitle: `Verified Review · ${item.type}`,
-      rating: rating,
-      content: comment || "Spontaneous rating left by student.",
-      date: "Today",
-    };
-
-    setPostedReviews([newReview, ...postedReviews]);
-    setPendingReviews(pendingReviews.filter(p => p.id !== item.id));
-    
-    setSelectedPendingId(null);
-    setRating(0);
-    setComment('');
-    setActiveTab('posted'); 
+    submit.mutate(
+      {
+        subjectType: item.source.subjectType,
+        subjectId: item.source.subjectId,
+        sourceType: item.source.sourceType,
+        sourceId: item.source.sourceId,
+        rating,
+        title: item.title,
+        // Empty rather than a placeholder sentence the student never wrote.
+        body: comment.trim() || undefined,
+      },
+      {
+        onSuccess() {
+          // Both lists are invalidated by the hook; the item moves itself.
+          setSelectedPendingId(null);
+          setRating(0);
+          setComment('');
+          setActiveTab('posted');
+        },
+        // submit_review refuses anything the caller was not party to, or that
+        // is not complete. Show its reason rather than failing silently.
+        onError: (e) => setError(e instanceof Error ? e.message : 'Could not post the review'),
+      },
+    );
   };
 
   return (
@@ -135,10 +150,24 @@ export default function MyReviewsPage() {
         </button>
       </div>
 
+      {/* submit_review refuses anything not yours or not yet complete. Its
+          reason is worth showing — "nothing happened" is the worst outcome. */}
+      {error && (
+        <p className="text-coral border-coral/30 bg-coral/5 mt-3 rounded-lg border px-3 py-2 text-sm">
+          {error}
+        </p>
+      )}
+
       {/* Main Content Render Block */}
       <section className="mt-6">
         {activeTab === 'pending' ? (
-          pendingReviews.length === 0 ? (
+          isLoading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-ink/5 h-24 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : pendingReviews.length === 0 ? (
             <EmptyState
               title="All caught up!"
               description="You don't have any pending orders or completed campus services waiting for a review right now."
@@ -227,7 +256,13 @@ export default function MyReviewsPage() {
             </div>
           )
         ) : (
-          postedReviews.length === 0 ? (
+          isLoading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-ink/5 h-24 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : postedReviews.length === 0 ? (
             <EmptyState
               title="No posted feedback"
               description="Reviews or ratings you publish across campus spaces will show up directly in this history log."

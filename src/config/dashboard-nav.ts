@@ -30,6 +30,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Store,
   TicketIcon,
   TrendingUp,
   Users,
@@ -100,6 +101,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/vendor', label: 'Overview', icon: LayoutDashboard },
+          { href: '/vendor/stores', label: 'Stores', icon: Store },
           { href: '/vendor/listings', label: 'Listings', icon: List },
           { href: '/vendor/orders', label: 'Orders', icon: ShoppingBag },
           { href: '/vendor/inbox', label: 'Inbox', icon: Inbox },

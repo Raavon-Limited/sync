@@ -1,6 +1,8 @@
 ﻿'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import { useHostels } from '@/modules/hostels/hooks';
+import type { Hostel as DomainHostel } from '@/modules/hostels/types';
 import Image, { type StaticImageData } from 'next/image';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import hostelImg from '@/assets/images/hostel.jpeg';
@@ -22,140 +24,54 @@ interface Hostel {
   type: 'self contain' | 'room and parlour' | 'two bedroom' | 'others';
 }
 
-const HOSTELS: Hostel[] = [
-  {
-    slug: 'woss-hostel',
-    name: 'Woss Hostel',
-    location: '4 min walk · KWASU Gate',
-    status: 'available',
-    rating: 4.9,
-    price: '₦180,000',
-    numericPrice: 180000,
-    tags: ['Wi-Fi', 'Water', '24h light', 'Sync-verified', 'Top-rated'],
-    host: 'Alhaji Woss',
-    totalRooms: 24,
-    roomsLeft: 5,
-    type: 'self contain',
-  },
-  {
-    slug: 'la-marida-malete',
-    name: 'La Marida Hotel',
-    location: '9 min walk · Malete Town',
-    status: 'available',
-    rating: 4.7,
-    price: '₦150,000',
-    numericPrice: 150000,
-    tags: ['Wi-Fi', 'Water', 'Security', 'Tiled flooring'],
-    host: 'Mama Yetunde',
-    totalRooms: 40,
-    roomsLeft: 12,
-    type: 'self contain',
-  },
-  {
-    slug: 'amina-villa',
-    name: 'Amina Villa',
-    location: '12 min walk · Malete Town',
-    status: 'reserved',
-    rating: 4.6,
-    price: '₦95,000',
-    numericPrice: 95000,
-    tags: ['Wi-Fi', 'Water', 'Female only', 'Borehole'],
-    host: 'Baba Amina',
-    totalRooms: 18,
-    roomsLeft: 0,
-    type: 'others',
-  },
-  {
-    slug: 'success-hostel',
-    name: 'Success Hostel',
-    location: '15 min walk · Malete Town',
-    status: 'limited',
-    rating: 4.5,
-    price: '₦70,000',
-    numericPrice: 70000,
-    tags: ['Water', '24h light', 'Budget-friendly'],
-    host: 'Bro. Success',
-    totalRooms: 30,
-    roomsLeft: 2,
-    type: 'others',
-  },
-  {
-    slug: 'montresor-capitol',
-    name: 'MonTresor Capitol Hostel',
-    location: '11 min walk · Safari',
-    status: 'available',
-    rating: 4.8,
-    price: '₦165,000',
-    numericPrice: 165000,
-    tags: ['Wi-Fi', 'Water', 'Security', 'CCTV at gate'],
-    host: 'Capitol Admins',
-    totalRooms: 35,
-    roomsLeft: 7,
-    type: 'self contain',
-  },
-  {
-    slug: 'eniduro-villa',
-    name: 'Eniduro Villa',
-    location: '13 min walk · Malete Town',
-    status: 'reserved',
-    rating: 4.6,
-    price: '₦110,000',
-    numericPrice: 110000,
-    tags: ['Wi-Fi', 'Water', 'Male only', 'Inverter Backup'],
-    host: 'Pa Eniduro',
-    totalRooms: 15,
-    roomsLeft: 0,
-    type: 'room and parlour',
-  },
-  {
-    slug: 'apex-executive-suites',
-    name: 'Apex Executive Suites',
-    location: '5 min walk · Safari Area',
-    status: 'available',
-    rating: 4.9,
-    price: '₦280,000',
-    numericPrice: 280000,
-    tags: ['AC Unit', 'Prepaid Meter', 'Modern Kitchen', 'Fenced Guard'],
-    host: 'Engr. Dele',
-    totalRooms: 12,
-    roomsLeft: 4,
-    type: 'room and parlour',
-  },
-  {
-    slug: 'legacy-apartments',
-    name: 'Legacy Luxury Apartments',
-    location: '7 min walk · Behind School Gate',
-    status: 'limited',
-    rating: 4.8,
-    price: '₦420,000',
-    numericPrice: 420000,
-    tags: ['Two Bathrooms', 'Balcony', 'Gated Community', 'Water Heater'],
-    host: 'Alhaja Kudirat',
-    totalRooms: 8,
-    roomsLeft: 1,
-    type: 'two bedroom',
-  },
-  {
-    slug: 'emerald-court',
-    name: 'Emerald Premium Court',
-    location: '10 min walk · Eleko Junction',
-    status: 'available',
-    rating: 4.7,
-    price: '₦390,000',
-    numericPrice: 390000,
-    tags: ['Spacious Living', 'Car Park', '24h Security', 'Water Treatment'],
-    host: 'Chief Kola',
-    totalRooms: 16,
-    roomsLeft: 6,
-    type: 'two bedroom',
-  },
-];
-
-// Real photos for the cards, assigned deterministically per hostel (cycled).
+/**
+ * Card shape for this page. The domain type (`@/modules/hostels/types`) carries
+ * rooms, images and availability; this is the flattened view the cards render.
+ */
 const HOSTEL_IMAGES = [hostelImg, hostel1Img, hostelArielImg];
-const HOSTEL_IMAGE_BY_SLUG: Record<string, StaticImageData> = Object.fromEntries(
-  HOSTELS.map((h, i) => [h.slug, HOSTEL_IMAGES[i % HOSTEL_IMAGES.length]]),
-);
+
+/**
+ * `hostels.room_type` is OCCUPANCY ('Self-contain', 'Sharing', 'Female only',
+ * 'Male only'). This page filters by LAYOUT ('self contain', 'room and parlour',
+ * 'two bedroom'). They are different taxonomies, and only one value overlaps —
+ * everything the schema cannot express as a layout falls to 'others' rather
+ * than being guessed at. Reconciling them properly is a schema decision.
+ */
+function toLayout(roomType: string): Hostel['type'] {
+  return roomType === 'Self-contain' ? 'self contain' : 'others';
+}
+
+function toStatus(availability?: string, roomsLeft?: number): Hostel['status'] {
+  if (availability === 'full' || roomsLeft === 0) return 'reserved';
+  if (availability === 'filling_up') return 'limited';
+  return 'available';
+}
+
+/** Domain hostel -> the flat shape these cards were built against. */
+function toCard(h: DomainHostel): Hostel {
+  const naira = h.pricePerSessionKobo / 100;
+  const roomsTotal = h.roomsTotal ?? h.rooms.length;
+  const roomsLeft = h.roomsAvailable ?? h.rooms.filter((r) => r.state === 'free').length;
+  return {
+    slug: h.slug,
+    name: h.name,
+    location: h.area,
+    status: toStatus(h.availability, roomsLeft),
+    // No rating on `hostels`, and no reviews aggregate yet — 0 rather than an
+    // invented number. See the note in the hostels module README.
+    rating: 0,
+    price: `₦${naira.toLocaleString()}`,
+    numericPrice: naira,
+    tags: h.amenities ?? [],
+    // The landlord's name lives in `profiles`, which is own-row-only, so it is
+    // genuinely unavailable here. It needs a disclosure RPC like the one the
+    // vendor roster uses.
+    host: undefined,
+    totalRooms: roomsTotal,
+    roomsLeft,
+    type: toLayout(h.roomType),
+  };
+}
 
 const FILTERS = [
   { value: 'all', label: 'All Layouts' },
@@ -264,11 +180,19 @@ export default function Page() {
     }, 1000);
   };
 
+  // Real hostels. The page keeps its own card shape; `toCard` bridges the two.
+  const { data: domainHostels = [], isLoading: hostelsLoading } = useHostels();
+  const HOSTELS = useMemo(() => domainHostels.map(toCard), [domainHostels]);
+  const imageFor = (slug: string) => {
+    const i = HOSTELS.findIndex((h) => h.slug === slug);
+    return HOSTEL_IMAGES[(i < 0 ? 0 : i) % HOSTEL_IMAGES.length];
+  };
+
   const totalHostelsCount = HOSTELS.length;
   const remainingHostels = useMemo(() => {
     if (!selectedHostel) return [];
     return HOSTELS.filter((h) => h.slug !== selectedHostel.slug);
-  }, [selectedHostel]);
+  }, [selectedHostel, HOSTELS]);
 
   const visible = useMemo(
     () =>
@@ -285,7 +209,9 @@ export default function Page() {
 
         return matchesQuery && matchesFilter;
       }),
-    [active, query],
+    // HOSTELS is fetched, not a module constant — without it here the list
+    // stays empty after the data loads.
+    [active, query, HOSTELS],
   );
 
   /* ==================== SCREEN 2: DEDICATED HOSTEL DETAIL VIEW ==================== */
@@ -772,12 +698,20 @@ export default function Page() {
 
         <div className="mb-4">
           <p className="text-xs font-bold uppercase tracking-wider text-content-muted">
-            Showing {visible.length} of {totalHostelsCount} Match Complexes
+            {hostelsLoading
+              ? 'Loading hostels…'
+              : `Showing ${visible.length} of ${totalHostelsCount} Match Complexes`}
           </p>
         </div>
 
         {/* Hostels Directory Cards Block Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {!hostelsLoading && visible.length === 0 && (
+            <p className="text-content-muted col-span-full py-10 text-center text-sm">
+              No hostels published yet.
+            </p>
+          )}
+
           {visible.map((hostel) => (
             <div
               key={hostel.slug}
@@ -786,7 +720,7 @@ export default function Page() {
             >
               <div className="h-44 w-full relative overflow-hidden border-b border-line/10">
                 <Image
-                  src={HOSTEL_IMAGE_BY_SLUG[hostel.slug]}
+                  src={imageFor(hostel.slug)}
                   alt={hostel.name}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

@@ -38,7 +38,10 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
  *  signed out or if the table hasn't been migrated yet. */
 export type Profile = {
   id: string;
+  /** The hat being worn right now. Every gate and policy reads this. */
   role: 'student' | 'vendor' | 'landlord' | 'admin' | 'super_admin';
+  /** Every hat held. `role` is always one of these — a check constraint says so. */
+  roles: string[];
   full_name: string | null;
   phone: string | null;
   vendor_category: 'landlord' | 'food' | 'beauty' | 'laundry' | 'tradesman' | null;

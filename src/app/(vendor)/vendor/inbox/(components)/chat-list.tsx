@@ -6,7 +6,16 @@ import { cn } from '@/lib/utils';
 import { ChatContact } from '@/modules/vendor/types';
 import { ConversationPrefs, DEFAULT_PREFS } from '@/store/use-chat-store';
 
-export type ChatFilter = 'all' | 'archived';
+/**
+ * Inbox tabs.
+ *
+ * 'unread' is a VIEW over the same conversations, not a separate bucket the way
+ * 'archived' is: a thread can be unread and archived at once. The filtering in
+ * chat-component reflects that - unread shows unread threads regardless of
+ * archive state, so a customer waiting on a reply cannot be hidden by having
+ * archived the thread.
+ */
+export type ChatFilter = 'all' | 'unread' | 'archived';
 
 interface ChatListProps {
   contacts: ChatContact[];
@@ -17,6 +26,8 @@ interface ChatListProps {
   filter: ChatFilter;
   onFilterChange: (filter: ChatFilter) => void;
   archivedCount: number;
+  /** Threads with at least one message the vendor has not read. */
+  unreadCount: number;
   prefs: Record<string, ConversationPrefs>;
 }
 
@@ -29,10 +40,12 @@ export function ChatList({
   filter,
   onFilterChange,
   archivedCount,
+  unreadCount,
   prefs,
 }: ChatListProps) {
   const tabs: { value: ChatFilter; label: string; count?: number }[] = [
     { value: 'all', label: 'All' },
+    { value: 'unread', label: 'Unread', count: unreadCount },
     { value: 'archived', label: 'Archived', count: archivedCount },
   ];
 
@@ -79,7 +92,11 @@ export function ChatList({
       <div className="min-h-0 flex-1 overflow-y-auto">
         {contacts.length === 0 && (
           <p className="text-muted px-4 py-8 text-center text-xs">
-            {filter === 'archived' ? 'No archived conversations.' : 'No conversations found.'}
+            {filter === 'archived'
+              ? 'No archived conversations.'
+              : filter === 'unread'
+                ? 'All caught up - nothing unread.'
+                : 'No conversations found.'}
           </p>
         )}
 
@@ -128,15 +145,16 @@ export function ChatList({
               </div>
 
               {contact.unreadCount ? (
-                <span
-                  className={cn(
-                    'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white',
-                    // A muted conversation still counts, it just stops shouting.
-                    muted ? 'bg-ink/25' : 'bg-red-500',
-                  )}
-                >
+                <span className="bg-coral text-cream ml-auto flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
                   {contact.unreadCount}
                 </span>
+              ) : contact.hasUnread ? (
+                /* No exact count available (see Conversation.hasUnread), so a
+                   dot rather than a fabricated number. */
+                <span
+                  aria-label="Unread messages"
+                  className="bg-coral ml-auto size-2 shrink-0 rounded-full"
+                />
               ) : null}
             </button>
           );

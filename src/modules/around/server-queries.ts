@@ -18,8 +18,14 @@ const configured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
 
-/** Pin categories the map legend understands. */
-export type PinCategory = 'hostel' | 'food' | 'laundry' | 'beauty' | 'hotspot' | 'event';
+/** PostgREST rows are shaped by the select string, not the generated types. */
+type Row = Record<string, any>;
+
+/** Pin categories the map legend understands.
+ *
+ *  No 'event' key. Events carry no coordinates of their own on this schema, so
+ *  a legend entry for them would advertise a colour that can never appear. */
+export type PinCategory = 'hostel' | 'food' | 'laundry' | 'beauty' | 'workmanship' | 'hotspot';
 
 export interface MapPin {
   id: string;
@@ -43,48 +49,123 @@ export interface MapPin {
 }
 
 /**
- * Hostels as map pins.
+ * A vendor's legend bucket.
  *
- * `geo` is a PostGIS geography column, which PostgREST serialises as GeoJSON,
- * so coordinates arrive as [lng, lat] - note the order, it is the reverse of
- * Leaflet's [lat, lng] and silently puts every pin in the wrong hemisphere if
- * you get it backwards.
+ * `kind` alone would flatten every business into one colour, so vendors split
+ * by their own category - which is the distinction a student is actually
+ * scanning the map for. `vendor_profiles.category` says 'tradesman'; the
+ * product says workmanship, so it is mapped here rather than renamed in the
+ * database.
+ */
+function vendorCategory(category: string | null): PinCategory {
+  switch (category) {
+    case 'beauty':
+      return 'beauty';
+    case 'laundry':
+      return 'laundry';
+    case 'tradesman':
+      return 'workmanship';
+    default:
+      return 'food';
+  }
+}
+
+/**
+ * Everything with a position: storefronts, hostels and hotspots.
  *
- * Rows without coordinates are skipped rather than defaulted to campus: a pin
+ * This used to read `hostels` alone, so the map showed one category out of six
+ * while the legend advertised all of them. The three-way union mirrors
+ * `fetchNearbyPins` (the client-side query), including its rule that VENDOR
+ * PINS COME FROM STOREFRONTS: a location is a property of a BRANCH, not the
+ * brand, so a business with three shops is three pins in three places.
+ * `vendor_profiles.geo` was superseded by storefronts and is not read.
+ *
+ * Rows without coordinates are skipped rather than defaulted to campus - a pin
  * in the wrong place is worse than no pin.
  */
 export async function listMapPins(origin?: { lat: number; lng: number }): Promise<MapPin[]> {
   if (!configured) return [];
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('hostels')
-      .select('id, name, slug, geo, verified')
-      .not('geo', 'is', null)
-      .limit(60);
-    if (error || !data) return [];
-
     const from = origin ?? { lat: CAMPUS_POINT.lat, lng: CAMPUS_POINT.lng };
+    const at = (lat: number, lng: number) =>
+      formatDistance(distanceMetres(from, { lat, lng }));
 
-    return data.flatMap((row): MapPin[] => {
-      const geo = row.geo as unknown as { coordinates?: [number, number] } | null;
-      const coords = geo?.coordinates;
-      if (!coords || coords.length !== 2) return [];
-      const [lng, lat] = coords;
+    const [storefronts, hostels, hotspots] = await Promise.all([
+      supabase
+        .from('storefronts')
+        .select(
+          'id, slug, name, lat, lng, vendor:vendor_profiles!storefronts_vendor_id_fkey(business_name, category, verification_status, archived_at)',
+        )
+        .is('archived_at', null)
+        .limit(120),
+      supabase
+        .from('hostels')
+        .select('id, name, slug, lat, lng, verified')
+        .is('archived_at', null)
+        .limit(120),
+      supabase
+        .from('hotspots')
+        .select('id, name, slug, lat, lng')
+        .eq('is_active', true)
+        .limit(60),
+    ]);
 
-      return [
-        {
-          id: row.id,
-          category: 'hostel',
-          name: row.name,
-          distance: formatDistance(distanceMetres(from, { lat, lng })),
-          href: `/hostels/${row.slug}`,
-          lat,
-          lng,
-          featured: row.verified,
-        },
-      ];
-    });
+    const pins: MapPin[] = [];
+
+    for (const row of (storefronts.data ?? []) as Row[]) {
+      // The brand may be archived even when the branch row is not.
+      const vendor = row.vendor;
+      if (!vendor || vendor.archived_at) continue;
+      const lat = Number(row.lat);
+      const lng = Number(row.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      pins.push({
+        id: row.id,
+        category: vendorCategory(vendor.category ?? null),
+        // Brand name is what a student recognises; the branch name only
+        // distinguishes one shop from another.
+        name: vendor.business_name ?? row.name,
+        distance: at(lat, lng),
+        href: `/vendors/${row.slug}`,
+        lat,
+        lng,
+        featured: vendor.verification_status === 'verified',
+      });
+    }
+
+    for (const row of (hostels.data ?? []) as Row[]) {
+      const lat = Number(row.lat);
+      const lng = Number(row.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      pins.push({
+        id: row.id,
+        category: 'hostel',
+        name: row.name,
+        distance: at(lat, lng),
+        href: `/hostels/${row.slug}`,
+        lat,
+        lng,
+        featured: Boolean(row.verified),
+      });
+    }
+
+    for (const row of (hotspots.data ?? []) as Row[]) {
+      const lat = Number(row.lat);
+      const lng = Number(row.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      pins.push({
+        id: row.id,
+        category: 'hotspot',
+        name: row.name,
+        distance: at(lat, lng),
+        href: `/hotspots/${row.slug}`,
+        lat,
+        lng,
+      });
+    }
+
+    return pins;
   } catch {
     return [];
   }

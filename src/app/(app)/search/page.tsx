@@ -7,9 +7,38 @@ import SearchStrip, { type SearchQuery } from "./components/SearchStrip";
 import FilterSidebar from "./components/FilterSidebar";
 import ResultsHeader from "./components/ResultsHeader";
 import ListingCard from "./components/ListingCard";
-import { ALL_LISTINGS, DEFAULT_FILTERS, EMPTY_FILTERS,
-  type SearchFilters, type SortOption, type ViewMode, type RoomType, type Amenity,
+import { DEFAULT_FILTERS, EMPTY_FILTERS,
+  type SearchFilters, type SortOption, type ViewMode, type RoomType, type Amenity, type Listing,
 } from "./data";
+import { useHostels } from "@/modules/hostels/hooks";
+import type { Hostel } from "@/modules/hostels/types";
+
+/**
+ * Domain hostel -> search result card.
+ *
+ * Price is in THOUSANDS of naira here, because the filter sliders are, and the
+ * database stores kobo. Two conversions in one hop is exactly where an
+ * off-by-1000 hides, so it is done once and commented rather than inline.
+ */
+function toListing(h: Hostel): Listing {
+  return {
+    id: h.id,
+    slug: h.slug,
+    name: h.name,
+    distance: h.distanceMinutes ? `${h.distanceMinutes} min` : "—",
+    area: h.area,
+    price: Math.round(h.pricePerSessionKobo / 100 / 1000),
+    // No rating column on `hostels` and no reviews aggregate yet.
+    rating: 0,
+    reviewCount: 0,
+    amenities: h.amenities ?? [],
+    image: h.images[0]?.url ?? "",
+    roomType: h.roomType as RoomType,
+    verified: h.isVerified,
+    roomsAvailable: h.roomsAvailable ?? 0,
+    roomsTotal: h.roomsTotal ?? h.rooms.length,
+  };
+}
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -120,11 +149,26 @@ function SearchPageInner() {
   }, [submitted, filters.roomTypes, filters.amenities]);
 
   // ── Filter + sort listings ────────────────────────────────────────────────
+  const { data: hostels = [], isLoading } = useHostels({ pageSize: 100 });
+  const allListings = useMemo(() => hostels.map(toListing), [hostels]);
+
   const results = useMemo(() => {
-    let list = ALL_LISTINGS.filter(l => {
+    let list = allListings.filter(l => {
       if (l.price < filters.priceMin || l.price > filters.priceMax) return false;
       if (filters.roomTypes.length && !filters.roomTypes.includes(l.roomType)) return false;
-      if (filters.amenities.length && !filters.amenities.every(a => l.amenities.includes(a))) return false;
+      // Case-insensitive substring: `hostels.amenities` is free text, so a
+      // hostel listing "Water" should still match a filter for "Borehole water".
+      if (
+        filters.amenities.length &&
+        !filters.amenities.every(a =>
+          l.amenities.some(
+            have =>
+              have.toLowerCase().includes(a.toLowerCase()) ||
+              a.toLowerCase().includes(have.toLowerCase()),
+          ),
+        )
+      )
+        return false;
       if (filters.verifiedBy.includes("Sync team visit") && !l.verified) return false;
       if (submitted.area && !l.area.toLowerCase().includes(submitted.area.toLowerCase())) return false;
       if (submitted.roomType && !l.roomType.toLowerCase().includes(submitted.roomType.toLowerCase())) return false;
@@ -144,7 +188,9 @@ function SearchPageInner() {
     if (sort === "Highest rated") list = [...list].sort((a, b) => b.rating - a.rating);
 
     return list;
-  }, [filters, sort, submitted, q]);
+    // `q` (the free-text filter) and `allListings` (the live hostels query) are
+    // both read above, so both belong here - one side of the merge had each.
+  }, [filters, sort, submitted, q, allListings]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -189,7 +235,15 @@ function SearchPageInner() {
               onViewChange={setView} />
 
             {/* Render results dynamically mapped layouts context */}
-            {results.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col gap-3.5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="bg-ink/5 h-36 animate-pulse rounded-2xl" />
+                ))}
+              </div>
+            ) : results.length === 0 ? (
+              /* Reached only after loading — otherwise "no results, reset your
+                 filters" would appear while the first fetch is still in flight. */
               <EmptyState onReset={handleClearAll} />
             ) : view === "List" ? (
               <div className="flex flex-col gap-3.5">

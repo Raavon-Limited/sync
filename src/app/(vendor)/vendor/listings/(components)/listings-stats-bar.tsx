@@ -1,16 +1,28 @@
 import { CustomCard } from '@/components/shared/card';
 import { Listing } from '@/modules/vendor/types';
-import { Archive, BadgeCheck, FilePenLine, Package, PackageX } from 'lucide-react';
+import { BadgeCheck, FilePenLine, Package, PackageX } from 'lucide-react';
+
 interface ListingStatsBarProps {
   listings: Listing[];
+  /**
+   * Listing ids that the active store has run out of. Sold-out is per store —
+   * see the shared catalogue migration — so this cannot be derived from the
+   * catalogue rows alone.
+   */
+  soldOutIds?: Set<string>;
 }
 
-export function ListingStatsBar({ listings }: ListingStatsBarProps) {
+export function ListingStatsBar({ listings, soldOutIds }: ListingStatsBarProps) {
   const total = listings.length;
   const active = listings.filter((l) => l.status === 'Active').length;
-  // const draft = listings.filter((l) => l.status === 'Draft').length;
-  const outOfStock = listings.filter((l) => l.status === 'Out of Stock').length;
   const archived = listings.filter((l) => l.status === 'Archived').length;
+  // Counted from the STORE's stock, not `listings.status`. The old line was
+  // `l.status === 'Out of Stock'` — a value the check constraint allows and
+  // that nothing in the app or the database has ever written, so this tile
+  // read 0 permanently no matter how much had actually run out.
+  const outOfStock = soldOutIds
+    ? listings.filter((l) => soldOutIds.has(l.id)).length
+    : 0;
 
   const stats = [
     {
@@ -35,7 +47,7 @@ export function ListingStatsBar({ listings }: ListingStatsBarProps) {
       iconBg: 'bg-amber-100',
     },
     {
-      label: 'OUT OF STOCK',
+      label: 'SOLD OUT HERE',
       value: outOfStock,
       valueColor: 'text-red-600',
       icon: <PackageX className="size-5 text-red-600" />,

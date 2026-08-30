@@ -6,7 +6,8 @@ import { Attachment } from './attachment';
 import Image from 'next/image';
 
 interface AttachmentPreviewProps {
-  attachment: Attachment;
+  /** Compose-time only, so the File is guaranteed here. */
+  attachment: Attachment & { file: File };
   onRemove: (id: string) => void;
   onPreview: (attachment: Attachment) => void;
 }

@@ -88,6 +88,8 @@ export function DashboardHeader({ navKey, profile }: DashboardHeaderProps) {
           avatarUrl={profile.avatarUrl}
           profileHref={profileHref}
           settingsHref={`${base}/settings`}
+          role={profile.role}
+          roles={profile.roles}
         />
       </div>
     </header>

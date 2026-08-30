@@ -5,9 +5,17 @@ import { CalendarDays, Package, Receipt, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { Order } from '@/types/order';
+import type { FoodOrder } from '@/modules/food/types';
+import { OrderActions } from './order-actions';
 
 interface OrderDetailsDialogProps {
   order: Order | null;
+  /**
+   * The same order as the domain sees it. Null only while a row is selected
+   * that the current query no longer holds; the actions are simply not offered
+   * rather than guessed at from the collapsed presentation status.
+   */
+  domainOrder: FoodOrder | null;
   onClose: () => void;
 }
 
@@ -87,7 +95,7 @@ export function OrderDetailsBody({ order }: { order: Order }) {
 /**
  * Details for a single order, opened by clicking its row in the orders table.
  */
-export function OrderDetailsDialog({ order, onClose }: OrderDetailsDialogProps) {
+export function OrderDetailsDialog({ order, domainOrder, onClose }: OrderDetailsDialogProps) {
   /*
    * Driven straight off `order` so there's no second "is it open" state to keep
    * in sync. Radix still needs the node mounted long enough to animate out, but
@@ -110,6 +118,8 @@ export function OrderDetailsDialog({ order, onClose }: OrderDetailsDialogProps) 
             </DialogHeader>
 
             <OrderDetailsBody order={order} />
+
+            {domainOrder && <OrderActions order={domainOrder} />}
           </>
         )}
       </DialogContent>

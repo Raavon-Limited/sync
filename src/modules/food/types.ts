@@ -37,6 +37,11 @@ export interface FoodVendor {
   ratingCount: number;
   isAcceptingOrders: boolean;
   isVerified: boolean;
+  /** "HH:MM:SS" from Postgres `time`, or null when the vendor never set hours. */
+  opensAt?: string | null;
+  closesAt?: string | null;
+  publicPhone?: string | null;
+  businessAddress?: string | null;
 }
 
 export interface FoodListing {
@@ -45,10 +50,18 @@ export interface FoodListing {
   name: string;
   description?: string | null;
   category: string;
+  /** The price AT THIS STORE — the store's override, else the catalogue's. */
   priceKobo: number;
-  stock: number;
+  /** null = untracked (cooked to order). 0 = sold out. Per store. */
+  stock: number | null;
   sold: number;
   status: 'Active' | 'Out of Stock' | 'Archived';
+  /**
+   * Whether this store can sell it right now: carried here, and either
+   * untracked or with stock left. Comes from the generated `is_available`
+   * column, so it cannot disagree with what checkout will allow.
+   */
+  isAvailable: boolean;
   imageUrl?: string | null;
 }
 

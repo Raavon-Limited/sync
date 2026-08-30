@@ -23,7 +23,6 @@ import {
   useMap,
 } from '@vis.gl/react-google-maps';
 import { LocateFixed } from 'lucide-react';
-import { type NearbyCategory } from '@/mock/around';
 import {
   AREA_ZOOM,
   areaCoords,
@@ -33,18 +32,24 @@ import {
   MAP_DEFAULT_VIEW as MAP_VIEW,
 } from '@/lib/constants/areas';
 import { useOptionalLocation } from '@/providers/location-provider';
-import type { MapPin } from '@/modules/around/server-queries';
+import type { MapPin, PinCategory } from '@/modules/around/server-queries';
 import { GOOGLE_MAP_ID, GoogleMapsProvider, MapUnavailable } from './google-maps-provider';
 
-/** Category label + dot colour (mirrored by the legend). */
-const CATEGORY: Record<NearbyCategory, { label: string; color: string }> = {
+/**
+ * Legend label + dot colour.
+ *
+ * Keyed off `PinCategory`, so a category the query can produce cannot be
+ * missing a colour and a colour cannot be advertised for pins that never
+ * arrive. There is deliberately no "Events" entry: events carry no coordinates
+ * of their own on this schema, so listMapPins can never emit one.
+ */
+const CATEGORY: Record<PinCategory, { label: string; color: string }> = {
   hostel: { label: 'Hostels', color: '#3f7d20' },
   food: { label: 'Food', color: '#ff8b5c' },
-  event: { label: 'Events', color: '#7c5cff' },
-  hotspot: { label: 'Hot spots', color: '#ff5c8b' },
   beauty: { label: 'Beauty', color: '#c45cff' },
-  workmanship: { label: 'Workmanship', color: '#0e0e12' },
   laundry: { label: 'Laundry', color: '#1f9fb8' },
+  workmanship: { label: 'Workmanship', color: '#0e0e12' },
+  hotspot: { label: 'Hot spots', color: '#ff5c8b' },
 };
 
 /** Zoom used when we have a real GPS fix - tighter than the area overview,

@@ -481,8 +481,221 @@ export type Database = {
           },
         ]
       }
+      storefront_staff: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          revoked_at: string | null
+          role: string
+          storefront_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          revoked_at?: string | null
+          role?: string
+          storefront_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          revoked_at?: string | null
+          role?: string
+          storefront_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_staff_storefront_id_fkey"
+            columns: ["storefront_id"]
+            isOneToOne: false
+            referencedRelation: "storefronts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role: string
+          storefront_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          role?: string
+          storefront_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: string
+          storefront_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_invites_storefront_id_fkey"
+            columns: ["storefront_id"]
+            isOneToOne: false
+            referencedRelation: "storefronts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_listings: {
+        Row: {
+          created_at: string
+          is_available: boolean
+          is_listed: boolean
+          listing_id: string
+          price_kobo: number | null
+          stock: number | null
+          storefront_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_listed?: boolean
+          listing_id: string
+          price_kobo?: number | null
+          stock?: number | null
+          storefront_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_listed?: boolean
+          listing_id?: string
+          price_kobo?: number | null
+          stock?: number | null
+          storefront_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      storefronts: {
+        Row: {
+          auto_pause_after: number | null
+          auto_pause_minutes: number
+          pause_reason: string | null
+          paused_until: string | null
+          lat: number | null
+          lng: number | null
+          address: string | null
+          archived_at: string | null
+          area: string | null
+          campus_id: string | null
+          closes_at: string | null
+          created_at: string
+          geo: unknown | null
+          id: string
+          is_accepting_orders: boolean
+          is_primary: boolean
+          name: string
+          opens_at: string | null
+          public_phone: string | null
+          slug: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          auto_pause_after?: number | null
+          auto_pause_minutes?: number
+          pause_reason?: string | null
+          paused_until?: string | null
+          lat?: number | null
+          lng?: number | null
+          address?: string | null
+          archived_at?: string | null
+          area?: string | null
+          campus_id?: string | null
+          closes_at?: string | null
+          created_at?: string
+          geo?: unknown | null
+          id?: string
+          is_accepting_orders?: boolean
+          is_primary?: boolean
+          name: string
+          opens_at?: string | null
+          public_phone?: string | null
+          slug: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          auto_pause_after?: number | null
+          auto_pause_minutes?: number
+          pause_reason?: string | null
+          paused_until?: string | null
+          lat?: number | null
+          lng?: number | null
+          address?: string | null
+          archived_at?: string | null
+          area?: string | null
+          campus_id?: string | null
+          closes_at?: string | null
+          created_at?: string
+          geo?: unknown | null
+          id?: string
+          is_accepting_orders?: boolean
+          is_primary?: boolean
+          name?: string
+          opens_at?: string | null
+          public_phone?: string | null
+          slug?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefronts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefronts_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carts: {
         Row: {
+          storefront_id: string | null
           created_at: string
           id: string
           status: string
@@ -491,6 +704,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          storefront_id?: string | null
           created_at?: string
           id?: string
           status?: string
@@ -499,6 +713,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          storefront_id?: string | null
           created_at?: string
           id?: string
           status?: string
@@ -1019,8 +1234,61 @@ export type Database = {
           },
         ]
       }
+      event_ticket_tiers: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_id: string
+          id: string
+          is_active: boolean
+          name: string
+          price_kobo: number
+          quantity: number | null
+          sold: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_kobo: number
+          quantity?: number | null
+          sold?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_kobo?: number
+          quantity?: number | null
+          sold?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_ticket_tiers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
+          cover_url: string | null
+          category: string | null
+          description: string | null
           created_at: string
           geo: unknown
           id: string
@@ -1031,6 +1299,9 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          cover_url?: string | null
+          category?: string | null
+          description?: string | null
           created_at?: string
           geo?: unknown
           id?: string
@@ -1041,6 +1312,9 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          cover_url?: string | null
+          category?: string | null
+          description?: string | null
           created_at?: string
           geo?: unknown
           id?: string
@@ -1377,6 +1651,8 @@ export type Database = {
       }
       hostels: {
         Row: {
+          lat: number | null
+          lng: number | null
           address: string | null
           amenities: string[]
           archived_at: string | null
@@ -1398,6 +1674,8 @@ export type Database = {
           verified: boolean
         }
         Insert: {
+          lat?: number | null
+          lng?: number | null
           address?: string | null
           amenities?: string[]
           archived_at?: string | null
@@ -1419,6 +1697,8 @@ export type Database = {
           verified?: boolean
         }
         Update: {
+          lat?: number | null
+          lng?: number | null
           address?: string | null
           amenities?: string[]
           archived_at?: string | null
@@ -1458,6 +1738,8 @@ export type Database = {
       }
       hotspots: {
         Row: {
+          lat: number | null
+          lng: number | null
           address: string | null
           area: string | null
           campus_id: string | null
@@ -1477,6 +1759,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          lat?: number | null
+          lng?: number | null
           address?: string | null
           area?: string | null
           campus_id?: string | null
@@ -1496,6 +1780,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          lat?: number | null
+          lng?: number | null
           address?: string | null
           area?: string | null
           campus_id?: string | null
@@ -1524,10 +1810,63 @@ export type Database = {
           },
         ]
       }
+      listing_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+          vendor_category: string
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          vendor_category: string
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          vendor_category?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_categories_vendor_category_fkey"
+            columns: ["vendor_category"]
+            isOneToOne: false
+            referencedRelation: "vendor_categories"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "listing_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
+          storefront_id: string | null
           archived_at: string | null
           category: string
+          category_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -1541,8 +1880,10 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          storefront_id?: string | null
           archived_at?: string | null
           category: string
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1556,8 +1897,10 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          storefront_id?: string | null
           archived_at?: string | null
           category?: string
+          category_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1571,6 +1914,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "listing_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listings_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -1820,6 +2170,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          storefront_id: string | null
           created_at: string
           customer_name: string | null
           customer_phone: string | null
@@ -1841,6 +2192,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          storefront_id?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -1862,6 +2214,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          storefront_id?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -2004,6 +2357,45 @@ export type Database = {
         }
         Relationships: []
       }
+      payout_requests: {
+        Row: {
+          amount_kobo: number
+          bank_account_id: string
+          failure_reason: string | null
+          id: string
+          owner_id: string
+          requested_at: string
+          settled_at: string | null
+          status: string
+          transfer_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_kobo: number
+          bank_account_id: string
+          failure_reason?: string | null
+          id?: string
+          owner_id: string
+          requested_at?: string
+          settled_at?: string | null
+          status?: string
+          transfer_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_kobo?: number
+          bank_account_id?: string
+          failure_reason?: string | null
+          id?: string
+          owner_id?: string
+          requested_at?: string
+          settled_at?: string | null
+          status?: string
+          transfer_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           archived_at: string | null
@@ -2053,21 +2445,32 @@ export type Database = {
           vendor_category?: string | null
           verification_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_vendor_category_fkey"
+            columns: ["vendor_category"]
+            isOneToOne: false
+            referencedRelation: "vendor_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       promotions: {
         Row: {
           code: string | null
           created_at: string
+          daily_budget_kobo: number | null
           description: string | null
           discount_type: string
           discount_value: number
           ends_at: string | null
           id: string
           is_active: boolean
+          listing_id: string | null
           max_redemptions: number | null
           min_order_kobo: number
           name: string
+          promotion_type: string | null
           redemption_count: number
           starts_at: string
           updated_at: string
@@ -2076,15 +2479,18 @@ export type Database = {
         Insert: {
           code?: string | null
           created_at?: string
+          daily_budget_kobo?: number | null
           description?: string | null
           discount_type: string
           discount_value: number
           ends_at?: string | null
           id?: string
           is_active?: boolean
+          listing_id?: string | null
           max_redemptions?: number | null
           min_order_kobo?: number
           name: string
+          promotion_type?: string | null
           redemption_count?: number
           starts_at?: string
           updated_at?: string
@@ -2093,21 +2499,31 @@ export type Database = {
         Update: {
           code?: string | null
           created_at?: string
+          daily_budget_kobo?: number | null
           description?: string | null
           discount_type?: string
           discount_value?: number
           ends_at?: string | null
           id?: string
           is_active?: boolean
+          listing_id?: string | null
           max_redemptions?: number | null
           min_order_kobo?: number
           name?: string
+          promotion_type?: string | null
           redemption_count?: number
           starts_at?: string
           updated_at?: string
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "promotions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "promotions_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2685,6 +3101,36 @@ export type Database = {
           },
         ]
       }
+      vendor_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vendor_profiles: {
         Row: {
           archived_at: string | null
@@ -2771,6 +3217,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "campuses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_profiles_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "vendor_categories"
+            referencedColumns: ["slug"]
           },
           {
             foreignKeyName: "vendor_profiles_id_fkey"
@@ -2971,6 +3424,67 @@ export type Database = {
       }
     }
     Functions: {
+      request_withdrawal: {
+        Args: { p_amount_kobo: number; p_bank_account_id: string }
+        Returns: string
+      }
+      cancel_withdrawal: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
+      settle_payout: {
+        Args: {
+          p_request_id: string
+          p_status: string
+          p_transfer_code?: string
+          p_failure_reason?: string
+        }
+        Returns: string
+      }
+      switch_role: {
+        Args: { p_role: string }
+        Returns: string
+      }
+      claim_role: {
+        Args: { p_role: string }
+        Returns: string[]
+      }
+      campus_pulse: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      cancel_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: string
+      }
+      pause_store: {
+        Args: { p_storefront_id: string; p_minutes?: number }
+        Returns: string
+      }
+      resume_store: {
+        Args: { p_storefront_id: string }
+        Returns: undefined
+      }
+      store_accepting_orders: {
+        Args: { p_storefront_id: string }
+        Returns: boolean
+      }
+      store_price: {
+        Args: { p_storefront_id: string; p_listing_id: string }
+        Returns: number
+      }
+      my_revenue_series: {
+        Args: { p_period?: string }
+        Returns: Json
+      }
+      admin_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      admin_analytics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       accept_delivery_offer: {
         Args: { p_offer_id: string }
         Returns: {
@@ -3027,6 +3541,123 @@ export type Database = {
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       max_holds_per_student: { Args: never; Returns: number }
       open_order_conversation: { Args: { p_order_id: string }; Returns: string }
+      open_listing_conversation: { Args: { p_listing_id: string }; Returns: string }
+      pay_order_from_wallet: { Args: { p_order_id: string }; Returns: string }
+      subscribe_to_plan: { Args: { p_plan_id: string }; Returns: string }
+      release_matured_escrow: {
+        Args: { p_limit?: number }
+        Returns: { order_id: string; transaction_id: string | null }[]
+      }
+      resolve_dispute: {
+        Args: {
+          p_dispute_id: string
+          p_resolution: string
+          p_refund_kobo?: number
+          p_notes?: string
+        }
+        Returns: string
+      }
+      purchase_tickets: {
+        Args: { p_tier_id: string; p_quantity?: number; p_reference?: string }
+        Returns: string[]
+      }
+      release_order_escrow: { Args: { p_order_id: string }; Returns: string }
+      credit_wallet_topup: {
+        Args: { p_user_id: string; p_amount_kobo: number; p_reference: string }
+        Returns: string
+      }
+      open_booking_conversation: { Args: { p_booking_id: string }; Returns: string }
+      open_hostel_conversation: { Args: { p_hostel_id: string }; Returns: string }
+      open_service_conversation: { Args: { p_request_id: string }; Returns: string }
+      open_delivery_conversation: { Args: { p_order_id: string }; Returns: string }
+      set_primary_storefront: { Args: { p_storefront_id: string }; Returns: undefined }
+      revoke_storefront_staff: { Args: { p_staff_id: string }; Returns: undefined }
+      accept_storefront_invite: { Args: { p_token: string }; Returns: string }
+      create_storefront_invite: {
+        Args: { p_storefront_id: string; p_email: string; p_role?: string }
+        Returns: { invite_id: string; token: string; expires_at: string }[]
+      }
+      storefront_roster: {
+        Args: { p_storefront_id?: string }
+        Returns: {
+          staff_id: string
+          storefront_id: string
+          branch_name: string
+          user_id: string
+          full_name: string | null
+          email: string | null
+          role: string
+          joined_at: string
+          revoked_at: string | null
+          is_active: boolean
+        }[]
+      }
+      storefront_invites_pending: {
+        Args: { p_storefront_id?: string }
+        Returns: {
+          invite_id: string
+          storefront_id: string
+          branch_name: string
+          email: string
+          role: string
+          invited_at: string
+          expires_at: string
+          is_expired: boolean
+        }[]
+      }
+      storefront_activity: {
+        Args: { p_storefront_id?: string; p_limit?: number }
+        Returns: {
+          occurred_at: string
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          storefront_id: string
+          summary: Json
+        }[]
+      }
+      nearby_storefronts: {
+        Args: {
+          p_lat: number
+          p_lng: number
+          p_radius_m?: number
+          p_category?: string
+          p_limit?: number
+        }
+        Returns: {
+          id: string
+          vendor_id: string
+          name: string
+          slug: string
+          area: string | null
+          address: string | null
+          lat: number | null
+          lng: number | null
+          opens_at: string | null
+          closes_at: string | null
+          is_accepting_orders: boolean
+          is_primary: boolean
+          business_name: string | null
+          logo_url: string | null
+          category: string | null
+          rating_avg: number
+          rating_count: number
+          distance_m: number | null
+        }[]
+      }
+      conversation_counterparties: {
+        Args: { p_conversation_ids?: string[] }
+        Returns: {
+          conversation_id: string
+          user_id: string
+          full_name: string | null
+          business_name: string | null
+          logo_url: string | null
+        }[]
+      }
       promote_to_admin: {
         Args: { p_email: string; p_role: string }
         Returns: string

@@ -34,11 +34,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useMyListings } from '@/modules/vendor/hooks';
+import { formatKobo } from '@/lib/query/helpers';
 import type { PromotionType } from './types';
 
 // ── payload type (matches what your API will expect) ─────────────────────────
 export interface CreatePromotionPayload {
   promotionType: PromotionType;
+  /**
+   * The listing this campaign promotes.
+   *
+   * A campaign now targets a PRODUCT rather than carrying a free-text name: a
+   * name cannot be joined, breaks when the vendor renames the listing, and
+   * leaves the analytics no way to attribute sales back to what was promoted.
+   */
+  listingId: string;
+  /** Snapshot of the listing name at creation time, for display. */
   campaignName: string;
   startDate: string; // ISO date string "YYYY-MM-DD"
   endDate: string;
@@ -85,7 +96,19 @@ function PromotionForm({
   const [promotionType, setPromotionType] = React.useState<PromotionType | ''>(
     defaultPromotionType ?? '',
   );
-  const [campaignName, setCampaignName] = React.useState('');
+  const [listingId, setListingId] = React.useState('');
+
+  /*
+   * Only ACTIVE listings are offered. Promoting an archived or out-of-stock
+   * product spends budget driving traffic to something nobody can buy, which is
+   * worse than not offering it at all.
+   */
+  const { data: listings = [], isLoading: listingsLoading } = useMyListings();
+  const promotable = React.useMemo(
+    () => listings.filter((l) => l.status === 'Active'),
+    [listings],
+  );
+  const selectedListing = promotable.find((l) => l.id === listingId);
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
   const [dailyBudget, setDailyBudget] = React.useState('');
@@ -103,7 +126,7 @@ function PromotionForm({
   function validate(): boolean {
     const next: typeof errors = {};
     if (!promotionType) next.promotionType = 'Please select a promotion type.';
-    if (!campaignName.trim()) next.campaignName = 'Campaign name is required.';
+    if (!listingId) next.listingId = 'Choose the product this campaign promotes.';
     if (!startDate) next.startDate = 'Start date is required.';
     if (!endDate) next.endDate = 'End date is required.';
     if (startDate && endDate && endDate < startDate)
@@ -118,7 +141,9 @@ function PromotionForm({
     if (!validate()) return;
     await onSubmit({
       promotionType: promotionType as PromotionType,
-      campaignName: campaignName.trim(),
+      listingId,
+      // Snapshot the name so a later rename does not rewrite campaign history.
+      campaignName: selectedListing?.name ?? '',
       startDate,
       endDate,
       dailyBudget: Number(dailyBudget),
@@ -151,17 +176,44 @@ function PromotionForm({
         </Select>
       </Field>
 
-      {/* Campaign Name */}
-      <Field label="Campaign Name" error={errors.campaignName}>
-        <Input
-          placeholder="e.g. Weekend Jollof Special"
-          value={campaignName}
-          onChange={(e) => {
-            setCampaignName(e.target.value);
-            setErrors((err) => ({ ...err, campaignName: undefined }));
+      {/* Product being promoted */}
+      <Field label="Product" error={errors.listingId}>
+        <Select
+          value={listingId}
+          onValueChange={(v) => {
+            setListingId(v);
+            setErrors((e) => ({ ...e, listingId: undefined }));
           }}
-          className={cn(errors.campaignName && 'border-red-400 focus:border-red-400')}
-        />
+          disabled={listingsLoading || promotable.length === 0}
+        >
+          <SelectTrigger className={cn(errors.listingId && 'border-red-400 focus:border-red-400')}>
+            <SelectValue
+              placeholder={
+                listingsLoading
+                  ? 'Loading your products...'
+                  : promotable.length === 0
+                    ? 'No active products to promote'
+                    : 'Choose a product...'
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {promotable.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {/* Price and stock included so the vendor picks the right item
+                    without leaving the modal to check. */}
+                {l.name} - {formatKobo(l.priceKobo)}
+                {l.stock > 0 ? '' : ' (out of stock)'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {!listingsLoading && promotable.length === 0 && (
+          <p className="text-muted mt-1.5 text-xs">
+            You need at least one active listing before you can run a campaign.
+          </p>
+        )}
       </Field>
 
       {/* Date row */}
