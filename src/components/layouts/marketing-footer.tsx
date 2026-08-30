@@ -4,43 +4,20 @@
  * morphing ambient glow behind it. Merges seamlessly with the dark CTA above.
  */
 import Link from 'next/link';
-import { ArrowUpRight, ChevronDown } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SyncLogo } from '@/components/brand/sync-logo';
 import { SITE } from '@/config/site';
+// Shared with the signed-in AppFooter, so the same pages are reachable from
+// both shells. See config/footer-nav.
+import {
+  COMPANY_LINKS,
+  HELP_LINKS,
+  LEGAL_LINKS,
+  PRODUCT_LINKS,
+  type FooterLink,
+} from '@/config/footer-nav';
 
-const PRODUCT = [
-  { href: '/hostels', label: 'Hostels' },
-  { href: '/food', label: 'Food' },
-  { href: '/events', label: 'Events' },
-  { href: '/beauty', label: 'Beauty' },
-  { href: '/workmanship', label: 'Trades' },
-  { href: '/hotspots', label: 'Hot spots' },
-];
-const COMPANY = [
-  { href: '/about', label: 'About' },
-  { href: '/for-vendors', label: 'For landlords' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/how-verification-works', label: 'How verification works' },
-  { href: '/around', label: 'Around you' },
-];
-const LEGAL = [
-  { href: '/legal/privacy', label: 'Privacy Policy' },
-  { href: '/legal/terms', label: 'Terms of Service' },
-  { href: '/legal/cookies', label: 'Cookie Policy' },
-  { href: '/legal/data-protection', label: 'Data Protection' },
-];
-// The questions people ask before signing up. These get their own full-width band
-// across the footer rather than a cramped stack beside the Get Sync button.
-const HELP = [
-  { href: '/about', label: 'About Sync' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/how-verification-works', label: 'How verification works' },
-  { href: '/legal/privacy', label: 'Privacy Policy' },
-  { href: '/legal/terms', label: 'Terms of Service' },
-  { href: '/legal/cookies', label: 'Cookie Policy' },
-  { href: '/legal/data-protection', label: 'Data Protection' },
-];
 const SOCIALS = [
   { href: SITE.socials.x, label: 'X', initials: 'X' },
   { href: SITE.socials.instagram, label: 'Instagram', initials: 'IG' },
@@ -93,9 +70,9 @@ export function MarketingFooter() {
             </div>
           </div>
 
-          <FooterCol title="Product" items={PRODUCT} />
-          <FooterCol title="Company" items={COMPANY} />
-          <FooterCol title="Legal" items={LEGAL} />
+          <FooterCol title="Product" items={PRODUCT_LINKS} />
+          <FooterCol title="Company" items={COMPANY_LINKS} />
+          <FooterCol title="Legal" items={LEGAL_LINKS} />
         </div>
 
         {/* Before you start - a full-width band, so these read as the footer's own
@@ -103,7 +80,7 @@ export function MarketingFooter() {
         <div className="border-cream/10 mt-16 border-t pt-8">
           <p className="eyebrow text-cream/40">Before you start</p>
           <ul className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-            {HELP.map((l) => (
+            {HELP_LINKS.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
@@ -169,7 +146,7 @@ export function MarketingFooter() {
  * links were there but nobody opened them. Four links per column is not enough
  * content to be worth hiding, so they are always visible at every width.
  */
-function FooterCol({ title, items }: { title: string; items: { href: string; label: string }[] }) {
+function FooterCol({ title, items }: { title: string; items: FooterLink[] }) {
   return (
     <div className="border-cream/10 border-t pt-6 md:border-none md:pt-0">
       <p className="eyebrow text-cream/40">{title}</p>

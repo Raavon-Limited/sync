@@ -9,6 +9,7 @@
  * by the proxy (middleware), not here.
  */
 import { DashboardSidebar } from './dashboard-sidebar';
+import { AppFooter } from './app-footer';
 import { DashboardHeader } from './dashboard-header';
 import { getDashboardProfile } from './dashboard-profile';
 import type { DashboardNavKey } from '@/config/dashboard-nav';
@@ -36,6 +37,8 @@ export async function DashboardShell({
         <div className="flex min-w-0 flex-1 flex-col">
           <DashboardHeader navKey={navKey} profile={profile} />
           <main className="flex-1 p-4 md:p-8">{children}</main>
+          {/* Site + legal links. No fixed dock in this shell, so no offset. */}
+          <AppFooter />
         </div>
       </div>
     </div>
