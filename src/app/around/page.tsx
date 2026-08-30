@@ -124,10 +124,33 @@ export default async function AroundPage() {
 
       {/* The rest of this page is about the student's own radius. This is the
           other locations: where else on campus is busy, what is open there,
-          and what people are actually buying. Real data, unlike its
-          neighbours above. */}
+          and what people are actually buying.
+
+          SIGNED-IN ONLY, and not by accident. /around is public, but the
+          `campus_pulse` RPC revokes execute from `anon` on purpose: its own
+          migration explains that aggregates still identify people on a campus
+          this small, which is why it suppresses trends below a cohort
+          threshold and buckets busyness instead of counting it. Restricting it
+          to signed-in students is part of that reasoning, not an oversight -
+          so this is gated here rather than "fixed" by widening the grant.
+
+          Rendered unconditionally, it called an RPC it could never be allowed
+          to run and printed the raw Postgres denial onto a public page. */}
       <div className="mt-10">
-        <CampusPulse />
+        {user ? (
+          <CampusPulse />
+        ) : (
+          <Link
+            href="/login?next=/around"
+            className="border-line/10 hover:border-accent-fg/40 text-content-muted flex flex-col gap-1 rounded-xl border border-dashed p-6 text-sm transition-colors"
+          >
+            <span className="text-foreground font-medium">See what&rsquo;s happening across campus</span>
+            <span>
+              Which areas are busy, what just opened, what people are ordering. Sign in to
+              view it.
+            </span>
+          </Link>
+        )}
       </div>
     </main>
   );

@@ -34,8 +34,18 @@ export function CampusPulse() {
 
   if (isPending) return <Spinner />;
   if (error) {
+    // The raw message used to be printed to the page. On a public feed that
+    // published database internals - a signed-out visitor was shown
+    // "permission denied for function campus_pulse", which names an
+    // implementation detail, reads as broken, and tells them nothing they can
+    // act on. The real error goes to the console for us; the page gets copy.
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[campus-pulse] load failed:', error);
+    }
     return (
-      <p className="text-coral text-sm">Could not load campus activity: {(error as Error).message}</p>
+      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
+        Campus activity isn&rsquo;t available right now.
+      </p>
     );
   }
   if (areas.length === 0) {
