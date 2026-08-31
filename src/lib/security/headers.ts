@@ -27,7 +27,12 @@ const SUPABASE_ORIGINS = 'https://*.supabase.co https://*.supabase.in wss://*.su
 // opaque worker error in the console.
 const GOOGLE_MAPS_SCRIPT = 'https://maps.googleapis.com';
 const GOOGLE_MAPS_IMG = 'https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com';
-const GOOGLE_MAPS_CONNECT = 'https://maps.googleapis.com';
+// places.googleapis.com is a SEPARATE origin from maps.googleapis.com, and it
+// is where the Places API (New) actually sends its requests - the address
+// autocomplete in onboarding talks to it via the SDK. Without it here, CSP
+// blocks every suggestion request; the field then falls back to a plain input
+// and looks merely unhelpful rather than broken, which is a bad way to find out.
+const GOOGLE_MAPS_CONNECT = 'https://maps.googleapis.com https://places.googleapis.com';
 // The SDK injects a Google Fonts <link> for its own UI text.
 const GOOGLE_FONTS_STYLE = 'https://fonts.googleapis.com';
 const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';

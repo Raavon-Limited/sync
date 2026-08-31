@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FormField } from '@/components/forms';
+import { AddressAutocomplete } from '@/components/forms/address-autocomplete';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -181,7 +182,24 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
               <Textarea id="sells" rows={4} placeholder="Describe your menu, rooms, or services…" {...register('sells')} />
             </FormField>
             <FormField label="Business address" htmlFor="businessAddress" error={errors.businessAddress?.message}>
-              <Input id="businessAddress" placeholder="Tanke Crescent, Ilorin" {...register('businessAddress')} />
+              {/* Google Places suggestions. Falls back to a plain text input
+                  whenever Places is unavailable, so an outage or a disabled API
+                  can never block onboarding - the address is required to
+                  finish, and typing it must always work. */}
+              <Controller
+                name="businessAddress"
+                control={control}
+                render={({ field }) => (
+                  <AddressAutocomplete
+                    id="businessAddress"
+                    name={field.name}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Start typing your address…"
+                  />
+                )}
+              />
             </FormField>
           </>
         )}

@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FormField } from '@/components/forms';
+import { PasswordRequirements } from '@/components/forms/password-requirements';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import {
@@ -104,11 +105,28 @@ export function SignupForm({ next }: { next?: string }) {
     handleSubmit,
     setValue,
     trigger,
+    clearErrors,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { role: 'student', acceptedTerms: false },
+    /**
+     * EVERY text field defaults to '' rather than being left undefined.
+     *
+     * Undefined fails `z.string()` before any rule runs, so the message was
+     * Zod's own "Invalid input: expected string, received undefined" - internal
+     * wording shown to a user who had simply not typed anything yet. With ''
+     * the field's real rules run and produce the copy they were written for.
+     */
+    defaultValues: {
+      role: 'student',
+      acceptedTerms: false,
+      fullName: '',
+      phone: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
   const role = watch('role');
@@ -132,7 +150,15 @@ export function SignupForm({ next }: { next?: string }) {
 
   async function goNext() {
     const ok = await trigger(STEP_FIELDS[step]);
-    if (ok) setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    if (!ok) return;
+
+    // Clear before advancing. `trigger` runs the WHOLE schema through the
+    // resolver, so validating step 2 also evaluates the step 3 fields, and
+    // those errors stayed in formState - which is why arriving on the last step
+    // showed "Email is required" under a field nobody had touched yet. The
+    // current step has just passed, so there is nothing worth keeping.
+    clearErrors();
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
   async function onSubmit(values: SignupInput) {
@@ -403,21 +429,28 @@ export function SignupForm({ next }: { next?: string }) {
             />
           </FormField>
 
-          <FormField label="Password" htmlFor="password" error={errors.password?.message}>
+          {/* The live checklist replaces the field-level error: showing both
+              means saying "one capital letter" twice, once in red and once with
+              a tick. The list is the better of the two - it shows every rule
+              before you fail it. */}
+          <FormField label="Password" htmlFor="password">
             <Controller
               name="password"
               control={control}
               render={({ field }) => (
-                <PasswordInput
-                  id="password"
-                  autoComplete="new-password"
-                  placeholder="At least 8 characters"
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
+                <>
+                  <PasswordInput
+                    id="password"
+                    autoComplete="new-password"
+                    placeholder="Choose a strong password"
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                  <PasswordRequirements value={field.value ?? ''} />
+                </>
               )}
             />
           </FormField>
@@ -446,7 +479,9 @@ export function SignupForm({ next }: { next?: string }) {
           </FormField>
 
           {/* Terms */}
-          <div className="flex items-start gap-3">
+          {/* items-center, not items-start: the label is one short line, so
+              top-aligning the box left it sitting above the text. */}
+          <div className="flex items-center gap-3">
             <button
               type="button"
               role="checkbox"
@@ -454,7 +489,7 @@ export function SignupForm({ next }: { next?: string }) {
               aria-label="Agree to Terms and Privacy Policy"
               onClick={() => setValue('acceptedTerms', !acceptedTerms, { shouldValidate: true })}
               className={cn(
-                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors',
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors',
                 acceptedTerms ? 'bg-lime border-lime' : 'border-line/25 bg-transparent',
               )}
             >
