@@ -9,7 +9,6 @@
  * by the proxy (middleware), not here.
  */
 import { DashboardSidebar } from './dashboard-sidebar';
-import { AppFooter } from './app-footer';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { DashboardHeader } from './dashboard-header';
 import { getDashboardProfile } from './dashboard-profile';
@@ -44,9 +43,12 @@ export async function DashboardShell({
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <DashboardHeader navKey={navKey} profile={profile} />
+          {/* No AppFooter here. A dashboard is a working surface - a marketing
+              and legal link band under every table and form is noise, and the
+              same links are already reachable from the account menu and the
+              public site. It stays on AppShell and /around, which are browsing
+              surfaces where it belongs. */}
           <main className="flex-1 p-4 md:p-8">{children}</main>
-          {/* Site + legal links. No fixed dock in this shell, so no offset. */}
-          <AppFooter />
         </div>
       </div>
 

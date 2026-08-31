@@ -58,7 +58,8 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
   const parsed = signupSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, 'Invalid details') };
 
-  const { email, password, fullName, phone, role, vendorCategory, trade, campusId } = parsed.data;
+  const { email, password, fullName, phone, role, vendorCategory, trade, campusId, campusOther } =
+    parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -78,6 +79,9 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
         // ignores anything that is not a real, ACTIVE row, so a tampered value
         // costs the account a campus rather than naming one we do not serve.
         campus_id: role === 'student' ? (campusId ?? null) : null,
+        // The typed university, when it is not one we have. The trigger keeps
+        // it only if campus_id did not resolve, so the two never disagree.
+        campus_other: role === 'student' ? (campusOther ?? null) : null,
       },
     },
   });

@@ -8,8 +8,45 @@
  * shell uses.
  */
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
+import { createClient } from '@/lib/supabase/server';
 import { resolveHandle } from '@/lib/handle';
 import type { DashboardNavKey } from '@/config/dashboard-nav';
+
+/**
+ * The student's university, for the sidebar profile card.
+ *
+ * Two sources, and both are legitimate: `campus_id` when they picked one we
+ * know, `campus_other` when they typed one we do not have. A student at an
+ * unlisted university still has a university, and their own dashboard is the
+ * last place to pretend otherwise.
+ *
+ * Degrades to undefined - the card simply omits the line. It is decoration on
+ * a page that must render, so a failed lookup is not worth an error.
+ */
+async function campusLine(profile: {
+  campus_id?: string | null;
+  campus_other?: string | null;
+} | null): Promise<string | undefined> {
+  if (!profile) return undefined;
+  if (profile.campus_other) return profile.campus_other;
+  if (!profile.campus_id) return undefined;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('campuses')
+      .select('code, name')
+      .eq('id', profile.campus_id)
+      .maybeSingle();
+    if (!data) return undefined;
+    // The code is what students say out loud; the full name is the fallback
+    // for a campus that has no short form.
+    return (data.code as string | null) || (data.name as string | null) || undefined;
+  } catch {
+    // Pre-migration databases have no campuses columns at all.
+    return undefined;
+  }
+}
 
 export interface DashboardProfile {
   /** Status/role line above the name, e.g. "Verified vendor". */
@@ -119,6 +156,19 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
       };
     case 'student':
     default:
-      return { ...hats, eyebrow: 'Student', name, email, initial, handle };
+      return {
+        ...hats,
+        eyebrow: 'Student',
+        name,
+        email,
+        initial,
+        handle,
+        // The university, on the card, using the meta slot every other role
+        // already uses for its defining detail (Business, Properties).
+        metaLabel: 'University',
+        metaValue: await campusLine(
+          profile as { campus_id?: string | null; campus_other?: string | null } | null,
+        ),
+      };
   }
 }

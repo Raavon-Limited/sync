@@ -54,7 +54,15 @@ export const signupSchema = z
      * properly in the onboarding wizard (step 2), and asking twice in two
      * places is how the two answers end up disagreeing.
      */
-    campusId: z.string().uuid({ message: 'Choose your school' }).optional(),
+    campusId: z.string().uuid().optional(),
+    /**
+     * The university as TYPED, when it is not one we have a row for.
+     *
+     * The seeded list is broad but explicitly not the complete NUC register, so
+     * a gap in our data must never be the reason someone cannot sign up. This
+     * is kept and becomes the demand signal for where to expand.
+     */
+    campusOther: z.string().trim().min(2).max(160).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
@@ -62,8 +70,14 @@ export const signupSchema = z
   })
   .superRefine((d, ctx) => {
     if (d.role === 'student') {
-      if (!d.campusId) {
-        ctx.addIssue({ code: 'custom', message: 'Choose your school', path: ['campusId'] });
+      // EITHER is enough: a picked campus, or one they typed that we do not
+      // have. Requiring the id would make an incomplete seed a hard blocker.
+      if (!d.campusId && !d.campusOther) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Tell us your university',
+          path: ['campusOther'],
+        });
       }
       return;
     }

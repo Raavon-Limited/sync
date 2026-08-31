@@ -17,7 +17,7 @@
  * of truth - the steps only decide WHEN each field is checked, never what
  * counts as valid. Same approach as the vendor onboarding wizard.
  *
- * STUDENTS PICK A SCHOOL; VENDORS DO NOT GIVE AN ADDRESS HERE. The vendor's
+ * STUDENTS NAME THEIR UNIVERSITY; VENDORS DO NOT GIVE AN ADDRESS HERE. The vendor's
  * business address is collected in the onboarding wizard (step 2), and asking
  * in two places is how the two answers end up disagreeing. Students have no
  * onboarding wizard, so their campus has to be captured here.
@@ -54,7 +54,8 @@ import {
   type VendorCategory,
 } from '@/lib/validations';
 import { signUp } from '@/modules/auth/actions';
-import { campusLabel, useCampuses } from '@/modules/campuses';
+import { useCampuses, type Campus } from '@/modules/campuses';
+import { CampusInput } from '@/components/forms/campus-input';
 
 const ROLES: { id: SignupInput['role']; label: string; desc: string }[] = [
   { id: 'student', label: "I'm a student", desc: 'Find hostels, food & services' },
@@ -85,12 +86,12 @@ const STEPS = ['Who you are', 'About you', 'Your account'];
  * Which fields each step is responsible for.
  *
  * The role-conditional ones are listed on step 0 whatever the role: the schema
- * only raises an issue on `campusId` for students and on `vendorCategory` for
+ * only raises an issue on the campus fields for students and on `vendorCategory` for
  * vendors, so naming both here is harmless and means the table does not have to
  * be re-derived every time the role changes.
  */
 const STEP_FIELDS: Record<number, (keyof SignupInput)[]> = {
-  0: ['role', 'campusId', 'vendorCategory', 'trade'],
+  0: ['role', 'campusId', 'campusOther', 'vendorCategory', 'trade'],
   1: ['fullName', 'phone'],
   2: ['email', 'password', 'confirmPassword', 'acceptedTerms'],
 };
@@ -133,7 +134,11 @@ export function SignupForm({ next }: { next?: string }) {
   const role = watch('role');
   const vendorCategory = watch('vendorCategory');
   const acceptedTerms = watch('acceptedTerms');
-  const campusId = watch('campusId');
+  // The text in the box, and the campus it resolved to (null while free text).
+  // Kept as local state rather than derived from the form: the box holds a NAME
+  // while the form holds an id, so they are genuinely two different values.
+  const [campusText, setCampusText] = useState('');
+  const [campus, setCampus] = useState<Campus | null>(null);
   const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : '/login';
   const isLast = step === STEPS.length - 1;
 
@@ -146,6 +151,9 @@ export function SignupForm({ next }: { next?: string }) {
       setValue('trade', undefined);
     } else {
       setValue('campusId', undefined);
+      setValue('campusOther', undefined);
+      setCampus(null);
+      setCampusText('');
     }
   }
 
@@ -307,32 +315,43 @@ export function SignupForm({ next }: { next?: string }) {
               row, so this one answer is worth more than a typed address would
               be - and it cannot be misspelt. */}
           {role === 'student' && (
-            <FormField label="Your school" htmlFor="campusId" error={errors.campusId?.message}>
-              <Select
-                value={campusId}
-                onValueChange={(v) => setValue('campusId', v, { shouldValidate: true })}
-              >
-                <SelectTrigger id="campusId">
-                  <SelectValue
-                    placeholder={campusesLoading ? 'Loading campuses…' : 'Select your school'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {campuses.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {campusLabel(s)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* Only campuses we actually serve are selectable, so say so
-                  rather than leaving someone hunting for a school that is
-                  seeded but not switched on yet. */}
-              {!campusesLoading && campuses.length === 0 && (
-                <p className="text-content-muted mt-1.5 text-xs">
-                  No campuses are available yet. Please try again shortly.
-                </p>
-              )}
+            <FormField
+              label="Your university"
+              htmlFor="campus"
+              error={errors.campusOther?.message}
+            >
+              {/* Type-ahead, not a dropdown: there are a hundred-odd
+                  institutions and a student knows exactly which is theirs, so
+                  typing three letters beats scrolling. A university we do not
+                  have is ACCEPTED as free text - a gap in our seed must never
+                  be why someone cannot sign up - and the field says so, plus
+                  where we actually operate, the moment it happens. */}
+              <CampusInput
+                id="campus"
+                campuses={campuses}
+                loading={campusesLoading}
+                value={campusText}
+                selected={campus}
+                placeholder="Start typing, e.g. KWASU"
+                onChange={(text) => {
+                  setCampusText(text);
+                  // Free text until a suggestion is picked. Trimmed to satisfy
+                  // the schema's min length without trapping a trailing space.
+                  const trimmed = text.trim();
+                  setValue('campusOther', trimmed.length >= 2 ? trimmed : undefined, {
+                    shouldValidate: false,
+                  });
+                }}
+                onSelect={(c) => {
+                  setCampus(c);
+                  // Exactly one of the two is ever set, so they cannot disagree
+                  // about which university this student attends.
+                  setValue('campusId', c?.id, { shouldValidate: false });
+                  setValue('campusOther', c ? undefined : campusText.trim() || undefined, {
+                    shouldValidate: false,
+                  });
+                }}
+              />
             </FormField>
           )}
 
