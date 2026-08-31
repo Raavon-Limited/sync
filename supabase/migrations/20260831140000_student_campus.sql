@@ -26,6 +26,18 @@
 -- waiting list with a real signup date and a real campus, which is the only
 -- honest way to decide where to open next.
 --
+-- WHY THIS IS VERSIONED 20260831140000 AND NOT ...120000
+--   ...120000 was an earlier, abandoned version of this migration that created
+--   a separate `public.schools` table. It was pushed before the approach
+--   changed to extending `campuses`. Rewriting the file in place kept the same
+--   version number, so the CLI saw ...120000 already applied and reported
+--   "Remote database is up to date" while running none of the new SQL - the
+--   database kept the schools design and the app expected the campus one.
+--
+--   A migration that has been applied anywhere is immutable. Change of approach
+--   means a NEW version, plus an explicit undo of what the old one did, which
+--   is the first section below.
+--
 -- ROLLBACK
 --   alter table public.profiles
 --     drop column if exists campus_id, drop column if exists campus_other;
@@ -34,6 +46,20 @@
 --     drop column if exists lat, drop column if exists lng,
 --     drop column if exists sort_order, drop column if exists is_serviced;
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Undo the abandoned `schools` design from 20260831120000.
+--
+-- Safe to drop: nothing in the application ever read it. The picker that would
+-- have populated profiles.school_id never worked - it queried campus columns
+-- that did not exist yet - so the column holds no answers from any real user,
+-- and the table holds nothing but its own seed.
+--
+-- Guarded with IF EXISTS so this migration is also correct on a database that
+-- never saw ...120000 at all.
+-- ---------------------------------------------------------------------------
+alter table public.profiles drop column if exists school_id;
+drop table if exists public.schools;
 
 alter table public.campuses
   -- The campus address, stored ONCE. A student picks a campus and the address
