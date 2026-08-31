@@ -39,6 +39,12 @@ import { Lock, Pencil, Phone, MapPin, Building2, Store } from 'lucide-react';
 import { Button, Input, Textarea, Spinner, Badge } from '@/components/ui';
 import { ImageField } from '@/components/forms';
 import { BusinessIdCard } from './business-id-card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useSession } from '@/providers/session-provider';
+import {
+  useMyVerificationCode,
+  useRotateVerificationCode,
+} from '@/modules/verification/hooks';
 import { SITE } from '@/config/site';
 import { useMyStorefront, useUpdateStorefront } from '@/modules/vendor/hooks';
 
@@ -56,10 +62,14 @@ const FIELD =
 
 export function BusinessProfileForm() {
   const { data: storefront, isPending, error } = useMyStorefront();
+  const { profile } = useSession();
+  const { data: cardCode } = useMyVerificationCode();
+  const rotate = useRotateVerificationCode();
   const update = useUpdateStorefront();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState(false);
+  const [confirmReissue, setConfirmReissue] = useState(false);
 
   if (isPending) return <Spinner />;
 
@@ -135,10 +145,18 @@ export function BusinessProfileForm() {
         <BusinessIdCard
           businessName={storefront.businessName}
           slug={storefront.slug}
+          code={cardCode}
+          // The PERSON, from `profiles`. On a landlord's or agent's card this
+          // is the headline — the thing being checked at a door is a human
+          // being, and a business name could belong to whoever is holding the
+          // card.
+          holderName={profile?.fullName}
           category={storefront.category}
           area={storefront.area}
           logoUrl={storefront.logoUrl}
           verificationStatus={storefront.verificationStatus}
+          onReissue={() => setConfirmReissue(true)}
+          reissuing={rotate.isPending}
         />
 
         <div className="border-line/10 bg-panel flex flex-col gap-4 rounded-2xl border p-5">
@@ -201,6 +219,21 @@ export function BusinessProfileForm() {
 
           {saved && <span className="text-sm text-emerald-600">Saved.</span>}
         </div>
+
+        {/* Reissuing is irreversible and instantly breaks cards that may be in
+            somebody's wallet, so it asks first and says exactly what happens. */}
+        <ConfirmDialog
+          open={confirmReissue}
+          onOpenChange={setConfirmReissue}
+          title="Reissue your ID card?"
+          description="Every card you have already printed or shared stops working immediately, and anyone scanning an old one sees “not a valid card”. You will need to download and reprint. Do this if a card has been lost, copied, or kept by someone who has left."
+          confirmLabel="Reissue"
+          destructive
+          loading={rotate.isPending}
+          onConfirm={() =>
+            rotate.mutate(undefined, { onSuccess: () => setConfirmReissue(false) })
+          }
+        />
       </div>
     );
   }

@@ -50,3 +50,34 @@ export function useDeleteDocument() {
     },
   });
 }
+
+// ── The ID card's address ───────────────────────────────────────────────────
+
+/**
+ * The caller's card code, for building their QR.
+ *
+ * Long `staleTime` because it only ever changes when the vendor deliberately
+ * reissues — and short-polling a capability is a capability in more places.
+ */
+export function useMyVerificationCode() {
+  const { userId } = useSession();
+  return useQuery({
+    queryKey: [...qk.vendorProfile.mine(), 'card-code', userId ?? ''] as const,
+    queryFn: () => api.fetchMyVerificationCode(db()),
+    enabled: !!userId,
+    staleTime: 60 * 60_000,
+  });
+}
+
+/** Reissue. Every previously printed card stops resolving immediately. */
+export function useRotateVerificationCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.rotateVerificationCode(db()),
+    onSuccess() {
+      // The card on screen has to redraw with the new code, or the vendor
+      // downloads one that no longer works.
+      qc.invalidateQueries({ queryKey: qk.vendorProfile.mine() });
+    },
+  });
+}

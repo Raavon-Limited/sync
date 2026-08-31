@@ -151,17 +151,27 @@ as $fn$
   -- No subscription, or an expired one: the cheapest active plan. Selected by
   -- price rather than by the literal code 'free', so renaming the entry plan
   -- does not silently remove everyone's limits.
-  select p.*
-    from public.plans p
-   where p.is_active
-     and not exists (
-       select 1 from public.subscriptions s
-        where s.vendor_id = p_vendor
-          and s.status in ('active', 'past_due')
-          and s.current_period_end > now()
-     )
-   order by p.price_kobo, p.sort_order
-   limit 1;
+  --
+  -- PARENTHESISED so the ORDER BY / LIMIT belong to THIS branch. Written flat,
+  -- they attach to the whole UNION instead, where the alias `p` is out of
+  -- scope - a union's output is an unnamed relation whose columns can only be
+  -- named by output label or ordinal. That is the "missing FROM-clause entry
+  -- for table p" this migration failed on. The branches are mutually exclusive
+  -- (the second's NOT EXISTS is the negation of the first's subquery), so the
+  -- limit was always meant for the fallback alone.
+  (
+    select p.*
+      from public.plans p
+     where p.is_active
+       and not exists (
+         select 1 from public.subscriptions s
+          where s.vendor_id = p_vendor
+            and s.status in ('active', 'past_due')
+            and s.current_period_end > now()
+       )
+     order by p.price_kobo, p.sort_order
+     limit 1
+  );
 $fn$;
 
 grant execute on function private.effective_plan(uuid) to authenticated, service_role;

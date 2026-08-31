@@ -105,3 +105,31 @@ export async function deleteDocument(db: Client, id: string) {
   const { error } = await db.from('verification_documents').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ── The ID card's address ───────────────────────────────────────────────────
+
+/**
+ * The caller's own card code.
+ *
+ * A CAPABILITY, not an identifier. Anyone holding it can open the card page,
+ * which shows a photograph — so the column is revoked from `anon` and
+ * `authenticated` at the table and only reachable through this owner-scoped
+ * function. Never put it in a list, a log, or a URL that is not the card.
+ */
+export async function fetchMyVerificationCode(db: Client): Promise<string | null> {
+  const { data, error } = await db.rpc('my_verification_code');
+  if (error) throw error;
+  return (data as string | null) ?? null;
+}
+
+/**
+ * Issue a new code, invalidating every card already printed.
+ *
+ * This is the "my card was lost" button, and it is destructive in a way worth
+ * confirming first: the old code stops resolving the moment this returns.
+ */
+export async function rotateVerificationCode(db: Client): Promise<string> {
+  const { data, error } = await db.rpc('rotate_verification_code');
+  if (error) throw error;
+  return data as string;
+}

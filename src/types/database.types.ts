@@ -3619,21 +3619,24 @@ export type Database = {
       submit_verification: { Args: Record<string, never>; Returns: string }
       claim_business_name: { Args: { p_name: string }; Returns: string }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
-      verify_business: {
-        Args: { p_slug: string }
+      my_verification_code: { Args: Record<string, never>; Returns: string | null }
+      rotate_verification_code: { Args: Record<string, never>; Returns: string }
+      verify_card: {
+        Args: { p_code: string }
         Returns: {
           found: boolean
           state: string
           business_name: string | null
-          slug: string
+          holder_name: string | null
+          photo_url: string | null
           category: string | null
           area: string | null
-          logo_url: string | null
           verified_at: string | null
           member_since: string | null
           store_count: number
           rating_avg: number | null
           rating_count: number
+          requirements: Json
           checked_at: string
         }[]
       }

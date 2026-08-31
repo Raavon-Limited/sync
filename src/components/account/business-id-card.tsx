@@ -28,7 +28,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Download, QrCode, ExternalLink, FileText } from 'lucide-react';
+import { Download, QrCode, ExternalLink, FileText, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { SITE, canonicalOrigin } from '@/config/site';
 import { renderQr } from '@/lib/qr';
@@ -82,24 +82,41 @@ function fit(s: string, max: number) {
 
 export interface BusinessIdCardProps {
   businessName: string;
+  /** Only used to name the downloaded file. The QR is addressed by `code`. */
   slug: string;
+  /**
+   * The card's unguessable address. Absent while it loads, which is why the
+   * QR is not drawn until it arrives — a code-less card would produce a QR
+   * pointing at `/v/undefined`, which resolves to "not a valid card" and looks
+   * like the vendor's own account is broken.
+   */
+  code?: string | null;
+  /** The person's name, when there is one. On an agent's card it leads. */
+  holderName?: string | null;
   category?: string | null;
   area?: string | null;
   logoUrl?: string | null;
   verificationStatus: VerificationStatus | string;
   memberSince?: string | null;
   storeCount?: number;
+  /** Reissue — invalidates every printed card. Omitted, the control hides. */
+  onReissue?: () => void;
+  reissuing?: boolean;
 }
 
 export function BusinessIdCard({
   businessName,
   slug,
+  code,
+  holderName,
   category,
   area,
   logoUrl,
   verificationStatus,
   memberSince,
   storeCount,
+  onReissue,
+  reissuing,
 }: BusinessIdCardProps) {
   const [busy, setBusy] = useState<null | 'png' | 'pdf'>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +129,11 @@ export function BusinessIdCard({
   // machine would otherwise carry `http://localhost:3000/v/...` permanently:
   // it would look perfect, print perfectly, and scan to nothing on anybody
   // else's phone. See canonicalOrigin().
-  const verifyUrl = useMemo(() => `${ORIGIN}/v/${slug}`, [slug]);
+  //
+  // Addressed by the CODE, not the slug. `/v/raavon-limited` is guessable from
+  // a business name, and this page shows a photograph of a person — anyone
+  // could have walked the slug list and harvested faces. See 20260901190000.
+  const verifyUrl = useMemo(() => (code ? `${ORIGIN}/v/${code}` : null), [code]);
 
   // The source art is 2000×2000 and 1.7MB. Inlining that verbatim would make
   // every downloaded card ~2.4MB of base64 for a watermark that is drawn 380px
@@ -137,7 +158,7 @@ export function BusinessIdCard({
 
   const common = {
     businessName,
-    slug,
+    holderName,
     category,
     area,
     verifyUrl,
@@ -149,7 +170,18 @@ export function BusinessIdCard({
   const svg = useMemo(
     () => buildCard({ ...common, logoHref: logoUrl ?? null, rosetteHref: rosette }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [businessName, slug, category, area, verifyUrl, state, memberSince, storeCount, logoUrl, rosette],
+    [
+      businessName,
+      holderName,
+      category,
+      area,
+      verifyUrl,
+      state,
+      memberSince,
+      storeCount,
+      logoUrl,
+      rosette,
+    ],
   );
 
   async function download(format: 'png' | 'pdf') {
@@ -190,31 +222,53 @@ export function BusinessIdCard({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" disabled={!!busy} onClick={() => download('png')} className="gap-2">
+        {/* Downloading before the code arrives would bake `/v/undefined` into a
+            file the vendor then prints. Disabled until there is something real
+            to encode. */}
+        <Button
+          size="sm"
+          disabled={!!busy || !verifyUrl}
+          onClick={() => download('png')}
+          className="gap-2"
+        >
           <Download className="size-4" /> {busy === 'png' ? 'Preparing…' : 'Download PNG'}
         </Button>
         <Button
           size="sm"
           variant="outline"
-          disabled={!!busy}
+          disabled={!!busy || !verifyUrl}
           onClick={() => download('pdf')}
           className="gap-2"
         >
           <FileText className="size-4" /> {busy === 'pdf' ? 'Preparing…' : 'PDF'}
         </Button>
-        <Button size="sm" variant="ghost" asChild className="gap-2">
-          <a href={verifyUrl} target="_blank" rel="noreferrer">
-            <ExternalLink className="size-4" /> Test the code
-          </a>
-        </Button>
+        {verifyUrl && (
+          <Button size="sm" variant="ghost" asChild className="gap-2">
+            <a href={verifyUrl} target="_blank" rel="noreferrer">
+              <ExternalLink className="size-4" /> Test the code
+            </a>
+          </Button>
+        )}
+        {onReissue && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!!busy || reissuing}
+            onClick={onReissue}
+            className="text-content-muted hover:text-coral gap-2"
+          >
+            <RotateCcw className="size-4" /> {reissuing ? 'Reissuing…' : 'Lost your card?'}
+          </Button>
+        )}
       </div>
 
       <p className="text-content-muted flex items-start gap-2 text-xs">
         <QrCode className="mt-0.5 size-3.5 shrink-0" />
         {/* Said plainly, because it is the reason the card is worth carrying:
             the code is not a picture of a status, it is a lookup. */}
-        Anyone can scan this code to see your status live — they do not need a Sync account. If
-        your verification changes, every card already printed shows the new answer.
+        Whoever scans this sees your status live — they need no Sync account, and if your
+        verification changes, every card already printed shows the new answer. The link works
+        only from the card, so keep a lost one from being used by reissuing it above.
       </p>
 
       {error && <p className="text-coral text-xs">{error}</p>}
@@ -226,30 +280,38 @@ export function BusinessIdCard({
 
 function buildCard(o: {
   businessName: string;
-  slug: string;
+  holderName?: string | null;
   category?: string | null;
   area?: string | null;
-  verifyUrl: string;
+  verifyUrl: string | null;
   state: { label: string; colour: string };
   memberSince?: string | null;
   storeCount?: number;
   logoHref: string | null;
   rosetteHref: string | null;
 }) {
-  const qr = renderQr(o.verifyUrl, {
-    size: 150,
-    dark: LIME_DEEP,
-    light: CREAM,
-    margin: 2,
-    radius: 0.34,
-  });
+  // No code yet: draw the panel empty rather than encoding a placeholder. A QR
+  // that resolves to "not a valid card" is worse than an obviously blank one.
+  const qr = o.verifyUrl
+    ? renderQr(o.verifyUrl, { size: 150, dark: LIME_DEEP, light: CREAM, margin: 2, radius: 0.34 })
+    : null;
 
   const since = o.memberSince
     ? new Date(o.memberSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
     : null;
 
-  const meta = [o.category, o.area].filter(Boolean).join(' · ');
-  const initial = o.businessName.trim().charAt(0).toUpperCase() || 'S';
+  // THE PERSON LEADS WHEN THERE IS ONE.
+  //
+  // A shop's card answers "is this business real". An agent's card answers
+  // "should I open this door", and the thing being checked is a human being —
+  // so their name is the headline and the business becomes the context under
+  // it. Falling back to the business name keeps the card correct for a vendor
+  // who never filled in a personal name.
+  const headline = o.holderName?.trim() || o.businessName;
+  const sub = [o.holderName?.trim() ? o.businessName : null, o.category, o.area]
+    .filter(Boolean)
+    .join(' · ');
+  const initial = headline.trim().charAt(0).toUpperCase() || 'S';
 
   // Laid out on a grid rather than by eye: one gutter, one baseline rhythm.
   const PAD = 44;
@@ -306,8 +368,8 @@ function buildCard(o: {
   <circle cx="${PAD + 34}" cy="128" r="34" fill="none" stroke="${GOLD}" stroke-width="1.5"/>
 
   <text x="${PAD + 88}" y="122" fill="${CREAM}" font-size="30" font-weight="700"
-        letter-spacing="-0.5">${esc(fit(o.businessName, 20))}</text>
-  ${meta ? `<text x="${PAD + 88}" y="148" fill="${MUTED}" font-size="14">${esc(fit(meta, 30))}</text>` : ''}
+        letter-spacing="-0.5">${esc(fit(headline, 20))}</text>
+  ${sub ? `<text x="${PAD + 88}" y="148" fill="${MUTED}" font-size="14">${esc(fit(sub, 34))}</text>` : ''}
 
   <!-- Status. Quiet next to the code on purpose: this is the convenience, the
        QR is the check. -->
@@ -334,7 +396,11 @@ function buildCard(o: {
 
   <text x="${PAD}" y="356" fill="${MUTED}" font-size="10" letter-spacing="1.6">SCAN TO VERIFY</text>
   <text x="${PAD}" y="378" fill="${GOLD}" font-size="12">${esc(
-    fit(o.verifyUrl.replace(/^https?:\/\/(www\.)?/, ''), 38),
+    // The code is deliberately NOT printed as readable text. Writing it out
+    // would let anyone who photographs the card type it in later — the whole
+    // point of an unguessable address is that it lives in the QR and nowhere
+    // a passing glance can capture.
+    o.verifyUrl ? `${SITE.name.toLowerCase()} · scan the code, do not type it` : 'Preparing…',
   )}</text>
 
   <text x="${PAD}" y="${H - 34}" fill="#6a6a72" font-size="10" letter-spacing="1.2">
@@ -344,7 +410,7 @@ function buildCard(o: {
   <!-- The code, on its own light panel, fully inside the card's padding. -->
   <g transform="translate(${QR_X} ${QR_Y})">
     <rect width="${QR_BOX}" height="${QR_BOX}" rx="22" fill="${CREAM}"/>
-    <g transform="translate(14 14)">${qr.inner}</g>
+    <g transform="translate(14 14)">${qr ? qr.inner : ''}</g>
   </g>
   <text x="${QR_X + QR_BOX / 2}" y="${QR_Y + QR_BOX + 24}" fill="${MUTED}" font-size="10"
         letter-spacing="1.4" text-anchor="middle">POINT A CAMERA HERE</text>
