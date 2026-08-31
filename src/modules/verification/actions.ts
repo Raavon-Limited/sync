@@ -42,9 +42,29 @@ import type { VerificationResult } from './types';
  * TODO: when the identity provider (Smile ID / Dojah) is live, verify ID
  * server-side here, and persist to a `vendor_verifications` table.
  */
+/**
+ * One uploaded file, already in Storage, described well enough for a reviewer
+ * to know what they are opening.
+ *
+ * `subtype` is the specific document — 'nin', 'passport' — and it is the whole
+ * reason this replaced a bare `string[]` of paths. `doc_type: 'gov_id'` alone
+ * told the review queue that SOME identity document had arrived and nothing
+ * about which, so a reviewer had to open every file to find out what it was
+ * meant to be.
+ */
+export interface UploadedDocument {
+  /** Matches a `key` in modules/verification/requirements. */
+  docType: string;
+  /** A `doc_subtype` value from that requirement's `options`. */
+  subtype?: string | null;
+  /** What the reviewer sees in the queue, e.g. "NIN slip or card (front)". */
+  title: string;
+  storagePath: string;
+}
+
 export async function submitVendorOnboarding(
   input: VendorOnboardingInput,
-  documentPaths: string[] = [],
+  documents: UploadedDocument[] = [],
 ): Promise<VerificationResult> {
   const parsed = vendorOnboardingSchema.safeParse(input);
   if (!parsed.success) {
@@ -70,7 +90,7 @@ export async function submitVendorOnboarding(
       trade: vendorCategory === 'tradesman' ? (trade ?? null) : null,
       business_address: businessAddress,
       area: area ?? null,
-      documents: documentPaths,
+      documents: documents.map((d) => d.storagePath),
     },
   });
   if (error) {
@@ -139,6 +159,39 @@ export async function submitVendorOnboarding(
   // `submit_verification` writes vendor_profiles — the authority — and its
   // mirror trigger carries the value to profiles, which is what the dashboard
   // gate reads. See 20260901100000.
+  // THE DOCUMENTS HAVE TO LAND IN A TABLE TOO, and until now they did not.
+  //
+  // The uploaded paths went into `user_metadata.documents` and nowhere else.
+  // `verification_documents` is what /admin/vendors reads, so every vendor who
+  // uploaded an ID reached a reviewer showing "0 of 0 documents" — and since
+  // set_verification_status refuses to verify an account with nothing
+  // approved, the submission could not be actioned at all. The files existed in
+  // Storage with nothing pointing at them.
+  //
+  // BEFORE submit_verification, so the queue entry a reviewer opens already has
+  // its documents attached. The staff notification fires off the status change;
+  // arriving at an empty folder because the rows landed a moment later is the
+  // race worth avoiding.
+  //
+  // Best-effort, deliberately. RLS lets an owner insert their own rows, but a
+  // failure here must not strand somebody whose files uploaded and whose
+  // details saved — the submission still goes through and the gap is visible
+  // to staff as a missing document rather than as a lost account.
+  if (documents.length) {
+    const { error: docsError } = await supabase.from('verification_documents').insert(
+      documents.map((d) => ({
+        owner_id: user.id,
+        doc_type: d.docType,
+        doc_subtype: d.subtype ?? null,
+        title: d.title,
+        storage_path: d.storagePath,
+      })),
+    );
+    if (docsError) {
+      console.error('[verification] could not record documents', docsError.message);
+    }
+  }
+
   const { error: submitError } = await supabase.rpc('submit_verification');
   if (submitError) {
     return {

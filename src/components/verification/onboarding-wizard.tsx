@@ -41,6 +41,13 @@ import { CharCount, FormField } from '@/components/forms';
 import { AddressAutocomplete } from '@/components/forms/address-autocomplete';
 import { toast } from '@/components/ui/toast';
 import { VerificationSubmittedModal } from '@/components/verification/verification-submitted-modal';
+import {
+  IdentityDocumentUpload,
+  EMPTY_IDENTITY_DOCUMENT,
+  MAX_DOCUMENT_BYTES,
+  type IdentityDocument,
+} from '@/components/verification/document-upload';
+import { requirementSpec } from '@/modules/verification/requirements';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -49,7 +56,7 @@ import {
   type VendorCategory,
   type VendorOnboardingInput,
 } from '@/lib/validations';
-import { submitVendorOnboarding } from '@/modules/verification/actions';
+import { submitVendorOnboarding, type UploadedDocument } from '@/modules/verification/actions';
 
 const STEPS = ['Profile', 'Business', 'Category', 'Documents', 'Review'] as const;
 
@@ -100,6 +107,12 @@ export interface OnboardingWizardProps {
 export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  // The government ID: which one, and its two sides. Separate from `docs`
+  // because it is the one document with a subtype the reviewer has to record.
+  const [idDoc, setIdDoc] = useState<IdentityDocument>(EMPTY_IDENTITY_DOCUMENT);
+  const [docError, setDocError] = useState<string | null>(null);
+  // Everything else the requirements ask a business for — CAC, proof of
+  // address, property papers. Still a plain list: they have no front and back.
   const [docs, setDocs] = useState<File[]>([]);
   // Where Continue goes, and whether the modal is up. Held together because
   // the destination is only known once the server has told us which business
@@ -140,7 +153,42 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
     4: [],
   };
 
+  /**
+   * What the documents step will accept before it lets you past.
+   *
+   * Uploading is OPTIONAL — the copy says so and a business can add documents
+   * later — but a HALF-uploaded document is not the same as none. Picking
+   * "Driver's licence" and attaching only the front produces a review that
+   * cannot be completed and a vendor who thinks they are done.
+   */
+  function documentsProblem(): string | null {
+    for (const [side, file] of [
+      ['front', idDoc.front],
+      ['back', idDoc.back],
+    ] as const) {
+      if (file && file.size > MAX_DOCUMENT_BYTES) {
+        return `The ${side} of your document is over 10 MB. Try a smaller photo.`;
+      }
+    }
+    const tooBig = docs.find((f) => f.size > MAX_DOCUMENT_BYTES);
+    if (tooBig) return `"${tooBig.name}" is over 10 MB. Try a smaller file.`;
+
+    // Nothing started is fine. Something started has to be finished.
+    if (!idDoc.subtype) return null;
+    if (!idDoc.front) return 'Add the front of your document, or choose Change to start over.';
+    const needsBack = idDoc.subtype !== 'passport';
+    if (needsBack && !idDoc.back) {
+      return 'Add the back of your document, or choose Change to start over.';
+    }
+    return null;
+  }
+
   async function goNext() {
+    if (step === 3) {
+      const problem = documentsProblem();
+      setDocError(problem);
+      if (problem) return;
+    }
     const fields = stepFields[step];
     if (fields.length === 0 || (await trigger(fields))) {
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -153,23 +201,68 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   }
 
   async function onSubmit(values: VendorOnboardingInput) {
-    const paths: string[] = [];
-    if (docs.length) {
+    const problem = documentsProblem();
+    if (problem) {
+      setDocError(problem);
+      setStep(3);
+      return;
+    }
+
+    // Each file is described before it is uploaded, so what reaches
+    // `verification_documents` says WHICH document and WHICH side rather than
+    // just naming a path in a bucket.
+    const idLabel =
+      requirementSpec('gov_id')?.options?.find((o) => o.value === idDoc.subtype)?.label ??
+      'Government ID';
+    const queued: { docType: string; subtype: string | null; title: string; file: File }[] = [];
+    if (idDoc.subtype && idDoc.front) {
+      queued.push({
+        docType: 'gov_id',
+        subtype: idDoc.subtype,
+        title: `${idLabel} (front)`,
+        file: idDoc.front,
+      });
+    }
+    if (idDoc.subtype && idDoc.back) {
+      queued.push({
+        docType: 'gov_id',
+        subtype: idDoc.subtype,
+        title: `${idLabel} (back)`,
+        file: idDoc.back,
+      });
+    }
+    for (const file of docs) {
+      // No subtype: these arrive unlabelled and a reviewer names them from the
+      // file itself. Better an honest null than a guessed category.
+      queued.push({ docType: 'biz_reg', subtype: null, title: file.name, file });
+    }
+
+    const uploaded: UploadedDocument[] = [];
+    if (queued.length) {
       try {
         const supabase = createClient();
-        for (const file of docs) {
-          const path = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+        for (const [i, item] of queued.entries()) {
+          // The index breaks ties: front and back are uploaded in the same
+          // millisecond, so a timestamp alone had them overwrite each other.
+          const path = `${Date.now()}-${i}-${item.file.name.replace(/\s+/g, '-')}`;
           const { error } = await supabase.storage
             .from('vendor-verification')
-            .upload(path, file, { upsert: true });
-          if (!error) paths.push(path);
+            .upload(path, item.file, { upsert: true });
+          if (!error) {
+            uploaded.push({
+              docType: item.docType,
+              subtype: item.subtype,
+              title: item.title,
+              storagePath: path,
+            });
+          }
         }
       } catch {
         // Storage not wired yet - submit the details anyway.
       }
     }
 
-    const res = await submitVendorOnboarding(values, paths);
+    const res = await submitVendorOnboarding(values, uploaded);
     if (!res.ok) {
       toast(res.error);
       return;
@@ -186,6 +279,16 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
 
   const v = getValues();
   const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? '—';
+
+  // What the review row says about the ID: which document, and how much of it.
+  const idSummary = (() => {
+    if (!idDoc.subtype) return 'None yet';
+    const label =
+      requirementSpec('gov_id')?.options?.find((o) => o.value === idDoc.subtype)?.label ??
+      'Government ID';
+    const sides = [idDoc.front && 'front', idDoc.back && 'back'].filter(Boolean);
+    return sides.length ? `${label} · ${sides.join(' + ')}` : label;
+  })();
 
   return (
     // In a panel the wizard OWNS the height: it becomes the flex column that
@@ -398,39 +501,65 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
 
           {/* Step 4 - Documents */}
           {step === 3 && (
-            <div className="flex flex-col gap-3">
-              <p className="text-content-muted text-sm">
-                Upload your ID and any business documents (CAC, proof of address, property papers).
-                Optional now — you can add them later.
-              </p>
-              <label
-                htmlFor="docs"
-                className="border-line/30 hover:border-line/50 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center"
-              >
-                <Upload className="text-content-muted h-7 w-7" />
-                <span className="text-content-muted text-sm">Tap to add documents</span>
-              </label>
-              <input
-                id="docs"
-                type="file"
-                multiple
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={onDocs}
+            <div className="flex flex-col gap-6">
+              {/* The identity document, chosen then uploaded side by side. */}
+              <IdentityDocumentUpload
+                value={idDoc}
+                onChange={(next) => {
+                  setIdDoc(next);
+                  setDocError(null);
+                }}
+                error={docError ?? undefined}
               />
-              {docs.length > 0 && (
-                <ul className="flex flex-col gap-2">
-                  {docs.map((f, i) => (
-                    <li
-                      key={i}
-                      className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <FileText className="text-content-muted h-4 w-4 shrink-0" />
-                      <span className="truncate">{f.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+
+              {/* Everything else, kept but subordinate. requirements.ts asks a
+                  business for a CAC certificate and a proof of address as well
+                  as an ID; dropping this control when the ID flow arrived would
+                  have quietly stopped collecting either. */}
+              <div className="border-line/10 flex flex-col gap-3 border-t pt-5">
+                <div>
+                  <h3 className="text-content text-base font-semibold">Business documents</h3>
+                  <p className="text-content-muted text-sm">
+                    CAC certificate, proof of address or property papers. Optional now — you can add
+                    them later.
+                  </p>
+                </div>
+                <label
+                  htmlFor="docs"
+                  className="border-line/20 hover:border-line/40 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center"
+                >
+                  <Upload className="text-content-muted h-6 w-6" />
+                  <span className="text-content-muted text-sm">Tap to add documents</span>
+                </label>
+                <input
+                  id="docs"
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={onDocs}
+                />
+                {docs.length > 0 && (
+                  <ul className="flex flex-col gap-2">
+                    {docs.map((f, i) => (
+                      <li
+                        key={i}
+                        className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <FileText className="text-content-muted h-4 w-4 shrink-0" />
+                        <span className="flex-1 truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDocs((d) => d.filter((_, j) => j !== i))}
+                          className="text-coral shrink-0 cursor-pointer text-xs"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
 
@@ -444,7 +573,11 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                 ['Offers', categoryLabel + (v.trade ? ` · ${v.trade}` : '')],
                 ['Address', v.businessAddress],
                 ['Area', v.area || 'Not set'],
-                ['Documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
+                // Named, not counted. "1 file" told a vendor nothing about
+                // whether they had attached the right thing, or both sides of
+                // it — which is the only question this row is here to answer.
+                ['Identity document', idSummary],
+                ['Business documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
               ].map(([k, val]) => (
                 <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                   <dt className="text-content-muted">{k}</dt>
