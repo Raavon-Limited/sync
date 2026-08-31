@@ -266,9 +266,15 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
 
   return (
     <>
-      {/* Portalled: this form renders inside the auth card, whose backdrop-blur
-          makes it a containing block for fixed positioning - a plain
-          `fixed inset-0` here covered the CARD, not the screen. */}
+      {/* Portalled, and it stays that way. This form renders inside the auth
+          card, which used to carry a backdrop-blur - and a filtered element is
+          a containing block for fixed positioning, so a plain `fixed inset-0`
+          here covered the CARD rather than the screen.
+
+          The blur is gone now (see auth-layout: it was flashing a lime seam),
+          so `fixed` would happen to work again. The portal stays regardless:
+          it does not depend on an ancestor's filter, transform or perspective,
+          any of which would silently reintroduce the bug. */}
       {redirecting && (
         <FullScreenOverlay>
           <BrandLoader label="Signing you in…" />
@@ -283,8 +289,8 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
             <div>
               <p className="text-content text-sm font-medium">Which account?</p>
               <p className="text-content-muted mt-1 text-xs">
-                This login holds more than one. You can switch at any time from the menu
-                under your avatar.
+                This login holds more than one. You can switch at any time from the menu under your
+                avatar.
               </p>
             </div>
             {choices
@@ -300,9 +306,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
                     <span className="text-content block text-sm font-medium">
                       {ROLE_HOME[r].label}
                     </span>
-                    <span className="text-content-muted block text-xs">
-                      {ROLE_HOME[r].blurb}
-                    </span>
+                    <span className="text-content-muted block text-xs">{ROLE_HOME[r].blurb}</span>
                   </span>
                   <ArrowRight className="text-content-muted h-4 w-4 shrink-0" />
                 </button>

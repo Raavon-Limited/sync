@@ -43,7 +43,7 @@ export function AuthLayout({
         </Link>
         <div>
           <p className="eyebrow text-lime">{eyebrow}</p>
-          <h1 className="font-display mt-2 text-3xl leading-[1.05] tracking-tight md:text-section">
+          <h1 className="font-display md:text-section mt-2 text-3xl leading-[1.05] tracking-tight">
             {title}
           </h1>
           <p className="text-cream/70 mt-4 hidden max-w-md text-sm md:block">{SITE.description}</p>
@@ -66,30 +66,37 @@ export function AuthLayout({
             through - not a CSS gradient - and, being absolutely positioned past
             this pane's edges (-bottom, -right) inside an `overflow-y-auto`
             container, they added scrollable area and made an otherwise
-            short form scroll. The doodle behind is what the glass reads. */}
-        {/* Ceramic glass.
-            A flat tint plus blur alone reads as a slightly different rectangle.
-            Three things make a pane look like a thick, glazed object:
+            short form scroll. */}
 
-            1. An INSET RIM - a bright hairline just inside the top edge and a
-               dark one inside the bottom. This is the THICKNESS, and it is the
-               single biggest difference from a coloured overlay: it is what
-               makes the pane look like something you could pick up.
-            2. A LARGE radius. Ceramic has no sharp corners; 2rem reads as a
-               moulded object where 1rem reads as a UI card.
-            3. Saturated blur, so the blobs above bleed through as COLOUR
-               rather than grey.
+        {/* A SOLID PANEL. The frosted-glass version of this card is gone, and
+            the reason is worth keeping so it does not get rebuilt.
 
-            The fill is FLAT, deliberately. A gradient was tried and dropped -
-            it tips the effect from a clean glaze towards a lit 3D surface, and
-            the rim already supplies the light direction.
+            It was `bg-cream/8` + `backdrop-blur-2xl backdrop-saturate-200` over
+            an inset rim, and it produced a LIME BAND that flashed down the
+            right-hand side of the form. It was never a gradient - grep the CSS
+            and there is no lime gradient anywhere in the build - which is
+            exactly why it was so hard to find.
 
-            One arbitrary shadow because the inset highlight, the inset floor
-            and the cast shadow must compose in a single box-shadow; Tailwind's
-            shadow utilities cannot express that stack. */}
-        <div
-          className="border-cream/12 bg-cream/8 w-full max-w-lg rounded-[2rem] border p-6 shadow-[inset_0_1px_0_0_rgba(244,241,232,0.28),inset_0_-1px_0_0_rgba(14,14,18,0.4),0_24px_60px_-12px_rgba(0,0,0,0.65)] backdrop-blur-2xl backdrop-saturate-200 md:p-8"
-        >
+            It is a backdrop-filter compositing artifact. A 40px blur over a
+            full-height element is rasterised in TILES, and the tile seam shows
+            as a hard vertical edge; `saturate(200%)` then doubles the chroma of
+            whatever tiny hue difference lands either side of it, turning an
+            invisible seam into a visible green one. It flashes rather than
+            sits still because the tiles are re-rasterised on scroll, on focus,
+            on keyboard open - which is also why it never showed up in a static
+            review of the CSS.
+
+            Blur radius, saturation and translucency all feed it, so the fix is
+            to stop compositing a backdrop at all rather than to tune the
+            numbers. An opaque panel cannot sample what is behind it.
+
+            The doodle backdrop is untouched and still reads AROUND the card;
+            what changed is that it no longer reads THROUGH it.
+
+            The cast shadow stays: it is a plain drop shadow, it is what keeps
+            the panel from floating ambiguously on the ink, and it is not part
+            of the effect that was removed. */}
+        <div className="border-cream/10 bg-panel w-full max-w-lg rounded-[2rem] border p-6 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.65)] md:p-8">
           {children}
         </div>
       </main>

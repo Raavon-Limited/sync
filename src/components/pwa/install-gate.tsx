@@ -69,6 +69,24 @@ const WEB_ROUTES = [
   '/login',
   '/signup',
   '/verify',
+  // THE WAY BACK IN. These were missed when auth was allowlisted, and the two
+  // of them fail differently:
+  //
+  //   /forgot-password  is reached by clicking "Forgot password?" ON /login —
+  //                     an allowed page handing you straight to a blocked one.
+  //                     Someone who cannot remember their password is exactly
+  //                     the person who cannot get past a wall that says "sign
+  //                     in or install".
+  //   /reset-password   is where the emailed link LANDS. Whatever device opens
+  //                     that email decides, and it is routinely one with no app
+  //                     installed and no session. Gating it turns a working
+  //                     reset link into a dead end, and the link expires while
+  //                     they are stuck behind it.
+  //
+  // Neither is a route worth converting anybody on: password recovery is not
+  // browsing, it is someone locked out of an account they already have.
+  '/forgot-password',
+  '/reset-password',
   // ID CARD CHECKS. `/v/<code>` is where a QR on a vendor's or agent's card
   // resolves, and the person scanning it is a stranger — a tenant at their own
   // front door deciding whether the caller is who the platform says they are.
@@ -143,8 +161,8 @@ export function InstallGate({ signedIn = false }: { signedIn?: boolean }) {
           Get the {SITE.name} app
         </h1>
         <p className="text-content-muted mt-3 text-sm">
-          {SITE.name} lives on your home screen. Add it once and everything -
-          hostels, food, events - opens straight from your phone.
+          {SITE.name} lives on your home screen. Add it once and everything - hostels, food, events
+          - opens straight from your phone.
         </p>
 
         {/* Chromium: a real install dialog. */}
