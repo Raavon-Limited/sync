@@ -33,6 +33,7 @@ import {
   VERIFICATION_PRESENTATION,
   type VerificationState,
 } from '@/modules/verification/public-queries';
+import { requirementSpec } from '@/modules/verification/requirements';
 import { Rosette } from '@/components/brand/rosette';
 import { SITE } from '@/config/site';
 
@@ -168,21 +169,43 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               {result.requirements.length > 0 && (
                 <div className="border-line/10 mt-1 w-full rounded-xl border p-3 text-left">
                   <p className="text-content-muted mb-2 font-mono text-[10px] tracking-widest uppercase">
-                    Checks by {SITE.name}
+                    Documents {SITE.name} has checked
                   </p>
-                  <ul className="flex flex-col gap-1.5">
-                    {result.requirements.map((r) => (
-                      <li key={r.key} className="flex items-center gap-2 text-sm">
-                        {r.met ? (
-                          <Check className="size-4 shrink-0 text-emerald-500" />
-                        ) : (
-                          <X className="text-content-muted size-4 shrink-0" />
-                        )}
-                        <span className={r.met ? 'text-content' : 'text-content-muted'}>
-                          {r.label}
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="flex flex-col gap-2.5">
+                    {result.requirements.map((r) => {
+                      // Wording comes from the shared spec, so this page and
+                      // the vendor's own upload screen cannot drift into
+                      // describing the same check differently.
+                      const spec = requirementSpec(r.key);
+                      return (
+                        <li key={r.key} className="flex items-start gap-2 text-sm">
+                          {r.met ? (
+                            <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                          ) : (
+                            <X className="text-content-muted mt-0.5 size-4 shrink-0" />
+                          )}
+                          <span className="flex min-w-0 flex-col">
+                            <span className={r.met ? 'text-content' : 'text-content-muted'}>
+                              {spec?.label ?? r.label}
+                              {!r.met && (
+                                <span className="text-content-muted"> — not provided</span>
+                              )}
+                            </span>
+                            {/* The documents by the names people use — NIN,
+                                CAC. It lists what SATISFIES the check rather
+                                than naming one, because a government ID can be
+                                a NIN slip, a licence or a passport and the
+                                record does not say which. Printing "NIN
+                                verified" over a passport would be a false
+                                statement on the one page whose job is being
+                                true. */}
+                            {spec?.accepts && (
+                              <span className="text-content-muted text-xs">{spec.accepts}</span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}

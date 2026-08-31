@@ -28,28 +28,22 @@ import { createClient } from '@/lib/supabase/client';
 import { useMyDocuments, useUploadDocument } from '@/modules/verification/hooks';
 import { useSession } from '@/providers/session-provider';
 import type { DocStatus, DocumentItem } from '@/modules/vendor/types';
+import { VERIFICATION_REQUIREMENTS } from '@/modules/verification/requirements';
 
-/** What Sync asks every vendor for. Product config, not database state. */
-const REQUIRED_DOCS: { docType: string; title: string; description: string; colour: string }[] = [
-  {
-    docType: 'gov_id',
-    title: 'Government ID',
-    description: "National ID card, Driver's licence, or International passport",
-    colour: 'bg-violet-50 text-violet-500',
-  },
-  {
-    docType: 'biz_reg',
-    title: 'Business registration',
-    description: 'CAC certificate or business name registration',
-    colour: 'bg-blue-50 text-blue-500',
-  },
-  {
-    docType: 'proof_address',
-    title: 'Proof of address',
-    description: 'A utility bill or tenancy agreement from the last 3 months',
-    colour: 'bg-amber-50 text-amber-500',
-  },
-];
+/**
+ * What Sync asks every vendor for.
+ *
+ * Product config, not database state — and now shared with the public card
+ * page, which lists the same checks to whoever scans a vendor's ID. Two copies
+ * of this list would drift, and the drift would show up as a card claiming a
+ * check the vendor was never asked to pass.
+ */
+const REQUIRED_DOCS = VERIFICATION_REQUIREMENTS.map((r) => ({
+  docType: r.key,
+  title: r.label,
+  description: r.description,
+  colour: r.colour,
+}));
 
 const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
   approved: { label: 'Approved', cls: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },

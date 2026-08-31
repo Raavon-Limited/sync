@@ -69,6 +69,17 @@ const WEB_ROUTES = [
   '/login',
   '/signup',
   '/verify',
+  // ID CARD CHECKS. `/v/<code>` is where a QR on a vendor's or agent's card
+  // resolves, and the person scanning it is a stranger — a tenant at their own
+  // front door deciding whether the caller is who the platform says they are.
+  //
+  // Gating this is worse than pointless. They have no Sync account and no
+  // reason to want one; they have a phone camera and a decision to make in the
+  // next ten seconds. An install prompt in that moment does not convert
+  // anybody, it just withholds the answer — and the likely outcome is that
+  // they let the person in anyway, unverified, which is the exact failure the
+  // card exists to prevent.
+  '/v',
 ];
 
 function isWebRoute(pathname: string): boolean {
