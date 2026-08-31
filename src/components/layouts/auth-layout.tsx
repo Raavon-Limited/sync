@@ -48,12 +48,26 @@ export function AuthLayout({
         </p>
       </aside>
 
-      <main className="bg-surface-deep relative isolate flex flex-1 items-center justify-center overflow-y-auto p-6 md:h-dvh md:p-10">
-        {/* Ink lines on the light pane, much fainter: this side has form
-            fields on it, and a pattern that competes with an input is a
-            legibility problem, not a texture. */}
-        <DoodleBackdrop tile={520} className="text-ink/5 dark:text-cream/5" />
-        <div className="w-full max-w-lg py-6">{children}</div>
+      {/* p-4 on mobile, not p-6: the card below adds its own p-6, and two
+          24px insets on a 375px screen left the inputs in a 279px column. */}
+      <main className="bg-surface-deep relative isolate flex flex-1 items-center justify-center overflow-y-auto p-4 md:h-dvh md:p-10">
+        {/* The doodle now reads THROUGH the glass card below rather than
+            sitting behind bare form fields, so it can carry more weight than
+            the /5 it had when the inputs sat directly on it. */}
+        <DoodleBackdrop tile={520} className="text-ink/8 dark:text-cream/8" />
+
+        {/* Glass card: the form floats over the townscape instead of lying on
+            it. Three parts do the work, and all three are needed -
+              - a SEMI-TRANSPARENT ground, so the drawing shows through at all;
+              - backdrop-blur, so what shows through is soft enough to read
+                form labels over. Blur without transparency is a no-op; the
+                reverse is a legibility problem.
+              - a hairline border catching light at the edge, which is what
+                makes it read as a pane of glass rather than a faded box.
+            shadow-pop lifts it off the surface - the "float". */}
+        <div className="border-line/15 bg-panel/60 shadow-pop w-full max-w-lg rounded-3xl border p-6 backdrop-blur-xl md:p-8">
+          {children}
+        </div>
       </main>
     </div>
   );
