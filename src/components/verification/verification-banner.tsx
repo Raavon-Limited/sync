@@ -19,20 +19,28 @@
  * wrapping into the other. Below that the two ends stack and the link sits
  * under the message, still left-aligned with it. The icon stays on the first
  * line of the text rather than centring against a two-line paragraph.
+ *
+ * "VERIFY NOW" OPENS A PANEL, IT DOES NOT NAVIGATE. It used to be a Link to
+ * /onboarding, which answered a prompt about the dashboard by replacing the
+ * dashboard. See VerifyNowSheet for why the panel is the right shape here and
+ * why the route still exists for first-run signup.
  */
-import Link from 'next/link';
+'use client';
+
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { VerificationStatus } from '@/modules/verification/types';
+import type { VendorOnboardingInput } from '@/lib/validations';
+import { VerifyNowSheet } from './verify-now-sheet';
 
 interface VerificationBannerProps {
   status: VerificationStatus;
-  /** Where "Verify Now" goes. */
-  href: string;
+  /** Prefill for the wizard the "Verify Now" panel opens. */
+  initial: Partial<VendorOnboardingInput>;
   className?: string;
 }
 
-export function VerificationBanner({ status, href, className }: VerificationBannerProps) {
+export function VerificationBanner({ status, initial, className }: VerificationBannerProps) {
   if (status === 'verified') return null;
 
   const awaitingReview = status === 'pending';
@@ -46,9 +54,7 @@ export function VerificationBanner({ status, href, className }: VerificationBann
         // Waiting on a reviewer is not an error, and colouring it like one
         // tells someone who has done everything asked of them that something
         // is wrong. Same strip, neutral palette.
-        awaitingReview
-          ? 'border-line/15 bg-surface-deep'
-          : 'border-coral/40 bg-coral/10',
+        awaitingReview ? 'border-line/15 bg-surface-deep' : 'border-coral/40 bg-coral/10',
         className,
       )}
     >
@@ -75,14 +81,19 @@ export function VerificationBanner({ status, href, className }: VerificationBann
       </div>
 
       {/* Nothing to press while a reviewer has it — a second submission is the
-          only thing this link could produce. */}
+          only thing this control could produce. */}
       {!awaitingReview && (
-        <Link
-          href={href}
-          className="text-coral shrink-0 pl-[26px] text-sm font-semibold tracking-[0.1px] underline underline-offset-2 sm:pl-0"
-        >
-          Verify Now
-        </Link>
+        <VerifyNowSheet initial={initial}>
+          {/* A button, not a link: it opens a panel on this page rather than
+              going anywhere, and a link that navigates nowhere is a promise
+              the middle-click and the status bar both break. */}
+          <button
+            type="button"
+            className="text-coral shrink-0 cursor-pointer pl-[26px] text-sm font-semibold tracking-[0.1px] underline underline-offset-2 sm:pl-0"
+          >
+            Verify Now
+          </button>
+        </VerifyNowSheet>
       )}
     </div>
   );

@@ -36,11 +36,6 @@ export interface DashboardContentConfig {
    * so inviting them to verify again is asking for a duplicate submission.
    */
   pendingBadge: string;
-  /**
-   * Where that badge sends them. Both business roles clear verification in the
-   * same `/onboarding` wizard - see the note in (auth)/verify/verify-form.
-   */
-  verifyHref: string;
 }
 
 export const DASHBOARD_CONTENT: Record<DashboardVariant, DashboardContentConfig> = {
@@ -53,7 +48,6 @@ export const DASHBOARD_CONTENT: Record<DashboardVariant, DashboardContentConfig>
     gatedActivity: 'taking orders',
     unverifiedBadge: 'Verify your store',
     pendingBadge: 'Verification pending',
-    verifyHref: '/onboarding',
   },
   landlord: {
     eyebrow: 'LANDLORD DASHBOARD',
@@ -63,6 +57,5 @@ export const DASHBOARD_CONTENT: Record<DashboardVariant, DashboardContentConfig>
     gatedActivity: 'letting your rooms',
     unverifiedBadge: 'Verify your account',
     pendingBadge: 'Verification pending',
-    verifyHref: '/onboarding',
   },
 };

@@ -15,8 +15,11 @@ import { ArrowRight, Dot, Wallet, ShoppingBag, Star, AlertTriangle } from 'lucid
 import { Badge, Button, Card } from '@/components/ui';
 import type { LucideIcon } from 'lucide-react';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
+import { getCurrentUser } from '@/modules/auth/queries';
 import { isLocked } from '@/components/verification/verify-gate';
 import { VerificationBanner } from '@/components/verification/verification-banner';
+import { VerifyNowSheet } from '@/components/verification/verify-now-sheet';
+import type { VendorCategory } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_CONTENT, type DashboardVariant } from '@/config/dashboard-content';
 
@@ -78,6 +81,17 @@ export async function RoleDashboard({
 }: RoleDashboardProps) {
   const content = DASHBOARD_CONTENT[variant];
   const profile = await getDashboardProfile(variant);
+
+  // Prefill for the verification panel, read on the SERVER and passed down as
+  // plain data — the same user_metadata /onboarding reads, so both hosts of the
+  // wizard open with the same fields already filled in.
+  const user = await getCurrentUser();
+  const meta = user?.user_metadata ?? {};
+  const verifyInitial = {
+    fullName: (meta.full_name as string | undefined) ?? '',
+    phone: (meta.phone as string | undefined) ?? '',
+    vendorCategory: meta.vendor_category as VendorCategory | undefined,
+  };
   // Three states, not two. "Submitted and waiting" is neither verified nor a
   // prompt to go and verify - telling someone who has already sent their
   // documents to verify their account reads as though it never arrived.
@@ -134,9 +148,22 @@ export async function RoleDashboard({
         <div className="mb-2 flex items-center justify-between gap-3">
           {/* Unverified is not a status line, it is the one thing gating this
               account - and the pill was pulsing at people with nowhere to go.
-              It now opens the wizard that clears it. The verified badge stays
-              inert: there is no page behind "Verified landlord". */}
-          {actionable ? <Link href={content.verifyHref}>{badge}</Link> : badge}
+              It now opens the wizard that clears it, in a panel over this
+              dashboard rather than by navigating away from the numbers it is
+              about to unlock. The verified badge stays inert: there is nothing
+              behind "Verified landlord". */}
+          {actionable ? (
+            <VerifyNowSheet initial={verifyInitial}>
+              <button
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0 text-left"
+              >
+                {badge}
+              </button>
+            </VerifyNowSheet>
+          ) : (
+            badge
+          )}
         </div>
         <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
           <h2 className="text-section text-content font-display mt-2 font-medium md:mt-0">
@@ -184,7 +211,7 @@ export async function RoleDashboard({
           thing read, and a banner above them pushes the whole dashboard down
           to say something that is not urgent. Here it sits between the numbers
           it just emptied and the panels it is about to empty. */}
-      <VerificationBanner status={status} href={content.verifyHref} className="mt-1" />
+      <VerificationBanner status={status} initial={verifyInitial} className="mt-1" />
 
       {/* Pending list + revenue chart */}
       <section className="mt-5">

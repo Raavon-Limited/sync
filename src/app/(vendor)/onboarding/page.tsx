@@ -7,7 +7,7 @@
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/modules/auth/queries';
 import type { VendorCategory } from '@/lib/validations';
-import { OnboardingWizard } from './onboarding-wizard';
+import { OnboardingWizard } from '@/components/verification/onboarding-wizard';
 
 export const metadata: Metadata = { title: 'Vendor onboarding' };
 

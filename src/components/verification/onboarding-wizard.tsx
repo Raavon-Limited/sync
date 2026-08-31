@@ -1,9 +1,21 @@
 /**
- * OnboardingWizard - the 5-step vendor onboarding wizard
+ * OnboardingWizard - the 5-step vendor verification wizard
  * (profile → business → category → documents → review). Validated per step with
  * react-hook-form + the shared `vendorOnboardingSchema`. Submitting flips the
- * vendor to `pending` (admin approves via /admin/vendors) and routes to the
- * vendor dashboard.
+ * vendor to `pending`, which staff then decide on in the admin queue.
+ *
+ * IT LIVES HERE, NOT IN THE ROUTE FOLDER, BECAUSE IT HAS TWO HOSTS.
+ *   /onboarding                 the first run, straight after signup: a fresh
+ *                               account with no dashboard worth showing yet.
+ *   <VerifyNowSheet>            "Verify Now" from a dashboard someone is
+ *                               already using — a side panel over their own
+ *                               screen, so the context they came from stays
+ *                               behind it.
+ *
+ *   Both are the same five steps against the same schema and the same RPCs.
+ *   The alternative — a second, sheet-shaped copy of this form — is how the
+ *   two ended up disagreeing about what verification asks for the last time
+ *   this flow was rebuilt.
  *
  * Documents upload to Supabase Storage best-effort; liveness/auto-ID via Smile
  * ID / Dojah is wired in later. Some fields are prefilled from signup.
@@ -63,7 +75,29 @@ const TRADE_OPTIONS: { value: Trade; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardingInput> }) {
+export interface OnboardingWizardProps {
+  initial: Partial<VendorOnboardingInput>;
+  /**
+   * Where the wizard is mounted. The route centres itself in a page column;
+   * inside a sheet the panel already sets the width, and a second `max-w-xl`
+   * would leave the form floating in a narrower column than the panel it is
+   * in.
+   */
+  layout?: 'page' | 'panel';
+  /**
+   * Called when the submitted-modal's Continue is pressed, with the dashboard
+   * the chosen category belongs to.
+   *
+   * Supplied by the sheet, which has to close ITSELF before anything
+   * navigates — a Radix dialog left open across a route change keeps the
+   * scroll lock and the aria-hidden on the page behind it, so the dashboard
+   * they land on is inert and looks frozen. Omitted on the route, where the
+   * wizard is the whole page and navigating away is the only exit.
+   */
+  onSubmitted?: (dashboardHref: string) => void;
+}
+
+export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [docs, setDocs] = useState<File[]>([]);
@@ -154,11 +188,16 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
   const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? '—';
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className={cn('w-full', layout === 'page' && 'mx-auto max-w-xl')}>
       <VerificationSubmittedModal
         open={submitted !== null}
         onContinue={() => {
-          router.push(submitted ?? '/vendor');
+          const dest = submitted ?? '/vendor';
+          if (onSubmitted) {
+            onSubmitted(dest);
+            return;
+          }
+          router.push(dest);
           router.refresh();
         }}
       />
@@ -170,12 +209,21 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
               <span
                 className={cn(
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium',
-                  i < step ? 'bg-ink text-white' : i === step ? 'bg-lime text-ink' : 'bg-ink/10 text-content-muted',
+                  i < step
+                    ? 'bg-ink text-white'
+                    : i === step
+                      ? 'bg-lime text-ink'
+                      : 'bg-ink/10 text-content-muted',
                 )}
               >
                 {i < step ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
               </span>
-              <span className={cn('hidden text-xs sm:inline', i === step ? 'text-content font-medium' : 'text-content-muted')}>
+              <span
+                className={cn(
+                  'hidden text-xs sm:inline',
+                  i === step ? 'text-content font-medium' : 'text-content-muted',
+                )}
+              >
                 {label}
               </span>
             </div>
@@ -200,7 +248,11 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
         {/* Step 2 - Business */}
         {step === 1 && (
           <>
-            <FormField label="Business name" htmlFor="businessName" error={errors.businessName?.message}>
+            <FormField
+              label="Business name"
+              htmlFor="businessName"
+              error={errors.businessName?.message}
+            >
               <Input id="businessName" placeholder="Mama Put Tanke" {...register('businessName')} />
             </FormField>
             <FormField
@@ -209,9 +261,18 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
               error={errors.sells?.message}
               counter={<CharCount value={sells} min={SELLS_MIN} max={SELLS_MAX} />}
             >
-              <Textarea id="sells" rows={4} placeholder="Describe your menu, rooms, or services…" {...register('sells')} />
+              <Textarea
+                id="sells"
+                rows={4}
+                placeholder="Describe your menu, rooms, or services…"
+                {...register('sells')}
+              />
             </FormField>
-            <FormField label="Business address" htmlFor="businessAddress" error={errors.businessAddress?.message}>
+            <FormField
+              label="Business address"
+              htmlFor="businessAddress"
+              error={errors.businessAddress?.message}
+            >
               {/* Google Places suggestions. Falls back to a plain text input
                   whenever Places is unavailable, so an outage or a disabled API
                   can never block onboarding - the address is required to
@@ -250,7 +311,11 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
         {/* Step 3 - Category */}
         {step === 2 && (
           <>
-            <FormField label="What do you offer?" htmlFor="vendorCategory" error={errors.vendorCategory?.message}>
+            <FormField
+              label="What do you offer?"
+              htmlFor="vendorCategory"
+              error={errors.vendorCategory?.message}
+            >
               <Controller
                 name="vendorCategory"
                 control={control}
@@ -309,11 +374,21 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
               <Upload className="text-content-muted h-7 w-7" />
               <span className="text-content-muted text-sm">Tap to add documents</span>
             </label>
-            <input id="docs" type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={onDocs} />
+            <input
+              id="docs"
+              type="file"
+              multiple
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={onDocs}
+            />
             {docs.length > 0 && (
               <ul className="flex flex-col gap-2">
                 {docs.map((f, i) => (
-                  <li key={i} className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                  <li
+                    key={i}
+                    className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                  >
                     <FileText className="text-content-muted h-4 w-4 shrink-0" />
                     <span className="truncate">{f.name}</span>
                   </li>
@@ -337,7 +412,9 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
             ].map(([k, val]) => (
               <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                 <dt className="text-content-muted">{k}</dt>
-                <dd className="text-content max-w-[60%] truncate text-right font-medium">{val || '—'}</dd>
+                <dd className="text-content max-w-[60%] truncate text-right font-medium">
+                  {val || '—'}
+                </dd>
               </div>
             ))}
           </dl>
