@@ -64,21 +64,26 @@ export function VerifyNowSheet({ initial, children }: VerifyNowSheetProps) {
           384px column without every field wrapping. Full bleed on a phone is
           the variant's own behaviour and is left alone.
 
-          overflow-y-auto because the panel is the scroll container here: the
-          page behind it is locked while it is open, so a form taller than the
-          viewport has nowhere else to go. */}
+          overflow-HIDDEN, not auto. The panel itself must not scroll: if it
+          did, the whole wizard including its footer would move together and
+          Back/Continue would slide off the bottom. The scrolling happens one
+          level down, inside the wizard, so the step indicator and the footer
+          can stay put around it. */}
       <SheetContent
         side="right"
-        className="flex flex-col gap-0 overflow-y-auto sm:max-w-xl md:w-[42rem]"
+        className="flex flex-col gap-0 overflow-hidden sm:max-w-xl md:w-[42rem]"
       >
-        <SheetHeader>
+        <SheetHeader className="shrink-0">
           <SheetTitle>Verify your business</SheetTitle>
           <SheetDescription>
             A few steps to get verified — then the rest of your dashboard unlocks.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6">
+        {/* min-h-0 so this box may shrink below its content and hand the
+            overflow to the wizard's own scroll area. Without it the flex child
+            floors at its content height and nothing scrolls at all. */}
+        <div className="mt-6 flex min-h-0 flex-1 flex-col">
           <OnboardingWizard
             initial={initial}
             layout="panel"

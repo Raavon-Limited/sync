@@ -188,7 +188,16 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? '—';
 
   return (
-    <div className={cn('w-full', layout === 'page' && 'mx-auto max-w-xl')}>
+    // In a panel the wizard OWNS the height: it becomes the flex column that
+    // fills the sheet, so the fields can scroll under a footer that does not.
+    // On the page it is a plain block in a normal document flow.
+    <div
+      className={cn(
+        'w-full',
+        layout === 'page' && 'mx-auto max-w-xl',
+        layout === 'panel' && 'flex h-full min-h-0 flex-col',
+      )}
+    >
       <VerificationSubmittedModal
         open={submitted !== null}
         onContinue={() => {
@@ -201,8 +210,10 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
           router.refresh();
         }}
       />
-      {/* Step indicator */}
-      <ol className="mb-8 flex items-center">
+      {/* Step indicator. shrink-0 in a panel so it stays put while the fields
+          under it scroll — losing "which of five steps am I on" is the first
+          thing a scrolling wizard costs you. */}
+      <ol className={cn('mb-8 flex items-center', layout === 'panel' && 'shrink-0')}>
         {STEPS.map((label, i) => (
           <li key={label} className={cn('flex items-center', i < STEPS.length - 1 && 'flex-1')}>
             <div className="flex items-center gap-2">
@@ -232,121 +243,125 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
         ))}
       </ol>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-        {/* Step 1 - Profile */}
-        {step === 0 && (
-          <>
-            <FormField label="Full name" htmlFor="fullName" error={errors.fullName?.message}>
-              <Input id="fullName" placeholder="Aisha Olawale" {...register('fullName')} />
-            </FormField>
-            <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
-              <Input id="phone" type="tel" placeholder="0801 234 5678" {...register('phone')} />
-            </FormField>
-          </>
-        )}
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className={cn('flex flex-col gap-4', layout === 'panel' && 'min-h-0 flex-1')}
+        noValidate
+      >
+        {/* THE SCROLLING PART. Only the fields move; the footer below is
+            outside this box.
 
-        {/* Step 2 - Business */}
-        {step === 1 && (
-          <>
-            <FormField
-              label="Business name"
-              htmlFor="businessName"
-              error={errors.businessName?.message}
-            >
-              <Input id="businessName" placeholder="Mama Put Tanke" {...register('businessName')} />
-            </FormField>
-            <FormField
-              label="What do you sell or offer?"
-              htmlFor="sells"
-              error={errors.sells?.message}
-              counter={<CharCount value={sells} min={SELLS_MIN} max={SELLS_MAX} />}
-            >
-              <Textarea
-                id="sells"
-                rows={4}
-                placeholder="Describe your menu, rooms, or services…"
-                {...register('sells')}
-              />
-            </FormField>
-            <FormField
-              label="Business address"
-              htmlFor="businessAddress"
-              error={errors.businessAddress?.message}
-            >
-              {/* Google Places suggestions. Falls back to a plain text input
+            `min-h-0` is load bearing on both this and the form above it: a flex
+            child defaults to min-height:auto, which refuses to shrink below its
+            content, so without it the box grows to fit every field and pushes
+            the footer off the bottom of the panel instead of scrolling.
+
+            `-mx-6 px-6` bleeds the scroll area to the panel edges so a focus
+            ring or a select popover is not clipped by a mid-panel boundary,
+            while the fields keep their inset. */}
+        <div
+          className={cn(
+            'flex flex-col gap-4',
+            layout === 'panel' && '-mx-6 min-h-0 flex-1 overflow-y-auto px-6',
+          )}
+        >
+          {/* Step 1 - Profile */}
+          {step === 0 && (
+            <>
+              <FormField label="Full name" htmlFor="fullName" error={errors.fullName?.message}>
+                <Input id="fullName" placeholder="Aisha Olawale" {...register('fullName')} />
+              </FormField>
+              <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
+                <Input id="phone" type="tel" placeholder="0801 234 5678" {...register('phone')} />
+              </FormField>
+            </>
+          )}
+
+          {/* Step 2 - Business */}
+          {step === 1 && (
+            <>
+              <FormField
+                label="Business name"
+                htmlFor="businessName"
+                error={errors.businessName?.message}
+              >
+                <Input
+                  id="businessName"
+                  placeholder="Mama Put Tanke"
+                  {...register('businessName')}
+                />
+              </FormField>
+              <FormField
+                label="What do you sell or offer?"
+                htmlFor="sells"
+                error={errors.sells?.message}
+                counter={<CharCount value={sells} min={SELLS_MIN} max={SELLS_MAX} />}
+              >
+                <Textarea
+                  id="sells"
+                  rows={4}
+                  placeholder="Describe your menu, rooms, or services…"
+                  {...register('sells')}
+                />
+              </FormField>
+              <FormField
+                label="Business address"
+                htmlFor="businessAddress"
+                error={errors.businessAddress?.message}
+              >
+                {/* Google Places suggestions. Falls back to a plain text input
                   whenever Places is unavailable, so an outage or a disabled API
                   can never block onboarding - the address is required to
                   finish, and typing it must always work. */}
-              <Controller
-                name="businessAddress"
-                control={control}
-                render={({ field }) => (
-                  <AddressAutocomplete
-                    id="businessAddress"
-                    name={field.name}
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    placeholder="Start typing your address…"
-                  />
-                )}
-              />
-            </FormField>
-            {/* Not the same thing as the address, and not cosmetic. Discovery
+                <Controller
+                  name="businessAddress"
+                  control={control}
+                  render={({ field }) => (
+                    <AddressAutocomplete
+                      id="businessAddress"
+                      name={field.name}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      placeholder="Start typing your address…"
+                    />
+                  )}
+                />
+              </FormField>
+              {/* Not the same thing as the address, and not cosmetic. Discovery
                 is location-first: a business with no area is left out of the
                 campus board and cannot be ranked by distance, so students
                 simply never see it. Asking here means Settings opens filled
                 in instead of asking again. */}
-            <FormField
-              label="Area"
-              htmlFor="area"
-              error={errors.area?.message}
-              hint="The neighbourhood students would search for. You can change this later."
-            >
-              <Input id="area" placeholder="Tanke, Safari, Oke-Odo…" {...register('area')} />
-            </FormField>
-          </>
-        )}
+              <FormField
+                label="Area"
+                htmlFor="area"
+                error={errors.area?.message}
+                hint="The neighbourhood students would search for. You can change this later."
+              >
+                <Input id="area" placeholder="Tanke, Safari, Oke-Odo…" {...register('area')} />
+              </FormField>
+            </>
+          )}
 
-        {/* Step 3 - Category */}
-        {step === 2 && (
-          <>
-            <FormField
-              label="What do you offer?"
-              htmlFor="vendorCategory"
-              error={errors.vendorCategory?.message}
-            >
-              <Controller
-                name="vendorCategory"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="vendorCategory">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORY_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </FormField>
-            {category === 'tradesman' && (
-              <FormField label="Your trade" htmlFor="trade" error={errors.trade?.message}>
+          {/* Step 3 - Category */}
+          {step === 2 && (
+            <>
+              <FormField
+                label="What do you offer?"
+                htmlFor="vendorCategory"
+                error={errors.vendorCategory?.message}
+              >
                 <Controller
-                  name="trade"
+                  name="vendorCategory"
                   control={control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="trade">
-                        <SelectValue placeholder="Select your trade" />
+                      <SelectTrigger id="vendorCategory">
+                        <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {TRADE_OPTIONS.map((o) => (
+                        {CATEGORY_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
                             {o.label}
                           </SelectItem>
@@ -356,72 +371,111 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                   )}
                 />
               </FormField>
-            )}
-          </>
-        )}
+              {category === 'tradesman' && (
+                <FormField label="Your trade" htmlFor="trade" error={errors.trade?.message}>
+                  <Controller
+                    name="trade"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="trade">
+                          <SelectValue placeholder="Select your trade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRADE_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </FormField>
+              )}
+            </>
+          )}
 
-        {/* Step 4 - Documents */}
-        {step === 3 && (
-          <div className="flex flex-col gap-3">
-            <p className="text-content-muted text-sm">
-              Upload your ID and any business documents (CAC, proof of address, property papers).
-              Optional now — you can add them later.
-            </p>
-            <label
-              htmlFor="docs"
-              className="border-line/30 hover:border-line/50 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center"
-            >
-              <Upload className="text-content-muted h-7 w-7" />
-              <span className="text-content-muted text-sm">Tap to add documents</span>
-            </label>
-            <input
-              id="docs"
-              type="file"
-              multiple
-              accept="image/*,application/pdf"
-              className="hidden"
-              onChange={onDocs}
-            />
-            {docs.length > 0 && (
-              <ul className="flex flex-col gap-2">
-                {docs.map((f, i) => (
-                  <li
-                    key={i}
-                    className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                  >
-                    <FileText className="text-content-muted h-4 w-4 shrink-0" />
-                    <span className="truncate">{f.name}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+          {/* Step 4 - Documents */}
+          {step === 3 && (
+            <div className="flex flex-col gap-3">
+              <p className="text-content-muted text-sm">
+                Upload your ID and any business documents (CAC, proof of address, property papers).
+                Optional now — you can add them later.
+              </p>
+              <label
+                htmlFor="docs"
+                className="border-line/30 hover:border-line/50 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center"
+              >
+                <Upload className="text-content-muted h-7 w-7" />
+                <span className="text-content-muted text-sm">Tap to add documents</span>
+              </label>
+              <input
+                id="docs"
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={onDocs}
+              />
+              {docs.length > 0 && (
+                <ul className="flex flex-col gap-2">
+                  {docs.map((f, i) => (
+                    <li
+                      key={i}
+                      className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <FileText className="text-content-muted h-4 w-4 shrink-0" />
+                      <span className="truncate">{f.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
-        {/* Step 5 - Review */}
-        {step === 4 && (
-          <dl className="border-line/10 divide-line/10 divide-y rounded-xl border">
-            {[
-              ['Name', v.fullName],
-              ['Phone', v.phone],
-              ['Business', v.businessName],
-              ['Offers', categoryLabel + (v.trade ? ` · ${v.trade}` : '')],
-              ['Address', v.businessAddress],
-              ['Area', v.area || 'Not set'],
-              ['Documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
-            ].map(([k, val]) => (
-              <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
-                <dt className="text-content-muted">{k}</dt>
-                <dd className="text-content max-w-[60%] truncate text-right font-medium">
-                  {val || '—'}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
+          {/* Step 5 - Review */}
+          {step === 4 && (
+            <dl className="border-line/10 divide-line/10 divide-y rounded-xl border">
+              {[
+                ['Name', v.fullName],
+                ['Phone', v.phone],
+                ['Business', v.businessName],
+                ['Offers', categoryLabel + (v.trade ? ` · ${v.trade}` : '')],
+                ['Address', v.businessAddress],
+                ['Area', v.area || 'Not set'],
+                ['Documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
+              ].map(([k, val]) => (
+                <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
+                  <dt className="text-content-muted">{k}</dt>
+                  <dd className="text-content max-w-[60%] truncate text-right font-medium">
+                    {val || '—'}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
 
-        {/* Footer */}
-        <div className="mt-2 flex gap-3">
+        {/* Footer. In a panel it is pinned to the bottom: the only two controls
+            that move the wizard on must not be something you scroll to find,
+            and on a phone the last field plus the keyboard would routinely
+            hide them.
+
+            It sits OUTSIDE the scroll box but INSIDE the form, so the submit
+            button still belongs to the form it submits — hoisting it to the
+            sheet would mean wiring it back with a `form=` attribute for no
+            gain.
+
+            The negative margin lets the top border and the solid ground run
+            the full width of the panel, so content scrolling underneath
+            disappears behind an edge rather than at an arbitrary inset. */}
+        <div
+          className={cn(
+            'mt-2 flex gap-3',
+            layout === 'panel' && 'border-line/10 bg-panel -mx-6 mt-0 shrink-0 border-t px-6 pt-4',
+          )}
+        >
           {step > 0 && (
             <Button type="button" variant="outline" onClick={() => setStep((s) => s - 1)}>
               Back
