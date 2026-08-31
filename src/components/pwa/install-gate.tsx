@@ -1,11 +1,17 @@
 /**
- * InstallGate - in a browser tab, only the public pages are reachable; anything
- * else asks the visitor to install Sync to their home screen first.
+ * InstallGate - in a browser tab, a SIGNED-OUT visitor browsing the app's own
+ * routes is asked to install Sync to their home screen first.
  *
- * Once installed, `display-mode: standalone` is true and this renders nothing,
- * so the installed app behaves normally everywhere.
+ * It never appears for:
+ *   - the installed app (`display-mode: standalone`)
+ *   - the public web pages and auth, listed in WEB_ROUTES
+ *   - anyone who is signed in, anywhere
  *
- * WEB_ROUTES is the whole policy - edit that list to open or close routes.
+ * That last one is the difference between a gate and a wall. The web's job is
+ * marketing plus your account: someone with an account is not a visitor to
+ * convert, and their dashboard has to open in a browser.
+ *
+ * WEB_ROUTES plus the signed-in check are the whole policy.
  *
  * Two things to know about how this behaves:
  *
@@ -26,6 +32,7 @@ import { usePathname } from 'next/navigation';
 import { Share, MoreVertical, Plus, Smartphone } from 'lucide-react';
 
 import { useInstall } from '@/lib/pwa/use-install';
+import { useSession } from '@/providers/session-provider';
 import { Button } from '@/components/ui/button';
 import { SITE } from '@/config/site';
 
@@ -35,18 +42,33 @@ import { SITE } from '@/config/site';
  * Matched as prefixes, except '/' which must match exactly or it would open
  * everything.
  *
- * AUTH IS DELIBERATELY NOT HERE. Every student module (/hostels, /food,
- * /events, ...) is gated in proxy.ts for ALL roles, so a signed-out visitor
- * clicking a hostel is redirected SERVER-SIDE to /login before any client code
- * runs. Allowlisting /login therefore defeated the whole gate: the redirect
- * landed on a permitted page and the install prompt never appeared. Leaving
- * auth gated means that redirect lands somewhere the gate still covers.
+ * AUTH IS HERE NOW, and the reason it was not is worth recording. The gate used
+ * to exclude /login and /signup on purpose: every student module is gated in
+ * proxy.ts, so a signed-out visitor clicking a hostel is redirected
+ * SERVER-SIDE to /login, and allowlisting /login meant that redirect landed on
+ * a permitted page where the install prompt never appeared.
+ *
+ * That reasoning held right up until it made the product unusable: with auth
+ * gated there is NO WAY to sign in on the web at all, so nobody can reach their
+ * dashboard there - and the dashboard is meant to be the web's whole job. A
+ * gate that blocks the front door does not convert visitors, it turns them
+ * away.
+ *
+ * The gate still does its work on the case that matters: a signed-out visitor
+ * BROWSING app routes (hostels, food, events) is still asked to install. What
+ * it no longer does is stand between someone and their own account.
  */
 const WEB_ROUTES = [
   '/', // landing
   '/about',
   '/for-vendors',
   '/how-it-works',
+  '/how-verification-works',
+  '/legal',
+  // Auth. Without these the web has no front door.
+  '/login',
+  '/signup',
+  '/verify',
 ];
 
 function isWebRoute(pathname: string): boolean {
@@ -57,9 +79,23 @@ function isWebRoute(pathname: string): boolean {
 export function InstallGate() {
   const pathname = usePathname();
   const { isStandalone, platform, canPrompt, promptInstall } = useInstall();
+  const { user, isLoading } = useSession();
 
   // Installed app, or a page we deliberately serve on the web: get out of the way.
   if (isStandalone || isWebRoute(pathname)) return null;
+
+  // SIGNED-IN USERS ARE NEVER GATED.
+  //
+  // The gate's job is turning visitors into installs. Someone who already has
+  // an account is not a visitor, and putting an install wall between them and
+  // their own dashboard is friction with nothing on the other side of it. This
+  // is also what makes handle-rooted dashboards work: those live at /<name>,
+  // which is dynamic and could never have been enumerated in WEB_ROUTES above.
+  //
+  // `isLoading` matters as much as `user`: the session resolves after
+  // hydration, so without it the gate flashes over the dashboard of a signed-in
+  // user for the moment before their profile arrives.
+  if (isLoading || user) return null;
 
   return (
     <div

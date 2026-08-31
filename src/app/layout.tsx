@@ -105,11 +105,15 @@ export default async function RootLayout({
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
         <RegisterSW />
-        <Providers areas={areas}>{children}</Providers>
-        {/* Renders only in a browser tab, and only on a route outside
-            WEB_ROUTES. Sits AFTER Providers so it overlays the app, and
-            outside it so an area change never re-renders the gate. */}
-        <InstallGate />
+        <Providers areas={areas}>
+          {children}
+          {/* Renders only in a browser tab, only when signed out, and only on a
+              route outside WEB_ROUTES. INSIDE Providers because it has to read
+              the session to know whether you are signed in - it used to sit
+              outside, where useSession() fell back to "signed out" and the gate
+              covered your own dashboard. Last child so it still overlays. */}
+          <InstallGate />
+        </Providers>
         {/* Renders nothing on touch devices or under reduced motion. */}
         <Cursor />
       </body>
