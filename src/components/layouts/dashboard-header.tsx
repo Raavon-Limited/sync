@@ -51,19 +51,23 @@ export function DashboardHeader({ navKey, profile }: DashboardHeaderProps) {
             <Dialog.Content className="bg-panel data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-left fixed inset-y-0 left-0 z-50 flex w-[18rem] max-w-[85vw] flex-col overflow-y-auto p-4 md:hidden">
               <Dialog.Title className="sr-only">Menu</Dialog.Title>
               <Dialog.Description className="sr-only">Dashboard navigation.</Dialog.Description>
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  aria-label="Close menu"
-                  className="text-content hover:bg-ink/5 absolute top-3 right-3 inline-flex size-9 items-center justify-center rounded-full"
-                >
-                  <X className="size-5" />
-                </button>
-              </Dialog.Close>
               <DashboardSidebar
                 navKey={navKey}
                 profile={profile}
                 onNavigate={() => setOpen(false)}
+                // Handed to the sidebar so it sits BESIDE the mode toggle.
+                // Positioned absolutely here, it landed on top of it.
+                headerAction={
+                  <Dialog.Close asChild>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      className="text-content hover:bg-ink/5 inline-flex size-9 items-center justify-center rounded-full"
+                    >
+                      <X className="size-5" />
+                    </button>
+                  </Dialog.Close>
+                }
               />
             </Dialog.Content>
           </Dialog.Portal>

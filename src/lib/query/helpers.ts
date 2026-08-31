@@ -14,6 +14,7 @@
  * belongs anyway: components should never see snake_case rows.
  */
 import type { PostgrestError } from '@supabase/supabase-js';
+import { userMessage } from '@/lib/errors';
 
 /** What Supabase hands back from `.select()` / `.rpc()`. */
 export interface PostgrestResult<T> {
@@ -24,21 +25,33 @@ export interface PostgrestResult<T> {
 /**
  * An error that carries the HTTP status, so `retry` in query-client.ts can tell
  * a 403 (terminal — RLS said no) from a 503 (worth retrying).
+ *
+ * ITS `message` IS SAFE TO SHOW. This is the error every `unwrap` throws, so it
+ * is what reaches `onError: (e) => toast(e.message)` in a few dozen components.
+ * Passing PostgREST's prose straight through meant any one of them could put
+ * `new row violates row-level security policy for table "orders"` in front of a
+ * student. The untouched text is kept on `raw` for logs and debugging.
  */
 export class DataError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly hint?: string;
+  /** PostgREST's own words. For logs — never for the screen. */
+  readonly raw: string;
 
-  constructor(error: PostgrestError, fallbackStatus = 400) {
-    super(error.message);
+  constructor(
+    error: PostgrestError,
+    fallbackStatus = 400,
+    fallback = 'Something went wrong. Please try again.',
+  ) {
+    super(userMessage(error, fallback));
     this.name = 'DataError';
     this.code = error.code;
     this.hint = error.hint ?? undefined;
+    this.raw = error.message;
     // PostgREST maps RLS denials to 401/403 and missing rows to 406; the code is
     // the reliable signal, so derive status from it rather than parsing prose.
-    this.status =
-      error.code === '42501' ? 403 : error.code === 'PGRST116' ? 404 : fallbackStatus;
+    this.status = error.code === '42501' ? 403 : error.code === 'PGRST116' ? 404 : fallbackStatus;
   }
 }
 
@@ -46,7 +59,9 @@ export class DataError extends Error {
 export function unwrap<T>(result: PostgrestResult<T>): T {
   if (result.error) throw new DataError(result.error);
   if (result.data === null) {
-    throw new Error('Query returned no data');
+    // Not a user's doing and nothing they can act on, so it reads as ours.
+    console.error('[query] unwrap() got a null payload with no error');
+    throw new Error('We could not load that. Refresh the page and try again.');
   }
   return result.data;
 }

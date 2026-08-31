@@ -16,6 +16,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
+import { userMessage } from '@/lib/errors';
 import type {
   BankAccount,
   EarningsSummary,
@@ -401,11 +402,11 @@ export async function requestWithdrawal(
     p_amount_kobo: input.amountKobo,
     p_bank_account_id: input.bankAccountId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not request that withdrawal.'));
   return data as unknown as string;
 }
 
 export async function cancelWithdrawal(db: Client, requestId: string): Promise<void> {
   const { error } = await db.rpc('cancel_withdrawal', { p_request_id: requestId });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not cancel that withdrawal.'));
 }

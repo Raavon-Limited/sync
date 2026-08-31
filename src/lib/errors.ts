@@ -27,9 +27,10 @@
  *   Our SECURITY DEFINER functions raise human sentences under generic
  *   SQLSTATEs — `raise exception 'Only Sync staff can decide a verification'
  *   using errcode = '42501'`. Reading the code first would replace that with
- *   the generic 42501 text ("This account is not set up as a business yet"),
- *   which is a different and wrong explanation. The code mapping is therefore
- *   the fallback for when the message itself is unusable, not the first stop.
+ *   the generic 42501 text ("You do not have permission to do that"), throwing
+ *   away the only sentence that said WHICH permission and why. The code mapping
+ *   is therefore the fallback for when the message itself is unusable, not the
+ *   first stop.
  *
  * THE DETAIL IS NOT LOST, IT MOVES. Every replaced message is logged server
  * -side first, so the thing that used to be in the user's face is still in the
@@ -99,10 +100,7 @@ const BY_MESSAGE: [RegExp, string][] = [
     /for security purposes.*after (\d+) seconds?/i,
     'You are trying that a bit too quickly. Wait a few seconds and try again.',
   ],
-  [
-    /rate limit|too many requests/i,
-    'Too many attempts. Wait a few minutes before trying again.',
-  ],
+  [/rate limit|too many requests/i, 'Too many attempts. Wait a few minutes before trying again.'],
   [/captcha/i, 'The security check did not pass. Reload the page and try again.'],
 
   // ── Reaching us at all ────────────────────────────────────────────────────
@@ -116,9 +114,14 @@ const BY_MESSAGE: [RegExp, string][] = [
 const BY_CODE: Record<string, string> = {
   // Raised by our own SECURITY DEFINER functions.
   '28000': 'Your session has expired. Sign in again to pick up where you left off.',
-  '42501': 'This account is not set up as a business yet.',
+  // Only reached for a RAW permission failure — an RLS policy or a GRANT
+  // refusing the write. Our own 42501 raises carry a human sentence that the
+  // step above returns instead, so this must stay general: it used to say
+  // "this account is not set up as a business yet", which was the right words
+  // for one caller and a confusing non-sequitur for every other.
+  '42501': 'You do not have permission to do that.',
   '22023': 'That option is not available. Pick another and try again.',
-  'P0002': 'We could not find that. It may have been removed.',
+  P0002: 'We could not find that. It may have been removed.',
   // Postgres constraint failures.
   '23505': 'That has already been taken. Try a different one.',
   '23503': 'Something this depends on is missing. Refresh the page and try again.',

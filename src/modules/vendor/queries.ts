@@ -164,7 +164,10 @@ const toOrder = (r: Row): FoodOrder => ({
 
 // ── Storefront ─────────────────────────────────────────────────────────────
 
-export async function fetchMyStorefront(db: Client, vendorId: string): Promise<VendorStorefront | null> {
+export async function fetchMyStorefront(
+  db: Client,
+  vendorId: string,
+): Promise<VendorStorefront | null> {
   const r = unwrapMaybe<Row>(
     await db.from('vendor_profiles').select('*').eq('id', vendorId).maybeSingle(),
   );
@@ -235,15 +238,8 @@ export async function upsertListing(
     storefrontId?: string;
   },
 ): Promise<VendorListing> {
-  // storefront_id is NOT NULL: a listing is stocked AT a branch. A vendor
-  // editing an existing item keeps its branch; a new item without an explicit
-  // branch lands on the primary one.
-  const storefrontId =
-    input.storefrontId ?? (input.id ? undefined : await resolvePrimaryStorefrontId(db, input.vendorId));
-
   const payload = {
     vendor_id: input.vendorId,
-    ...(storefrontId ? { storefront_id: storefrontId } : {}),
     name: input.name,
     description: input.description ?? null,
     category: input.category,
@@ -253,9 +249,35 @@ export async function upsertListing(
     image_url: input.imageUrl ?? null,
   };
 
+  // storefront_id is NOT NULL: a listing is stocked AT a branch. The two paths
+  // are built separately because the column is required on CREATE and merely
+  // optional on EDIT — one shared payload with `storefront_id` spread in
+  // conditionally is optional in both, which typechecked only while the
+  // generated types were stale and would have inserted a null branch.
   const row = input.id
-    ? unwrap<Row>(await db.from('listings').update(payload).eq('id', input.id).select().single())
-    : unwrap<Row>(await db.from('listings').insert(payload).select().single());
+    ? // An edit keeps the branch it has unless one was named.
+      unwrap<Row>(
+        await db
+          .from('listings')
+          .update(input.storefrontId ? { ...payload, storefront_id: input.storefrontId } : payload)
+          .eq('id', input.id)
+          .select()
+          .single(),
+      )
+    : // A new item without an explicit branch lands on the primary one.
+      // resolvePrimaryStorefrontId returns a branch or throws, so this is never
+      // undefined.
+      unwrap<Row>(
+        await db
+          .from('listings')
+          .insert({
+            ...payload,
+            storefront_id:
+              input.storefrontId ?? (await resolvePrimaryStorefrontId(db, input.vendorId)),
+          })
+          .select()
+          .single(),
+      );
 
   return toListing(row);
 }
@@ -311,9 +333,7 @@ export async function fetchVendorOrders(
     .order('placed_at', { ascending: false })
     .range(from, to);
 
-  q = opts.storefrontId
-    ? q.eq('storefront_id', opts.storefrontId)
-    : q.eq('vendor_id', vendorId);
+  q = opts.storefrontId ? q.eq('storefront_id', opts.storefrontId) : q.eq('vendor_id', vendorId);
 
   if (opts.status) q = q.eq('status', opts.status);
 

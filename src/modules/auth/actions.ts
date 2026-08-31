@@ -18,7 +18,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { resolveHandle } from '@/lib/handle';
 import { userMessage } from '@/lib/errors';
-import type { Row } from '@/lib/supabase/row';
 import {
   email as emailRule,
   loginSchema,
@@ -197,10 +196,7 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
       .select('role, roles, archived_at')
       .eq('id', data.user.id)
       .maybeSingle();
-    // `roles` postdates types/database.types.ts, which is generated FROM the
-    // database. REGENERATE THE TYPES once 20260830090000 is applied and this
-    // cast can go.
-    const prof = res.data as unknown as Row | null;
+    const prof = res.data;
     if (prof?.role) role = prof.role as Role;
     if (Array.isArray(prof?.roles)) roles = prof.roles as Role[];
     if (prof?.archived_at) {
@@ -225,7 +221,11 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
     // profiles table not migrated yet - fall back to the metadata role.
   }
 
-  return { ok: true, role, handle: handleFor(data.user, role) };
+  // `roles` is what lets the form offer a choice to a multi-role account. It
+  // was being computed and then dropped on the floor here, so `res.roles` was
+  // always undefined and the chooser never appeared — a student-and-vendor
+  // signed in wearing whichever hat was last active, which is a coin flip.
+  return { ok: true, role, roles, handle: handleFor(data.user, role) };
 }
 
 /** Which input the login form should show for an email: admins/super_admins are
@@ -259,7 +259,8 @@ export async function sendLoginOtp(rawEmail: string): Promise<AuthResult> {
     email: parsed.data,
     options: { shouldCreateUser: false },
   });
-  if (error) return { ok: false, error: userMessage(error, 'We could not send your sign-in code.') };
+  if (error)
+    return { ok: false, error: userMessage(error, 'We could not send your sign-in code.') };
   return { ok: true };
 }
 
@@ -275,14 +276,18 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
   if (error) return { ok: false, error: userMessage(error, 'We could not confirm that code.') };
 
   let role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
+  // Same as signIn: the OTP path has to offer the same choice, or an admin who
+  // is also a vendor lands somewhere different depending on how they signed in.
+  let roles: Role[] = [];
   try {
     const admin = createAdminClient();
     const { data: prof } = await admin
       .from('profiles')
-      .select('role, archived_at')
+      .select('role, roles, archived_at')
       .eq('id', data.user!.id)
       .maybeSingle();
     if (prof?.role) role = prof.role as Role;
+    if (Array.isArray(prof?.roles)) roles = prof.roles as Role[];
 
     // Bootstrap: a founding admin (env allowlist) lands as admin even if
     // profiles.role wasn't seeded - self-heal it so the proxy + /admin pages
@@ -313,7 +318,7 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
   } catch {
     // profiles table not migrated yet.
   }
-  return { ok: true, role, handle: handleFor(data.user, role) };
+  return { ok: true, role, roles, handle: handleFor(data.user, role) };
 }
 
 /** Sign out the current user. Clears the session cookies. */
@@ -393,8 +398,7 @@ export async function requestPasswordReset(rawEmail: string): Promise<AuthResult
   // Even an invalid address gets the same answer, for the reason above.
   if (!parsed.success) return { ok: true };
 
-  const site =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://www.letsyncyou.com';
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://www.letsyncyou.com';
 
   try {
     const supabase = await createClient();

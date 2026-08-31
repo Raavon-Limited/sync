@@ -83,7 +83,9 @@ export async function submitVendorOnboarding(
   // wrong category is reviewed, and approved, as the wrong kind of business.
   const { data: role, error: categoryError } = await supabase.rpc('set_vendor_category', {
     p_category: vendorCategory,
-    p_trade: vendorCategory === 'tradesman' ? (trade ?? null) : null,
+    // `undefined`, not `null`: p_trade has a SQL default, so the generated type
+    // is optional and an explicit null is a type error (see docs/DATA_LAYER).
+    p_trade: vendorCategory === 'tradesman' ? (trade ?? undefined) : undefined,
   });
   if (categoryError) {
     return {
@@ -116,7 +118,7 @@ export async function submitVendorOnboarding(
     p_business_name: businessName,
     p_business_address: businessAddress,
     p_phone: phone,
-    p_area: area ?? null,
+    p_area: area ?? undefined,
     p_bio: sells,
   });
   if (businessError) {

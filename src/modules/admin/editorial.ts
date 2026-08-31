@@ -9,7 +9,11 @@
  */
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FEATURED_TAG, UNCATEGORISED } from '@/app/(admin)/admin/editorial/admin-editorialConstants';
+import { userMessage } from '@/lib/errors';
+import {
+  FEATURED_TAG,
+  UNCATEGORISED,
+} from '@/app/(admin)/admin/editorial/admin-editorialConstants';
 import type {
   Article,
   ArticleStatus,
@@ -46,10 +50,12 @@ export async function listArticles(): Promise<{
 
   const { data, error } = await db
     .from('articles')
-    .select('id, slug, title, excerpt, body, cover_url, author_id, status, published_at, tags, created_at')
+    .select(
+      'id, slug, title, excerpt, body, cover_url, author_id, status, published_at, tags, created_at',
+    )
     .order('created_at', { ascending: false });
 
-  if (error) throw new Error(`Could not load articles: ${error.message}`);
+  if (error) throw new Error(userMessage(error, 'We could not load the articles.'));
 
   const rows = (data ?? []) as Row[];
 

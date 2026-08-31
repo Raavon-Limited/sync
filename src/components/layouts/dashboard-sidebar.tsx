@@ -29,11 +29,29 @@ interface DashboardSidebarProps {
   navKey: DashboardNavKey;
   /** Optional block above the nav — the vendor store switcher. */
   topSlot?: React.ReactNode;
+  /**
+   * Rendered in the wordmark row, immediately after the mode toggle. The
+   * mobile drawer's close button goes here.
+   *
+   * It has to be passed IN rather than positioned over: the drawer used to
+   * place its own X at `absolute top-3 right-3`, which is the exact spot this
+   * row puts the mode toggle. On a phone the two controls sat on top of each
+   * other — the X drawn over the sun icon — and whichever one you meant, you
+   * got the other. Sharing one flex row is what the marketing menu already
+   * does, and it cannot overlap by construction.
+   */
+  headerAction?: React.ReactNode;
   profile: DashboardProfile;
   onNavigate?: () => void;
 }
 
-export function DashboardSidebar({ navKey, profile, onNavigate, topSlot }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  navKey,
+  profile,
+  onNavigate,
+  topSlot,
+  headerAction,
+}: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { brandLabel, sections, rootHref } = DASHBOARD_NAV[navKey];
@@ -64,7 +82,8 @@ export function DashboardSidebar({ navKey, profile, onNavigate, topSlot }: Dashb
 
   return (
     <div className="flex h-full flex-col gap-5">
-      {/* Wordmark + role, with the mode toggle pinned to the edge */}
+      {/* Wordmark + role on the left; mode toggle and, in the drawer, the close
+          button share the right edge as siblings rather than as a stack. */}
       <div className="flex items-center justify-between gap-2 px-2">
         {/* Points at the dashboard root, NOT `/`. The landing page is a web-only
             surface; from inside a dashboard the lockup should return you to your
@@ -78,7 +97,10 @@ export function DashboardSidebar({ navKey, profile, onNavigate, topSlot }: Dashb
           {/* The kit's dashboard lockup: mark + wordmark + role tag. */}
           <SyncLogo height={18} role={brandLabel} />
         </Link>
-        <ThemeToggle className="text-content shrink-0" />
+        <div className="flex shrink-0 items-center gap-1">
+          <ThemeToggle className="text-content" />
+          {headerAction}
+        </div>
       </div>
 
       {/* Profile card */}

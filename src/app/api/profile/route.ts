@@ -15,6 +15,7 @@
  * it's dynamic by default.
  */
 import { createClient } from '@/lib/supabase/server';
+import { userMessage } from '@/lib/errors';
 import type { Database } from '@/types/database.types';
 
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
@@ -40,7 +41,12 @@ export async function GET() {
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    return Response.json(
+      { error: userMessage(error, 'We could not load your profile.') },
+      { status: 500 },
+    );
+  }
 
   return Response.json(data ?? null);
 }
@@ -82,7 +88,12 @@ export async function PATCH(request: Request) {
     .eq('id', user.id)
     .select('*')
     .single();
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    return Response.json(
+      { error: userMessage(error, 'We could not save your profile.') },
+      { status: 500 },
+    );
+  }
 
   return Response.json(data);
 }

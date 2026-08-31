@@ -25,6 +25,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database.types';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
+import { userMessage } from '@/lib/errors';
 import { FEATURED_TAG } from '@/app/(admin)/admin/editorial/admin-editorialConstants';
 
 export type PublishMode = 'publish' | 'draft' | 'schedule';
@@ -74,7 +75,8 @@ function timing(mode: PublishMode, publishAt?: string) {
   if (mode === 'draft') return { status: 'draft', published_at: null };
   if (mode === 'schedule') {
     const when = publishAt ? new Date(publishAt) : null;
-    if (!when || Number.isNaN(when.getTime())) throw new Error('Pick a date and time to schedule for');
+    if (!when || Number.isNaN(when.getTime()))
+      throw new Error('Pick a date and time to schedule for');
     if (when <= new Date()) throw new Error('Scheduled time must be in the future');
     return { status: 'published', published_at: when.toISOString() };
   }
@@ -96,7 +98,7 @@ async function uploadCover(file: File, staffId: string): Promise<string> {
   const { error } = await db.storage
     .from('public-media')
     .upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(`Cover upload failed: ${error.message}`);
+  if (error) throw new Error(userMessage(error, 'The cover image could not be uploaded.'));
 
   return db.storage.from('public-media').getPublicUrl(path).data.publicUrl;
 }
@@ -133,7 +135,8 @@ export async function createArticle(input: ArticleInput, mode: PublishMode) {
       return;
     }
     // 23505 = unique_violation. Anything else is a real failure.
-    if (error.code !== '23505') throw new Error(error.message);
+    if (error.code !== '23505')
+      throw new Error(userMessage(error, 'We could not save the article.'));
     slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
   }
   throw new Error('Could not find a free slug for that title');
@@ -162,7 +165,7 @@ export async function updateArticle(id: string, input: ArticleInput, mode: Publi
   if (input.image) patch.cover_url = await uploadCover(input.image, staffId);
 
   const { error } = await db.from('articles').update(patch).eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not save your changes.'));
   revalidatePath('/admin/editorial');
 }
 
@@ -178,7 +181,7 @@ export async function archiveArticle(id: string) {
     .from('articles')
     .update({ status: 'archived', updated_at: new Date().toISOString() })
     .eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not archive the article.'));
   revalidatePath('/admin/editorial');
 }
 
@@ -193,11 +196,11 @@ export async function purgeArticle(id: string) {
     .select('published_at, status')
     .eq('id', id)
     .maybeSingle();
-  if (readErr) throw new Error(readErr.message);
+  if (readErr) throw new Error(userMessage(readErr, 'We could not find that article.'));
   if (!row) return;
   if (row.published_at) throw new Error('Published articles are archived, not deleted');
 
   const { error } = await db.from('articles').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not delete the article.'));
   revalidatePath('/admin/editorial');
 }

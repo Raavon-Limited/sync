@@ -167,7 +167,12 @@ export async function resolvePrimaryStorefrontId(db: Client, vendorId: string): 
   if (!row?.id) {
     // Every vendor_profiles row got a "Main branch" in the storefronts
     // backfill, so this means the brand itself is missing or archived.
-    throw new Error(`Vendor ${vendorId} has no active storefront`);
+    //
+    // The vendor id stays in the log, not in the message: this throw reaches a
+    // toast, and "Vendor 8f3c…-… has no active storefront" tells the person
+    // holding the phone nothing and hands them an internal id.
+    console.error('[storefronts] no active storefront for vendor', vendorId);
+    throw new Error('This business has no active branch yet. Add a branch first.');
   }
   return row.id as string;
 }
@@ -369,9 +374,7 @@ export async function fetchManagedStorefronts(
  */
 function toScopes(v: unknown): StaffScope[] {
   if (!Array.isArray(v)) return [];
-  return v.filter((s): s is StaffScope =>
-    ALL_STAFF_SCOPES.includes(s as StaffScope),
-  );
+  return v.filter((s): s is StaffScope => ALL_STAFF_SCOPES.includes(s as StaffScope));
 }
 
 const toStaff = (r: Row): StorefrontStaffMember => ({
@@ -568,7 +571,10 @@ const toStoreListing = (r: Row): StoreListing => ({
   isAvailable: !!r.is_available,
 });
 
-export async function fetchStoreListings(db: Client, storefrontId: string): Promise<StoreListing[]> {
+export async function fetchStoreListings(
+  db: Client,
+  storefrontId: string,
+): Promise<StoreListing[]> {
   return unwrapList<Row>(
     await db.from('storefront_listings').select('*').eq('storefront_id', storefrontId),
   ).map(toStoreListing);

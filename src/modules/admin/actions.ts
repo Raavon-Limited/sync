@@ -22,6 +22,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
+import { userMessage } from '@/lib/errors';
 
 export type DocDecision = 'approved' | 'needs_action';
 export type VendorDecision = 'verified' | 'rejected' | 'pending';
@@ -65,7 +66,7 @@ export async function reviewDocument(input: {
     })
     .eq('id', input.documentId);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
   revalidatePath('/admin/vendors');
 }
 
@@ -76,10 +77,7 @@ export async function reviewDocument(input: {
  * decides a vendor is real. The screen shows how many documents are approved so
  * that decision is informed, but it does not make it for them.
  */
-export async function setVendorVerification(input: {
-  vendorId: string;
-  decision: VendorDecision;
-}) {
+export async function setVendorVerification(input: { vendorId: string; decision: VendorDecision }) {
   await assertStaff();
 
   // THROUGH THE RPC, NOT A COLUMN WRITE.
@@ -105,7 +103,7 @@ export async function setVendorVerification(input: {
     p_status: input.decision,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not update this verification.'));
   revalidatePath('/admin/vendors');
 }
 
@@ -122,7 +120,7 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
   const { data, error } = await admin.storage
     .from('verification-docs')
     .createSignedUrl(storagePath, 60 * 5);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not open that document.'));
   return data.signedUrl;
 }
 
@@ -151,7 +149,7 @@ export async function resolveDispute(input: {
     p_refund_kobo: input.refundKobo,
     p_notes: input.notes,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not resolve this dispute.'));
   revalidatePath('/admin/disputes');
 }
 
@@ -183,13 +181,15 @@ export async function decideHostelVisit(input: {
       updated_at: now,
     })
     .eq('id', input.visitId);
-  if (visitErr) throw new Error(visitErr.message);
+  if (visitErr) throw new Error(userMessage(visitErr, 'We could not save that visit.'));
 
   const { error: hostelErr } = await admin
     .from('hostels')
     .update({ verified: input.decision === 'Verified', updated_at: now })
     .eq('id', input.hostelId);
-  if (hostelErr) throw new Error(hostelErr.message);
+  if (hostelErr) {
+    throw new Error(userMessage(hostelErr, 'The visit was saved, but the hostel was not updated.'));
+  }
 
   revalidatePath('/admin/verify-visits');
 }
@@ -224,7 +224,7 @@ export async function scheduleHostelVisit(input: {
     ? await admin.from('hostel_verification_visits').update(payload).eq('id', existing.id)
     : await admin.from('hostel_verification_visits').insert(payload);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not schedule that visit.'));
   revalidatePath('/admin/verify-visits');
 }
 
@@ -261,7 +261,7 @@ export async function updateSetting(input: {
     })
     .eq('key', input.key);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not save that setting.'));
   revalidatePath('/admin/settings');
 }
 
@@ -288,6 +288,6 @@ export async function updateFeatureFlag(input: {
     })
     .eq('key', input.key);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not save that flag.'));
   revalidatePath('/admin/settings');
 }

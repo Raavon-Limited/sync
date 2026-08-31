@@ -1,6 +1,16 @@
 -- ============================================================================
 -- signup_roles — a new account holds the role it is wearing.
 --
+-- THIS FILE IS 20260901210000 AND MUST STAY THERE. It was briefly renamed to
+-- ...220000 on the theory that its push had rolled back. It had not: the remote
+-- records 210000 as applied AND the schema shows this migration's effects —
+-- student signup succeeds, which it cannot do unless handle_new_user seeds
+-- `roles`. Moving the file left the remote holding a version with no local
+-- file, which `db push` refuses to work past at all.
+--
+-- What actually went missing in that shuffle was document_subtype, which had
+-- taken this number and is now 20260901230000.
+--
 -- SIGNUP HAS BEEN BROKEN FOR EVERY STUDENT SINCE 20260830090000.
 --
 --   > Database error saving new user
