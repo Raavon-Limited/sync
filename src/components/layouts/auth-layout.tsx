@@ -25,7 +25,12 @@ export function AuthLayout({
     // Locked to the viewport height - the page never scrolls. If a form is
     // taller than the viewport, only the form pane scrolls (the brand panel
     // stays put).
-    <div className="bg-surface text-content flex h-dvh flex-col overflow-hidden md:grid md:grid-cols-2">
+    // `dark` is forced, not inherited. Both halves are Ink now, so the form
+    // side must use dark tokens even for a visitor whose theme is light -
+    // otherwise its labels and inputs render ink-on-ink and vanish. `.dark` is
+    // a plain class selector in globals.css, so applying it here re-scopes
+    // every token inside this subtree and nothing else on the site moves.
+    <div className="dark bg-ink text-cream flex h-dvh flex-col overflow-hidden md:grid md:grid-cols-2">
       {/* Brand + dynamic heading: top band on mobile, left column on desktop.
           `relative isolate` is what keeps the backdrop's -z-10 inside this
           panel instead of sliding behind the page. */}
@@ -50,22 +55,24 @@ export function AuthLayout({
 
       {/* p-4 on mobile, not p-6: the card below adds its own p-6, and two
           24px insets on a 375px screen left the inputs in a 279px column. */}
-      <main className="bg-surface-deep relative isolate flex flex-1 items-center justify-center overflow-y-auto p-4 md:h-dvh md:p-10">
-        {/* The doodle now reads THROUGH the glass card below rather than
-            sitting behind bare form fields, so it can carry more weight than
-            the /5 it had when the inputs sat directly on it. */}
-        <DoodleBackdrop tile={520} className="text-ink/8 dark:text-cream/8" />
+      <main className="bg-ink relative isolate flex flex-1 items-center justify-center overflow-y-auto p-4 md:h-dvh md:p-10">
+        {/* Cream lines, same as the brand panel - both sides are Ink now. */}
+        <DoodleBackdrop tile={520} className="text-cream/8" />
 
-        {/* Glass card: the form floats over the townscape instead of lying on
-            it. Three parts do the work, and all three are needed -
-              - a SEMI-TRANSPARENT ground, so the drawing shows through at all;
-              - backdrop-blur, so what shows through is soft enough to read
-                form labels over. Blur without transparency is a no-op; the
-                reverse is a legibility problem.
-              - a hairline border catching light at the edge, which is what
-                makes it read as a pane of glass rather than a faded box.
-            shadow-pop lifts it off the surface - the "float". */}
-        <div className="border-line/15 bg-panel/60 shadow-pop w-full max-w-lg rounded-3xl border p-6 backdrop-blur-xl md:p-8">
+        {/* Glass card.
+            The first attempt used `bg-panel/60`, which on this surface is
+            #17171c over #0e0e12 - a near-identical dark on dark. There was
+            nothing to see THROUGH and 60% was close to opaque, so it read as a
+            slightly different rectangle rather than glass.
+            Real glass on a dark ground is a LIGHT film: a few percent of cream
+            lifts the pane off the surface and lets the townscape carry the
+            transparency, while the blur keeps it soft enough to read labels
+            over. The two-tone border does the rest - brighter on top where a
+            pane would catch light, dimmer below - which is what the eye reads
+            as an edge rather than a drawn outline. */}
+        <div
+          className="border-cream/12 border-t-cream/25 bg-cream/6 w-full max-w-lg rounded-3xl border p-6 shadow-[0_16px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-150 md:p-8"
+        >
           {children}
         </div>
       </main>
