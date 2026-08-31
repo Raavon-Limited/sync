@@ -51,7 +51,7 @@ export function VendorOrderStats() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-5">
       {stats.map(({ label, value, icon: Icon, iconColor }) => (
-        <Card key={label} className="border-line/5 border bg-transparent">
+        <Card key={label} className="border-line/5 border">
           <CardHeader>
             <CardTitle className="text-muted font-mono tracking-wide">{label}</CardTitle>
           </CardHeader>

@@ -461,9 +461,9 @@ export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'i
  * policy authorizes on the first segment - a vendor can only write under their
  * own folder, so one vendor cannot overwrite another's photo.
  */
-export async function uploadListingImage(
+export async function uploadVendorImage(
   db: Client,
-  input: { userId: string; file: File },
+  input: { userId: string; file: File; folder?: 'listings' | 'logos' | 'stores' },
 ): Promise<string> {
   if (!ACCEPTED_IMAGE_TYPES.includes(input.file.type)) {
     throw new Error('Please choose a JPEG, PNG, WebP or AVIF image.');
@@ -474,7 +474,10 @@ export async function uploadListingImage(
 
   const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   const token = crypto.randomUUID().slice(0, 8);
-  const path = `${input.userId}/listings/${token}-${safeName}`;
+  // The folder is cosmetic — the POLICY authorizes on the first segment, the
+  // uploader's uuid — but it keeps a vendor's own storage browsable when
+  // somebody has to go looking for the photo behind a support ticket.
+  const path = `${input.userId}/${input.folder ?? 'listings'}/${token}-${safeName}`;
 
   const { error } = await db.storage.from(MEDIA_BUCKET).upload(path, input.file, {
     contentType: input.file.type,
@@ -487,6 +490,14 @@ export async function uploadListingImage(
   const { data } = db.storage.from(MEDIA_BUCKET).getPublicUrl(path);
 
   return data.publicUrl;
+}
+
+/** The original name, kept so existing callers do not all have to change. */
+export async function uploadListingImage(
+  db: Client,
+  input: { userId: string; file: File },
+): Promise<string> {
+  return uploadVendorImage(db, { ...input, folder: 'listings' });
 }
 
 // ── Listing categories ─────────────────────────────────────────────────────

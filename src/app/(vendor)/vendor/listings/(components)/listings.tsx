@@ -29,7 +29,12 @@ import {
 } from './listings-modal';
 import { useModalStore } from '@/store';
 import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
-import { useStoreListings, useSetSoldOut } from '@/modules/storefronts/hooks';
+import {
+  useStoreListings,
+  useSetSoldOut,
+  useSetStoreListing,
+  useMyStorefronts,
+} from '@/modules/storefronts/hooks';
 
 /**
  * Fetched once with archived included, then filtered in memory.
@@ -91,6 +96,14 @@ export default function ListingsPage() {
   const upsert = useUpsertListing();
   const remove = useDeleteListings();
   const archive = useArchiveListings(LIST_FILTERS);
+
+  // Every store the vendor owns — the add form ticks them all by default,
+  // because an item added to a three-branch business is almost always sold at
+  // three branches. `useMyStorefronts` excludes archived ones, which is right:
+  // you cannot stock a store that is closed.
+  const { data: ownedStores = [] } = useMyStorefronts();
+  const setStoreListing = useSetStoreListing();
+  const allStoreIds = useMemo(() => ownedStores.map((s) => s.id), [ownedStores]);
 
   /*
    * Filter chips come from this vendor's taxonomy, not a constant - a clothing
@@ -170,7 +183,25 @@ export default function ListingsPage() {
   // Every handler goes through the server; the cache is the source of truth.
   // `useArchiveListings` is optimistic internally because archiving is
   // reversible - create and delete are not, so they wait for confirmation.
-  const handleAdd = (listing: Listing) => {
+  /**
+   * Create the catalogue row, then say which stores carry it.
+   *
+   * TWO STEPS BECAUSE `storefront_listings` NEEDS AN ID THAT DOES NOT EXIST YET.
+   * The insert trigger `carry_listing_at_home_store` already stocks the home
+   * store, so the second pass writes every store — `is_listed: false` included
+   * — rather than only the ticked ones. Otherwise unticking the home store
+   * would leave the trigger's row behind and the item on sale somewhere the
+   * vendor just said it is not.
+   *
+   * The listing is reported as added as soon as the row exists. Availability
+   * failing is worth a warning, not a rollback: the item is real, it is simply
+   * not on sale everywhere yet, and the edit panel can finish the job.
+   */
+  const handleAdd = (listing: Listing, storeIds: string[]) => {
+    // Its home store — where it was created. Prefer the one being worked so
+    // the grid shows it immediately; otherwise the first store that carries it.
+    const home = activeId && storeIds.includes(activeId) ? activeId : storeIds[0];
+
     upsert.mutate(
       {
         name: listing.name,
@@ -179,11 +210,33 @@ export default function ListingsPage() {
         stock: listing.stock,
         status: listing.status,
         imageUrl: listing.imageUrl ?? null,
+        ...(home ? { storefrontId: home } : {}),
       },
       {
-        onSuccess: () => {
+        onSuccess: async (created) => {
           toast.success('Listing added');
           closeAddListing();
+          try {
+            await Promise.all(
+              allStoreIds.map((storefrontId) => {
+                const carried = storeIds.includes(storefrontId);
+                return setStoreListing.mutateAsync({
+                  storefrontId,
+                  listingId: created.id,
+                  isListed: carried,
+                  // Opening stock is per store. 0 means untracked ("cooked to
+                  // order"), not sold out — the same reading the trigger uses.
+                  ...(carried ? { stock: listing.stock > 0 ? listing.stock : null } : {}),
+                });
+              }),
+            );
+          } catch (e) {
+            toast.error(
+              `${listing.name} was added, but not to every store: ${
+                (e as Error).message || 'unknown error'
+              }`,
+            );
+          }
         },
         onError: (e) => toast.error(e.message || 'Could not add the listing'),
       },
@@ -305,8 +358,8 @@ export default function ListingsPage() {
     <section className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-ink text-2xl font-bold">Listings</h1>
-          <p className="text-muted text-sm">
+          <h1 className="font-display text-content text-2xl font-bold">Listings</h1>
+          <p className="text-content-muted text-sm">
             {isLoading
               ? 'Loading your catalogue...'
               : listings.length + ' products \u00b7 ' + activeCount + ' active'}
@@ -388,7 +441,7 @@ export default function ListingsPage() {
             />
           ))}
           {filtered.length === 0 && (
-            <p className="text-muted col-span-full py-16 text-center text-sm">
+            <p className="text-content-muted col-span-full py-16 text-center text-sm">
               {listings.length === 0
                 ? 'No listings yet. Add your first product to start selling.'
                 : 'No listings match your filters.'}
@@ -406,7 +459,12 @@ export default function ListingsPage() {
         />
       )}
 
-      <AddListingModal open={addListing.open} onAdd={handleAdd} onClose={closeAddListing} />
+      <AddListingModal
+        open={addListing.open}
+        onAdd={handleAdd}
+        onClose={closeAddListing}
+        defaultStoreIds={allStoreIds}
+      />
 
       <EditModal
         open={editListing.open}

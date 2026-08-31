@@ -78,7 +78,7 @@ export function EventRow({ event }: { event: StudentEvent }) {
 export function TicketCard({ ticket }: { ticket: StudentTicket }) {
   const valid = ticket.status === 'valid';
   return (
-    <div className="border-line/15 flex items-center gap-4 rounded-2xl border border-dashed p-4">
+    <div className="bg-panel border-line/15 flex items-center gap-4 rounded-2xl border border-dashed p-4">
       <span
         className={cn(
           'flex size-11 shrink-0 items-center justify-center rounded-xl',
@@ -143,7 +143,7 @@ export function EventsTicketsSummary({ basePath = '/me' }: { basePath?: string }
             </Link>
           </Button>
         </div>
-        <div className="border-line/15 rounded-2xl border border-dashed px-4">
+        <div className="bg-panel border-line/15 rounded-2xl border border-dashed px-4">
           {upcomingEvents.map((event) => (
             <EventRow key={event.id} event={event} />
           ))}

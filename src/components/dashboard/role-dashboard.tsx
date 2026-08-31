@@ -12,9 +12,12 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Dot, Wallet, ShoppingBag, Star, AlertTriangle } from 'lucide-react';
-import { Avatar, AvatarFallback, Badge, Button } from '@/components/ui';
+import { Badge, Button, Card } from '@/components/ui';
 import type { LucideIcon } from 'lucide-react';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
+import { isLocked } from '@/components/verification/verify-gate';
+import { VerificationBanner } from '@/components/verification/verification-banner';
+import { cn } from '@/lib/utils';
 import { DASHBOARD_CONTENT, type DashboardVariant } from '@/config/dashboard-content';
 
 import { CustomCard } from '../shared/card';
@@ -75,11 +78,50 @@ export async function RoleDashboard({
 }: RoleDashboardProps) {
   const content = DASHBOARD_CONTENT[variant];
   const profile = await getDashboardProfile(variant);
-  const verified = profile.eyebrow.startsWith('Verified');
+  // Three states, not two. "Submitted and waiting" is neither verified nor a
+  // prompt to go and verify - telling someone who has already sent their
+  // documents to verify their account reads as though it never arrived.
+  const status = profile.verificationStatus;
+  const verified = status === 'verified';
+  const awaitingReview = status === 'pending';
+  // Everything below the header is data this account has not earned the right
+  // to have yet. The shell still renders - see verify-gate for why a redirect
+  // would be worse.
+  const locked = isLocked(status);
   const storeName = profile.metaValue;
-  const { lead, accent } = content.headline(count);
+  // The count IS live - dash.counts.pending for a vendor, awaiting.length for
+  // a landlord. It only looked hardcoded because the gate emptied the list
+  // underneath it and left the headline claiming two orders over nothing. A
+  // locked dashboard reports zero because zero is what it can show.
+  const shownCount = locked ? 0 : count;
+  const { lead, accent } = content.headline(shownCount);
   const ActionIcon = content.action?.icon;
-  const styledKpis = kpis.map(withKpiStyle);
+  // Locked KPIs keep their labels and lose their numbers. A row of zeroes
+  // would be a claim about their business; an em-dash is an absence.
+  const styledKpis = (
+    locked ? kpis.map((k) => ({ ...k, value: '—', sub: 'After verification' })) : kpis
+  ).map(withKpiStyle);
+
+  // Only the "go and do something" state is a link, so only it gets the
+  // pointer and the hover. Built once so the two forms cannot drift apart.
+  const actionable = !verified && !awaitingReview;
+  const badge = (
+    <Badge
+      variant={awaitingReview ? 'muted' : 'accent'}
+      className={cn(
+        'border-line/50 flex items-center self-start border whitespace-normal sm:self-auto sm:whitespace-nowrap',
+        actionable && 'hover:bg-lime/80 cursor-pointer transition-colors',
+      )}
+    >
+      <span className="relative inline-flex items-center justify-center">
+        <Dot size={20} className="relative z-10" />
+        {/* The ping is an attention-getter. Nothing needs their attention
+            while a reviewer already has it. */}
+        {!awaitingReview && <Dot size={20} className="absolute animate-ping opacity-75" />}
+      </span>
+      {verified ? profile.eyebrow : awaitingReview ? content.pendingBadge : content.unverifiedBadge}
+    </Badge>
+  );
 
   return (
     <section className="flex flex-col gap-3">
@@ -90,29 +132,36 @@ export async function RoleDashboard({
 
       <div className="w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <Badge
-            variant="accent"
-            className="border-line/50 flex items-center self-start border whitespace-normal sm:self-auto sm:whitespace-nowrap"
-          >
-            <span className="relative inline-flex items-center justify-center">
-              <Dot size={20} className="relative z-10" />
-              <Dot size={20} className="absolute animate-ping opacity-75" />
-            </span>
-            {verified ? profile.eyebrow : content.unverifiedBadge}
-          </Badge>
+          {/* Unverified is not a status line, it is the one thing gating this
+              account - and the pill was pulsing at people with nowhere to go.
+              It now opens the wizard that clears it. The verified badge stays
+              inert: there is no page behind "Verified landlord". */}
+          {actionable ? <Link href={content.verifyHref}>{badge}</Link> : badge}
         </div>
         <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
           <h2 className="text-section text-content font-display mt-2 font-medium md:mt-0">
             {lead} <span className="text-lime-deep">{accent}</span>
           </h2>
-          {content.action && (
-            <Link href={content.action.href}>
-              <Button className="mt-4 flex items-center justify-end gap-2 md:mt-0 md:justify-start">
+          {content.action &&
+            (locked ? (
+              // Still shown, so they can see what verifying buys them - but it
+              // cannot be pressed, because the server would refuse it anyway.
+              <Button
+                disabled
+                title="Available once your account is verified"
+                className="mt-4 flex items-center justify-end gap-2 md:mt-0 md:justify-start"
+              >
                 {ActionIcon && <ActionIcon />}
                 {content.action.label}
               </Button>
-            </Link>
-          )}
+            ) : (
+              <Link href={content.action.href}>
+                <Button className="mt-4 flex items-center justify-end gap-2 md:mt-0 md:justify-start">
+                  {ActionIcon && <ActionIcon />}
+                  {content.action.label}
+                </Button>
+              </Link>
+            ))}
         </div>
       </div>
 
@@ -131,13 +180,22 @@ export async function RoleDashboard({
         ))}
       </div>
 
+      {/* Under the KPI row, not above the headline: the cards are the first
+          thing read, and a banner above them pushes the whole dashboard down
+          to say something that is not urgent. Here it sits between the numbers
+          it just emptied and the panels it is about to empty. */}
+      <VerificationBanner status={status} href={content.verifyHref} className="mt-1" />
+
       {/* Pending list + revenue chart */}
       <section className="mt-5">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="flex-1">
+        {/* items-stretch, not items-start: the two columns are a matched pair
+            and a short pending list should not leave a ragged edge beside a
+            full-height chart. */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+          <Card className="border-line/5 flex flex-1 flex-col border p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-content-muted text-body font-mono uppercase">
-                {content.pendingTitle} . {count}
+                {content.pendingTitle} . {shownCount}
               </h2>
               {content.pendingViewAllHref && (
                 <Link href={content.pendingViewAllHref}>
@@ -150,17 +208,21 @@ export async function RoleDashboard({
                 </Link>
               )}
             </div>
-            <PendingRequestList items={pending} />
-          </div>
+            <PendingRequestList items={locked ? [] : pending} />
+          </Card>
 
           <div className="flex-1">
-            <RevenueChartPanel initialData={chart} initialPeriod="weekly" />
+            <RevenueChartPanel initialData={locked ? [] : chart} initialPeriod="weekly" />
           </div>
         </div>
       </section>
 
-      {/* Role-specific lower sections */}
-      {children}
+      {/* Role-specific lower sections - hostels, products, earnings - are the
+          business itself, and none of it exists before verification. Hidden
+          rather than replaced by a second "verification in review" panel: the
+          banner above already said it once, and saying it twice on one screen
+          reads as an error rather than a state. */}
+      {locked ? null : children}
     </section>
   );
 }

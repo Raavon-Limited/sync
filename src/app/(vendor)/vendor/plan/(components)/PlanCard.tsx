@@ -64,20 +64,23 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
       </div>
 
       {/* Price */}
-      <div className="mb-5">
+      {/* `items-baseline` so the small period sits on the amount's baseline
+          rather than its box, and `min-w-0` + `wrap-break-word` so a long
+          figure wraps inside the card instead of running out of it. */}
+      <div className="mb-5 flex min-w-0 flex-wrap items-baseline gap-x-1">
         <span
           className={cn(
-            'font-display text-2xl font-black sm:text-3xl',
+            'font-display min-w-0 text-2xl font-black wrap-break-word sm:text-3xl',
             isEnterprise ? 'text-cream' : 'text-content',
           )}
         >
           {plan.priceLabel}
         </span>
-        {plan.price !== null && plan.price > 0 && (
-          <span
-            className={cn('ml-1 text-sm', isEnterprise ? 'text-cream/50' : 'text-content-muted')}
-          >
-            /mo
+        {/* The period comes from the plan's own `interval`, so a yearly plan
+            says /yr instead of claiming to be monthly. */}
+        {plan.pricePeriod && (
+          <span className={cn('text-sm', isEnterprise ? 'text-cream/50' : 'text-content-muted')}>
+            {plan.pricePeriod}
           </span>
         )}
       </div>
@@ -117,7 +120,9 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
           </Button>
         ) : plan.cta === 'upgrade' ? (
           <Button className="w-full bg-lime-600 text-white hover:bg-lime-700" onClick={handleClick}>
-            Upgrade
+            {/* "Upgrade" on the free plan is not a thing you can do to it.
+                Somebody on no plan at all is choosing, not upgrading. */}
+            {plan.price === 0 ? 'Start free' : 'Upgrade'}
           </Button>
         ) : (
           <Button variant="outline" className="w-full" onClick={handleClick}>

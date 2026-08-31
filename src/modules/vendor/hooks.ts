@@ -270,6 +270,19 @@ export function useUploadListingImage() {
   });
 }
 
+/**
+ * The same upload, for anything that is not a listing photo — a business logo,
+ * a store front. Same bucket, same 5MB limit, same own-folder-only policy;
+ * only the folder differs, and that is for humans browsing storage later.
+ */
+export function useUploadVendorImage(folder: 'listings' | 'logos' | 'stores' = 'listings') {
+  const { userId } = useSession();
+
+  return useMutation({
+    mutationFn: (file: File) => api.uploadVendorImage(db(), { userId: userId!, file, folder }),
+  });
+}
+
 // ── Listing categories ─────────────────────────────────────────────────────
 
 /**

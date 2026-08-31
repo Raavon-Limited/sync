@@ -140,9 +140,35 @@ function Suggesting(props: AddressAutocompleteProps) {
 
         setItems(next);
         setOpen(next.length > 0);
-      } catch {
+
+        // Zero results is a legitimate answer, not a fault - `includedRegionCodes`
+        // is a hard restriction in the new API, so a street that exists only
+        // outside those regions correctly returns nothing. Say so in dev, or the
+        // silence is indistinguishable from a broken key.
+        if (process.env.NODE_ENV === 'development' && next.length === 0) {
+          console.info(
+            `[AddressAutocomplete] Places returned 0 suggestions for "${value}" ` +
+              `restricted to [${included.join(', ')}]. The call succeeded - there is ` +
+              `simply no match in those regions.`,
+          );
+        }
+      } catch (err) {
         // Places not enabled on the project, quota, offline: the field simply
         // stops suggesting. Typing still works, which is what matters.
+        //
+        // But it must not fail INVISIBLY in development. Swallowing this whole
+        // is why a disabled "Places API (New)" looks exactly like an address
+        // with no matches - one is a console setting to fix, the other is
+        // correct behaviour, and the field rendered the same for both.
+        if (process.env.NODE_ENV === 'development') {
+          console.error(
+            '[AddressAutocomplete] Places request failed - the field is now a plain ' +
+              'text input. Usual cause: "Places API (New)" is not enabled on the ' +
+              'Google Cloud project (it is a separate enable from Maps JavaScript), ' +
+              'or the key’s HTTP-referrer restriction does not list this origin.',
+            err,
+          );
+        }
         if (mine === seq.current) {
           setItems([]);
           setOpen(false);

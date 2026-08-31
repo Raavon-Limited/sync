@@ -489,6 +489,7 @@ export type Database = {
           joined_at: string
           revoked_at: string | null
           role: string
+          scopes: string[]
           storefront_id: string
           user_id: string
         }
@@ -499,6 +500,7 @@ export type Database = {
           joined_at?: string
           revoked_at?: string | null
           role?: string
+          scopes?: string[]
           storefront_id: string
           user_id: string
         }
@@ -509,6 +511,7 @@ export type Database = {
           joined_at?: string
           revoked_at?: string | null
           role?: string
+          scopes?: string[]
           storefront_id?: string
           user_id?: string
         }
@@ -533,6 +536,7 @@ export type Database = {
           invited_by: string
           revoked_at: string | null
           role: string
+          scopes: string[]
           storefront_id: string
           token: string
         }
@@ -546,6 +550,7 @@ export type Database = {
           invited_by: string
           revoked_at?: string | null
           role?: string
+          scopes?: string[]
           storefront_id: string
           token?: string
         }
@@ -559,6 +564,7 @@ export type Database = {
           invited_by?: string
           revoked_at?: string | null
           role?: string
+          scopes?: string[]
           storefront_id?: string
           token?: string
         }
@@ -605,8 +611,9 @@ export type Database = {
       }
       storefronts: {
         Row: {
-          auto_pause_after: number | null
+          auto_pause_after: number
           auto_pause_minutes: number
+          image_url: string | null
           pause_reason: string | null
           paused_until: string | null
           lat: number | null
@@ -629,8 +636,9 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
-          auto_pause_after?: number | null
+          auto_pause_after?: number
           auto_pause_minutes?: number
+          image_url?: string | null
           pause_reason?: string | null
           paused_until?: string | null
           lat?: number | null
@@ -653,8 +661,9 @@ export type Database = {
           vendor_id: string
         }
         Update: {
-          auto_pause_after?: number | null
+          auto_pause_after?: number
           auto_pause_minutes?: number
+          image_url?: string | null
           pause_reason?: string | null
           paused_until?: string | null
           lat?: number | null
@@ -3445,6 +3454,10 @@ export type Database = {
         Args: { p_role: string }
         Returns: string
       }
+      set_vendor_category: {
+        Args: { p_category: string; p_trade?: string | null }
+        Returns: string
+      }
       claim_role: {
         Args: { p_role: string }
         Returns: string[]
@@ -3574,8 +3587,85 @@ export type Database = {
       revoke_storefront_staff: { Args: { p_staff_id: string }; Returns: undefined }
       accept_storefront_invite: { Args: { p_token: string }; Returns: string }
       create_storefront_invite: {
-        Args: { p_storefront_id: string; p_email: string; p_role?: string }
+        Args: {
+          p_storefront_id: string
+          p_email: string
+          p_role?: string
+          p_scopes?: string[]
+        }
         Returns: { invite_id: string; token: string; expires_at: string }[]
+      }
+      set_storefront_staff_scopes: {
+        Args: { p_staff_id: string; p_scopes: string[] }
+        Returns: undefined
+      }
+      revoke_storefront_invite: { Args: { p_invite_id: string }; Returns: undefined }
+      ensure_vendor_profile: { Args: Record<string, never>; Returns: string }
+      submit_verification: { Args: Record<string, never>; Returns: string }
+      claim_business_name: { Args: { p_name: string }; Returns: string }
+      save_onboarding_business: {
+        Args: {
+          p_business_name: string
+          p_business_address?: string | null
+          p_phone?: string | null
+          p_area?: string | null
+          p_bio?: string | null
+        }
+        Returns: undefined
+      }
+      store_performance: {
+        Args: Record<string, never>
+        Returns: {
+          storefront_id: string
+          store_name: string
+          is_archived: boolean
+          orders_total: number
+          orders_completed: number
+          orders_active: number
+          orders_cancelled: number
+          orders_refunded: number
+          revenue_kobo: number
+          booked_kobo: number
+          refunded_kobo: number
+          avg_order_kobo: number
+          last_order_at: string | null
+        }[]
+      }
+      store_revenue_monthly: {
+        Args: { p_months?: number }
+        Returns: {
+          month: string
+          storefront_id: string
+          store_name: string
+          revenue_kobo: number
+          orders_count: number
+        }[]
+      }
+      store_transactions: {
+        Args: {
+          p_storefront_id?: string
+          p_bucket?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          order_id: string
+          storefront_id: string
+          store_name: string
+          status: string
+          is_refunded: boolean
+          total_kobo: number
+          net_kobo: number
+          item_count: number
+          placed_at: string
+          delivered_at: string | null
+          student_name: string
+          total_rows: number
+        }[]
+      }
+      set_storefront_archived: {
+        Args: { p_storefront_id: string; p_archived: boolean }
+        Returns: Database['public']['Tables']['storefronts']['Row']
       }
       storefront_roster: {
         Args: { p_storefront_id?: string }
@@ -3587,6 +3677,7 @@ export type Database = {
           full_name: string | null
           email: string | null
           role: string
+          scopes: string[]
           joined_at: string
           revoked_at: string | null
           is_active: boolean
@@ -3600,13 +3691,19 @@ export type Database = {
           branch_name: string
           email: string
           role: string
+          scopes: string[]
           invited_at: string
           expires_at: string
           is_expired: boolean
         }[]
       }
       storefront_activity: {
-        Args: { p_storefront_id?: string; p_limit?: number }
+        Args: {
+          p_storefront_id?: string
+          p_limit?: number
+          p_search?: string
+          p_actor_id?: string
+        }
         Returns: {
           occurred_at: string
           actor_id: string | null

@@ -31,6 +31,13 @@ export const vendorOnboardingSchema = z
     vendorCategory: z.enum(VENDOR_CATEGORIES, { message: 'Select what you offer' }),
     trade: z.enum(TRADES).optional(),
     businessAddress: z.string().trim().min(6, 'Enter your business address').max(200),
+    /**
+     * Optional, but it is the field discovery actually runs on: a business with
+     * no area is left out of the campus board and cannot be ranked by distance,
+     * so students simply never see it. Asked here so Settings opens filled in
+     * rather than asking again — see save_onboarding_business.
+     */
+    area: z.string().trim().max(80).optional(),
   })
   .superRefine((d, ctx) => {
     if (d.vendorCategory === 'tradesman' && !d.trade) {

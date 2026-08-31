@@ -15,7 +15,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   // which branch is active, and two providers would be two answers.
   return (
     <ActiveStorefrontProvider>
-      <DashboardShell navKey="vendor" sidebarSlot={<StoreSwitcher />}>
+      <DashboardShell navKey="vendor" sidebarSlot={<StoreSwitcher />} doodle="food">
         {children}
       </DashboardShell>
     </ActiveStorefrontProvider>

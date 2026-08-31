@@ -102,6 +102,9 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         items: [
           { href: '/vendor', label: 'Overview', icon: LayoutDashboard },
           { href: '/vendor/stores', label: 'Stores', icon: Store },
+          // Access is granted per store but managed per person, so it sits
+          // beside Stores rather than inside it.
+          { href: '/vendor/team', label: 'Team', icon: Users, heading: 'Team & access' },
           { href: '/vendor/listings', label: 'Listings', icon: List },
           { href: '/vendor/orders', label: 'Orders', icon: ShoppingBag },
           { href: '/vendor/inbox', label: 'Inbox', icon: Inbox },

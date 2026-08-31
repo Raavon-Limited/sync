@@ -49,7 +49,11 @@ export function PlanContainer() {
         name: p.name,
         tagline: p.description ?? '',
         price: p.priceKobo / 100,
-        priceLabel: p.priceKobo === 0 ? 'Free' : `${naira(p.priceKobo)}/${p.interval}`,
+        // Money and period kept apart. Together they were one unbreakable
+        // string in a display font ("₦2,500/monthly") that ran off the card,
+        // and the card then appended its own "/mo" underneath it.
+        priceLabel: p.priceKobo === 0 ? 'Free' : naira(p.priceKobo),
+        pricePeriod: p.priceKobo === 0 ? '' : p.interval === 'yearly' ? '/yr' : '/mo',
         // No commission column on `plans` — see the header.
         commission: null,
         features: [

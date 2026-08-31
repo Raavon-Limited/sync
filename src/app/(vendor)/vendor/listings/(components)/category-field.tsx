@@ -62,7 +62,7 @@ export function CategoryField({ value, onChange, error }: CategoryFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-muted text-xs font-medium">Category</label>
+        <label className="text-content-muted text-xs font-medium">Category</label>
 
         {!adding && (
           <button
@@ -78,7 +78,7 @@ export function CategoryField({ value, onChange, error }: CategoryFieldProps) {
       {isLoading ? (
         <div className="bg-ink/5 h-9 animate-pulse rounded-lg" />
       ) : categories.length === 0 ? (
-        <p className="text-muted text-xs">
+        <p className="text-content-muted text-xs">
           No categories yet for your business type. Add one to get started.
         </p>
       ) : (
@@ -92,7 +92,7 @@ export function CategoryField({ value, onChange, error }: CategoryFieldProps) {
                 'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors',
                 value === c.name
                   ? 'border-lime-500 bg-lime-500/10 text-lime-deep font-medium'
-                  : 'border-line/40 text-muted hover:border-lime-500/50',
+                  : 'border-line/40 text-content-muted hover:border-lime-500/50',
               )}
             >
               {value === c.name && <Check className="size-3" />}
@@ -139,7 +139,7 @@ export function CategoryField({ value, onChange, error }: CategoryFieldProps) {
               setAdding(false);
               setCreateError(null);
             }}
-            className="text-muted hover:text-ink inline-flex size-8 shrink-0 items-center justify-center"
+            className="text-content-muted hover:text-content inline-flex size-8 shrink-0 items-center justify-center"
             aria-label="Cancel"
           >
             <X className="size-3.5" />

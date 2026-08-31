@@ -28,7 +28,7 @@ function HostelCard({ hostel, onSelect }: { hostel: Hostel; onSelect?: (id: stri
   return (
     <Card
       onClick={() => onSelect?.(hostel.id)}
-      className="group border-line w-full cursor-pointer border bg-transparent transition-shadow duration-300 hover:shadow-lg"
+      className="group border-line w-full cursor-pointer border transition-shadow duration-300 hover:shadow-lg"
     >
       {/* Image / Placeholder */}
       <div className="border-line/25 m-3 overflow-hidden rounded-xl border border-dashed">

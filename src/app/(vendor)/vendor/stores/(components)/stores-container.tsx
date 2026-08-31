@@ -1,74 +1,87 @@
 /**
- * Manage stores — branches, the people who run them, and what those people did.
+ * Manage stores — the locations themselves.
+ *
+ * WHAT MOVED OUT AND WHY
+ *   The roster, the invitations and the activity feed used to live at the
+ *   bottom of this page, scoped to whichever store card was highlighted. That
+ *   made "who works for me" a per-store question, which is not how an owner
+ *   thinks about it — they hire a person, then decide where and what. Those
+ *   sections are /vendor/team now, across every store at once.
  *
  * TWO AUDIENCES, ONE ROUTE
- *   Every write here (create a branch, promote a primary, invite, revoke) and
- *   both read RPCs are owner-scoped in the database, so a manager arriving here
- *   would get three empty sections and controls that refuse. Rather than hide
- *   the route — which needs the shared nav config to become role-aware — the
- *   component renders a manager view: the branch they run, and a plain
- *   statement of where their authority ends.
+ *   Every write here (create, promote, archive) is owner-scoped in the
+ *   database, so a manager arriving would get controls that refuse. Rather
+ *   than hide the route — which needs the shared nav config to become
+ *   role-aware — this renders a manager view: the store they run, what they
+ *   were given, and a plain statement of where their authority ends.
  */
 'use client';
 
 import { useState } from 'react';
-import { Store, Plus, Star, Users, Activity, Trash2, Copy, Check, MapPinOff } from 'lucide-react';
-import { CooldownControl } from './cooldown-control';
-import { Button, Input, Badge } from '@/components/ui';
+import {
+  Store,
+  Star,
+  MapPinOff,
+  Archive,
+  ArchiveRestore,
+  Check,
+  Pencil,
+  BarChart3,
+  TriangleAlert,
+} from 'lucide-react';
+import { CooldownSheet } from './cooldown-sheet';
+import { StoreFormDialog } from './store-form-dialog';
+import { StoreAnalytics } from './store-analytics';
+import { StoreTransactions } from './store-transactions';
+import { Button, Badge } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
-import { isStoreOpen, pauseMinutesLeft } from '@/modules/storefronts/types';
+import {
+  isStoreOpen,
+  pauseMinutesLeft,
+  scopeLabel,
+  type Storefront,
+} from '@/modules/storefronts/types';
 import {
   useMyStorefronts,
-  useCreateStorefront,
   useSetPrimaryStorefront,
-  useStorefrontRoster,
-  usePendingInvites,
-  useCreateInvite,
-  useRevokeStaff,
-  useStorefrontActivity,
+  useSetStorefrontArchived,
 } from '@/modules/storefronts/hooks';
+import { useMyStorefront } from '@/modules/vendor/hooks';
 
-function money(kobo?: string) {
-  if (!kobo) return null;
-  return `₦${(Number(kobo) / 100).toLocaleString()}`;
-}
-
-/** "listing.insert" -> "Added a listing". The feed is read by a person. */
-function describe(action: string) {
-  const map: Record<string, string> = {
-    'listing.insert': 'Added a listing',
-    'listing.update': 'Edited a listing',
-    'listing.delete': 'Removed a listing',
-    'storefront.insert': 'Created the store',
-    'storefront.update': 'Changed store details',
-    'order.insert': 'Order placed',
-  };
-  if (map[action]) return map[action];
-  if (action.startsWith('order.update.')) return `Order → ${action.split('.').pop()}`;
-  return action;
+/** The one line that says what a student would see right now. */
+function statusLine(s: Storefront) {
+  if (s.archivedAt) return 'Archived — hidden from students';
+  if (!s.isAcceptingOrders) return 'Closed';
+  // Three states, not two. "Paused" used to mean the manual switch was off; it
+  // now means a cooldown, and a store closed indefinitely is a different thing
+  // from one that reopens in six minutes.
+  return isStoreOpen(s) ? 'Accepting orders' : `Paused · ${pauseMinutesLeft(s.pausedUntil)} min left`;
 }
 
 export function StoresContainer() {
   const { activeId, setActive, isOwner, storefronts: managed } = useActiveStorefront();
-  const { data: stores = [], isLoading } = useMyStorefronts();
+  // Archived stores are the owner's own history and nobody else's — the public
+  // policy filters them out at the database, so this cannot leak one.
+  const { data: stores = [], isLoading } = useMyStorefronts({ includeArchived: true });
+  const { data: brand } = useMyStorefront();
+
   const [selected, setSelected] = useState<string | null>(null);
-  const branchId = selected ?? activeId ?? stores[0]?.id ?? null;
+  const active = stores.filter((s) => !s.archivedAt);
+  const archived = stores.filter((s) => s.archivedAt);
 
-  const selectedStore = stores.find((s) => s.id === branchId) ?? null;
+  // Never resolves to an archived store: it is the one you cannot work in, and
+  // a cooldown panel pointed at it would be controls that do nothing.
+  const branchId =
+    (selected && active.some((s) => s.id === selected) ? selected : null) ??
+    (active.some((s) => s.id === activeId) ? activeId : null) ??
+    active[0]?.id ??
+    null;
+  const selectedStore = active.find((s) => s.id === branchId) ?? null;
 
-  const create = useCreateStorefront();
   const promote = useSetPrimaryStorefront();
-  const [newName, setNewName] = useState('');
-  const [newArea, setNewArea] = useState('');
-
-  const { data: roster = [] } = useStorefrontRoster(branchId ?? undefined);
-  const { data: invites = [] } = usePendingInvites(branchId ?? undefined);
-  const { data: activity = [] } = useStorefrontActivity({ storefrontId: branchId ?? undefined, limit: 25 });
-  const invite = useCreateInvite();
-  const revoke = useRevokeStaff();
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [issued, setIssued] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const setArchived = useSetStorefrontArchived();
+  const [confirming, setConfirming] = useState<Storefront | null>(null);
 
   if (isLoading) {
     return (
@@ -81,10 +94,9 @@ export function StoresContainer() {
   }
 
   // A MANAGER GETS A DIFFERENT PAGE, NOT AN EMPTY ONE.
-  // Every read below (roster, invites, activity) and every write (create,
-  // promote, invite, revoke) is owner-scoped in the database, so a manager
-  // would see three empty sections and controls that refuse. Showing them the
-  // branch they actually run is both honest and more useful than hiding the
+  // Every write below is owner-scoped in the database, so a manager would see
+  // controls that refuse. Showing them the store they actually run — and the
+  // sections they were handed — is both honest and more useful than hiding the
   // route, and it states the permission boundary rather than leaving them to
   // discover it by hitting an error.
   if (!isOwner) {
@@ -92,7 +104,7 @@ export function StoresContainer() {
       <div className="flex flex-col gap-4">
         {managed.map((s) => (
           <div key={s.id} className="border-line/10 bg-panel flex flex-col gap-1 rounded-xl border p-4">
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <Store className="text-lime-deep size-4" />
               <span className="text-content font-medium">{s.name}</span>
               <Badge className="bg-blue-100 text-blue-700">You manage this</Badge>
@@ -105,21 +117,21 @@ export function StoresContainer() {
                 No area — students cannot find this store
               </span>
             )}
-            <span className="text-content-muted text-xs">
-              {/* Same three states as the owner's card. "Paused" now means a
-                  cooldown, so a store switched off indefinitely has to read
-                  differently from one that reopens in six minutes. */}
-              {!s.isAcceptingOrders
-                ? 'Closed'
-                : isStoreOpen(s)
-                  ? 'Accepting orders'
-                  : `Paused · ${pauseMinutesLeft(s.pausedUntil)} min left`}
+            <span className="text-content-muted text-xs">{statusLine(s)}</span>
+            {/* What they were actually given. Without this a manager finds out
+                they cannot touch the menu by tapping it and being refused. */}
+            <span className="mt-1 flex flex-wrap items-center gap-1">
+              {s.scopes.map((sc) => (
+                <Badge key={sc} className="bg-ink/5 text-content-muted">
+                  {scopeLabel(sc)}
+                </Badge>
+              ))}
             </span>
           </div>
         ))}
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
-          You can work this store&apos;s listings and orders. Adding stores, inviting other managers
-          and the owner&apos;s earnings stay with the owner.
+          You can work the sections listed above. Adding or archiving stores, inviting other
+          managers and the owner&apos;s earnings stay with the owner.
         </p>
       </div>
     );
@@ -127,263 +139,252 @@ export function StoresContainer() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* ── Branches ─────────────────────────────────────────────────────── */}
+      {/* ── Stores ───────────────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
-          <Store className="size-4" /> Your stores
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
+            <Store className="size-4" /> Your stores
+          </h2>
+          {/* Both page-level actions in one place. The cooldown still applies
+              to ONE store — the one being worked — so the trigger names it
+              rather than sitting here unlabelled: a control that silently
+              closed whichever card was highlighted is the easiest possible way
+              to shut the wrong shop. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedStore && <CooldownSheet store={selectedStore} />}
+            <StoreFormDialog
+              verificationStatus={brand?.verificationStatus}
+              isFirstStore={active.length === 0}
+            />
+          </div>
+        </div>
+        {selectedStore && active.length > 1 && (
+          <p className="text-content-muted -mt-1 text-xs">
+            Cooldown applies to <span className="text-content">{selectedStore.name}</span>, the
+            store you are working in.
+          </p>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {stores.map((s) => (
-            <button
+          {active.map((s) => (
+            <StoreCard
               key={s.id}
-              type="button"
-              onClick={() => {
+              store={s}
+              isWorking={s.id === branchId}
+              onWorkHere={() => {
                 setSelected(s.id);
                 setActive(s.id);
               }}
-              className={`border-line/10 bg-panel flex flex-col gap-1 rounded-xl border p-4 text-left transition-colors ${
-                s.id === branchId ? 'border-lime-deep/40 ring-lime-deep/20 ring-2' : 'hover:border-line/25'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span className="text-content font-medium">{s.name}</span>
-                {s.isPrimary && (
-                  <Badge className="bg-lime/15 text-lime-deep gap-1">
-                    <Star className="size-3" /> Primary
-                  </Badge>
-                )}
-              </span>
-              {/* Not cosmetic. Discovery is location-first: a store with no
-                  area is left out of the campus board and cannot be ranked by
-                  distance, so students simply never see it. Nothing errors —
-                  it is just absent, which is the hardest kind of bug to
-                  notice from the vendor's side. */}
-              {s.area ? (
-                <span className="text-content-muted text-xs">{s.area}</span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-amber-600">
-                  <MapPinOff className="size-3 shrink-0" />
-                  No area — students cannot find this store
-                </span>
-              )}
-              <span className="text-content-muted text-xs">
-                {s.coords ? 'Pinned on the map' : 'No map pin'} ·{' '}
-                {/* Three states, not two. "Paused" used to mean the manual
-                    switch was off; it now means a cooldown, and a store that
-                    is closed indefinitely is a different thing from one that
-                    reopens in six minutes. */}
-                {!s.isAcceptingOrders
-                  ? 'Closed'
-                  : isStoreOpen(s)
-                    ? 'Accepting orders'
-                    : `Paused · ${pauseMinutesLeft(s.pausedUntil)} min left`}
-              </span>
-              {!s.isPrimary && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    promote.mutate(s.id);
-                  }}
-                  onKeyDown={(ev) => ev.key === 'Enter' && promote.mutate(s.id)}
-                  className="text-lime-deep mt-1 text-xs underline underline-offset-2"
-                >
-                  Make primary
-                </span>
-              )}
-            </button>
+              onPromote={() => promote.mutate(s.id)}
+              onArchive={() => setConfirming(s)}
+              busy={promote.isPending || setArchived.isPending}
+              canArchive={active.length > 1}
+            />
           ))}
         </div>
 
-        {/* Scoped to the selected store: a cooldown is per location, and one
-            control that silently applied to whichever store was highlighted
-            would be the easiest possible way to close the wrong shop. */}
-        {selectedStore && <CooldownControl store={selectedStore} />}
-
-        <form
-          className="border-line/10 flex flex-wrap items-end gap-2 rounded-xl border border-dashed p-4"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            if (!newName.trim()) return;
-            create.mutate(
-              { name: newName.trim(), area: newArea.trim() || null },
-              { onSuccess: () => { setNewName(''); setNewArea(''); } },
-            );
-          }}
-        >
-          <label className="flex min-w-40 flex-1 flex-col gap-1">
-            <span className="text-content-muted text-xs">Store name</span>
-            <Input value={newName} onChange={(ev) => setNewName(ev.target.value)} placeholder="Tanke store" />
-          </label>
-          <label className="flex min-w-40 flex-1 flex-col gap-1">
-            <span className="text-content-muted text-xs">Area</span>
-            <Input value={newArea} onChange={(ev) => setNewArea(ev.target.value)} placeholder="Tanke" />
-          </label>
-          <Button type="submit" disabled={create.isPending || !newName.trim()} className="gap-2">
-            <Plus className="size-4" /> Add store
-          </Button>
-        </form>
-        {create.isError && (
-          <p className="text-coral text-xs">{(create.error as Error)?.message}</p>
+        {setArchived.error && (
+          <p className="text-coral flex items-start gap-1 text-xs">
+            <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+            {(setArchived.error as Error).message}
+          </p>
+        )}
+        {promote.isError && (
+          <p className="text-coral text-xs">{(promote.error as Error)?.message}</p>
         )}
       </section>
 
-      {/* ── People ───────────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
-          <Users className="size-4" /> Who can manage this store
-        </h2>
-
-        {roster.length === 0 && invites.length === 0 && (
-          <p className="text-content-muted text-sm">Only you, for now.</p>
-        )}
-
-        {roster.map((m) => (
-          <div
-            key={m.staffId}
-            className="border-line/10 bg-panel flex items-center gap-3 rounded-xl border px-4 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-content truncate text-sm font-medium">
-                {m.fullName || m.email || 'Unknown'}
-              </p>
-              <p className="text-content-muted truncate text-xs">
-                {m.email} · {m.role} · joined {new Date(m.joinedAt).toLocaleDateString()}
-              </p>
-            </div>
-            {m.isActive ? (
-              <Button
-                variant="outline"
-                className="text-coral gap-1"
-                disabled={revoke.isPending}
-                onClick={() => revoke.mutate(m.staffId)}
+      {/* ── Archived ─────────────────────────────────────────────────────── */}
+      {archived.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
+            <Archive className="size-4" /> Archived
+          </h2>
+          <p className="text-content-muted text-sm">
+            Hidden from students and out of search. Their orders and history are kept. A store you
+            bring back comes back <em>closed</em>, so you can check its stock before it starts
+            taking orders again.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {archived.map((s) => (
+              <div
+                key={s.id}
+                className="border-line/10 bg-panel/60 flex flex-col gap-1 rounded-xl border border-dashed p-4"
               >
-                <Trash2 className="size-4" /> Revoke
-              </Button>
-            ) : (
-              <Badge className="bg-ink/5 text-content-muted">Revoked</Badge>
-            )}
-          </div>
-        ))}
-
-        {invites.map((i) => (
-          <div
-            key={i.inviteId}
-            className="border-line/10 flex items-center gap-3 rounded-xl border border-dashed px-4 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-content truncate text-sm">{i.email}</p>
-              <p className="text-content-muted text-xs">
-                Invited · {i.isExpired ? 'expired' : `expires ${new Date(i.expiresAt).toLocaleDateString()}`}
-              </p>
-            </div>
-            <Badge className="bg-ink/5 text-content-muted">Pending</Badge>
-          </div>
-        ))}
-
-        <form
-          className="border-line/10 flex flex-wrap items-end gap-2 rounded-xl border border-dashed p-4"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            if (!branchId || !inviteEmail.trim()) return;
-            invite.mutate(
-              { storefrontId: branchId, email: inviteEmail.trim() },
-              {
-                onSuccess: (r) => {
-                  setIssued(r.token);
-                  setInviteEmail('');
-                  setCopied(false);
-                },
-              },
-            );
-          }}
-        >
-          <label className="flex min-w-52 flex-1 flex-col gap-1">
-            <span className="text-content-muted text-xs">Invite a manager by email</span>
-            <Input
-              type="email"
-              value={inviteEmail}
-              onChange={(ev) => setInviteEmail(ev.target.value)}
-              placeholder="manager@example.com"
-            />
-          </label>
-          <Button type="submit" disabled={invite.isPending || !inviteEmail.trim()}>
-            Send invite
-          </Button>
-        </form>
-        {invite.isError && <p className="text-coral text-xs">{(invite.error as Error)?.message}</p>}
-
-        {/* The token is returned exactly once and is never readable again, so it
-            has to be surfaced here rather than fetched later. */}
-        {issued && (
-          <div className="border-lime-deep/30 bg-lime/5 flex flex-col gap-2 rounded-xl border p-4">
-            <p className="text-content text-sm font-medium">Share this invite link</p>
-            <p className="text-content-muted text-xs">
-              It is shown once and cannot be retrieved again. It expires in 7 days and works only for
-              the address you invited.
-            </p>
-            <div className="flex items-center gap-2">
-              <code className="bg-panel text-content min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-xs">
-                {`${typeof window !== 'undefined' ? window.location.origin : ''}/vendor/join?token=${issued}`}
-              </code>
-              <Button
-                variant="outline"
-                className="gap-1"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(
-                    `${window.location.origin}/vendor/join?token=${issued}`,
-                  );
-                  setCopied(true);
-                }}
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copied ? 'Copied' : 'Copy'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ── Activity ─────────────────────────────────────────────────────── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
-          <Activity className="size-4" /> Recent activity
-        </h2>
-        {activity.length === 0 ? (
-          <p className="text-content-muted text-sm">Nothing recorded at this store yet.</p>
-        ) : (
-          <ol className="border-line/10 bg-panel divide-line/10 divide-y rounded-xl border">
-            {activity.map((a, i) => (
-              <li key={`${a.occurredAt}-${i}`} className="flex items-center gap-3 px-4 py-3">
-                <Badge
-                  className={
-                    a.actorRole === 'owner'
-                      ? 'bg-lime/15 text-lime-deep'
-                      : a.actorRole === 'staff'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-ink/5 text-content-muted'
-                  }
+                <span className="text-content-muted font-medium line-through">{s.name}</span>
+                <span className="text-content-muted text-xs">
+                  {s.area ?? 'No area'} · archived{' '}
+                  {new Date(s.archivedAt!).toLocaleDateString()}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-fit gap-1"
+                  disabled={setArchived.isPending}
+                  onClick={() => setArchived.mutate({ id: s.id, archived: false })}
                 >
-                  {a.actorRole}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="text-content truncate text-sm">
-                    {describe(a.action)}
-                    {a.summary.name ? ` — ${a.summary.name}` : ''}
-                  </p>
-                  <p className="text-content-muted truncate text-xs">
-                    {a.actorName} · {new Date(a.occurredAt).toLocaleString()}
-                    {a.summary.stock ? ` · stock ${a.summary.stock}` : ''}
-                    {money(a.summary.total_kobo) ? ` · ${money(a.summary.total_kobo)}` : ''}
-                  </p>
-                </div>
-              </li>
+                  <ArchiveRestore className="size-3" /> Bring back
+                </Button>
+              </div>
             ))}
-          </ol>
-        )}
+          </div>
+        </section>
+      )}
+
+      {/* ── How they are doing ───────────────────────────────────────────── */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-content flex items-center gap-2 text-lg font-semibold">
+          <BarChart3 className="size-4" /> Performance
+        </h2>
+        <StoreAnalytics />
       </section>
+
+      {/* ── The orders behind those numbers ──────────────────────────────── */}
+      {/* Scoped to the store being worked when there is more than one, so the
+          table answers the same question as the cards above it rather than
+          merging every location into one undifferentiated list. */}
+      <StoreTransactions
+        storefrontId={active.length > 1 ? branchId : null}
+        storeName={active.length > 1 ? (selectedStore?.name ?? null) : null}
+      />
+
+      <ConfirmDialog
+        open={!!confirming}
+        onOpenChange={(v) => !v && setConfirming(null)}
+        title={`Archive ${confirming?.name ?? 'this store'}?`}
+        description="Students stop seeing it immediately and it drops out of search. Its orders, listings and history are kept, and you can bring it back at any time."
+        confirmLabel="Archive"
+        destructive
+        loading={setArchived.isPending}
+        onConfirm={() => {
+          if (!confirming) return;
+          setArchived.mutate(
+            { id: confirming.id, archived: true },
+            // Left open on failure on purpose — the refusals here are real
+            // ("finish these orders first") and closing the dialog would throw
+            // the reason away before it was read.
+            { onSuccess: () => setConfirming(null) },
+          );
+        }}
+      />
+    </div>
+  );
+}
+
+function StoreCard({
+  store,
+  isWorking,
+  onWorkHere,
+  onPromote,
+  onArchive,
+  busy,
+  canArchive,
+}: {
+  store: Storefront;
+  isWorking: boolean;
+  onWorkHere: () => void;
+  onPromote: () => void;
+  onArchive: () => void;
+  busy: boolean;
+  canArchive: boolean;
+}) {
+  return (
+    // A div, not a button. The card used to be a <button> with clickable spans
+    // inside it, which is invalid HTML and gave keyboard users an action they
+    // could not reach.
+    <div
+      className={`border-line/10 bg-panel flex flex-col gap-1 rounded-xl border p-4 transition-colors ${
+        isWorking ? 'border-lime-deep/40 ring-lime-deep/20 ring-2' : 'hover:border-line/25'
+      }`}
+    >
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="text-content font-medium">{store.name}</span>
+        {store.isPrimary && (
+          <Badge className="bg-lime/15 text-lime-deep gap-1">
+            <Star className="size-3" /> Primary
+          </Badge>
+        )}
+      </span>
+
+      {/* Not cosmetic. Discovery is location-first: a store with no area is
+          left out of the campus board and cannot be ranked by distance, so
+          students simply never see it. Nothing errors — it is just absent,
+          which is the hardest kind of bug to notice from the vendor's side. */}
+      {store.area ? (
+        <span className="text-content-muted text-xs">{store.area}</span>
+      ) : (
+        <span className="flex items-center gap-1 text-xs text-amber-600">
+          <MapPinOff className="size-3 shrink-0" />
+          No area — students cannot find this store
+        </span>
+      )}
+
+      <span className="text-content-muted text-xs">
+        {store.coords ? 'Pinned on the map' : 'No map pin'} · {statusLine(store)}
+      </span>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1">
+        {/* "Work here" points the rest of the dashboard at this store: the
+            order queue, the listings grid, the stock switches and the cooldown
+            all read one active store, and this is what sets it. It is the
+            sidebar's store switcher, repeated on the card the vendor is
+            already looking at. The label says the state rather than the verb
+            once it is on, because "Work here" on the store you are already in
+            reads as a button that does nothing. */}
+        <Button
+          variant={isWorking ? 'ghost' : 'outline'}
+          size="sm"
+          onClick={onWorkHere}
+          disabled={isWorking}
+          className="gap-1"
+          title={
+            isWorking
+              ? 'Orders, listings and stock on this dashboard are showing this store'
+              : 'Point orders, listings and stock at this store'
+          }
+        >
+          {isWorking ? (
+            <>
+              <Check className="size-3" /> Working here
+            </>
+          ) : (
+            'Work here'
+          )}
+        </Button>
+
+        {/* Per card, not per page. One Edit button tied to the highlighted
+            store meant editing a second store took two clicks and a guess
+            about which one it would open. */}
+        <StoreFormDialog
+          store={store}
+          trigger={
+            <Button variant="ghost" size="sm" className="gap-1">
+              <Pencil className="size-3" /> Edit
+            </Button>
+          }
+        />
+
+        {!store.isPrimary && (
+          <Button variant="ghost" size="sm" onClick={onPromote} disabled={busy}>
+            Make primary
+          </Button>
+        )}
+
+        {/* Hidden rather than disabled when it is the only store: there is
+            nothing the vendor could do about it, and a greyed control invites
+            a hunt for the reason. */}
+        {canArchive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onArchive}
+            disabled={busy}
+            className="text-content-muted hover:text-coral gap-1"
+          >
+            <Archive className="size-3" /> Archive
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

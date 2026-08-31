@@ -24,7 +24,7 @@ export function PropertyCard({ properties, onEdit, onBoost }: PropertyCardProps)
       {properties.map((property) => (
         <Card
           key={property.id}
-          className="border-line group w-full border bg-transparent transition-shadow duration-300 hover:shadow-lg"
+          className="border-line group w-full border transition-shadow duration-300 hover:shadow-lg"
         >
           {/* Image / Placeholder */}
           <div className="border-line/30 mx-4 mt-4 overflow-hidden rounded-lg border border-dashed">

@@ -25,9 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FormField } from '@/components/forms';
+import { CharCount, FormField } from '@/components/forms';
 import { AddressAutocomplete } from '@/components/forms/address-autocomplete';
 import { toast } from '@/components/ui/toast';
+import { VerificationSubmittedModal } from '@/components/verification/verification-submitted-modal';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -39,6 +40,10 @@ import {
 import { submitVendorOnboarding } from '@/modules/verification/actions';
 
 const STEPS = ['Profile', 'Business', 'Category', 'Documents', 'Review'] as const;
+
+/** Mirrors `sells` in vendorOnboardingSchema. Keep the two in step. */
+const SELLS_MIN = 10;
+const SELLS_MAX = 500;
 
 const CATEGORY_OPTIONS: { value: VendorCategory; label: string }[] = [
   { value: 'landlord', label: 'Landlord (rooms & hostels)' },
@@ -62,6 +67,10 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [docs, setDocs] = useState<File[]>([]);
+  // Where Continue goes, and whether the modal is up. Held together because
+  // the destination is only known once the server has told us which business
+  // role the submitted category left them on.
+  const [submitted, setSubmitted] = useState<string | null>(null);
 
   const {
     register,
@@ -80,14 +89,18 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
       businessName: '',
       sells: '',
       businessAddress: '',
+      area: '',
     },
   });
 
   const category = watch('vendorCategory');
+  // Watched so the counter tracks each keystroke; it is one field, and the
+  // re-render is the point.
+  const sells = watch('sells') ?? '';
 
   const stepFields: Record<number, (keyof VendorOnboardingInput)[]> = {
     0: ['fullName', 'phone'],
-    1: ['businessName', 'sells', 'businessAddress'],
+    1: ['businessName', 'sells', 'businessAddress', 'area'],
     2: category === 'tradesman' ? ['vendorCategory', 'trade'] : ['vendorCategory'],
     3: [],
     4: [],
@@ -127,9 +140,14 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
       toast(res.error);
       return;
     }
-    toast('Submitted — we’ll review your business shortly.');
-    router.push('/vendor');
-    router.refresh();
+    // The modal carries the outcome now, so no toast: the two would say the
+    // same thing at the same moment, and the toast would be the one that
+    // disappears before it is read.
+    //
+    // Where they land follows the category they just chose. Hardcoding
+    // '/vendor' sent every landlord to a route the proxy gates to
+    // roles: ['vendor'] - a 403 at the end of a five-step wizard.
+    setSubmitted(res.role === 'landlord' ? '/landlord' : '/vendor');
   }
 
   const v = getValues();
@@ -137,6 +155,13 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
 
   return (
     <div className="mx-auto w-full max-w-xl">
+      <VerificationSubmittedModal
+        open={submitted !== null}
+        onContinue={() => {
+          router.push(submitted ?? '/vendor');
+          router.refresh();
+        }}
+      />
       {/* Step indicator */}
       <ol className="mb-8 flex items-center">
         {STEPS.map((label, i) => (
@@ -178,7 +203,12 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
             <FormField label="Business name" htmlFor="businessName" error={errors.businessName?.message}>
               <Input id="businessName" placeholder="Mama Put Tanke" {...register('businessName')} />
             </FormField>
-            <FormField label="What do you sell or offer?" htmlFor="sells" error={errors.sells?.message}>
+            <FormField
+              label="What do you sell or offer?"
+              htmlFor="sells"
+              error={errors.sells?.message}
+              counter={<CharCount value={sells} min={SELLS_MIN} max={SELLS_MAX} />}
+            >
               <Textarea id="sells" rows={4} placeholder="Describe your menu, rooms, or services…" {...register('sells')} />
             </FormField>
             <FormField label="Business address" htmlFor="businessAddress" error={errors.businessAddress?.message}>
@@ -200,6 +230,19 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
                   />
                 )}
               />
+            </FormField>
+            {/* Not the same thing as the address, and not cosmetic. Discovery
+                is location-first: a business with no area is left out of the
+                campus board and cannot be ranked by distance, so students
+                simply never see it. Asking here means Settings opens filled
+                in instead of asking again. */}
+            <FormField
+              label="Area"
+              htmlFor="area"
+              error={errors.area?.message}
+              hint="The neighbourhood students would search for. You can change this later."
+            >
+              <Input id="area" placeholder="Tanke, Safari, Oke-Odo…" {...register('area')} />
             </FormField>
           </>
         )}
@@ -289,6 +332,7 @@ export function OnboardingWizard({ initial }: { initial: Partial<VendorOnboardin
               ['Business', v.businessName],
               ['Offers', categoryLabel + (v.trade ? ` · ${v.trade}` : '')],
               ['Address', v.businessAddress],
+              ['Area', v.area || 'Not set'],
               ['Documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
             ].map(([k, val]) => (
               <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">

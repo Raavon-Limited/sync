@@ -9,5 +9,9 @@
 import { DashboardShell } from '@/components/layouts/dashboard-shell';
 
 export default function LandlordLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell navKey="landlord">{children}</DashboardShell>;
+  return (
+    <DashboardShell navKey="landlord" doodle="house">
+      {children}
+    </DashboardShell>
+  );
 }

@@ -23,10 +23,83 @@
 
 import { useState } from 'react';
 import { Store, PackageX, PackageCheck } from 'lucide-react';
-import { Button, Input, Badge, Spinner } from '@/components/ui';
+import { Button, Input, Badge, Spinner, Checkbox } from '@/components/ui';
 import { useMyStorefronts } from '@/modules/storefronts/hooks';
 import { useStoreListings, useSetStoreListing, useSetSoldOut } from '@/modules/storefronts/hooks';
 import { koboToNaira, nairaToKobo } from '@/lib/query/helpers';
+
+/**
+ * The same question, before the listing exists.
+ *
+ * WHY A SEPARATE COMPONENT AND NOT THE ONE BELOW
+ *   Every control below writes a `storefront_listings` row keyed on a listing
+ *   id, and on the create screen there is no id yet — the row cannot exist
+ *   until the listing does. So this collects an intention and the caller
+ *   applies it after the insert. Sharing one component would mean every write
+ *   growing an "unless we are creating" branch.
+ *
+ * DEFAULTS TO EVERY STORE. A vendor adding a dish to a business with three
+ * branches almost always sells it at three branches; the old behaviour put it
+ * at whichever one happened to be primary and gave no hint that the other two
+ * were missing it.
+ */
+export function StorePicker({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const { data: stores = [], isLoading } = useMyStorefronts();
+
+  if (isLoading) return <Spinner />;
+  if (!stores.length) {
+    return <p className="text-content-muted text-sm">No stores yet.</p>;
+  }
+
+  const all = stores.length > 0 && stores.every((s) => value.includes(s.id));
+  const toggle = (id: string) =>
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-content-muted flex items-center gap-2 font-mono text-xs tracking-wide">
+          <Store className="size-3" /> SELL AT
+        </h4>
+        {stores.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onChange(all ? [] : stores.map((s) => s.id))}
+            className="text-lime-deep text-xs underline underline-offset-2"
+          >
+            {all ? 'Clear all' : 'Select all stores'}
+          </button>
+        )}
+      </div>
+
+      {stores.map((s) => (
+        <label
+          key={s.id}
+          className="border-line/10 hover:border-line/25 flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors"
+        >
+          <Checkbox checked={value.includes(s.id)} onCheckedChange={() => toggle(s.id)} />
+          <span className="text-content min-w-0 flex-1 truncate text-sm">{s.name}</span>
+          <span className="text-content-muted text-xs">{s.area ?? 'No area'}</span>
+        </label>
+      ))}
+
+      {value.length === 0 && (
+        <p className="text-xs text-amber-600">
+          Not sold anywhere yet — nobody will be able to order it. You can change this later.
+        </p>
+      )}
+      <p className="text-content-muted text-xs">
+        Price and stock are per store. Set them per branch after it is created.
+      </p>
+    </div>
+  );
+}
 
 export function StoreAvailability({
   listingId,
@@ -47,9 +120,33 @@ export function StoreAvailability({
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="text-content-muted flex items-center gap-2 font-mono text-xs tracking-wide">
-        <Store className="size-3" /> SOLD AT
-      </h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-content-muted flex items-center gap-2 font-mono text-xs tracking-wide">
+          <Store className="size-3" /> SOLD AT
+        </h4>
+        {/* One tap for the common case. Adding an item to every branch by hand is
+            four round trips a vendor should not have to make. `stock: null` is
+            untracked, not zero — see setSoldOut for why those differ. */}
+        {stores.length > 1 && (
+          <button
+            type="button"
+            disabled={setListing.isPending}
+            onClick={() =>
+              stores.forEach((s) =>
+                setListing.mutate({
+                  storefrontId: s.id,
+                  listingId,
+                  isListed: true,
+                  stock: null,
+                }),
+              )
+            }
+            className="text-lime-deep text-xs underline underline-offset-2 disabled:opacity-50"
+          >
+            Sell at every store
+          </button>
+        )}
+      </div>
       {stores.map((s) => (
         <StoreRow
           key={s.id}

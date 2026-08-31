@@ -91,7 +91,7 @@ export default async function Page() {
             <h2 className="text-content-muted font-mono text-sm tracking-wide">RECENT ACTIVITY</h2>
           </div>
 
-          <div className="border-line/20 rounded-2xl border border-dashed">
+          <div className="bg-panel border-line/20 rounded-2xl border border-dashed">
             {recentActivity.map((item, index) => {
               const Icon = item.icon;
               return (

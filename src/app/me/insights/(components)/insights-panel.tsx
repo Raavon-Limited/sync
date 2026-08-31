@@ -120,7 +120,7 @@ export function InsightsPanel() {
     <section className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {stats.map(({ label, value, sub, icon: Icon }) => (
-          <Card key={label} className="border-line/10 border bg-transparent">
+          <Card key={label} className="border-line/10 border">
             <CardHeader>
               <CardTitle className="text-content-muted flex items-center gap-2 font-mono text-xs tracking-wide">
                 <Icon className="size-4 shrink-0" />

@@ -137,7 +137,7 @@ export function DocumentsPanel() {
           const Icon = meta.icon;
           const req = REQUIRED_DOCS[i];
           return (
-            <Card key={item.id} className="border-line/10 border bg-transparent">
+            <Card key={item.id} className="border-line/10 border">
               <CardContent className="flex flex-wrap items-center gap-3 p-4">
                 <span
                   className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', req.colour)}

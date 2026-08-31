@@ -97,7 +97,7 @@ export function BookingCard({ booking: b }: { booking: StudentBooking }) {
   const status = STATUS[b.status];
   const done = b.status === 'completed';
   return (
-    <Card className="border-line/10 flex flex-col gap-4 border bg-transparent p-4 sm:flex-row sm:items-center">
+    <Card className="border-line/10 flex flex-col gap-4 border p-4 sm:flex-row sm:items-center">
       {/* No hostel in the database carries an image yet, and `toCard` maps a
           missing one to ''. next/image REJECTS an empty src - it warns that the
           browser may re-download the whole page, then throws "Image is missing

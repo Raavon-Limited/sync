@@ -217,11 +217,11 @@ export function WalletPanel() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="border-line/10 border bg-transparent p-5">
+        <Card className="border-line/10 border p-5">
           <p className="text-content-muted font-mono text-xs tracking-wide">ADDED THIS MONTH</p>
           <p className="text-content mt-1 text-2xl font-bold">{naira(added)}</p>
         </Card>
-        <Card className="border-line/10 border bg-transparent p-5">
+        <Card className="border-line/10 border p-5">
           <p className="text-content-muted font-mono text-xs tracking-wide">SPENT THIS MONTH</p>
           <p className="text-content mt-1 text-2xl font-bold">
             {naira(spent)}
@@ -232,7 +232,7 @@ export function WalletPanel() {
       {/* Transactions */}
       <div className="flex flex-col gap-3">
         <h2 className="text-content-muted font-mono text-sm tracking-wide">TRANSACTIONS</h2>
-        <Card className="border-line/10 divide-line/5 divide-y border bg-transparent">
+        <Card className="border-line/10 divide-line/5 divide-y border">
           {isLoading &&
             Array.from({ length: 3 }).map((_, i) => (
               <div key={`sk-${i}`} className="bg-ink/5 m-3 h-12 animate-pulse rounded-lg" />

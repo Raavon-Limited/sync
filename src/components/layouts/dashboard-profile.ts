@@ -8,6 +8,7 @@
  * shell uses.
  */
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
+import type { VerificationStatus } from '@/modules/verification/types';
 import { createClient } from '@/lib/supabase/server';
 import { resolveHandle } from '@/lib/handle';
 import type { DashboardNavKey } from '@/config/dashboard-nav';
@@ -51,6 +52,12 @@ async function campusLine(profile: {
 export interface DashboardProfile {
   /** Status/role line above the name, e.g. "Verified vendor". */
   eyebrow: string;
+  /**
+   * The raw status, so callers stop inferring it from `eyebrow` with
+   * `.startsWith('Verified')`. That test could only ever answer yes/no, which
+   * is why someone who had already submitted was still being told to verify.
+   */
+  verificationStatus: VerificationStatus;
   name: string;
   email: string;
   /** Uppercase initial(s) for the avatar fallback. */
@@ -90,7 +97,8 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
     'You';
   const email = user?.email ?? '';
   const initial = name.trim().charAt(0).toUpperCase() || 'Y';
-  const verified = profile?.verification_status === 'verified';
+  const status = (profile?.verification_status ?? 'unverified') as VerificationStatus;
+  const verified = status === 'verified';
 
   // Handle is derived from user_metadata (+ email), NOT the profile row, so it
   // matches exactly what the proxy computes when rewriting the name-based URL.
@@ -125,6 +133,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
     case 'vendor':
       return {
         ...hats,
+        verificationStatus: status,
         eyebrow: verified ? 'Verified vendor' : 'Vendor',
         name,
         email,
@@ -138,6 +147,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
     case 'landlord':
       return {
         ...hats,
+        verificationStatus: status,
         eyebrow: verified ? 'Verified landlord' : 'Landlord',
         name,
         email,
@@ -149,6 +159,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
     case 'admin':
       return {
         ...hats,
+        verificationStatus: status,
         eyebrow: profile?.role === 'super_admin' ? 'Super admin' : 'Admin',
         name,
         email,
@@ -158,6 +169,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
     default:
       return {
         ...hats,
+        verificationStatus: status,
         eyebrow: 'Student',
         name,
         email,

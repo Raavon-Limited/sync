@@ -12,16 +12,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe } from '@/lib/query/helpers';
-import type {
-  ActivityEvent,
-  CreatedInvite,
-  ManagedStorefront,
-  StaffRole,
-  Storefront,
-  StorefrontInput,
-  StorefrontInvite,
-  StorefrontStaffMember,
-  StorefrontWithBrand,
+import {
+  ALL_STAFF_SCOPES,
+  DEFAULT_AUTO_PAUSE_AFTER,
+  DEFAULT_STAFF_SCOPES,
+  type ActivityEvent,
+  type CreatedInvite,
+  type ManagedStorefront,
+  type StaffRole,
+  type StaffScope,
+  type Storefront,
+  type StorefrontInput,
+  type StorefrontInvite,
+  type StorefrontStaffMember,
+  type StorefrontWithBrand,
+  type StorePerformance,
+  type StoreRevenuePoint,
+  type StoreTransaction,
+  type TransactionBucket,
 } from './types';
 
 type Client = SupabaseClient<Database>;
@@ -53,8 +61,12 @@ const toStorefront = (r: Row): Storefront => ({
   isAcceptingOrders: r.is_accepting_orders ?? true,
   pausedUntil: r.paused_until ?? null,
   pauseReason: r.pause_reason ?? null,
-  autoPauseAfter: r.auto_pause_after ?? null,
+  // `?? DEFAULT` rather than `?? null`: the column is NOT NULL since
+  // 20260901090000, and a row read back from an older cache should still
+  // describe the behaviour the database will actually apply.
+  autoPauseAfter: r.auto_pause_after ?? DEFAULT_AUTO_PAUSE_AFTER,
   autoPauseMinutes: r.auto_pause_minutes ?? 10,
+  imageUrl: r.image_url ?? null,
   isPrimary: !!r.is_primary,
   archivedAt: r.archived_at ?? null,
   createdAt: r.created_at,
@@ -67,14 +79,25 @@ const SELECT = '*';
 /**
  * Every branch a brand owns, primary first. `vendorId` is the owner's uid,
  * because vendor_profiles.id references profiles.id.
+ *
+ * `includeArchived` exists for the owner's own management screen and nothing
+ * else. Archived stores are invisible to students at the policy level
+ * (`storefronts_select_public` is `using (archived_at is null)`), so this flag
+ * cannot leak one — the owner's own policy is what returns them, and only to
+ * them. Every other caller wants the default.
  */
-export async function fetchStorefronts(db: Client, vendorId: string): Promise<Storefront[]> {
+export async function fetchStorefronts(
+  db: Client,
+  vendorId: string,
+  opts: { includeArchived?: boolean } = {},
+): Promise<Storefront[]> {
+  let q = db.from('storefronts').select(SELECT).eq('vendor_id', vendorId);
+  if (!opts.includeArchived) q = q.is('archived_at', null);
   return unwrapList<Row>(
-    await db
-      .from('storefronts')
-      .select(SELECT)
-      .eq('vendor_id', vendorId)
-      .is('archived_at', null)
+    await q
+      // Archived stores sink to the bottom of the owner's list — they are
+      // history, not somewhere they are choosing to work today.
+      .order('archived_at', { ascending: true, nullsFirst: true })
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true }),
   ).map(toStorefront);
@@ -183,6 +206,7 @@ export async function createStorefront(
         opens_at: input.opensAt ?? null,
         closes_at: input.closesAt ?? null,
         is_accepting_orders: input.isAcceptingOrders ?? true,
+        image_url: input.imageUrl ?? null,
         // Never on create. Promotion goes through set_primary_storefront, which
         // is the only path that cannot leave a brand with zero primary.
         is_primary: false,
@@ -210,11 +234,17 @@ export async function updateStorefront(
   if (input.opensAt !== undefined) patch.opens_at = input.opensAt;
   if (input.closesAt !== undefined) patch.closes_at = input.closesAt;
   if (input.isAcceptingOrders !== undefined) patch.is_accepting_orders = input.isAcceptingOrders;
+  if (input.imageUrl !== undefined) patch.image_url = input.imageUrl;
   // Capacity is an operational setting like trading hours, so a manager can
   // set it. `paused_until` is deliberately NOT patchable here — it goes
   // through pause_store/resume_store, which carry the permission check and
   // the reason.
-  if (input.autoPauseAfter !== undefined) patch.auto_pause_after = input.autoPauseAfter;
+  // NOT NULL since 20260901090000, where 0 became the explicit "never". A UI
+  // that still sends null for an empty field means the same thing and must not
+  // hit a constraint violation to find that out.
+  if (input.autoPauseAfter !== undefined) {
+    patch.auto_pause_after = Math.max(0, Math.trunc(input.autoPauseAfter ?? 0));
+  }
   if (input.autoPauseMinutes !== undefined) patch.auto_pause_minutes = input.autoPauseMinutes;
   if (input.coords !== undefined) {
     // Both or neither — storefronts_coords_both_or_neither rejects a half pin.
@@ -229,16 +259,36 @@ export async function updateStorefront(
 }
 
 /**
- * Soft delete. Hard-deleting would cascade listings and carts away, and
- * `orders.storefront_id` is ON DELETE RESTRICT precisely so a branch with
- * history cannot be erased.
+ * Take a store out of circulation, or put it back.
+ *
+ * ONE RPC, NOT A COLUMN WRITE. The plain update this replaces set
+ * `archived_at` and cleared `is_primary`, which could leave a business with no
+ * primary store at all — `storefronts_one_primary_idx` permits zero — and
+ * happily archived a store with orders a student had already paid for.
+ * `set_storefront_archived` refuses both and hands the primary flag on.
+ *
+ * Archived stores are already invisible to students: `storefronts_select_public`
+ * is `using (archived_at is null)`, so discovery, `nearby_storefronts` and the
+ * store's own page all drop it with no extra filtering anywhere.
  */
-export async function archiveStorefront(db: Client, id: string): Promise<void> {
-  const { error } = await db
-    .from('storefronts')
-    .update({ archived_at: new Date().toISOString(), is_primary: false })
-    .eq('id', id);
+export async function setStorefrontArchived(
+  db: Client,
+  id: string,
+  archived: boolean,
+): Promise<Storefront> {
+  const { data, error } = await db.rpc('set_storefront_archived', {
+    p_storefront_id: id,
+    p_archived: archived,
+  });
   if (error) throw error;
+  const row = (Array.isArray(data) ? data[0] : data) as Row;
+  if (!row) throw new Error('The store could not be updated');
+  return toStorefront(row);
+}
+
+/** Soft delete. Kept as a named alias so existing callers keep the guards. */
+export async function archiveStorefront(db: Client, id: string): Promise<void> {
+  await setStorefrontArchived(db, id, true);
 }
 
 /** Atomic — see set_primary_storefront in 20260822090000_storefronts.sql. */
@@ -272,29 +322,56 @@ export async function fetchManagedStorefronts(
       .is('archived_at', null)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true }),
-  ).map((r) => ({ ...toStorefront(r), capacity: 'owner' as const }));
+    // An owner is not staff of their own store and has no row to read scopes
+    // from. They hold every one by definition.
+  ).map((r) => ({ ...toStorefront(r), capacity: 'owner' as const, scopes: ALL_STAFF_SCOPES }));
 
-  // storefront_staff_read lets you see your OWN membership rows.
+  // storefront_staff_read lets you see your OWN membership rows — including
+  // the scopes, which is how the shell knows to hide a section this person was
+  // never granted rather than let them walk into an empty page.
   const memberships = unwrapList<Row>(
     await db
       .from('storefront_staff')
-      .select('storefront_id')
+      .select('storefront_id, scopes')
       .eq('user_id', userId)
       .is('revoked_at', null),
   );
 
   const ownedIds = new Set(owned.map((s) => s.id));
-  const staffedIds = memberships
-    .map((m) => m.storefront_id as string)
-    .filter((id) => !ownedIds.has(id));
+  const staffScopes = new Map<string, StaffScope[]>();
+  for (const m of memberships) {
+    const id = m.storefront_id as string;
+    if (!ownedIds.has(id)) staffScopes.set(id, toScopes(m.scopes));
+  }
 
-  if (!staffedIds.length) return owned;
+  if (!staffScopes.size) return owned;
 
   const staffed = unwrapList<Row>(
-    await db.from('storefronts').select(SELECT).in('id', staffedIds).is('archived_at', null),
-  ).map((r) => ({ ...toStorefront(r), capacity: 'staff' as const }));
+    await db
+      .from('storefronts')
+      .select(SELECT)
+      .in('id', [...staffScopes.keys()])
+      .is('archived_at', null),
+  ).map((r) => ({
+    ...toStorefront(r),
+    capacity: 'staff' as const,
+    scopes: staffScopes.get(r.id as string) ?? [],
+  }));
 
   return [...owned, ...staffed];
+}
+
+/**
+ * A `text[]` column, defended against the two things it can arrive as.
+ * PostgREST returns a JSON array, but a row that predates the column (a stale
+ * cache, a hand-written fixture) has none at all — and a member with no scopes
+ * would silently render as "can do nothing" rather than as an error.
+ */
+function toScopes(v: unknown): StaffScope[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((s): s is StaffScope =>
+    ALL_STAFF_SCOPES.includes(s as StaffScope),
+  );
 }
 
 const toStaff = (r: Row): StorefrontStaffMember => ({
@@ -305,6 +382,7 @@ const toStaff = (r: Row): StorefrontStaffMember => ({
   fullName: r.full_name ?? null,
   email: r.email ?? null,
   role: r.role,
+  scopes: toScopes(r.scopes),
   joinedAt: r.joined_at,
   revokedAt: r.revoked_at ?? null,
   isActive: !!r.is_active,
@@ -336,6 +414,7 @@ export async function fetchPendingInvites(
     branchName: r.branch_name,
     email: r.email,
     role: r.role,
+    scopes: toScopes(r.scopes),
     invitedAt: r.invited_at,
     expiresAt: r.expires_at,
     isExpired: !!r.is_expired,
@@ -349,17 +428,44 @@ export async function fetchPendingInvites(
  */
 export async function createInvite(
   db: Client,
-  input: { storefrontId: string; email: string; role?: StaffRole },
+  input: { storefrontId: string; email: string; role?: StaffRole; scopes?: StaffScope[] },
 ): Promise<CreatedInvite> {
   const { data, error } = await db.rpc('create_storefront_invite', {
     p_storefront_id: input.storefrontId,
     p_email: input.email,
     p_role: input.role ?? 'manager',
+    // Never sent as an empty array: the RPC refuses one, and defaulting here
+    // rather than there would let a caller with a bug hand someone nothing.
+    p_scopes: input.scopes?.length ? input.scopes : DEFAULT_STAFF_SCOPES,
   });
   if (error) throw error;
   const row = (Array.isArray(data) ? data[0] : data) as Row;
   if (!row) throw new Error('Invite was not created');
   return { inviteId: row.invite_id, token: row.token, expiresAt: row.expires_at };
+}
+
+/**
+ * Change what an existing manager may reach.
+ *
+ * The alternative — revoke and re-invite — loses their history and makes them
+ * redeem a second token to get back a job they never left.
+ */
+export async function setStaffScopes(
+  db: Client,
+  staffId: string,
+  scopes: StaffScope[],
+): Promise<void> {
+  const { error } = await db.rpc('set_storefront_staff_scopes', {
+    p_staff_id: staffId,
+    p_scopes: scopes,
+  });
+  if (error) throw error;
+}
+
+/** Cancel an invite that has not been redeemed. The token dies with it. */
+export async function revokeInvite(db: Client, inviteId: string): Promise<void> {
+  const { error } = await db.rpc('revoke_storefront_invite', { p_invite_id: inviteId });
+  if (error) throw error;
 }
 
 /** Returns the branch joined. Requires a CONFIRMED email matching the invite. */
@@ -382,11 +488,16 @@ export async function revokeStaff(db: Client, staffId: string): Promise<void> {
  */
 export async function fetchActivity(
   db: Client,
-  opts: { storefrontId?: string; limit?: number } = {},
+  opts: { storefrontId?: string; limit?: number; search?: string; actorId?: string } = {},
 ): Promise<ActivityEvent[]> {
   const { data, error } = await db.rpc('storefront_activity', {
     p_storefront_id: opts.storefrontId,
     p_limit: opts.limit,
+    // Searching happens in SQL, before the limit. Filtering a fetched page in
+    // the component would only ever search the most recent N events and call
+    // the result "everything this person did".
+    p_search: opts.search?.trim() || undefined,
+    p_actor_id: opts.actorId,
   });
   if (error) throw error;
   return ((data ?? []) as Row[]).map((r) => ({
@@ -514,4 +625,94 @@ export async function setSoldOut(
   soldOut: boolean,
 ): Promise<StoreListing> {
   return setStoreListing(db, { storefrontId, listingId, stock: soldOut ? 0 : null });
+}
+
+// -- Performance ---------------------------------------------------------------
+
+/**
+ * Per-store reporting. NOT a second ledger — money is per business and lives on
+ * `vendor_profiles`; this is a `group by storefront_id` over the same orders
+ * and escrow rows the earnings screen reads. See ./README.md.
+ */
+export async function fetchStorePerformance(db: Client): Promise<StorePerformance[]> {
+  const { data, error } = await db.rpc('store_performance');
+  if (error) throw error;
+  return ((data ?? []) as Row[]).map((r) => ({
+    storefrontId: r.storefront_id,
+    storeName: r.store_name,
+    isArchived: !!r.is_archived,
+    ordersTotal: r.orders_total ?? 0,
+    ordersCompleted: r.orders_completed ?? 0,
+    ordersActive: r.orders_active ?? 0,
+    ordersCancelled: r.orders_cancelled ?? 0,
+    ordersRefunded: r.orders_refunded ?? 0,
+    // bigint arrives as a string over PostgREST once it passes 2^53 — and as a
+    // number below it. Number() takes both; reading it as-is silently gives a
+    // string that formats fine and adds up wrong.
+    revenueKobo: Number(r.revenue_kobo ?? 0),
+    bookedKobo: Number(r.booked_kobo ?? 0),
+    refundedKobo: Number(r.refunded_kobo ?? 0),
+    avgOrderKobo: Number(r.avg_order_kobo ?? 0),
+    lastOrderAt: r.last_order_at ?? null,
+  }));
+}
+
+export async function fetchStoreRevenueMonthly(
+  db: Client,
+  months = 6,
+): Promise<StoreRevenuePoint[]> {
+  const { data, error } = await db.rpc('store_revenue_monthly', { p_months: months });
+  if (error) throw error;
+  return ((data ?? []) as Row[]).map((r) => ({
+    month: r.month,
+    storefrontId: r.storefront_id,
+    storeName: r.store_name,
+    revenueKobo: Number(r.revenue_kobo ?? 0),
+    ordersCount: r.orders_count ?? 0,
+  }));
+}
+
+/**
+ * One page of a store's orders.
+ *
+ * `totalRows` rides along on every row rather than coming from a second COUNT
+ * query — two queries with the same filter can still disagree if an order
+ * lands between them, and the pager is what shows the disagreement.
+ */
+export async function fetchStoreTransactions(
+  db: Client,
+  opts: {
+    storefrontId?: string | null;
+    bucket?: TransactionBucket;
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<{ rows: StoreTransaction[]; total: number }> {
+  const { data, error } = await db.rpc('store_transactions', {
+    p_storefront_id: opts.storefrontId ?? undefined,
+    p_bucket: opts.bucket ?? 'all',
+    p_limit: opts.limit ?? 25,
+    p_offset: opts.offset ?? 0,
+  });
+  if (error) throw error;
+
+  const raw = (data ?? []) as Row[];
+  return {
+    rows: raw.map((r) => ({
+      orderId: r.order_id,
+      storefrontId: r.storefront_id,
+      storeName: r.store_name,
+      status: r.status,
+      isRefunded: !!r.is_refunded,
+      totalKobo: Number(r.total_kobo ?? 0),
+      netKobo: Number(r.net_kobo ?? 0),
+      itemCount: r.item_count ?? 0,
+      placedAt: r.placed_at,
+      deliveredAt: r.delivered_at ?? null,
+      studentName: r.student_name ?? 'Customer',
+    })),
+    // An empty page carries no row to read the count off, and that is not the
+    // same as "we do not know" — it is zero.
+    total: Number(raw[0]?.total_rows ?? 0),
+  };
 }

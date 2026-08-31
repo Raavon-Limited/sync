@@ -96,7 +96,7 @@ export function RevenueChartPanel({
   const currentLabel = REVENUE_PERIODS.find((p) => p.value === period)?.label ?? 'Weekly';
 
   return (
-    <Card className="border-line/5 mb-4 h-full border bg-transparent">
+    <Card className="border-line/5 mb-4 h-full border">
       <CardHeader>
         <CardTitle className="text-content-muted flex items-center justify-between font-mono tracking-wide">
           <p>{config.title}</p>

@@ -119,6 +119,11 @@
   /* lime-deep */
   --ln: #0e0e12;
   /* ink (borders use /opacity) */
+  --sb: #0e0e12;
+  /* scrollbar thumb: ink on cream, lime on ink. Not the same hue in both
+     themes on purpose - lime is a fill colour for dark ground, and on the
+     cream page even a deepened lime sits too close to the background to
+     find. Each theme takes whichever of the two carries the contrast. */
   color-scheme: light;
 }
 
@@ -132,6 +137,7 @@
     --ac-fg: #c5ff4a;
     /* bright lime for contrast on dark */
     --ln: #f4f1e8;
+    --sb: #a8db3c;
     /* Deeper lime for fills on dark - less glare than the bright brand lime.
        Drives every bg-lime/accent in dark mode. Tune this one value. */
     --color-lime: #a8db3c;
@@ -147,6 +153,7 @@
   --ct-muted: #9b9ba3;
   --ac-fg: #c5ff4a;
   --ln: #f4f1e8;
+  --sb: #a8db3c;
   /* Deeper lime for fills on dark (see note above). */
   --color-lime: #a8db3c;
   color-scheme: dark;
@@ -159,19 +166,115 @@ html {
 
 /* Nothing may scroll the page sideways.
  *
- * `clip` rather than `hidden`: `overflow-x: hidden` on the root makes the
- * document a scroll container, which silently kills `position: sticky` on
- * every header, sidebar rail and map control in the app. `clip` cuts the
- * overflow without creating that container, so sticky keeps working.
+ * `clip` rather than `hidden`: `overflow-x: hidden` here makes the element a
+ * scroll container, which silently kills `position: sticky` on every header,
+ * sidebar rail and map control inside it. `clip` cuts the overflow without
+ * creating that container, so sticky keeps working.
+ *
+ * ON `body` ONLY - NOT ON `html`. The root's overflow is propagated to the
+ * viewport only while `html`'s own overflow is `visible`; give `html` a
+ * non-visible overflow and that propagation stops, and `body`'s overflow
+ * starts applying to the body box instead. That is what shifted the page
+ * under every Radix popup: react-remove-scroll locks scrolling by setting
+ * `overflow: hidden` on `body` plus a `margin-right` equal to the scrollbar
+ * width, to compensate for the bar it expects to disappear. With the clip on
+ * `html`, the `hidden` never reached the viewport - the page scrollbar stayed
+ * - while the margin still applied, so opening the account menu (or any
+ * dialog) shunted the whole page sideways by the scrollbar's width and left
+ * it scrollable behind the overlay. Clipping on `body` alone propagates to
+ * the viewport exactly as the old rule intended, `body` is still not a scroll
+ * container, and the lock's compensation now cancels a bar that really goes.
  *
  * This is a BACKSTOP, not a fix - it hides a too-wide element rather than
  * making it fit, and a clipped element is still unreachable. Anything found
  * overflowing gets fixed at the source as well.
  */
-html,
+html {
+  max-width: 100%;
+}
+
 body {
   overflow-x: clip;
   max-width: 100%;
+}
+
+/* Thin lime scrollbars, everywhere.
+ *
+ * `scrollbar-width` / `scrollbar-color` are INHERITED, so setting them on the
+ * root reaches every scroll container in the app - the sidebar rail, the
+ * dashboard drawer, a code block - without a class on each. Anything that
+ * wants no bar at all overrides with `.no-scrollbar` below.
+ *
+ * The `::-webkit-scrollbar` block underneath is for Safari, which still has
+ * no support for the standard properties. Chrome ignores those pseudo-
+ * elements on any element that sets `scrollbar-color`, so the two do not
+ * fight - each engine takes the one it understands.
+ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) var(--color-surface-deep);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: var(--color-surface-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  background-color: color-mix(in oklab, var(--sb) 70%, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb);
+}
+
+/* The dashboard rail takes a hairline instead of the app's 8px bar.
+ *
+ * It is a fixed 16rem column sitting a few hundred pixels from the page's own
+ * scrollbar, and two bars that width next to each other read as a second
+ * border rather than as controls. 0.2px is deliberately far below one CSS
+ * pixel: the engine rounds it up to the thinnest line it can actually draw,
+ * which is one device pixel — a hairline on any display.
+ *
+ * THE TRADE-OFF, STATED: at this width the thumb is not a drag target at all.
+ * The rail is short and scrolls by wheel, trackpad and keyboard; the bar is
+ * only a position indicator. If it ever has to be draggable, this is the rule
+ * to raise.
+ *
+ * Firefox has no sub-pixel setting, so `thin` is as close as it gets there.
+ * The transparent track keeps it reading as a thread rather than a stripe. */
+.rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) transparent;
+}
+
+.rail-scroll::-webkit-scrollbar {
+  width: 0.2px;
+  height: 0.2px;
+}
+
+.rail-scroll::-webkit-scrollbar-track,
+.rail-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Carousels and chip rails scroll by drag/swipe and by their own arrows; a
+   bar under them is noise. Used in a handful of places that had been writing
+   `no-scrollbar` without it ever being defined - so those rails were showing
+   a scrollbar, and now that scrollbars are lime it would have been a loud
+   one. Firefox and Safari take different halves of this. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 body {

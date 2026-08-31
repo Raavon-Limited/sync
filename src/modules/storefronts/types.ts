@@ -38,11 +38,19 @@ export interface Storefront {
   pauseReason?: 'manual' | 'auto_backlog' | null;
   /**
    * Pause automatically once this many orders are accepted and unfinished.
-   * null = never; a vendor has to say what their kitchen can hold.
+   * `0` = never. Every store starts at DEFAULT_AUTO_PAUSE_AFTER — this used to
+   * be null-by-default, which meant the feature existed and protected nobody.
    */
-  autoPauseAfter?: number | null;
-  /** How long an automatic pause lasts. */
+  autoPauseAfter: number;
+  /**
+   * How long an automatic pause lasts *if nothing moves*. Normally the pause
+   * ends earlier, when the backlog drops back under the limit — see
+   * `sync_store_backlog_pause` in 20260901090000. This is the floor that stops
+   * an abandoned store staying shut forever, not the expected duration.
+   */
   autoPauseMinutes: number;
+  /** Photo of this location. Null falls back to the business logo. */
+  imageUrl?: string | null;
   /** Exactly one per storefront. A link to the business resolves here. */
   isPrimary: boolean;
   archivedAt?: string | null;
@@ -88,6 +96,8 @@ export interface StorefrontInput {
   opensAt?: string | null;
   closesAt?: string | null;
   isAcceptingOrders?: boolean;
+  imageUrl?: string | null;
+  /** `0` (or null, which is normalised to 0) turns automatic pausing off. */
   autoPauseAfter?: number | null;
   autoPauseMinutes?: number;
 }
@@ -95,6 +105,86 @@ export interface StorefrontInput {
 // -- Staff --------------------------------------------------------------------
 
 export type StaffRole = 'manager' | 'staff';
+
+/**
+ * What one person may reach at one store.
+ *
+ * MUST MATCH `private.storefront_scope_names()` and the CHECK constraints on
+ * `storefront_staff` / `storefront_invites`. The database is the authority —
+ * an unknown name here is refused by the RPC rather than silently stored.
+ *
+ * MONEY IS NOT ON THIS LIST AND WILL NOT BE. Wallet, payouts, bank accounts and
+ * the subscription live on `vendor_profiles` (the business); nothing scoped to
+ * a store can reach them. See ./README.md.
+ */
+export type StaffScope = 'orders' | 'listings' | 'inbox' | 'store' | 'promotions';
+
+export const STAFF_SCOPES: ReadonlyArray<{
+  value: StaffScope;
+  label: string;
+  description: string;
+  /**
+   * False while the database cannot actually enforce the scope. Conversations
+   * resolve their vendor from `listings.vendor_id` and carry no
+   * `storefront_id`, so a store's messages still reach the owner alone. The
+   * grant is recorded for when messaging becomes store-routed; until then it
+   * opens nothing, and the UI has to say so rather than imply access.
+   */
+  enforced: boolean;
+  /**
+   * True when the grant is NOT limited to the store it was given at.
+   * `promotions.vendor_id` points at the business, so there is no such thing
+   * as a one-store discount — the picker has to say so before the owner ticks
+   * it, not after they find out.
+   */
+  businessWide?: boolean;
+}> = [
+  {
+    value: 'orders',
+    label: 'Orders',
+    description: 'See the queue, advance orders, and pause the store when it gets busy.',
+    enforced: true,
+  },
+  {
+    value: 'listings',
+    label: 'Listings & stock',
+    description: 'Add and edit items, prices and stock for this store.',
+    enforced: true,
+  },
+  {
+    value: 'inbox',
+    label: 'Inbox',
+    description: 'Customer messages. Not yet routed per store — messages still reach you only.',
+    enforced: false,
+  },
+  {
+    value: 'store',
+    label: 'Store settings',
+    description: 'Trading hours, area and map pin. Never archiving, primary, or adding stores.',
+    enforced: true,
+  },
+  {
+    value: 'promotions',
+    label: 'Promotions',
+    description:
+      'Create and end discount campaigns. A campaign belongs to the business, so it applies at every store — not just this one.',
+    enforced: true,
+    businessWide: true,
+  },
+];
+
+/** Every scope, for the "all sections" shortcut. */
+export const ALL_STAFF_SCOPES: StaffScope[] = STAFF_SCOPES.map((s) => s.value);
+
+/** The set an invite starts with — the two an extra pair of hands actually needs. */
+export const DEFAULT_STAFF_SCOPES: StaffScope[] = ['orders', 'listings'];
+
+/** Every store starts here. `0` means the vendor turned it off. */
+export const DEFAULT_AUTO_PAUSE_AFTER = 5;
+
+export function scopeLabel(scope: string): string {
+  return STAFF_SCOPES.find((s) => s.value === scope)?.label ?? scope;
+}
 
 /** A row from `storefront_roster()` — owner-scoped, so it carries the email. */
 export interface StorefrontStaffMember {
@@ -105,6 +195,8 @@ export interface StorefrontStaffMember {
   fullName: string | null;
   email: string | null;
   role: StaffRole;
+  /** Which parts of the store this person may work. Never empty. */
+  scopes: StaffScope[];
   joinedAt: string;
   revokedAt: string | null;
   isActive: boolean;
@@ -117,6 +209,7 @@ export interface StorefrontInvite {
   branchName: string;
   email: string;
   role: StaffRole;
+  scopes: StaffScope[];
   invitedAt: string;
   expiresAt: string;
   isExpired: boolean;
@@ -155,4 +248,93 @@ export interface ActivityEvent {
 export interface ManagedStorefront extends Storefront {
   /** Owners may do everything; staff are limited by RLS and the column guard. */
   capacity: 'owner' | 'staff';
+  /**
+   * What this user may reach here. Every scope for an owner; whatever they
+   * were granted for staff. UX only — RLS is what actually refuses.
+   */
+  scopes: StaffScope[];
+}
+
+/** Whether the signed-in user may work one part of a store. UX, not security. */
+export function hasScope(
+  store: Pick<ManagedStorefront, 'capacity' | 'scopes'> | null | undefined,
+  scope: StaffScope,
+): boolean {
+  if (!store) return false;
+  return store.capacity === 'owner' || store.scopes.includes(scope);
+}
+
+// -- Performance --------------------------------------------------------------
+
+/**
+ * Per-store reporting. NOT a second ledger — see ./README.md. Money is per
+ * business and lives on `vendor_profiles`; these are aggregates over the same
+ * orders and escrow rows the earnings screen reads, grouped by store.
+ */
+export interface StorePerformance {
+  storefrontId: string;
+  storeName: string;
+  /** Archived stores are included: one closed in March still earned in February. */
+  isArchived: boolean;
+  ordersTotal: number;
+  ordersCompleted: number;
+  /** Accepted and not yet finished — pending through on_the_way. */
+  ordersActive: number;
+  ordersCancelled: number;
+  ordersRefunded: number;
+  /** Released escrow, net of platform commission. What actually arrived. */
+  revenueKobo: number;
+  /** Paid for and not refunded, released or not. Revenue plus the pipeline. */
+  bookedKobo: number;
+  refundedKobo: number;
+  /** Averaged over delivered orders only — see the RPC for why. */
+  avgOrderKobo: number;
+  lastOrderAt: string | null;
+}
+
+/** One month, one store. Empty months are zeros, never gaps. */
+export interface StoreRevenuePoint {
+  /** First day of the month, as `YYYY-MM-DD`. */
+  month: string;
+  storefrontId: string;
+  storeName: string;
+  revenueKobo: number;
+  ordersCount: number;
+}
+
+/**
+ * The tabs on the transactions table.
+ *
+ * THESE ARE FILTERS, NOT A PARTITION. `cancel_order` refunds in the same
+ * transaction, so a cancelled order is usually also a refunded one and shows
+ * under both. Only `all` is the whole set — do not sum the tabs.
+ *
+ * `refunded` is what the product calls "returned": there is no returns concept
+ * in the schema, and money going back (`escrow_holds.status = 'refunded'`) is
+ * the real thing underneath it.
+ */
+export type TransactionBucket = 'all' | 'completed' | 'pending' | 'cancelled' | 'refunded';
+
+export const TRANSACTION_BUCKETS: ReadonlyArray<{ value: TransactionBucket; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'refunded', label: 'Refunded' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+export interface StoreTransaction {
+  orderId: string;
+  storefrontId: string;
+  storeName: string;
+  status: string;
+  isRefunded: boolean;
+  /** What the customer paid. */
+  totalKobo: number;
+  /** What reached the vendor — released escrow less commission. 0 until release. */
+  netKobo: number;
+  itemCount: number;
+  placedAt: string;
+  deliveredAt: string | null;
+  studentName: string;
 }

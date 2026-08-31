@@ -19,7 +19,15 @@ export interface Plan {
   name: string;
   tagline: string;
   price: number | null; // null = custom
+  /**
+   * The money ONLY — "₦2,500", or "Free". The billing period is `pricePeriod`
+   * and is rendered separately: baking it in here produced "₦2,500/monthly"
+   * in a display-weight font with no space to wrap at, which overflowed the
+   * card AND collided with the "/mo" suffix the card adds itself.
+   */
   priceLabel: string;
+  /** "/mo", "/yr", or empty for a free or custom plan. */
+  pricePeriod: string;
   commission: number | null; // null = custom
   features: PlanFeature[];
   cta: 'downgrade' | 'current' | 'upgrade' | 'contact';

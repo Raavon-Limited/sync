@@ -50,7 +50,7 @@ export function ListingImageField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-muted text-xs font-medium">{label}</label>
+      <label className="text-content-muted text-xs font-medium">{label}</label>
 
       <div className="flex items-center gap-3">
         <button
@@ -64,16 +64,16 @@ export function ListingImageField({
           aria-label={value ? 'Replace product photo' : 'Upload product photo'}
         >
           {upload.isPending ? (
-            <Loader2 className="text-muted size-5 animate-spin" />
+            <Loader2 className="text-content-muted size-5 animate-spin" />
           ) : value ? (
             <Image src={value} alt="" fill sizes="80px" className="object-cover" />
           ) : (
-            <ImagePlus className="text-muted size-5" />
+            <ImagePlus className="text-content-muted size-5" />
           )}
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="text-muted text-xs">
+          <p className="text-content-muted text-xs">
             {upload.isPending
               ? 'Uploading...'
               : value
@@ -88,7 +88,7 @@ export function ListingImageField({
                 onChange('');
                 setError(null);
               }}
-              className="text-muted hover:text-ink mt-1 inline-flex items-center gap-1 text-xs"
+              className="text-content-muted hover:text-content mt-1 inline-flex items-center gap-1 text-xs"
             >
               <X className="size-3" /> Remove
             </button>
