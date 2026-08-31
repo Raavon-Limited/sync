@@ -7,6 +7,30 @@ import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/security/headers';
 
 const nextConfig: NextConfig = {
+  /**
+   * Build output directory, overridable per invocation.
+   *
+   * `next build` and `next dev` share `.next` by default, so running a build
+   * while a dev server is up replaces the manifests the running server is
+   * serving from. The dev client then fails mid-navigation with
+   * "Failed to fetch" out of navigateToUnknownRoute, or 500s on a missing
+   * .next/dev/routes-manifest.json - a confusing failure that has nothing to do
+   * with the code being edited.
+   *
+   * Set NEXT_DIST_DIR to build somewhere else and leave the dev server alone:
+   *
+   *   NEXT_DIST_DIR=.next-verify npm run build
+   *
+   * Unset, everything behaves exactly as before, so CI and Vercel are
+   * unaffected.
+   *
+   * CAVEAT: Next rewrites tsconfig.json's `include` to point at whatever dist
+   * dir it just used. After building with an override, `git checkout
+   * tsconfig.json` - committing `.next-verify/types` into the shared config
+   * would break typechecking for everyone else, who do not have that folder.
+   */
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+
   async headers() {
     return [
       {
