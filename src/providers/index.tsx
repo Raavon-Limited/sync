@@ -37,6 +37,7 @@ import { ReduxProvider } from './redux-provider';
 import { QueryProvider } from './query-provider';
 import { SessionProvider } from './session-provider';
 import { LocationProvider } from './location-provider';
+import { AccountSwitchProvider } from './account-switch-provider';
 import type { Area } from '@/lib/constants/areas';
 
 export function Providers({
@@ -53,8 +54,13 @@ export function Providers({
         <SessionProvider>
           <TooltipProvider delayDuration={150}>
             <LocationProvider areas={areas}>
-              {children}
-              <Toaster />
+              {/* Inside QueryProvider because switching roles clears the whole
+                  query cache, and inside everything else so its overlay covers
+                  the app. */}
+              <AccountSwitchProvider>
+                {children}
+                <Toaster />
+              </AccountSwitchProvider>
             </LocationProvider>
           </TooltipProvider>
         </SessionProvider>

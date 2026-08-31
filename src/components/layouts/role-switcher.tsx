@@ -9,22 +9,24 @@
  * WHY IT NAVIGATES AFTERWARDS
  *   The gate is evaluated in the proxy, per request. Switching to `vendor`
  *   while sitting on `/me` leaves you on a page your new role is refused,
- *   so the switch is followed by a push to that role's home. Staying put and
+ *   so the switch is followed by a move to that role's home. Staying put and
  *   letting the next click 403 would look like the switch had broken.
  *
- * WHY IT REFRESHES
- *   Server components have already rendered with the old role. `router.refresh()`
- *   re-runs them; without it the sidebar and dashboard keep showing the
- *   previous hat until a hard reload.
+ * THE MECHANICS LIVE IN AccountSwitchProvider, not here.
+ *   Cache reset, navigation, refresh and the loader that covers all three are
+ *   shared with AddAccountItem, which performs the same operation. This file
+ *   used to own its own copy, and the two drifted: the profile query cache was
+ *   never invalidated by either, so `useSession().role` kept serving the old
+ *   role for up to five minutes and the switch appeared to need a reload. See
+ *   that provider for the full account of what was wrong.
  */
 'use client';
 
-import { useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Check, Loader2, Repeat } from 'lucide-react';
 import { DropdownMenuItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { toast } from '@/components/ui/toast';
 import { switchRole } from '@/modules/auth/actions';
+import { useAccountSwitch } from '@/providers/account-switch-provider';
 
 /** Where each hat lands, and what to call it. */
 const ROLE_HOME: Record<string, { label: string; href: string }> = {
@@ -37,26 +39,28 @@ const ROLE_HOME: Record<string, { label: string; href: string }> = {
 };
 
 export function RoleSwitcher({ role, roles }: { role: string; roles: string[] }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
+  const switcher = useAccountSwitch();
+  // The whole operation - server call, cache reset and navigation - is one
+  // pending window, owned by the provider so the overlay matches it exactly.
+  const pending = switcher?.switching ?? false;
 
   // One hat is not a choice. Rendering a switcher with a single disabled entry
   // is clutter for the overwhelming majority of accounts.
   const switchable = roles.filter((r) => ROLE_HOME[r]);
   if (switchable.length < 2) return null;
 
-  function choose(next: string) {
-    if (next === role) return;
-    start(async () => {
-      try {
-        await switchRole(next);
-        toast.success(`Switched to ${ROLE_HOME[next].label}`);
-        router.push(ROLE_HOME[next].href);
-        router.refresh();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not switch');
-      }
-    });
+  async function choose(next: string) {
+    if (next === role || !switcher) return;
+    try {
+      await switcher.run({
+        label: `Switching to ${ROLE_HOME[next].label}…`,
+        href: ROLE_HOME[next].href,
+        action: () => switchRole(next),
+      });
+      toast.success(`Switched to ${ROLE_HOME[next].label}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not switch');
+    }
   }
 
   return (

@@ -21,19 +21,21 @@
  */
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Briefcase, GraduationCap, Loader2 } from 'lucide-react';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { claimRole } from '@/modules/auth/actions';
+import { useAccountSwitch } from '@/providers/account-switch-provider';
 
 const BUSINESS_ROLES = ['vendor', 'landlord', 'rider'];
 
 export function AddAccountItem({ roles }: { roles: string[] }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
+  // The whole operation - claim, cache reset, navigation - is one pending
+  // window owned by the provider, so the overlay matches it exactly.
+  const switcher = useAccountSwitch();
+  const pending = switcher?.switching ?? false;
   const [confirm, setConfirm] = useState<'vendor' | 'student' | null>(null);
 
   const hasBusiness = roles.some((r) => BUSINESS_ROLES.includes(r));
@@ -44,19 +46,24 @@ export function AddAccountItem({ roles }: { roles: string[] }) {
   const offer = !hasBusiness ? 'vendor' : !hasStudent ? 'student' : null;
   if (!offer) return null;
 
-  function go(role: 'vendor' | 'student') {
-    start(async () => {
-      try {
-        await claimRole(role);
-        // Business roles need a profile before the dashboard means anything.
-        router.push(role === 'vendor' ? '/onboarding' : '/me');
-        router.refresh();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not add that account');
-      } finally {
-        setConfirm(null);
-      }
-    });
+  async function go(role: 'vendor' | 'student') {
+    if (!switcher) return;
+    // Close the dialog FIRST. It used to close in a `finally` after the await,
+    // so the confirm modal sat on screen through the whole server call with a
+    // greyed-out button - and the account only appeared to change once the
+    // dialog went away, which read as "it switches when I cancel".
+    setConfirm(null);
+    try {
+      await switcher.run({
+        label: role === 'vendor' ? 'Setting up your business…' : 'Adding your student account…',
+        // Claiming vendor grants the right to set a business up, not a
+        // business: there is no vendor_profiles row until onboarding writes one.
+        href: role === 'vendor' ? '/onboarding' : '/me',
+        action: () => claimRole(role),
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not add that account');
+    }
   }
 
   return (
