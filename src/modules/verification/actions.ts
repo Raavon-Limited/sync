@@ -181,8 +181,16 @@ export async function submitVendorVerification(
   const { businessName, sells, businessAddress } = parsed.data;
   const { error } = await supabase.auth.updateUser({
     data: {
+      // `liveness_confirmed: true` was here and is gone. It came from a
+      // checkbox in the form, which means it was the applicant asserting a
+      // fact about their own face — see the note in the zod schema. Nothing
+      // reads it, and leaving it would let a future reader mistake it for
+      // evidence.
+      //
+      // `verification_status` stays only because /onboarding prefills from
+      // metadata. It is NOT the status: submit_verification() below is, and it
+      // is the only thing that moves the column a reviewer looks at.
       verification_status: 'pending',
-      liveness_confirmed: true,
       business_name: businessName,
       sells,
       business_address: businessAddress,

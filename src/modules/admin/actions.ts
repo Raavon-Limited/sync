@@ -82,15 +82,28 @@ export async function setVendorVerification(input: {
 }) {
   await assertStaff();
 
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from('vendor_profiles')
-    .update({
-      verification_status: input.decision,
-      verified_at: input.decision === 'verified' ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.vendorId);
+  // THROUGH THE RPC, NOT A COLUMN WRITE.
+  //
+  // This used to update `vendor_profiles.verification_status` directly with the
+  // service-role client, and it never worked: `guard_vendor_profile_cols`
+  // reverts that column whenever `current_user` is 'authenticated', which — as
+  // 20260830100000 documents — is every PostgREST request, service-role
+  // included. The approval returned success and changed nothing, which is why
+  // verified vendors stayed locked out of their own dashboards.
+  //
+  // `set_verification_status` raises the transaction-local flag the guard
+  // honours, re-checks `is_staff()` inside the database rather than trusting
+  // that we checked out here, and writes an audit row naming the reviewer.
+  //
+  // CALLED WITH THE USER'S SESSION, NOT THE SERVICE ROLE — the RPC's own
+  // is_staff() reads auth.uid(), and the service-role client has no user
+  // session, so auth.uid() would be NULL and the call refused. Same reasoning
+  // as resolveDispute below.
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc('set_verification_status', {
+    p_vendor: input.vendorId,
+    p_status: input.decision,
+  });
 
   if (error) throw new Error(error.message);
   revalidatePath('/admin/vendors');

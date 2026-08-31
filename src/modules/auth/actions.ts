@@ -107,7 +107,15 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
   });
   if (error) {
     const alreadyRegistered = /already registered|already exists/i.test(error.message);
-    return { ok: false, error: error.message, alreadyRegistered };
+    // `error.message` here is GoTrue's, and its worst case is the one people
+    // actually hit: "Database error saving new user", which is what Supabase
+    // says when a trigger on auth.users raises. It names no cause the person
+    // could do anything about, so it never reaches them.
+    return {
+      ok: false,
+      error: userMessage(error, 'We could not create your account. Please try again.'),
+      alreadyRegistered,
+    };
   }
   // Supabase obfuscates an existing confirmed account: it returns a user with an
   // empty `identities` array and sends no email. Treat that as already-registered
@@ -136,7 +144,7 @@ export async function verifySignupOtp(input: VerifyOtpInput): Promise<VerifyResu
   const { email, code } = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not confirm that code.') };
 
   // Prefer the server-trusted profiles.role: the signup trigger promotes a
   // landlord-category signup to role='landlord', so the editable metadata
@@ -160,7 +168,7 @@ export async function resendSignupOtp(rawEmail: string): Promise<AuthResult> {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({ type: 'signup', email: parsed.data });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not send a new code.') };
   return { ok: true };
 }
 
@@ -173,7 +181,7 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
   const { email, password } = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not sign you in.') };
 
   let role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
   // Every hat this account holds, for the login role chooser. Stays empty when
@@ -251,7 +259,7 @@ export async function sendLoginOtp(rawEmail: string): Promise<AuthResult> {
     email: parsed.data,
     options: { shouldCreateUser: false },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not send your sign-in code.') };
   return { ok: true };
 }
 
@@ -264,7 +272,7 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
   const { email, code } = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not confirm that code.') };
 
   let role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
   try {
@@ -312,7 +320,7 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
 export async function signOut(): Promise<AuthResult> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not sign you out.') };
   return { ok: true };
 }
 
@@ -327,7 +335,7 @@ export async function signOut(): Promise<AuthResult> {
 export async function switchRole(role: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.rpc('switch_role', { p_role: role });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(userMessage(error, 'We could not switch you to that account.'));
 }
 
 /**
@@ -355,10 +363,12 @@ export async function claimRole(role: string): Promise<void> {
   const supabase = await createClient();
 
   const { error: claimError } = await supabase.rpc('claim_role', { p_role: role });
-  if (claimError) throw new Error(claimError.message);
+  if (claimError) throw new Error(userMessage(claimError, 'We could not add that account.'));
 
   const { error: switchError } = await supabase.rpc('switch_role', { p_role: role });
-  if (switchError) throw new Error(switchError.message);
+  if (switchError) {
+    throw new Error(userMessage(switchError, 'That account was added, but we could not open it.'));
+  }
 }
 
 // ── Password reset ──────────────────────────────────────────────────────────

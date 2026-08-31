@@ -3619,6 +3619,10 @@ export type Database = {
       submit_verification: { Args: Record<string, never>; Returns: string }
       claim_business_name: { Args: { p_name: string }; Returns: string }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
+      set_verification_status: {
+        Args: { p_vendor: string; p_status: string }
+        Returns: string
+      }
       my_verification_code: { Args: Record<string, never>; Returns: string | null }
       rotate_verification_code: { Args: Record<string, never>; Returns: string }
       verify_card: {
