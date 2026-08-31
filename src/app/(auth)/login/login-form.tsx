@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { FormField } from '@/components/forms';
+import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
 import { BrandLoader } from '@/components/ui/brand-loader';
 import { getLoginMethod, sendLoginOtp, signIn, verifyLoginOtp } from '@/modules/auth/actions';
@@ -202,14 +203,15 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
         {step === 'email' && (
           <form onSubmit={continueFromEmail} className="flex flex-col gap-4" noValidate>
             <FormField label="Email" htmlFor="email">
-              <Input
+              {/* Neutral placeholder: login is shared by students, vendors,
+                  landlords and admins, so a "@student.edu.ng" example is wrong
+                  for most of the people who see it. */}
+              <EmailInput
                 id="email"
-                type="email"
-                autoComplete="email"
                 autoFocus
-                placeholder="you@student.edu.ng"
+                placeholder="you@gmail.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
               />
             </FormField>
             <Button type="submit" size="lg" disabled={busy} className="w-full">

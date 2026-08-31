@@ -55,7 +55,7 @@ export function Newsletter() {
                 type="email"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="you@school.edu.ng"
+                placeholder="you@gmail.com"
                 aria-label="Email address"
                 aria-invalid={!!error}
                 className="bg-panel text-content placeholder:text-content/40 h-12 w-full rounded-full px-5 text-sm outline-none"

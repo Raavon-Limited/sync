@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { FormField } from '@/components/forms';
 import { PasswordRequirements } from '@/components/forms/password-requirements';
+import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import {
@@ -420,12 +421,24 @@ export function SignupForm({ next }: { next?: string }) {
       {step === 2 && (
         <>
           <FormField label="Email" htmlFor="email" error={errors.email?.message}>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@student.edu.ng"
-              {...register('email')}
+            {/* Placeholder follows the role. It was hardcoded to
+                "you@student.edu.ng", which a vendor signing up was shown as an
+                example of what THEY should type. */}
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <EmailInput
+                  id="email"
+                  name={field.name}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={
+                    role === 'vendor' ? 'you@yourbusiness.com' : 'you@gmail.com'
+                  }
+                />
+              )}
             />
           </FormField>
 
