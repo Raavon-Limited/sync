@@ -412,12 +412,20 @@ input:-webkit-autofill:focus {
   outline: none;
 }
 
-.menu-item:hover {
-  background: rgb(243 244 246);
-}
-
+/* Hover/keyboard highlight for menu rows.
+ *
+ * These were both a hardcoded `rgb(243 244 246)` - Tailwind's gray-100 - with
+ * no dark counterpart. On a dark panel that is a near-white bar behind
+ * near-white text, so the hovered row became the one row you could not read.
+ *
+ * `currentColor` at low alpha instead: the tint is derived from the text colour
+ * of whatever surface the menu is on, so it darkens on light panels and
+ * lightens on dark ones without either being written down. Nothing to keep in
+ * step when a theme changes.
+ */
+.menu-item:hover,
 .menu-item[data-highlighted] {
-  background: rgb(243 244 246);
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 @keyframes amap-pulse {
