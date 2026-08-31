@@ -91,7 +91,10 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
       alreadyRegistered: true,
     };
   }
-  return { ok: true };
+  // A session here means the project has "Confirm email" turned OFF: the
+  // account is already usable and nothing was emailed. Reported so the form can
+  // skip /verify, which would otherwise ask for a code that does not exist.
+  return { ok: true, signedIn: Boolean(data.session) };
 }
 
 /**

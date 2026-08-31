@@ -113,6 +113,17 @@ export function SignupForm({ next }: { next?: string }) {
       toast(res.error);
       return;
     }
+    // "Confirm email" off in Supabase => signUp already returned a session, so
+    // the account is live and nothing was emailed. Sending them to /verify to
+    // type a code that does not exist is a dead end with no way out, so go
+    // straight in. Business roles still need the onboarding wizard.
+    if (res.signedIn) {
+      const wantsBusiness = values.role !== 'student';
+      router.push(next ?? (wantsBusiness ? '/onboarding' : '/me'));
+      router.refresh();
+      return;
+    }
+
     router.push(`/verify?email=${encodeURIComponent(values.email)}`);
   }
 

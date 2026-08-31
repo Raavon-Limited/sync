@@ -28,7 +28,19 @@ export type AuthResult = { ok: true } | { ok: false; error: string };
 /** Signup result. `alreadyRegistered` lets the form send the user to /login
  *  instead of /verify when the email already has a confirmed account. */
 export type SignUpResult =
-  | { ok: true }
+  | {
+      ok: true;
+      /**
+       * True when Supabase returned a SESSION - i.e. "Confirm email" is off in
+       * the project's auth settings, so the account is live immediately and no
+       * code was emailed.
+       *
+       * The client must branch on this. Routing to /verify unconditionally
+       * strands a user who is already signed in on a page asking for a code
+       * that was never sent, which is a dead end with no way out.
+       */
+      signedIn: boolean;
+    }
   | { ok: false; error: string; alreadyRegistered?: boolean };
 
 /** Verify result also carries the role so the client can route to the right

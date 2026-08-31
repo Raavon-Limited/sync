@@ -28,6 +28,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ListingCard } from '@/components/shared/listing-card';
 import {
   Accordion,
@@ -105,7 +106,19 @@ export default async function LandingPage() {
             headline - widens the whole track past the viewport. Everything then
             lays out in that too-wide box, which is why the headline stopped
             wrapping and the sub-heading ran off the right edge. */}
-        <div className="mx-auto grid min-h-[72vh] w-full max-w-7xl min-w-0 items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12">
+        {/* Two columns ONLY when there is something for the second one.
+            HeroHighlights renders nothing when no listing has a photo yet -
+            correct, since a hero card without an image is a grey box - but in a
+            fixed `md:grid-cols-2` that left the headline pinned to the left half
+            with a void beside it. The showcase is real data now, so "empty" is
+            a normal state on a young market and the layout has to hold up in
+            it, not just when the database is full. */}
+        <div
+          className={cn(
+            'mx-auto grid min-h-[72vh] w-full max-w-7xl min-w-0 items-center gap-10 px-6 py-16 md:gap-12',
+            showcase.highlights.length > 0 && 'md:grid-cols-2',
+          )}
+        >
           {/* Left - headline */}
           <div className="min-w-0 text-center md:text-left">
             {/* flex-wrap + wrap-break-word: "412 verified hostels · KWASU,
