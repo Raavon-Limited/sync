@@ -7,7 +7,7 @@
  * hostels I collected and when they end" surface. Card-per-booking with a
  * status badge + days-left pill.
  */
-import { ArrowRight, CalendarClock, MapPin } from 'lucide-react';
+import { ArrowRight, CalendarClock, Home, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge, Button, Card } from '@/components/ui';
@@ -70,8 +70,9 @@ function toCard(b: Booking): StudentBooking {
     // Counting down to move-in before it starts, to the end date after.
     daysLeft: status === 'upcoming' ? daysBetween(b.moveIn) : daysBetween(b.endDate),
     pricePerSession: (b.pricePerSessionKobo ?? 0) / 100,
-    // The card falls back to a placeholder when this is empty; no hostel in the
-    // database carries an image yet.
+    // '' when the hostel has no image, which is every hostel today. BookingCard
+    // renders a placeholder rather than an <Image> for it - next/image throws
+    // on an empty src.
     image: b.hostelImageUrl ?? '',
   };
 }
@@ -97,8 +98,23 @@ export function BookingCard({ booking: b }: { booking: StudentBooking }) {
   const done = b.status === 'completed';
   return (
     <Card className="border-line/10 flex flex-col gap-4 border bg-transparent p-4 sm:flex-row sm:items-center">
-      <div className="relative h-20 w-full shrink-0 overflow-hidden rounded-xl sm:w-28">
-        <Image src={b.image} alt={b.property} fill className="object-cover" sizes="112px" />
+      {/* No hostel in the database carries an image yet, and `toCard` maps a
+          missing one to ''. next/image REJECTS an empty src - it warns that the
+          browser may re-download the whole page, then throws "Image is missing
+          required src property" - so the element must not render at all rather
+          than render empty. The comment in toCard already promised this
+          fallback; it just did not exist. */}
+      <div className="bg-surface-deep relative h-20 w-full shrink-0 overflow-hidden rounded-xl sm:w-28">
+        {b.image ? (
+          <Image src={b.image} alt={b.property} fill className="object-cover" sizes="112px" />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="text-content-muted flex h-full w-full items-center justify-center"
+          >
+            <Home className="h-6 w-6" />
+          </span>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
