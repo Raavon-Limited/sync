@@ -59,19 +59,36 @@ export function AuthLayout({
         {/* Cream lines, same as the brand panel - both sides are Ink now. */}
         <DoodleBackdrop tile={520} className="text-cream/8" />
 
-        {/* Glass card.
-            The first attempt used `bg-panel/60`, which on this surface is
-            #17171c over #0e0e12 - a near-identical dark on dark. There was
-            nothing to see THROUGH and 60% was close to opaque, so it read as a
-            slightly different rectangle rather than glass.
-            Real glass on a dark ground is a LIGHT film: a few percent of cream
-            lifts the pane off the surface and lets the townscape carry the
-            transparency, while the blur keeps it soft enough to read labels
-            over. The two-tone border does the rest - brighter on top where a
-            pane would catch light, dimmer below - which is what the eye reads
-            as an edge rather than a drawn outline. */}
+        {/* NO AMBIENT COLOUR BLOBS HERE, and they are not coming back.
+            Two blurred brand-coloured glows were tried, to give the glass
+            something to refract. They caused both of the problems that came
+            back: the green/warm wash across the card WAS those blobs showing
+            through - not a CSS gradient - and, being absolutely positioned past
+            this pane's edges (-bottom, -right) inside an `overflow-y-auto`
+            container, they added scrollable area and made an otherwise
+            short form scroll. The doodle behind is what the glass reads. */}
+        {/* Ceramic glass.
+            A flat tint plus blur alone reads as a slightly different rectangle.
+            Three things make a pane look like a thick, glazed object:
+
+            1. An INSET RIM - a bright hairline just inside the top edge and a
+               dark one inside the bottom. This is the THICKNESS, and it is the
+               single biggest difference from a coloured overlay: it is what
+               makes the pane look like something you could pick up.
+            2. A LARGE radius. Ceramic has no sharp corners; 2rem reads as a
+               moulded object where 1rem reads as a UI card.
+            3. Saturated blur, so the blobs above bleed through as COLOUR
+               rather than grey.
+
+            The fill is FLAT, deliberately. A gradient was tried and dropped -
+            it tips the effect from a clean glaze towards a lit 3D surface, and
+            the rim already supplies the light direction.
+
+            One arbitrary shadow because the inset highlight, the inset floor
+            and the cast shadow must compose in a single box-shadow; Tailwind's
+            shadow utilities cannot express that stack. */}
         <div
-          className="border-cream/12 border-t-cream/25 bg-cream/6 w-full max-w-lg rounded-3xl border p-6 shadow-[0_16px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-150 md:p-8"
+          className="border-cream/12 bg-cream/8 w-full max-w-lg rounded-[2rem] border p-6 shadow-[inset_0_1px_0_0_rgba(244,241,232,0.28),inset_0_-1px_0_0_rgba(14,14,18,0.4),0_24px_60px_-12px_rgba(0,0,0,0.65)] backdrop-blur-2xl backdrop-saturate-200 md:p-8"
         >
           {children}
         </div>
