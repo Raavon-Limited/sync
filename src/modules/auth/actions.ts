@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { resolveHandle } from '@/lib/handle';
+import type { Row } from '@/lib/supabase/row';
 import {
   email as emailRule,
   loginSchema,
@@ -39,10 +40,28 @@ function firstIssue(error: { issues: { message: string }[] }, fallback: string):
  * `/<handle>` and the proxy rewrites it to the right per-type dashboard
  * (vendor vs landlord). Returns undefined when no handle can be formed.
  */
-function handleFor(user: { email?: string; user_metadata?: Record<string, unknown> } | null): string | undefined {
+function handleFor(
+  user: { email?: string; user_metadata?: Record<string, unknown> } | null,
+  /**
+   * The SERVER-TRUSTED role, from profiles.role. Not optional in practice, and
+   * passing the metadata role here is the bug this parameter exists to prevent.
+   *
+   * This read `meta.role` - the editable user_metadata - while the proxy
+   * computes the same handle from profiles.role. resolveHandle branches on that
+   * role (business accounts key off business_name, everyone else off
+   * full_name), so the two disagreed the moment the two roles diverged.
+   *
+   * They diverge routinely: `claim_role` and `switch_role` change profiles.role
+   * and never touch user_metadata, so ANY multi-role account has a stale
+   * metadata role. Login then sent them to /<handle-from-full-name> while the
+   * proxy would only rewrite /<handle-from-business-name>, no rewrite fired,
+   * and Next 404'd on a URL we had just generated ourselves.
+   */
+  trustedRole: string | undefined,
+): string | undefined {
   const meta = user?.user_metadata ?? {};
   const handle = resolveHandle({
-    role: meta.role as string | undefined,
+    role: trustedRole,
     full_name: meta.full_name as string | undefined,
     business_name: meta.business_name as string | undefined,
     email: user?.email,
@@ -156,17 +175,25 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
   if (error) return { ok: false, error: error.message };
 
   let role = (data.user?.user_metadata?.role as Role | undefined) ?? 'student';
+  // Every hat this account holds, for the login role chooser. Stays empty when
+  // the multi-role migration has not run, which the form reads as "no choice".
+  let roles: Role[] = [];
 
   // Archive lifecycle: <30d → self-restore on login; 30–60d → blocked, admin
   // must restore; >60d → account is purged (so it usually won't get here).
   try {
     const admin = createAdminClient();
-    const { data: prof } = await admin
+    const res = await admin
       .from('profiles')
-      .select('role, archived_at')
+      .select('role, roles, archived_at')
       .eq('id', data.user.id)
       .maybeSingle();
+    // `roles` postdates types/database.types.ts, which is generated FROM the
+    // database. REGENERATE THE TYPES once 20260830090000 is applied and this
+    // cast can go.
+    const prof = res.data as unknown as Row | null;
     if (prof?.role) role = prof.role as Role;
+    if (Array.isArray(prof?.roles)) roles = prof.roles as Role[];
     if (prof?.archived_at) {
       const days = (Date.now() - new Date(prof.archived_at).getTime()) / 86_400_000;
       if (days < 30) {
@@ -189,7 +216,7 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
     // profiles table not migrated yet - fall back to the metadata role.
   }
 
-  return { ok: true, role, handle: handleFor(data.user) };
+  return { ok: true, role, handle: handleFor(data.user, role) };
 }
 
 /** Which input the login form should show for an email: admins/super_admins are
@@ -277,7 +304,7 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
   } catch {
     // profiles table not migrated yet.
   }
-  return { ok: true, role, handle: handleFor(data.user) };
+  return { ok: true, role, handle: handleFor(data.user, role) };
 }
 
 /** Sign out the current user. Clears the session cookies. */

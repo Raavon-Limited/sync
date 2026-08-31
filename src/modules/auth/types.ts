@@ -49,5 +49,19 @@ export type SignUpResult =
  *  own handle root (/<handle>) and let the proxy resolve the per-type dashboard
  *  (vendor vs landlord) instead of hardcoding /vendor. */
 export type VerifyResult =
-  | { ok: true; role: Role; handle?: string }
+  | {
+      ok: true;
+      /** The role currently worn - profiles.role. */
+      role: Role;
+      handle?: string;
+      /**
+       * Every role this account HOLDS - profiles.roles.
+       *
+       * Returned so the login form can offer a choice when there is more than
+       * one. Signing in wearing whichever hat happened to be last is a coin
+       * flip for a multi-role account, and lands half of them on the wrong
+       * dashboard. One role means no choice to make and no prompt.
+       */
+      roles?: Role[];
+    }
   | { ok: false; error: string };

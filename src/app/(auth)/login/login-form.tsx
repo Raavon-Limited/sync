@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { readStandalone } from '@/lib/pwa/use-install';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,14 @@ import { FormField } from '@/components/forms';
 import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
 import { BrandLoader } from '@/components/ui/brand-loader';
-import { getLoginMethod, sendLoginOtp, signIn, verifyLoginOtp } from '@/modules/auth/actions';
+import { FullScreenOverlay } from '@/components/ui/full-screen-overlay';
+import {
+  getLoginMethod,
+  sendLoginOtp,
+  signIn,
+  switchRole,
+  verifyLoginOtp,
+} from '@/modules/auth/actions';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Matches Supabase's default OTP resend window, so resends never hit its limit.
@@ -74,6 +82,29 @@ function destFor(role: string | undefined, handle?: string, next?: string) {
   return readStandalone() ? '/around' : dashboard;
 }
 
+/** What each hat is called, and where it lives. Mirrors RoleSwitcher. */
+const ROLE_HOME: Record<string, { label: string; blurb: string; href: string }> = {
+  student: { label: 'Student', blurb: 'Book rooms, order food, browse campus', href: '/me' },
+  vendor: { label: 'Business', blurb: 'Your listings, orders and earnings', href: '/vendor' },
+  landlord: { label: 'Landlord', blurb: 'Your properties, tenants and rent', href: '/landlord' },
+  rider: { label: 'Rider', blurb: 'Your delivery queue and earnings', href: '/rider' },
+};
+
+/**
+ * Should we ask which account they want?
+ *
+ * Only when the account genuinely holds more than one hat we can land on.
+ * Signing in wearing whichever role happened to be worn last is a coin flip for
+ * a multi-role account, and lands half of them on the wrong dashboard - which
+ * is what happened here: a landlord signed in and got the vendor handle.
+ *
+ * One role means no question to ask, so it never appears for the overwhelming
+ * majority of accounts. Staff are excluded: /admin is their only surface.
+ */
+function offerRoleChoice(roles?: string[]): boolean {
+  return (roles ?? []).filter((r) => ROLE_HOME[r]).length > 1;
+}
+
 type Step = 'email' | 'password' | 'otp';
 
 export function LoginForm({ next, email: initialEmail }: { next?: string; email?: string }) {
@@ -88,6 +119,14 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
   // it never flashes back to an idle form (which reads as "nothing happened").
   const [redirecting, setRedirecting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  /**
+   * The hats to choose between, when the account holds more than one.
+   *
+   * The session is ALREADY established by this point - authentication has
+   * succeeded and only the destination is open. So this is a routing question,
+   * not a second auth step, and picking simply decides which dashboard to open.
+   */
+  const [choices, setChoices] = useState<string[] | null>(null);
 
   const signupHref = next ? `/signup?next=${encodeURIComponent(next)}` : '/signup';
 
@@ -135,6 +174,11 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       toast(res.error);
       return;
     }
+    if (offerRoleChoice(res.roles)) {
+      setBusy(false);
+      setChoices(res.roles as string[]);
+      return;
+    }
     setRedirecting(true);
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
@@ -167,8 +211,37 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       toast(res.error);
       return;
     }
+    if (offerRoleChoice(res.roles)) {
+      setBusy(false);
+      setChoices(res.roles as string[]);
+      return;
+    }
     setRedirecting(true);
     router.push(destFor(res.role, res.handle, next));
+    router.refresh();
+  }
+
+  /**
+   * They picked which account to open.
+   *
+   * switch_role makes it the WORN role, not just the destination, so the proxy
+   * gate, RLS and every server render agree with where we are sending them. A
+   * push without the switch would land a landlord on /landlord while
+   * profiles.role still said vendor, and the gate would bounce them to /403.
+   */
+  async function chooseRole(role: string) {
+    setChoices(null);
+    setRedirecting(true);
+    try {
+      await switchRole(role);
+    } catch (e) {
+      setRedirecting(false);
+      toast(e instanceof Error ? e.message : 'Could not open that account');
+      return;
+    }
+    // The role root, not the handle: the handle is derived and the switch has
+    // only just changed the role it derives from.
+    router.push(next ?? ROLE_HOME[role].href);
     router.refresh();
   }
 
@@ -194,13 +267,51 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
 
   return (
     <>
+      {/* Portalled: this form renders inside the auth card, whose backdrop-blur
+          makes it a containing block for fixed positioning - a plain
+          `fixed inset-0` here covered the CARD, not the screen. */}
       {redirecting && (
-        <div className="fixed inset-0 z-[100]">
+        <FullScreenOverlay>
           <BrandLoader label="Signing you in…" />
-        </div>
+        </FullScreenOverlay>
       )}
       <div className="flex flex-col gap-6">
-        {step === 'email' && (
+        {/* Which account? Replaces the form entirely rather than sitting beside
+            it: authentication is already done at this point, so there is
+            nothing left to fill in and a form underneath would just be noise. */}
+        {choices && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-content text-sm font-medium">Which account?</p>
+              <p className="text-content-muted mt-1 text-xs">
+                This login holds more than one. You can switch at any time from the menu
+                under your avatar.
+              </p>
+            </div>
+            {choices
+              .filter((r) => ROLE_HOME[r])
+              .map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => void chooseRole(r)}
+                  className="border-line/15 hover:border-accent-fg/50 hover:bg-ink/5 flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors"
+                >
+                  <span className="min-w-0">
+                    <span className="text-content block text-sm font-medium">
+                      {ROLE_HOME[r].label}
+                    </span>
+                    <span className="text-content-muted block text-xs">
+                      {ROLE_HOME[r].blurb}
+                    </span>
+                  </span>
+                  <ArrowRight className="text-content-muted h-4 w-4 shrink-0" />
+                </button>
+              ))}
+          </div>
+        )}
+
+        {!choices && step === 'email' && (
           <form onSubmit={continueFromEmail} className="flex flex-col gap-4" noValidate>
             <FormField label="Email" htmlFor="email">
               {/* Neutral placeholder: login is shared by students, vendors,
@@ -220,7 +331,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </form>
         )}
 
-        {step === 'password' && (
+        {!choices && step === 'password' && (
           <form onSubmit={submitPassword} className="flex flex-col gap-4" noValidate>
             {emailRow}
             <FormField label="Password" htmlFor="password">
@@ -247,7 +358,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </form>
         )}
 
-        {step === 'otp' && (
+        {!choices && step === 'otp' && (
           <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
             {emailRow}
             <FormField label="Sign-in code" htmlFor="otp">
