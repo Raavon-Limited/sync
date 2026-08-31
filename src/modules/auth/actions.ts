@@ -58,7 +58,7 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
   const parsed = signupSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error, 'Invalid details') };
 
-  const { email, password, fullName, phone, role, vendorCategory, trade } = parsed.data;
+  const { email, password, fullName, phone, role, vendorCategory, trade, campusId } = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -74,6 +74,10 @@ export async function signUp(input: SignupInput): Promise<SignUpResult> {
         // resulting profiles.role, never this editable metadata.
         vendor_category: role === 'vendor' ? (vendorCategory ?? null) : null,
         trade: role === 'vendor' && vendorCategory === 'tradesman' ? (trade ?? null) : null,
+        // Students only. handle_new_user() looks this up against `campuses` and
+        // ignores anything that is not a real, ACTIVE row, so a tampered value
+        // costs the account a campus rather than naming one we do not serve.
+        campus_id: role === 'student' ? (campusId ?? null) : null,
       },
     },
   });

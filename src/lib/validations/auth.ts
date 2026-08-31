@@ -42,12 +42,31 @@ export const signupSchema = z
     // required only when the chosen category is 'tradesman'.
     vendorCategory: z.enum(VENDOR_CATEGORIES).optional(),
     trade: z.enum(TRADES).optional(),
+    /**
+     * Student-only: which campus they are at, as a `campuses.id`.
+     *
+     * A school id rather than a typed name, because the campus ADDRESS and
+     * coordinates hang off the school row - see the student-campus migration. Asking
+     * students to type it would produce four spellings of KWASU and no address
+     * at all.
+     *
+     * Deliberately NOT asked of vendors. Their business address is collected
+     * properly in the onboarding wizard (step 2), and asking twice in two
+     * places is how the two answers end up disagreeing.
+     */
+    campusId: z.string().uuid({ message: 'Choose your school' }).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
   .superRefine((d, ctx) => {
+    if (d.role === 'student') {
+      if (!d.campusId) {
+        ctx.addIssue({ code: 'custom', message: 'Choose your school', path: ['campusId'] });
+      }
+      return;
+    }
     if (d.role !== 'vendor') return;
     if (!d.vendorCategory) {
       ctx.addIssue({ code: 'custom', message: 'Select what you offer', path: ['vendorCategory'] });
