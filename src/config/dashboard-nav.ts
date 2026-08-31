@@ -154,8 +154,18 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/admin', label: 'Overview', icon: LayoutDashboard },
-          { href: '/admin/vendors', label: 'Vendors', icon: ShieldCheck },
-          { href: '/admin/landlord', label: '  Landlords', icon: Building2},
+          // "Vendors" was a lie about what this page holds: it lists EVERY
+          // business awaiting a decision, landlords included, because it
+          // filters vendor_profiles on nothing. An admin looking at a landlord
+          // marked PENDING had no reason to look under a nav item named after
+          // somebody else.
+          {
+            href: '/admin/vendors',
+            label: 'Businesses',
+            heading: 'Verification queue',
+            icon: ShieldCheck,
+          },
+          { href: '/admin/landlord', label: 'Landlords', icon: Building2 },
           { href: '/admin/verify-visits', label: 'Verification visits', icon: ClipboardCheck },
           { href: '/admin/users', label: 'Users', icon: Users },
         ],

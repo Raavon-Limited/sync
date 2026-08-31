@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
 import type { Row } from '@/lib/supabase/row';
 
@@ -38,13 +39,15 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
   const { data: landlord } = await admin
     .from('vendor_profiles')
-    .select('id, slug, business_name, area, business_address, public_phone, verification_status, created_at')
+    .select(
+      'id, slug, business_name, area, business_address, public_phone, verification_status, created_at',
+    )
     .eq('slug', slug)
     .maybeSingle();
 
   if (!landlord) notFound();
 
-  const [{ data: hostels }, { data: owner }] = await Promise.all([
+  const [{ data: hostels }, { data: owner }, { data: docs }] = await Promise.all([
     admin
       .from('hostels')
       .select('id, slug, name, area, room_type, price_per_session_kobo, verified')
@@ -53,7 +56,19 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
       .order('created_at', { ascending: false }),
     // The person behind the business. `profiles` is own-row-only under RLS,
     // so the service role is the only way to read it — and only here.
-    admin.from('profiles').select('full_name, role, phone').eq('id', (landlord as Row).id).maybeSingle(),
+    admin
+      .from('profiles')
+      .select('full_name, role, phone')
+      .eq('id', (landlord as Row).id)
+      .maybeSingle(),
+    // The documents behind the badge in the heading. Fetched separately rather
+    // than embedded: verification_documents has no FK to vendor_profiles (it
+    // points at profiles), and an embed that cannot resolve fails the page.
+    admin
+      .from('verification_documents')
+      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+      .eq('owner_id', (landlord as Row).id)
+      .order('uploaded_at', { ascending: false }),
   ]);
 
   // Scoped to this landlord's hostels. Reading the whole availability and visit
@@ -77,6 +92,16 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const visitByHostel = new Map(((visits ?? []) as Row[]).map((v) => [v.hostel_id, v]));
 
   const l = landlord as Row;
+
+  const reviewDocs: AdminDoc[] = ((docs ?? []) as Row[]).map((d) => ({
+    id: d.id,
+    docType: d.doc_type,
+    title: d.title,
+    status: d.status,
+    storagePath: d.storage_path,
+    actionMessage: d.action_message ?? null,
+    uploadedAt: d.uploaded_at,
+  }));
 
   return (
     <section className="flex flex-col gap-6">
@@ -116,6 +141,30 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
           )}
         </p>
       </div>
+
+      {/* THE DECISION, ON THE PAGE THAT SHOWS THE BADGE.
+          The status above used to be the end of it: an admin saw PENDING here
+          and had to know, from nowhere, that the review lived under a nav item
+          called "Vendors". Same component as the queue, so the two surfaces
+          cannot drift into disagreeing about what a reviewer may do. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-content-muted font-mono text-sm tracking-wide">
+          VERIFICATION · {l.verification_status}
+        </h2>
+        <VerificationReview
+          showHeader={false}
+          vendor={{
+            id: l.id,
+            businessName: l.business_name ?? 'Unnamed',
+            slug: l.slug,
+            category: 'landlord',
+            area: l.area ?? null,
+            verificationStatus: l.verification_status ?? 'unverified',
+            createdAt: l.created_at,
+            docs: reviewDocs,
+          }}
+        />
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-content-muted font-mono text-sm tracking-wide">

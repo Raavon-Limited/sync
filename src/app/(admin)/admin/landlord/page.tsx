@@ -60,6 +60,15 @@ export default async function Page() {
     counts: byLandlord.get(l.id) ?? { total: 0, verified: 0 },
   }));
 
+  // Whoever is waiting on a person goes first. Ordered by signup date alone,
+  // the one landlord who had submitted documents sat wherever they happened to
+  // have registered, among everyone who never will. Signup date still breaks
+  // ties inside each band, which is the order the query already returned.
+  const RANK: Record<string, number> = { pending: 0, unverified: 1, rejected: 2, verified: 3 };
+  rows.sort((a, b) => (RANK[a.verification_status] ?? 9) - (RANK[b.verification_status] ?? 9));
+
+  const waiting = rows.filter((l) => l.verification_status === 'pending').length;
+
   return (
     <section className="flex flex-col gap-4">
       <div>
@@ -67,6 +76,12 @@ export default async function Page() {
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
           Who owns <span className="text-lime-deep">what.</span>
         </h2>
+        {/* Says what is owed before you have to read every badge to find it. */}
+        <p className="text-content-muted mt-2 text-sm">
+          {waiting > 0
+            ? `${waiting} landlord${waiting === 1 ? '' : 's'} waiting on a verification decision — open one to review their documents.`
+            : 'Nothing waiting on a verification decision.'}
+        </p>
       </div>
 
       {rows.length === 0 ? (
@@ -101,6 +116,9 @@ export default async function Page() {
                     {l.counts.verified} verified
                   </span>
                   <span>{l.area ?? 'No area'}</span>
+                  {l.verification_status === 'pending' && (
+                    <span className="text-amber-600">Review documents</span>
+                  )}
                 </p>
               </div>
               <ChevronRight className="text-content-muted size-4 shrink-0" />
