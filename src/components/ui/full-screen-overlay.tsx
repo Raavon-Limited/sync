@@ -29,7 +29,7 @@ export function FullScreenOverlay({
   children,
   className,
   /** Above dialogs and the install gate, which sit at z-50 and z-100. */
-  z = 'z-[200]',
+  z = 'z-200',
 }: {
   children: React.ReactNode;
   className?: string;

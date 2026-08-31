@@ -5,7 +5,8 @@
  * It never appears for:
  *   - the installed app (`display-mode: standalone`)
  *   - the public web pages and auth, listed in WEB_ROUTES
- *   - anyone who is signed in, anywhere
+ *   - anyone who is signed in, anywhere - decided on the SERVER and passed in,
+ *     never read from client session state (see the note by `signedIn` below)
  *
  * That last one is the difference between a gate and a wall. The web's job is
  * marketing plus your account: someone with an account is not a visitor to
@@ -32,7 +33,6 @@ import { usePathname } from 'next/navigation';
 import { Share, MoreVertical, Plus, Smartphone } from 'lucide-react';
 
 import { useInstall } from '@/lib/pwa/use-install';
-import { useSession } from '@/providers/session-provider';
 import { Button } from '@/components/ui/button';
 import { SITE } from '@/config/site';
 
@@ -76,10 +76,9 @@ function isWebRoute(pathname: string): boolean {
   return WEB_ROUTES.some((r) => r !== '/' && (pathname === r || pathname.startsWith(`${r}/`)));
 }
 
-export function InstallGate() {
+export function InstallGate({ signedIn = false }: { signedIn?: boolean }) {
   const pathname = usePathname();
   const { isStandalone, platform, canPrompt, promptInstall } = useInstall();
-  const { user, isLoading } = useSession();
 
   // Installed app, or a page we deliberately serve on the web: get out of the way.
   if (isStandalone || isWebRoute(pathname)) return null;
@@ -92,10 +91,19 @@ export function InstallGate() {
   // is also what makes handle-rooted dashboards work: those live at /<name>,
   // which is dynamic and could never have been enumerated in WEB_ROUTES above.
   //
-  // `isLoading` matters as much as `user`: the session resolves after
-  // hydration, so without it the gate flashes over the dashboard of a signed-in
-  // user for the moment before their profile arrives.
-  if (isLoading || user) return null;
+  // `signedIn` COMES FROM THE SERVER, and it has to.
+  //
+  // The first version read useSession() instead, and gated a freshly logged-in
+  // user until they reloaded. `signIn` is a server action: it calls
+  // signInWithPassword with the SERVER client, which writes the cookies
+  // server-side. The browser's Supabase client never performed a sign-in, so
+  // onAuthStateChange never fires and SessionProvider.user stays null until
+  // something re-runs getUser() - which only a full reload does. The gate saw
+  // "not signed in" and covered the dashboard it had just navigated to.
+  //
+  // The root layout already knows the answer on the server, before any of this
+  // renders. Passing it down removes the race rather than trying to win it.
+  if (signedIn) return null;
 
   return (
     <div

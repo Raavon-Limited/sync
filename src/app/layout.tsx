@@ -14,6 +14,7 @@ import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/providers';
 import { listAreas } from '@/modules/areas/queries';
+import { getCurrentUser } from '@/modules/auth/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
 import { RegisterSW } from '@/components/pwa/register-sw';
 import { InstallGate } from '@/components/pwa/install-gate';
@@ -85,7 +86,10 @@ export default async function RootLayout({
   // Fetched here, not in each shell, so the single root LocationProvider has the
   // real list on first paint. listAreas() is React-cached (one query per
   // request) and falls back to the built-in list if Supabase is unreachable.
-  const areas = await listAreas();
+  // Both reads are independent, so fire them together. `user` decides only
+  // whether the InstallGate renders - it must come from the server, because the
+  // browser's Supabase client does not learn about a server-action sign-in.
+  const [areas, user] = await Promise.all([listAreas(), getCurrentUser()]);
 
   return (
     <html
@@ -105,15 +109,17 @@ export default async function RootLayout({
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
         <RegisterSW />
-        <Providers areas={areas}>
-          {children}
-          {/* Renders only in a browser tab, only when signed out, and only on a
-              route outside WEB_ROUTES. INSIDE Providers because it has to read
-              the session to know whether you are signed in - it used to sit
-              outside, where useSession() fell back to "signed out" and the gate
-              covered your own dashboard. Last child so it still overlays. */}
-          <InstallGate />
-        </Providers>
+        <Providers areas={areas}>{children}</Providers>
+        {/* Renders only in a browser tab, only when signed out, and only on a
+            route outside WEB_ROUTES.
+
+            `signedIn` is resolved HERE, on the server. The gate briefly read it
+            from useSession() instead, which made it cover the dashboard of a
+            user who had just logged in: `signIn` is a server action, so the
+            cookies are written server-side and the browser client never fires
+            onAuthStateChange - the client session stayed null until a reload.
+            The server has the answer before any of this renders. */}
+        <InstallGate signedIn={!!user} />
         {/* Renders nothing on touch devices or under reduced motion. */}
         <Cursor />
       </body>

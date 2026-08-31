@@ -241,8 +241,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     }
     // The role root, not the handle: the handle is derived and the switch has
     // only just changed the role it derives from.
-    router.push(next ?? ROLE_HOME[role].href);
-    router.refresh();
+    router.replace(next ?? ROLE_HOME[role].href);
   }
 
   function changeEmail() {

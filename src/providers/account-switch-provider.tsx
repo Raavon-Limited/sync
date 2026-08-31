@@ -35,9 +35,9 @@
  *   of every role-scoped key, and forgetting one is a data leak.
  *
  *   useTransition around the navigation. `isPending` stays true until the new
- *   route's RSC payload AND the refresh have landed, which is exactly the
- *   window the overlay needs to cover. No effect-driven setState, no timeout
- *   guessing when navigation finished.
+ *   route's RSC payload has landed, which is exactly the window the overlay
+ *   needs to cover. No effect-driven setState, no timeout guessing when
+ *   navigation finished.
  *
  *   One full-screen loader for the whole operation, so the old dashboard is
  *   never visible under a new role.
@@ -48,6 +48,7 @@ import { createContext, useCallback, useContext, useState, useTransition } from 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { BrandLoader } from '@/components/ui/brand-loader';
+import { FullScreenOverlay } from '@/components/ui/full-screen-overlay';
 
 interface SwitchRequest {
   /** Shown under the loader, e.g. "Switching to Business…". */
@@ -96,10 +97,18 @@ export function AccountSwitchProvider({ children }: { children: React.ReactNode 
       startNavigation(() => {
         // replace, not push: the old role's dashboard is not somewhere Back
         // should return to - it would render under the new role.
+        //
+        // ONE CALL, NOT TWO. This also called router.refresh() here, and the
+        // two fought: refresh() invalidates the CURRENT route while replace()
+        // navigates away from it, and the navigation lost. The switch reported
+        // success, the toast fired, and the page never moved - then reloading
+        // 404'd, because the URL was the old role's handle and the role it
+        // derives from had just changed underneath it.
+        //
+        // refresh() is not needed anyway: replace() fetches a fresh RSC payload
+        // for the destination, and these dashboards are dynamic (they read
+        // cookies), so nothing serves them from the client router cache.
         router.replace(href);
-        // Server components have already rendered with the old role; without
-        // this the sidebar and header keep the previous hat.
-        router.refresh();
       });
     },
     [queryClient, router],
@@ -110,10 +119,13 @@ export function AccountSwitchProvider({ children }: { children: React.ReactNode 
   return (
     <AccountSwitchContext.Provider value={{ switching, run }}>
       {children}
+      {/* Portalled, so an ancestor with a transform or backdrop-filter cannot
+          trap it - the same trap that boxed the login loader inside the auth
+          card. */}
       {switching && (
-        <div className="fixed inset-0 z-[200]" role="status" aria-live="assertive">
+        <FullScreenOverlay>
           <BrandLoader label={label ?? 'Switching account…'} />
-        </div>
+        </FullScreenOverlay>
       )}
     </AccountSwitchContext.Provider>
   );
