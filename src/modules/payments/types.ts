@@ -90,8 +90,46 @@ export interface Plan {
   priceKobo: number;
   interval: 'monthly' | 'yearly';
   features: string[];
+  /** Null means UNLIMITED, consistently across every cap below. */
   maxListings: number | null;
+  maxStores: number | null;
+  /**
+   * 0 = no team members at all; null = unlimited. Deliberately not the same
+   * value — "you cannot invite anyone" and "invite whoever you like" are
+   * opposite answers and a nullable-only column could not tell them apart.
+   */
+  maxTeam: number | null;
+  aiReplies: 'none' | 'limited' | 'full';
+  disputeSupport: 'none' | 'managed' | 'priority';
+  /** Discount on promotion placement, as a percentage. 0 = pays full price. */
+  boostPercent: number;
   sortOrder: number;
+}
+
+/**
+ * What the caller's plan allows and what they have spent of it, from
+ * `my_plan_usage()`. The same numbers the triggers enforce — read these rather
+ * than counting rows in a component, or the screen and the database will
+ * eventually disagree about whether somebody is at their limit.
+ */
+export interface PlanUsage {
+  planCode: string;
+  planName: string;
+  priceKobo: number;
+  maxListings: number | null;
+  usedListings: number;
+  maxStores: number | null;
+  usedStores: number;
+  maxTeam: number | null;
+  usedTeam: number;
+  aiReplies: 'none' | 'limited' | 'full';
+  disputeSupport: 'none' | 'managed' | 'priority';
+  boostPercent: number;
+}
+
+/** True when a cap is set and already reached. Null caps never block. */
+export function atLimit(used: number, max: number | null): boolean {
+  return max !== null && used >= max;
 }
 
 export interface Subscription {

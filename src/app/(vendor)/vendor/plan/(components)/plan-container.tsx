@@ -57,13 +57,14 @@ export function PlanContainer() {
         // No commission column on `plans` — see the header.
         commission: null,
         features: [
-          ...(p.features ?? []).map((label) => ({ label })),
+          // The listing cap leads, because it is the one people compare on.
+          // Everything after it comes from `plans.features`, which is data —
+          // changing what a plan offers is a row edit, not a deploy.
           {
             label:
-              p.maxListings == null
-                ? 'Unlimited listings'
-                : `Up to ${p.maxListings} listings`,
+              p.maxListings == null ? 'Unlimited listings' : `Up to ${p.maxListings} listings`,
           },
+          ...(p.features ?? []).map((label) => ({ label })),
         ],
         cta:
           currentCode === p.code

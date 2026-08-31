@@ -241,3 +241,19 @@ export function useCancelWithdrawal() {
     },
   });
 }
+
+/**
+ * The caller's plan limits and what they have used.
+ *
+ * Separate from `usePlans` because that is a catalogue — the same for
+ * everybody and cached for an hour — while this is one vendor's own position
+ * against it and changes whenever they add a listing or a store.
+ */
+export function usePlanUsage() {
+  const { userId } = useSession();
+  return useQuery({
+    queryKey: [...qk.plans.all, 'usage', userId ?? ''] as const,
+    queryFn: () => api.fetchPlanUsage(db()),
+    enabled: !!userId,
+  });
+}

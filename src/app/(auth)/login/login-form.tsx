@@ -343,6 +343,17 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
                 onChange={setPassword}
               />
             </FormField>
+            {/* Here, not on the email step. Somebody only discovers they have
+                forgotten their password once they are looking at the password
+                box — offering the escape hatch a screen earlier is offering it
+                before anyone needs it. The address is carried across so they
+                do not type it twice. */}
+            <Link
+              href={`/forgot-password?email=${encodeURIComponent(email)}`}
+              className="text-content-muted hover:text-content -mt-2 self-end text-sm"
+            >
+              Forgot password?
+            </Link>
             <Button type="submit" size="lg" disabled={busy} className="w-full">
               {busy ? 'Logging in…' : 'Log in'}
             </Button>

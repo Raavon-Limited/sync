@@ -38,6 +38,7 @@ import Image from 'next/image';
 import { Lock, Pencil, Phone, MapPin, Building2, Store } from 'lucide-react';
 import { Button, Input, Textarea, Spinner, Badge } from '@/components/ui';
 import { ImageField } from '@/components/forms';
+import { BusinessIdCard } from './business-id-card';
 import { SITE } from '@/config/site';
 import { useMyStorefront, useUpdateStorefront } from '@/modules/vendor/hooks';
 
@@ -127,7 +128,20 @@ export function BusinessProfileForm() {
   // ── Reading ──────────────────────────────────────────────────────────────
   if (!editing || !draft) {
     return (
-      <div className="border-line/10 bg-panel flex max-w-xl flex-col gap-4 rounded-2xl border p-5">
+      <div className="flex max-w-xl flex-col gap-6">
+        {/* The card comes FIRST. It is the thing a vendor came here to get —
+            something to show a customer — and the fields below it are the
+            settings that produce it. */}
+        <BusinessIdCard
+          businessName={storefront.businessName}
+          slug={storefront.slug}
+          category={storefront.category}
+          area={storefront.area}
+          logoUrl={storefront.logoUrl}
+          verificationStatus={storefront.verificationStatus}
+        />
+
+        <div className="border-line/10 bg-panel flex flex-col gap-4 rounded-2xl border p-5">
         <div className="flex items-start gap-4">
           <div className="border-line/10 bg-surface-deep/40 relative size-16 shrink-0 overflow-hidden rounded-full border">
             {storefront.logoUrl ? (
@@ -185,7 +199,8 @@ export function BusinessProfileForm() {
           </p>
         </div>
 
-        {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+          {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+        </div>
       </div>
     );
   }

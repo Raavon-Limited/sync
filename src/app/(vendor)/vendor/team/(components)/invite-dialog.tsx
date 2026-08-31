@@ -34,6 +34,8 @@ import {
 } from '@/components/ui';
 import { useCreateInvite } from '@/modules/storefronts/hooks';
 import { DEFAULT_STAFF_SCOPES, type StaffScope, type Storefront } from '@/modules/storefronts/types';
+import { canonicalOrigin } from '@/config/site';
+import { sendInviteEmail } from '@/modules/storefronts/invite-actions';
 import { ScopePicker } from './scope-picker';
 
 export function InviteDialog({
@@ -51,15 +53,21 @@ export function InviteDialog({
   const [scopes, setScopes] = useState<StaffScope[]>([...DEFAULT_STAFF_SCOPES]);
   const [issued, setIssued] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [mailError, setMailError] = useState<string | null>(null);
 
-  const link = issued
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/vendor/join?token=${issued}`
-    : '';
+  // The configured origin, not `window.location.origin`. This link is COPIED
+  // and sent to another person on another device — one generated from a dev
+  // machine would be a localhost address that works for nobody. It also has to
+  // match the link in the email, which the server builds the same way.
+  const link = issued ? `${canonicalOrigin()}/vendor/join?token=${issued}` : '';
 
   const reset = () => {
     setEmail('');
     setScopes([...DEFAULT_STAFF_SCOPES]);
     setIssued(null);
+    setMailError(null);
+    setSending(false);
     setCopied(false);
     invite.reset();
   };
@@ -81,17 +89,27 @@ export function InviteDialog({
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-content">
-            {issued ? 'Send them this link' : 'Invite someone to help'}
+            {issued ? 'Invitation sent' : 'Invite someone to help'}
           </DialogTitle>
           <DialogDescription>
             {issued
-              ? 'It is shown once and cannot be retrieved. It expires in 7 days and only works for the address you invited.'
+              ? 'They can also use the link below. It is shown once and cannot be retrieved, expires in 7 days, and only works for the address you invited.'
               : 'They get the sections you tick, at the store you choose — and nothing else. Your earnings, payouts and bank details are never included.'}
           </DialogDescription>
         </DialogHeader>
 
         {issued ? (
           <div className="flex flex-col gap-3">
+            {/* What actually happened to the email, stated. An owner who
+                assumes it sent and finds out days later that it did not is the
+                failure this line exists to prevent. */}
+            <p className={`text-sm ${mailError ? 'text-coral' : 'text-content-muted'}`}>
+              {sending
+                ? `Emailing ${email || 'them'}…`
+                : mailError
+                  ? mailError
+                  : `We emailed the invitation. They will set their own password when they open it.`}
+            </p>
             <div className="flex items-center gap-2">
               <code className="bg-ink/5 text-content min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-xs">
                 {link}
@@ -125,7 +143,24 @@ export function InviteDialog({
               if (!storeId || !email.trim() || scopes.length === 0) return;
               invite.mutate(
                 { storefrontId: storeId, email: email.trim(), scopes },
-                { onSuccess: (r) => setIssued(r.token) },
+                {
+                  onSuccess: async (r) => {
+                    setIssued(r.token);
+                    // Delivery is separate from creation on purpose: the
+                    // invite already exists and the link is on screen, so a
+                    // mail failure is a note, not a rollback. The owner can
+                    // always send it themselves.
+                    setSending(true);
+                    const res = await sendInviteEmail({
+                      token: r.token,
+                      email: email.trim(),
+                      storeName: stores.find((s) => s.id === storeId)?.name ?? 'your store',
+                      scopes,
+                    });
+                    setSending(false);
+                    setMailError(res.ok ? null : res.error);
+                  },
+                },
               );
             }}
           >

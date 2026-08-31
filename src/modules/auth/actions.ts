@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { resolveHandle } from '@/lib/handle';
+import { userMessage } from '@/lib/errors';
 import type { Row } from '@/lib/supabase/row';
 import {
   email as emailRule,
@@ -358,4 +359,75 @@ export async function claimRole(role: string): Promise<void> {
 
   const { error: switchError } = await supabase.rpc('switch_role', { p_role: role });
   if (switchError) throw new Error(switchError.message);
+}
+
+// ── Password reset ──────────────────────────────────────────────────────────
+
+/**
+ * Start a password reset.
+ *
+ * ALWAYS REPORTS SUCCESS, even for an address with no account. Answering
+ * "no such user" here would turn this form into an account-enumeration oracle
+ * — type addresses, watch which ones error — which is the same disclosure
+ * `getLoginMethod` already refuses to make. The person who owns the mailbox
+ * finds out by receiving the email, or by not receiving one.
+ *
+ * HOW LONG THE LINK LASTS IS A SUPABASE SETTING, not a value we can pass here:
+ * recovery links expire after the project's email OTP expiry
+ * (Authentication → Emails → "Email OTP Expiration"). Set it to 600 seconds
+ * for the 10-minute window this flow is written around. The copy in the UI
+ * says "10 minutes", so if that setting changes, change the copy with it.
+ */
+export async function requestPasswordReset(rawEmail: string): Promise<AuthResult> {
+  const parsed = emailRule.safeParse(rawEmail);
+  // Even an invalid address gets the same answer, for the reason above.
+  if (!parsed.success) return { ok: true };
+
+  const site =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://www.letsyncyou.com';
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+      redirectTo: `${site}/reset-password`,
+    });
+    // Logged, not surfaced: a misconfigured mailer is our problem to see, and
+    // telling the visitor would leak whether the address exists.
+    if (error) console.error('[reset] resetPasswordForEmail failed:', error);
+  } catch (e) {
+    console.error('[reset] threw:', e);
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Finish a password reset.
+ *
+ * Runs against the session Supabase established from the recovery link, so
+ * there is no token to pass and no way to change someone else's password:
+ * `updateUser` acts on whoever the recovery session belongs to. An expired or
+ * already-used link means there is no session, which is the error surfaced.
+ */
+export async function completePasswordReset(password: string): Promise<AuthResult> {
+  if (!password || password.length < 8) {
+    return { ok: false, error: 'Choose a password of at least 8 characters.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      ok: false,
+      error: 'This reset link has expired or was already used. Request a new one.',
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, error: userMessage(error, 'We could not set your password.') };
+
+  return { ok: true };
 }

@@ -22,6 +22,7 @@ import type {
   EscrowHold,
   Payout,
   Plan,
+  PlanUsage,
   Subscription,
   Wallet,
   WalletTransaction,
@@ -266,8 +267,41 @@ export async function fetchPlans(db: Client): Promise<Plan[]> {
     interval: r.interval,
     features: Array.isArray(r.features) ? r.features : [],
     maxListings: r.max_listings,
+    maxStores: r.max_stores ?? null,
+    maxTeam: r.max_team ?? null,
+    aiReplies: r.ai_replies ?? 'none',
+    disputeSupport: r.dispute_support ?? 'none',
+    boostPercent: r.boost_percent ?? 0,
     sortOrder: r.sort_order,
   }));
+}
+
+/**
+ * The caller's plan and what they have used of it.
+ *
+ * Read this rather than counting listings or stores in a component: these are
+ * the same numbers `enforce_listing_plan_limit` and friends check, so a screen
+ * built on them cannot tell a vendor they have room and then be refused.
+ */
+export async function fetchPlanUsage(db: Client): Promise<PlanUsage | null> {
+  const { data, error } = await db.rpc('my_plan_usage');
+  if (error) throw error;
+  const r = (Array.isArray(data) ? data[0] : data) as Row | undefined;
+  if (!r) return null;
+  return {
+    planCode: r.plan_code,
+    planName: r.plan_name,
+    priceKobo: Number(r.price_kobo ?? 0),
+    maxListings: r.max_listings ?? null,
+    usedListings: r.used_listings ?? 0,
+    maxStores: r.max_stores ?? null,
+    usedStores: r.used_stores ?? 0,
+    maxTeam: r.max_team ?? null,
+    usedTeam: r.used_team ?? 0,
+    aiReplies: r.ai_replies ?? 'none',
+    disputeSupport: r.dispute_support ?? 'none',
+    boostPercent: r.boost_percent ?? 0,
+  };
 }
 
 export async function fetchMySubscription(db: Client): Promise<Subscription | null> {

@@ -2331,6 +2331,11 @@ export type Database = {
           interval: string
           is_active: boolean
           max_listings: number | null
+          max_stores: number | null
+          max_team: number | null
+          ai_replies: string
+          dispute_support: string
+          boost_percent: number
           name: string
           price_kobo: number
           sort_order: number
@@ -2345,6 +2350,11 @@ export type Database = {
           interval?: string
           is_active?: boolean
           max_listings?: number | null
+          max_stores?: number | null
+          max_team?: number | null
+          ai_replies?: string
+          dispute_support?: string
+          boost_percent?: number
           name: string
           price_kobo: number
           sort_order?: number
@@ -2359,6 +2369,11 @@ export type Database = {
           interval?: string
           is_active?: boolean
           max_listings?: number | null
+          max_stores?: number | null
+          max_team?: number | null
+          ai_replies?: string
+          dispute_support?: string
+          boost_percent?: number
           name?: string
           price_kobo?: number
           sort_order?: number
@@ -3603,6 +3618,42 @@ export type Database = {
       ensure_vendor_profile: { Args: Record<string, never>; Returns: string }
       submit_verification: { Args: Record<string, never>; Returns: string }
       claim_business_name: { Args: { p_name: string }; Returns: string }
+      email_has_account: { Args: { p_email: string }; Returns: boolean }
+      verify_business: {
+        Args: { p_slug: string }
+        Returns: {
+          found: boolean
+          state: string
+          business_name: string | null
+          slug: string
+          category: string | null
+          area: string | null
+          logo_url: string | null
+          verified_at: string | null
+          member_since: string | null
+          store_count: number
+          rating_avg: number | null
+          rating_count: number
+          checked_at: string
+        }[]
+      }
+      my_plan_usage: {
+        Args: Record<string, never>
+        Returns: {
+          plan_code: string
+          plan_name: string
+          price_kobo: number
+          max_listings: number | null
+          used_listings: number
+          max_stores: number | null
+          used_stores: number
+          max_team: number | null
+          used_team: number
+          ai_replies: string
+          dispute_support: string
+          boost_percent: number
+        }[]
+      }
       save_onboarding_business: {
         Args: {
           p_business_name: string
