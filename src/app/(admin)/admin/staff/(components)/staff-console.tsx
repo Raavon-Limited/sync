@@ -101,7 +101,9 @@ export function StaffConsole({
                 () => addStaffByEmail({ email, role: newRole }),
                 (name) => {
                   setEmail('');
-                  setMessage(`${String(name)} now has ${ROLE_LABEL[newRole].toLowerCase()} access.`);
+                  setMessage(
+                    `${String(name)} now has ${ROLE_LABEL[newRole].toLowerCase()} access.`,
+                  );
                 },
               )
             }
@@ -110,8 +112,8 @@ export function StaffConsole({
             Give access
           </Button>
           <p className="text-content-muted w-full text-xs">
-            They need a Sync account already — this grants access to one, it does not create one.
-            A super admin can appoint and remove other admins; an admin cannot.
+            They need a Sync account already — this grants access to one, it does not create one. A
+            super admin can appoint and remove other admins; an admin cannot.
           </p>
           {message && <p className="w-full text-xs text-emerald-600">{message}</p>}
           {error && <p className="text-coral w-full text-xs">{error}</p>}

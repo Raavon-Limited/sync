@@ -34,6 +34,7 @@ import {
   TicketIcon,
   TrendingUp,
   Truck,
+  UserCog,
   Users,
   Wallet,
 } from 'lucide-react';
