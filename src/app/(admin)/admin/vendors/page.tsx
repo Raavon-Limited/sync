@@ -28,10 +28,16 @@ export default async function Page() {
   const admin = createAdminClient();
 
   const [{ data: vendors }, { data: docs }] = await Promise.all([
+    // VENDORS ONLY. A landlord is a vendor_profiles row with category
+    // 'landlord', so a query that filters on nothing returns them too - which
+    // is how this page ended up being every business on the platform under a
+    // nav item named "Vendors". Landlords are reviewed on /admin/landlord,
+    // which shows the property context this page has no column for.
     admin
       .from('vendor_profiles')
       .select('id, business_name, slug, category, area, verification_status, created_at')
       .is('archived_at', null)
+      .neq('category', 'landlord')
       .order('created_at', { ascending: false }),
     // Documents are fetched separately rather than embedded: verification_documents
     // has no FK to vendor_profiles (it points at profiles), and this codebase has
@@ -73,7 +79,7 @@ export default async function Page() {
       <div>
         <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / VENDORS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
-          Verification <span className="text-lime-deep">queue.</span>
+          Vendor <span className="text-lime-deep">verification.</span>
         </h2>
       </div>
       <VerificationQueue vendors={rows} />

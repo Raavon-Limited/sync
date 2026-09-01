@@ -40,7 +40,14 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { AlertCircle, CheckCircle2, Circle, Clock, FileText, Loader2 } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { getDocumentUrls, reviewDocument, setVendorVerification } from '@/modules/admin/actions';
+import {
+  getDocumentUrls,
+  reviewDocument,
+  setCompanyVerification,
+  setRiderVerification,
+  setVendorVerification,
+  type VendorDecision,
+} from '@/modules/admin/actions';
 import { DocumentViewer, isImagePath, type ViewerDoc } from './document-viewer';
 
 export interface AdminDoc {
@@ -129,13 +136,48 @@ function Preview({
   );
 }
 
+/**
+ * WHICH TABLE THE THREE HEADER BUTTONS WRITE.
+ *
+ * The document half of this card is identical for everyone — verification_documents
+ * is keyed on owner_id and knows nothing about what kind of account owns it — so
+ * only the per-account decision differs. That is one switch, not a second card:
+ * a copy of this file for riders would be a copy of the comparison layout, the
+ * signed-url handling and the modal, all of which would then drift.
+ */
+export type ReviewKind = 'vendor' | 'rider' | 'company';
+
+const DECIDE: Record<
+  ReviewKind,
+  (id: string, decision: VendorDecision, permanent?: boolean) => Promise<unknown>
+> = {
+  vendor: (id, decision, permanent) =>
+    setVendorVerification({ vendorId: id, decision, ...(permanent ? { permanent } : {}) }),
+  rider: (id, decision, permanent) =>
+    setRiderVerification({ riderId: id, decision, ...(permanent ? { permanent } : {}) }),
+  company: (id, decision, permanent) =>
+    setCompanyVerification({ companyId: id, decision, ...(permanent ? { permanent } : {}) }),
+};
+
+/** What the confirm dialog and the counts call the thing being reviewed. */
+const NOUN: Record<ReviewKind, string> = {
+  vendor: 'business',
+  rider: 'rider',
+  company: 'company',
+};
+
 export function VerificationReview({
   vendor,
   showHeader = true,
+  kind = 'vendor',
 }: {
   vendor: AdminVendor;
   showHeader?: boolean;
+  /** Which account type this is. Decides which staff RPC the buttons call. */
+  kind?: ReviewKind;
 }) {
+  const decide = DECIDE[kind];
+  const noun = NOUN[kind];
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, string>>({});
@@ -350,9 +392,7 @@ export function VerificationReview({
             variant="outline"
             disabled={busy || vendor.verificationStatus === 'verified' || approved === 0}
             title={approved === 0 ? 'Approve at least one document first' : undefined}
-            onClick={() =>
-              run(() => setVendorVerification({ vendorId: vendor.id, decision: 'verified' }))
-            }
+            onClick={() => run(() => decide(vendor.id, 'verified'))}
           >
             Verify
           </Button>
@@ -364,9 +404,7 @@ export function VerificationReview({
             variant="outline"
             className="text-coral"
             disabled={busy || vendor.verificationStatus === 'rejected'}
-            onClick={() =>
-              run(() => setVendorVerification({ vendorId: vendor.id, decision: 'rejected' }))
-            }
+            onClick={() => run(() => decide(vendor.id, 'rejected'))}
           >
             Reject
           </Button>
@@ -383,18 +421,10 @@ export function VerificationReview({
               const ok = window.confirm(
                 `Permanently block ${vendor.businessName} from verification?\n\n` +
                   'Use this only for fraud — a forged document or a stolen identity. ' +
-                  'They will not be able to submit again. Deciding on this business ' +
+                  `They will not be able to submit again. Deciding on this ${noun} ` +
                   'any other way afterwards lifts the block.',
               );
-              if (ok) {
-                run(() =>
-                  setVendorVerification({
-                    vendorId: vendor.id,
-                    decision: 'rejected',
-                    permanent: true,
-                  }),
-                );
-              }
+              if (ok) run(() => decide(vendor.id, 'rejected', true));
             }}
           >
             Reject as fraud

@@ -361,3 +361,105 @@ export async function updateFeatureFlag(input: {
   if (error) throw new Error(userMessage(error, 'We could not save that flag.'));
   revalidatePath('/admin/settings');
 }
+
+/**
+ * Call an RPC whose NAME postdates types/database.types.ts.
+ *
+ * `supabase.rpc` types its first argument as a union of the functions the
+ * generated types know about, so a brand-new one is a compile error rather than
+ * a runtime one. Casting the args (as setVendorVerification does) is not enough
+ * when the name itself is new.
+ *
+ * REGENERATE THE TYPES once 20260901270000 is applied, and delete this — the
+ * escape hatch is narrow on purpose: it returns only `error`, so nothing can
+ * quietly start depending on an untyped result shape.
+ */
+async function callUntypedRpc(name: string, args: Record<string, unknown>) {
+  const supabase = await createServerClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ error: { message: string; code?: string } | null }>;
+  return rpc(name, args);
+}
+
+/**
+ * Decide a rider's verification.
+ *
+ * A separate action from setVendorVerification because it is a separate RPC
+ * writing a separate table — see the header on 20260901270000 for why the
+ * database does not take an entity-type argument and switch on it.
+ *
+ * Called with the USER'S session for the same reason as every other RPC here:
+ * `set_rider_verification` checks `is_staff()` against `auth.uid()`, which is
+ * NULL on the service-role client.
+ */
+export async function setRiderVerification(input: {
+  riderId: string;
+  decision: VendorDecision;
+  /** Fraud. Blocks re-application until a later decision lifts it. */
+  permanent?: boolean;
+}) {
+  await assertStaff();
+
+  const { error } = await callUntypedRpc('set_rider_verification', {
+    p_rider: input.riderId,
+    p_status: input.decision,
+    ...(input.permanent ? { p_permanent: true } : {}),
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not update this rider.'));
+  revalidatePath('/admin/riders');
+  revalidatePath('/admin/verification');
+}
+
+/** Decide a logistics company's verification. Its documents live on the owner's profile. */
+export async function setCompanyVerification(input: {
+  companyId: string;
+  decision: VendorDecision;
+  permanent?: boolean;
+}) {
+  await assertStaff();
+
+  const { error } = await callUntypedRpc('set_company_verification', {
+    p_company: input.companyId,
+    p_status: input.decision,
+    ...(input.permanent ? { p_permanent: true } : {}),
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not update this company.'));
+  revalidatePath('/admin/riders');
+  revalidatePath('/admin/verification');
+}
+
+/**
+ * Freeze or unfreeze an account's ability to trade.
+ *
+ * NOT a verification decision, and deliberately not modelled as one: a vendor
+ * behaving badly still has real papers. Suspension says "not right now" and is
+ * reversible; a permanent rejection says "these documents are forged" and is
+ * not. Conflating them would mean lifting a suspension re-opens a fraud case.
+ */
+export async function setAccountSuspension(input: {
+  userId: string;
+  suspended: boolean;
+  /** Required when suspending — support reads it back to the person asking why. */
+  reason?: string;
+}) {
+  await assertStaff();
+
+  if (input.suspended && !input.reason?.trim()) {
+    throw new Error('Say why this account is being suspended');
+  }
+
+  const { error } = await callUntypedRpc('set_account_suspension', {
+    p_user: input.userId,
+    p_suspended: input.suspended,
+    p_reason: input.suspended ? input.reason!.trim() : null,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not change that account.'));
+  revalidatePath('/admin/riders');
+  revalidatePath('/admin/verification');
+  revalidatePath('/admin/users');
+}

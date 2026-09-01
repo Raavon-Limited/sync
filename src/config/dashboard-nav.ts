@@ -33,6 +33,7 @@ import {
   Store,
   TicketIcon,
   TrendingUp,
+  Truck,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -154,20 +155,34 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/admin', label: 'Overview', icon: LayoutDashboard },
-          // "Vendors" was a lie about what this page holds: it lists EVERY
-          // business awaiting a decision, landlords included, because it
-          // filters vendor_profiles on nothing. An admin looking at a landlord
-          // marked PENDING had no reason to look under a nav item named after
-          // somebody else.
+          // Named "Businesses" for a while because the page behind it listed
+          // every business awaiting a decision, landlords included. The page
+          // now filters them out and landlords are reviewed under their own
+          // item below, so the honest name is back.
           {
             href: '/admin/vendors',
-            label: 'Businesses',
-            heading: 'Verification queue',
+            label: 'Vendors',
+            heading: 'Vendor verification',
             icon: ShieldCheck,
           },
           { href: '/admin/landlord', label: 'Landlords', icon: Building2 },
+          { href: '/admin/riders', label: 'Riders', heading: 'Riders & fleets', icon: Truck },
           { href: '/admin/verify-visits', label: 'Verification visits', icon: ClipboardCheck },
           { href: '/admin/users', label: 'Users', icon: Users },
+        ],
+      },
+      {
+        label: 'Trust',
+        items: [
+          // Read-only, and above the per-type review pages in meaning rather
+          // than beside them: this is "where does everyone stand", the pages
+          // under it are "decide this one".
+          {
+            href: '/admin/verification',
+            label: 'Verification queue',
+            heading: 'Verification across the platform',
+            icon: ShieldCheck,
+          },
         ],
       },
       {
