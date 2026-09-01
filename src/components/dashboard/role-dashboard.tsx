@@ -16,6 +16,8 @@ import { Badge, Button, Card } from '@/components/ui';
 import type { LucideIcon } from 'lucide-react';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
 import { getCurrentUser } from '@/modules/auth/queries';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import type { Row } from '@/lib/supabase/row';
 import { isLocked } from '@/components/verification/verify-gate';
 import { VerificationBanner } from '@/components/verification/verification-banner';
 import { VerifyNowSheet } from '@/components/verification/verify-now-sheet';
@@ -87,10 +89,27 @@ export async function RoleDashboard({
   // wizard open with the same fields already filled in.
   const user = await getCurrentUser();
   const meta = user?.user_metadata ?? {};
+
+  // Same reasoning as /onboarding: a claimed business name is frozen, so the
+  // panel has to open with the one on record or the vendor is being invited to
+  // type something the server will refuse.
+  let businessName: string | undefined;
+  if (user?.id) {
+    const supabase = await createServerClient();
+    const { data } = await supabase
+      .from('vendor_profiles')
+      .select('business_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    businessName =
+      ((data as unknown as Row | null)?.business_name as string | undefined) ?? undefined;
+  }
+
   const verifyInitial = {
     fullName: (meta.full_name as string | undefined) ?? '',
     phone: (meta.phone as string | undefined) ?? '',
     vendorCategory: meta.vendor_category as VendorCategory | undefined,
+    businessName,
   };
   // Three states, not two. "Submitted and waiting" is neither verified nor a
   // prompt to go and verify - telling someone who has already sent their

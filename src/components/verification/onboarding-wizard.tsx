@@ -26,7 +26,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, FileText, Upload } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,12 +42,14 @@ import { AddressAutocomplete } from '@/components/forms/address-autocomplete';
 import { toast } from '@/components/ui/toast';
 import { VerificationSubmittedModal } from '@/components/verification/verification-submitted-modal';
 import {
-  IdentityDocumentUpload,
-  EMPTY_IDENTITY_DOCUMENT,
-  MAX_DOCUMENT_BYTES,
-  type IdentityDocument,
+  VerificationDocuments,
+  emptyDocumentState,
+  documentsProblem,
+  queueForUpload,
+  type DocumentState,
 } from '@/components/verification/document-upload';
-import { requirementSpec } from '@/modules/verification/requirements';
+import type { VerificationRole } from '@/modules/verification/requirements';
+import { claimedBusinessName } from '@/lib/business-name';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -83,6 +85,11 @@ const TRADE_OPTIONS: { value: Trade; label: string }[] = [
 ];
 
 export interface OnboardingWizardProps {
+  /**
+   * Prefill from what the account already holds. `businessName` matters most:
+   * it is claimed once and then frozen, so a re-verification that opens with an
+   * empty box is a step somebody can only get wrong.
+   */
   initial: Partial<VendorOnboardingInput>;
   /**
    * Where the wizard is mounted. The route centres itself in a page column;
@@ -106,14 +113,22 @@ export interface OnboardingWizardProps {
 
 export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: OnboardingWizardProps) {
   const router = useRouter();
+  // Empty when nothing has been claimed yet — a placeholder like
+  // "Unnamed business 21e446ce" is the system's own filler and must never be
+  // shown as though the person typed it.
+  const claimedName = claimedBusinessName(initial.businessName);
+  // A claimed name is FROZEN for the client: claim_business_name refuses to
+  // change one, and only staff can. The field says so rather than letting
+  // somebody edit their way into a refusal five steps later.
+  const nameLocked = claimedName !== '';
+
   const [step, setStep] = useState(0);
-  // The government ID: which one, and its two sides. Separate from `docs`
-  // because it is the one document with a subtype the reviewer has to record.
-  const [idDoc, setIdDoc] = useState<IdentityDocument>(EMPTY_IDENTITY_DOCUMENT);
+  // Every requirement for this kind of account, keyed by requirement. Seeded
+  // from 'vendor' because vendor and landlord are asked for the same four
+  // things — `requirementsFor` is still what decides at validation and upload,
+  // so a future divergence is picked up there rather than frozen in here.
+  const [docState, setDocState] = useState<DocumentState>(() => emptyDocumentState('vendor'));
   const [docError, setDocError] = useState<string | null>(null);
-  // Everything else the requirements ask a business for — CAC, proof of
-  // address, property papers. Still a plain list: they have no front and back.
-  const [docs, setDocs] = useState<File[]>([]);
   // Where Continue goes, and whether the modal is up. Held together because
   // the destination is only known once the server has told us which business
   // role the submitted category left them on.
@@ -133,7 +148,13 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
       fullName: initial.fullName ?? '',
       phone: initial.phone ?? '',
       vendorCategory: initial.vendorCategory,
-      businessName: '',
+      // Prefilled from the name this account has already claimed. A blank box
+      // here was not merely inconvenient on a RE-verification: retyping the
+      // name even slightly differently made claim_business_name refuse the
+      // whole submission with "already set to X and cannot be changed here",
+      // and typing it identically was the only way through a step that gave no
+      // hint that was the rule.
+      businessName: claimedName,
       sells: '',
       businessAddress: '',
       area: '',
@@ -161,31 +182,9 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
    * "Driver's licence" and attaching only the front produces a review that
    * cannot be completed and a vendor who thinks they are done.
    */
-  function documentsProblem(): string | null {
-    for (const [side, file] of [
-      ['front', idDoc.front],
-      ['back', idDoc.back],
-    ] as const) {
-      if (file && file.size > MAX_DOCUMENT_BYTES) {
-        return `The ${side} of your document is over 10 MB. Try a smaller photo.`;
-      }
-    }
-    const tooBig = docs.find((f) => f.size > MAX_DOCUMENT_BYTES);
-    if (tooBig) return `"${tooBig.name}" is over 10 MB. Try a smaller file.`;
-
-    // Nothing started is fine. Something started has to be finished.
-    if (!idDoc.subtype) return null;
-    if (!idDoc.front) return 'Add the front of your document, or choose Change to start over.';
-    const needsBack = idDoc.subtype !== 'passport';
-    if (needsBack && !idDoc.back) {
-      return 'Add the back of your document, or choose Change to start over.';
-    }
-    return null;
-  }
-
   async function goNext() {
     if (step === 3) {
-      const problem = documentsProblem();
+      const problem = documentsProblem(reqRole, docState);
       setDocError(problem);
       if (problem) return;
     }
@@ -195,13 +194,11 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
     }
   }
 
-  function onDocs(e: React.ChangeEvent<HTMLInputElement>) {
-    const list = e.target.files;
-    if (list) setDocs((d) => [...d, ...Array.from(list)]);
-  }
-
   async function onSubmit(values: VendorOnboardingInput) {
-    const problem = documentsProblem();
+    // Re-checked at submit, not only on Continue: the category can change on
+    // step 3 AFTER the documents step was passed, and a landlord and a vendor
+    // could one day be asked for different things.
+    const problem = documentsProblem(reqRole, docState);
     if (problem) {
       setDocError(problem);
       setStep(3);
@@ -211,31 +208,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
     // Each file is described before it is uploaded, so what reaches
     // `verification_documents` says WHICH document and WHICH side rather than
     // just naming a path in a bucket.
-    const idLabel =
-      requirementSpec('gov_id')?.options?.find((o) => o.value === idDoc.subtype)?.label ??
-      'Government ID';
-    const queued: { docType: string; subtype: string | null; title: string; file: File }[] = [];
-    if (idDoc.subtype && idDoc.front) {
-      queued.push({
-        docType: 'gov_id',
-        subtype: idDoc.subtype,
-        title: `${idLabel} (front)`,
-        file: idDoc.front,
-      });
-    }
-    if (idDoc.subtype && idDoc.back) {
-      queued.push({
-        docType: 'gov_id',
-        subtype: idDoc.subtype,
-        title: `${idLabel} (back)`,
-        file: idDoc.back,
-      });
-    }
-    for (const file of docs) {
-      // No subtype: these arrive unlabelled and a reviewer names them from the
-      // file itself. Better an honest null than a guessed category.
-      queued.push({ docType: 'biz_reg', subtype: null, title: file.name, file });
-    }
+    const queued = queueForUpload(reqRole, docState);
 
     const uploaded: UploadedDocument[] = [];
     if (queued.length) {
@@ -280,14 +253,21 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   const v = getValues();
   const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? '—';
 
-  // What the review row says about the ID: which document, and how much of it.
-  const idSummary = (() => {
-    if (!idDoc.subtype) return 'None yet';
-    const label =
-      requirementSpec('gov_id')?.options?.find((o) => o.value === idDoc.subtype)?.label ??
-      'Government ID';
-    const sides = [idDoc.front && 'front', idDoc.back && 'back'].filter(Boolean);
-    return sides.length ? `${label} · ${sides.join(' + ')}` : label;
+  // Which requirement set applies. Landlords and vendors are asked for the same
+  // four today; this is read live so that stops being an assumption the moment
+  // requirements.ts says otherwise.
+  const reqRole: VerificationRole = category === 'landlord' ? 'landlord' : 'vendor';
+
+  // What the review row says: which documents, named, not a file count. "1
+  // file" told a vendor nothing about whether they had attached the right
+  // thing, which is the only question the row exists to answer.
+  const docSummary = (() => {
+    const queued = queueForUpload(reqRole, docState);
+    if (!queued.length) return 'None yet';
+    const titles = Array.from(
+      new Set(queued.map((q) => q.title.replace(/ \((front|back)\)$/, ''))),
+    );
+    return `${queued.length} file(s) · ${titles.join(', ')}`;
   })();
 
   return (
@@ -387,10 +367,21 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                 label="Business name"
                 htmlFor="businessName"
                 error={errors.businessName?.message}
+                hint={
+                  nameLocked
+                    ? 'Your business name is already registered on Sync and cannot be changed here. Contact support if it is wrong.'
+                    : undefined
+                }
               >
                 <Input
                   id="businessName"
                   placeholder="Mama Put Tanke"
+                  readOnly={nameLocked}
+                  // Still registered and still submitted — the server expects
+                  // the field and re-claiming the same name is a no-op by
+                  // design. `disabled` would drop it from the payload and turn
+                  // a frozen name into a missing one.
+                  className={nameLocked ? 'cursor-not-allowed opacity-70' : undefined}
                   {...register('businessName')}
                 />
               </FormField>
@@ -502,64 +493,19 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
           {/* Step 4 - Documents */}
           {step === 3 && (
             <div className="flex flex-col gap-6">
-              {/* The identity document, chosen then uploaded side by side. */}
-              <IdentityDocumentUpload
-                value={idDoc}
+              {/* Every requirement for this kind of account, all mandatory.
+                  Driven by requirementsFor(role), so the wizard asks for
+                  exactly what the settings panel and the public ID card say it
+                  asks for. */}
+              <VerificationDocuments
+                role={reqRole}
+                value={docState}
                 onChange={(next) => {
-                  setIdDoc(next);
+                  setDocState(next);
                   setDocError(null);
                 }}
                 error={docError ?? undefined}
               />
-
-              {/* Everything else, kept but subordinate. requirements.ts asks a
-                  business for a CAC certificate and a proof of address as well
-                  as an ID; dropping this control when the ID flow arrived would
-                  have quietly stopped collecting either. */}
-              <div className="border-line/10 flex flex-col gap-3 border-t pt-5">
-                <div>
-                  <h3 className="text-content text-base font-semibold">Business documents</h3>
-                  <p className="text-content-muted text-sm">
-                    CAC certificate, proof of address or property papers. Optional now — you can add
-                    them later.
-                  </p>
-                </div>
-                <label
-                  htmlFor="docs"
-                  className="border-line/20 hover:border-line/40 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center"
-                >
-                  <Upload className="text-content-muted h-6 w-6" />
-                  <span className="text-content-muted text-sm">Tap to add documents</span>
-                </label>
-                <input
-                  id="docs"
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={onDocs}
-                />
-                {docs.length > 0 && (
-                  <ul className="flex flex-col gap-2">
-                    {docs.map((f, i) => (
-                      <li
-                        key={i}
-                        className="border-line/10 text-content flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                      >
-                        <FileText className="text-content-muted h-4 w-4 shrink-0" />
-                        <span className="flex-1 truncate">{f.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => setDocs((d) => d.filter((_, j) => j !== i))}
-                          className="text-coral shrink-0 cursor-pointer text-xs"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
             </div>
           )}
 
@@ -573,11 +519,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                 ['Offers', categoryLabel + (v.trade ? ` · ${v.trade}` : '')],
                 ['Address', v.businessAddress],
                 ['Area', v.area || 'Not set'],
-                // Named, not counted. "1 file" told a vendor nothing about
-                // whether they had attached the right thing, or both sides of
-                // it — which is the only question this row is here to answer.
-                ['Identity document', idSummary],
-                ['Business documents', docs.length ? `${docs.length} file(s)` : 'None yet'],
+                ['Documents', docSummary],
               ].map(([k, val]) => (
                 <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                   <dt className="text-content-muted">{k}</dt>

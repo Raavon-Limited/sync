@@ -14,19 +14,30 @@
  *   statuses, so the timeline is computed from them. An invented date on a
  *   verification screen is the kind of thing someone plans around.
  *
- * UPLOADS GO TO A PRIVATE BUCKET
- *   `verification-docs` is private, owner-and-staff only, pathed by user id.
- *   These are ID documents; nothing here produces a public URL.
+ * THIS PANEL DOES NOT UPLOAD ANYTHING. IT REPORTS.
+ *   It used to offer an Upload button per requirement, and that was a dead
+ *   end dressed as an action. Uploading a file here wrote a
+ *   `verification_documents` row and stopped — nothing re-submitted the
+ *   account for review, so the file sat in a queue entry nobody was told had
+ *   changed. Worse, it was reachable while a review was already in flight,
+ *   which is how a reviewer ends up looking at a folder that changed under
+ *   them mid-decision.
+ *
+ *   Verification is now collected in one place: the wizard behind "Verify
+ *   Now", which asks for the whole set and submits it as one act. This screen
+ *   answers the only question it is well placed to answer — where does each
+ *   document stand — and hands off to that wizard when something is
+ *   outstanding.
  */
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Circle, Clock, FileText, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import { CheckCircle2, Circle, Clock, FileText, AlertCircle } from 'lucide-react';
 import { Badge, Button, Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
-import { useMyDocuments, useUploadDocument } from '@/modules/verification/hooks';
+import { useMyDocuments } from '@/modules/verification/hooks';
 import { useSession } from '@/providers/session-provider';
+import { VerifyNowSheet } from '@/components/verification/verify-now-sheet';
 import type { DocStatus, DocumentItem } from '@/modules/vendor/types';
 import { VERIFICATION_REQUIREMENTS } from '@/modules/verification/requirements';
 
@@ -52,13 +63,22 @@ const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof 
   not_uploaded: { label: 'Not uploaded', cls: 'bg-ink/5 text-content-muted', icon: Circle },
 };
 
-export function DocumentsPanel() {
-  const { userId } = useSession();
+export function DocumentsPanel({
+  /**
+   * Set when a reviewer rejected this business permanently for fraud. Read on
+   * the server from `vendor_profiles.verification_blocked_at`, because the
+   * session carries `profiles` and the block lives on the business row.
+   *
+   * When set there is nothing to offer: submit_verification refuses, and a
+   * button that only produces a refusal is worse than no button.
+   */
+  blockedReason,
+}: {
+  blockedReason?: string | null;
+} = {}) {
+  const { profile } = useSession();
+  const verificationStatus = profile?.verificationStatus;
   const { data: docs = [], isLoading } = useMyDocuments();
-  const upload = useUploadDocument();
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const items = useMemo<DocumentItem[]>(
     () =>
@@ -83,28 +103,8 @@ export function DocumentsPanel() {
   );
 
   const approved = items.filter((i) => i.status === 'approved').length;
-
-  async function handleFile(docType: string, title: string, file: File) {
-    if (!userId) return;
-    setBusy(docType);
-    setError(null);
-    try {
-      // Pathed by user id — the bucket policy scopes reads to the owner and staff.
-      const path = `${userId}/${docType}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-      const { error: upErr } = await createClient()
-        .storage.from('verification-docs')
-        .upload(path, file, { upsert: false });
-      if (upErr) throw upErr;
-
-      // The hook fills ownerId from the session; passing it here would be
-      // a second source of truth for who is uploading.
-      await upload.mutateAsync({ docType, title, storagePath: path });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed');
-    } finally {
-      setBusy(null);
-    }
-  }
+  const verified = verificationStatus === 'verified';
+  const awaitingReview = verificationStatus === 'pending';
 
   if (isLoading) {
     return (
@@ -118,12 +118,50 @@ export function DocumentsPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-content-muted text-sm">
-        {approved} of {REQUIRED_DOCS.length} approved.
-        {approved < REQUIRED_DOCS.length && ' Verification completes when all three are.'}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-content-muted text-sm">
+          {/* Counted against the real list, not the literal "three" this used
+              to claim while rendering four rows. */}
+          {approved} of {REQUIRED_DOCS.length} approved.
+          {!verified && ` Verification completes when all ${REQUIRED_DOCS.length} are.`}
+        </p>
 
-      {error && <p className="text-coral text-sm">{error}</p>}
+        {/* The only action on this screen, and it is a handoff. Absent while a
+            reviewer already has the folder — a second submission is the only
+            thing it could produce — and absent when the door is closed. */}
+        {!verified && !awaitingReview && !blockedReason && (
+          <VerifyNowSheet
+            initial={{
+              fullName: profile?.fullName ?? '',
+              phone: profile?.phone ?? '',
+              // `profiles.business_name` is kept in step with the claimed name
+              // by save_onboarding_business. The wizard discards a placeholder
+              // on its own, so passing one through is harmless.
+              businessName: profile?.businessName ?? undefined,
+            }}
+          >
+            <Button variant="outline" className="shrink-0">
+              {approved > 0 || items.some((i) => i.status !== 'not_uploaded')
+                ? 'Continue verification'
+                : 'Start verification'}
+            </Button>
+          </VerifyNowSheet>
+        )}
+      </div>
+
+      {awaitingReview && (
+        <p className="border-line/15 bg-surface-deep text-content-muted rounded-lg border px-3 py-2 text-sm">
+          Your documents are with a reviewer. Nothing more is needed from you.
+        </p>
+      )}
+
+      {/* A permanent rejection is the one state with no way forward, so it says
+          so plainly instead of leaving somebody pressing a button that refuses. */}
+      {blockedReason && (
+        <p className="border-coral/40 bg-coral/10 text-coral rounded-lg border px-3 py-2 text-sm">
+          {blockedReason}
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
         {items.map((item, i) => {
@@ -134,7 +172,10 @@ export function DocumentsPanel() {
             <Card key={item.id} className="border-line/10 border">
               <CardContent className="flex flex-wrap items-center gap-3 p-4">
                 <span
-                  className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', req.colour)}
+                  className={cn(
+                    'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                    req.colour,
+                  )}
                 >
                   <FileText className="size-5" />
                 </span>
@@ -157,33 +198,6 @@ export function DocumentsPanel() {
                     <p className="text-coral mt-1 text-xs">{item.actionMessage}</p>
                   )}
                 </div>
-
-                <input
-                  ref={(el) => {
-                    inputs.current[item.id] = el;
-                  }}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={(ev) => {
-                    const f = ev.target.files?.[0];
-                    if (f) void handleFile(item.id, item.title, f);
-                    ev.target.value = '';
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  className="gap-1"
-                  disabled={busy === item.id || item.status === 'approved'}
-                  onClick={() => inputs.current[item.id]?.click()}
-                >
-                  {busy === item.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Upload className="size-4" />
-                  )}
-                  {item.status === 'not_uploaded' ? 'Upload' : 'Replace'}
-                </Button>
               </CardContent>
             </Card>
           );
@@ -202,9 +216,7 @@ export function DocumentsPanel() {
             ) : (
               <Circle className="text-content-muted size-4" />
             )}
-            <span
-              className={item.status === 'approved' ? 'text-content-muted' : 'text-content'}
-            >
+            <span className={item.status === 'approved' ? 'text-content-muted' : 'text-content'}>
               {item.title} — {STATUS_META[item.status].label.toLowerCase()}
             </span>
           </div>

@@ -1,76 +1,149 @@
 /**
- * IdentityDocumentUpload — pick which government ID, then upload both sides.
+ * VerificationDocuments — every document Sync asks this kind of account for,
+ * collected in one place, and none of them optional.
  *
- * REPLACES A SINGLE "Tap to add documents" DROP ZONE, and the difference is
- * not decoration. That control asked for "your ID and any business documents"
- * in one heap: it never learned WHICH document arrived, so every row landed as
- * `doc_type: 'gov_id'` with no subtype, and a reviewer opening the queue could
- * not tell a NIN slip from a passport without opening the file. It also had no
- * concept of a back side, so half of every driver's licence was missing and
- * nobody found out until review.
+ * WHY ALL OF THEM, AND WHY HERE
+ *   The wizard used to ask for "your ID and any business documents" through a
+ *   single drop zone, and called it "optional now — you can add them later".
+ *   That was never true. `set_verification_status` refuses to verify an
+ *   account with nothing approved, so a submission with no documents reached a
+ *   reviewer as:
  *
- * TWO PHASES, BECAUSE THE SECOND DEPENDS ON THE FIRST
- *   choose   which document, and the country that issued it
- *   prepare  front and back of THAT document, named in the copy
+ *     0 of 0 documents approved — nothing uploaded yet
  *
- *   Asking for "front and back" before knowing what of is how someone uploads
- *   the back of a passport, which does not exist.
+ *   with a Verify button that could not be pressed. The applicant believed
+ *   they had applied; staff had an entry they could only reject. "Later" had
+ *   no route back either — Settings offered uploads, but nothing re-submitted
+ *   the account for review, so the files landed in a queue nobody was told
+ *   about.
  *
- * THE LIST IS NOT INVENTED HERE. The options come from `requirementSpec('gov_id')`
- * in modules/verification/requirements — the same list the settings panel and
- * the public ID card read, and the same `value` strings that go into
- * `verification_documents.doc_subtype`. A second hardcoded list here is how the
- * card ends up naming a document the reviewer never saw.
+ *   So the whole set is asked for here, once, while the person is already
+ *   filling in a form and expecting to be asked.
  *
- * NIGERIA IS THE ONLY COUNTRY, AND THE PICKER SAYS SO RATHER THAN PRETENDING.
- * Every document we accept is a Nigerian instrument — NIN, CAC, NEPA — and
- * every campus is a Nigerian university. A picker listing countries we cannot
- * actually verify would collect an answer nothing acts on.
+ * THE LIST IS `requirementsFor(role)`, NOT A LIST IN THIS FILE.
+ *   Same source as the settings panel and the public ID card. A card that
+ *   claims a check the wizard never collected is the failure this shares one
+ *   list to avoid.
+ *
+ * THREE SHAPES, DRIVEN BY THE SPEC
+ *   captureOnly   camera only, no file picker, no subtype (the live photo)
+ *   options       pick WHICH document first, then upload it
+ *   gov_id        the above, plus a back side — unless it is a passport,
+ *                 which does not have one
  */
 'use client';
 
 import { useRef } from 'react';
-import { FileUp, IdCard, RefreshCw, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { requirementSpec } from '@/modules/verification/requirements';
+import { Camera, FileUp, IdCard, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  requirementsFor,
+  type VerificationRequirementSpec,
+  type VerificationRole,
+} from '@/modules/verification/requirements';
 
-/** What the wizard holds for the identity document. */
-export interface IdentityDocument {
-  /** A `doc_subtype` value, e.g. 'nin'. Null until chosen. */
+/** What is held for ONE requirement. `back` is only ever used by `gov_id`. */
+export interface RequirementFiles {
   subtype: string | null;
   front: File | null;
   back: File | null;
 }
 
-export const EMPTY_IDENTITY_DOCUMENT: IdentityDocument = {
-  subtype: null,
-  front: null,
-  back: null,
-};
+/** Keyed by requirement `key` ('selfie', 'gov_id', …). */
+export type DocumentState = Record<string, RequirementFiles>;
 
-/** Formats the reviewer can actually open, and the cap the bucket enforces. */
 const ACCEPT = 'image/png,image/jpeg,image/jpg,image/tiff,application/pdf';
 const FORMAT_CHIPS = ['PNG', 'JPEG', 'JPG', 'TIFF', 'PDF'];
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
-/**
- * A passport is one page. Asking for its back produces either a blank photo or
- * an abandoned step, so the second slot is per-document rather than assumed.
- */
+/** A passport is one page. Asking for its back yields a blank photo or a stall. */
 const SINGLE_SIDED = new Set(['passport']);
 
-function UploadSlot({
+function needsBack(spec: VerificationRequirementSpec, subtype: string | null): boolean {
+  return spec.key === 'gov_id' && !!subtype && !SINGLE_SIDED.has(subtype);
+}
+
+export function emptyDocumentState(role: VerificationRole): DocumentState {
+  return Object.fromEntries(
+    requirementsFor(role).map((r) => [r.key, { subtype: null, front: null, back: null }]),
+  );
+}
+
+/**
+ * What is still missing, in the order the person will fix it. Returns null when
+ * the set is complete.
+ *
+ * ONE MESSAGE AT A TIME, deliberately: a list of four faults at the bottom of a
+ * form is read as "this is broken", where one is read as "do this next".
+ */
+export function documentsProblem(role: VerificationRole, state: DocumentState): string | null {
+  for (const spec of requirementsFor(role)) {
+    const held = state[spec.key] ?? { subtype: null, front: null, back: null };
+
+    for (const file of [held.front, held.back]) {
+      if (file && file.size > MAX_DOCUMENT_BYTES) {
+        return `"${file.name}" is over 10 MB. Try a smaller photo.`;
+      }
+    }
+
+    if (spec.options && !held.subtype) {
+      return `Choose which document you are providing for ${spec.label.toLowerCase()}.`;
+    }
+    if (!held.front) {
+      return spec.captureOnly
+        ? `Take your ${spec.label.toLowerCase()}.`
+        : `Upload your ${spec.label.toLowerCase()}.`;
+    }
+    if (needsBack(spec, held.subtype) && !held.back) {
+      return 'Upload the back of your government ID.';
+    }
+  }
+  return null;
+}
+
+/** Every held file, described well enough for a reviewer to know what it is. */
+export function queueForUpload(
+  role: VerificationRole,
+  state: DocumentState,
+): { docType: string; subtype: string | null; title: string; file: File }[] {
+  const out: { docType: string; subtype: string | null; title: string; file: File }[] = [];
+  for (const spec of requirementsFor(role)) {
+    const held = state[spec.key];
+    if (!held) continue;
+    const label = spec.options?.find((o) => o.value === held.subtype)?.label ?? spec.label;
+    const twoSided = needsBack(spec, held.subtype);
+    if (held.front) {
+      out.push({
+        docType: spec.key,
+        subtype: held.subtype,
+        title: twoSided ? `${label} (front)` : label,
+        file: held.front,
+      });
+    }
+    if (twoSided && held.back) {
+      out.push({
+        docType: spec.key,
+        subtype: held.subtype,
+        title: `${label} (back)`,
+        file: held.back,
+      });
+    }
+  }
+  return out;
+}
+
+function Slot({
   label,
   file,
+  capture,
   onPick,
   onClear,
-  error,
 }: {
   label: string;
   file: File | null;
+  /** Camera only — no file picker. See the spec's `captureOnly` note. */
+  capture?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
-  error?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
 
@@ -86,13 +159,17 @@ function UploadSlot({
       <input
         ref={input}
         type="file"
-        accept={ACCEPT}
+        accept={capture ? 'image/*' : ACCEPT}
+        // `capture` makes a phone open the camera instead of the gallery. It
+        // raises the bar rather than closing the door — see the requirements
+        // spec — and desktop browsers ignore it entirely.
+        {...(capture ? { capture: 'user' as const } : {})}
         className="hidden"
         onChange={(e) => {
           const picked = e.target.files?.[0];
           if (picked) onPick(picked);
-          // Cleared so re-picking the SAME file still fires a change event —
-          // otherwise "Replace" with the identical filename does nothing.
+          // Reset so re-picking the SAME file still fires a change — otherwise
+          // "Replace" with an identical filename does nothing.
           e.target.value = '';
         }}
       />
@@ -121,159 +198,173 @@ function UploadSlot({
         <button
           type="button"
           onClick={() => input.current?.click()}
-          className={cn(
-            'flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
-            error
-              ? 'border-coral/50 bg-coral/5'
-              : 'border-line/20 hover:border-line/40 bg-surface-deep/20',
-          )}
+          className="border-line/20 hover:border-line/40 bg-surface-deep/20 flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors"
         >
-          <FileUp className="text-accent-fg size-5 shrink-0" aria-hidden="true" />
-          <span className="text-content-muted flex-1 text-sm">Click to upload</span>
-          {/* The accepted formats, stated where the decision is made rather
-              than in a paragraph above it that nobody reads twice. */}
-          <span className="hidden shrink-0 flex-wrap items-center gap-1 sm:flex">
-            {FORMAT_CHIPS.map((f) => (
-              <span
-                key={f}
-                className="border-line/10 bg-ink/20 text-content-muted rounded border px-1.5 py-0.5 text-[10px]"
-              >
-                {f}
-              </span>
-            ))}
-            <span className="border-line/10 bg-ink/20 text-content-muted rounded border px-1.5 py-0.5 text-[10px]">
-              &lt; 10 MB
-            </span>
+          {capture ? (
+            <Camera className="text-accent-fg size-5 shrink-0" aria-hidden="true" />
+          ) : (
+            <FileUp className="text-accent-fg size-5 shrink-0" aria-hidden="true" />
+          )}
+          <span className="text-content-muted flex-1 text-sm">
+            {capture ? 'Open camera' : 'Click to upload'}
           </span>
+          {!capture && (
+            <span className="hidden shrink-0 flex-wrap items-center gap-1 sm:flex">
+              {[...FORMAT_CHIPS, '< 10 MB'].map((f) => (
+                <span
+                  key={f}
+                  className="border-line/10 bg-ink/20 text-content-muted rounded border px-1.5 py-0.5 text-[10px]"
+                >
+                  {f}
+                </span>
+              ))}
+            </span>
+          )}
         </button>
       )}
-
-      {error && <p className="text-coral text-xs">{error}</p>}
     </div>
   );
 }
 
-export function IdentityDocumentUpload({
-  value,
+function Requirement({
+  spec,
+  held,
   onChange,
-  error,
 }: {
-  value: IdentityDocument;
-  onChange: (next: IdentityDocument) => void;
-  /** Set when the step was submitted incomplete. */
-  error?: string;
+  spec: VerificationRequirementSpec;
+  held: RequirementFiles;
+  onChange: (next: RequirementFiles) => void;
 }) {
-  const options = requirementSpec('gov_id')?.options ?? [];
-  const chosen = options.find((o) => o.value === value.subtype);
-  const needsBack = value.subtype ? !SINGLE_SIDED.has(value.subtype) : true;
+  const chosen = spec.options?.find((o) => o.value === held.subtype);
+  const twoSided = needsBack(spec, held.subtype);
+  const done = !!held.front && (!twoSided || !!held.back);
 
-  function pick(side: 'front' | 'back', file: File | null) {
-    onChange({ ...value, [side]: file });
-  }
-
-  // ── Phase 1: which document ───────────────────────────────────────────────
-  if (!chosen) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div>
-          <h3 className="text-content text-base font-semibold">
-            Choose your verification document
+  return (
+    <section className="border-line/10 bg-surface-deep/20 flex flex-col gap-3 rounded-2xl border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-content flex items-center gap-2 text-sm font-semibold">
+            {spec.label}
+            <span className="text-coral text-xs font-normal">Required</span>
           </h3>
-          <p className="text-content-muted text-sm">You must carry an official government ID</p>
+          <p className="text-content-muted mt-0.5 text-xs">{spec.description}</p>
         </div>
+        {done && (
+          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600">
+            Added
+          </span>
+        )}
+      </div>
 
-        <div className="flex flex-col gap-1.5">
-          <p className="text-content text-sm font-medium">
-            <span className="text-coral" aria-hidden="true">
-              *{' '}
-            </span>
-            Country
-          </p>
-          {/* Not a <select>. One option in a dropdown is a control that cannot
-              be operated; this states the fact instead. It becomes a picker on
-              the day a second country is actually verifiable. */}
-          <div className="border-line/15 bg-surface-deep/40 text-content flex items-center gap-2 rounded-xl border px-3 py-3 text-sm">
-            <span aria-hidden="true">🇳🇬</span>
-            Nigeria
-            <span className="text-content-muted ml-auto text-xs">
-              The only country Sync verifies today
-            </span>
-          </div>
-        </div>
-
+      {/* Which document, before how to photograph it. Asking for "front and
+          back" before knowing what of is how somebody uploads the back of a
+          passport. */}
+      {spec.options && !chosen ? (
         <div className="flex flex-col gap-2">
+          {spec.key === 'gov_id' && (
+            // Not a <select>: one option in a dropdown is a control that cannot
+            // be operated. Every document we accept is a Nigerian instrument
+            // and every campus a Nigerian university; this becomes a picker the
+            // day a second country is actually verifiable.
+            <div className="border-line/15 bg-surface-deep/40 text-content mb-1 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm">
+              <span aria-hidden="true">🇳🇬</span>
+              Nigeria
+              <span className="text-content-muted ml-auto text-xs">
+                The only country Sync verifies today
+              </span>
+            </div>
+          )}
           <p className="text-content text-sm font-medium">Select document type</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {options.map((o) => (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {spec.options.map((o) => (
               <button
                 key={o.value}
                 type="button"
-                onClick={() => onChange({ ...value, subtype: o.value })}
-                className={cn(
-                  'border-line/15 bg-surface-deep/30 hover:border-line/40 flex cursor-pointer flex-col gap-2 rounded-xl border p-4 text-left transition-colors',
-                )}
+                onClick={() => onChange({ ...held, subtype: o.value })}
+                className="border-line/15 bg-panel hover:border-line/40 flex cursor-pointer flex-col gap-1.5 rounded-xl border p-3 text-left transition-colors"
               >
-                <IdCard className="text-content-muted size-5" aria-hidden="true" />
+                <IdCard className="text-content-muted size-4" aria-hidden="true" />
                 <span className="text-content text-sm font-medium">{o.label}</span>
                 {o.hint && <span className="text-content-muted text-xs">{o.hint}</span>}
               </button>
             ))}
           </div>
         </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {chosen && (
+            <div className="border-line/10 flex flex-wrap items-center gap-2 border-b pb-2 text-sm">
+              {spec.key === 'gov_id' && <span aria-hidden="true">🇳🇬</span>}
+              <span className="text-content">{chosen.label}</span>
+              <button
+                type="button"
+                onClick={() => onChange({ subtype: null, front: null, back: null })}
+                className="text-accent-fg ml-auto cursor-pointer text-sm font-medium hover:underline"
+              >
+                Change
+              </button>
+            </div>
+          )}
+          <Slot
+            label={twoSided ? 'Front of your document' : spec.label}
+            file={held.front}
+            capture={spec.captureOnly}
+            onPick={(f) => onChange({ ...held, front: f })}
+            onClear={() => onChange({ ...held, front: null })}
+          />
+          {twoSided && (
+            <Slot
+              label="Back of your document"
+              file={held.back}
+              onPick={(f) => onChange({ ...held, back: f })}
+              onClear={() => onChange({ ...held, back: null })}
+            />
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
 
-        {error && <p className="text-coral text-xs">{error}</p>}
-      </div>
-    );
-  }
+export function VerificationDocuments({
+  role,
+  value,
+  onChange,
+  error,
+}: {
+  role: VerificationRole;
+  value: DocumentState;
+  onChange: (next: DocumentState) => void;
+  error?: string;
+}) {
+  const specs = requirementsFor(role);
+  const complete = specs.filter((s) => {
+    const held = value[s.key];
+    return held?.front && (!needsBack(s, held.subtype) || held.back);
+  }).length;
 
-  // ── Phase 2: that document, both sides ────────────────────────────────────
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h3 className="text-content text-base font-semibold">Prepare your document</h3>
+        <h3 className="text-content text-base font-semibold">Verification documents</h3>
         <p className="text-content-muted text-sm">
-          {needsBack
-            ? 'You will need to scan or upload both sides of your ID. Make sure the image is clear and not cut off.'
-            : 'Scan or upload the photo page. Make sure the image is clear and not cut off.'}
+          All {specs.length} are required — a reviewer cannot approve a business without them.
+        </p>
+        <p className="text-content-muted mt-1 text-xs">
+          {complete} of {specs.length} added
         </p>
       </div>
 
-      <div className="border-line/10 flex flex-wrap items-center gap-2 border-b pb-3 text-sm">
-        <span className="text-content-muted">Country:</span>
-        <span aria-hidden="true">🇳🇬</span>
-        <span className="text-content">Nigeria</span>
-        <span className="text-content-muted mx-1">·</span>
-        <span className="text-content">{chosen.label}</span>
-        {/* Back to phase 1. The country cannot change, but the document can,
-            and this is where somebody realises they picked the wrong one. */}
-        <button
-          type="button"
-          onClick={() => onChange({ subtype: null, front: null, back: null })}
-          className="text-accent-fg ml-auto cursor-pointer text-sm font-medium hover:underline"
-        >
-          Change
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <p className="text-content text-sm font-medium">Upload document</p>
-        <UploadSlot
-          label={needsBack ? 'Front of your document' : 'Photo page'}
-          file={value.front}
-          onPick={(f) => pick('front', f)}
-          onClear={() => pick('front', null)}
+      {specs.map((spec) => (
+        <Requirement
+          key={spec.key}
+          spec={spec}
+          held={value[spec.key] ?? { subtype: null, front: null, back: null }}
+          onChange={(next) => onChange({ ...value, [spec.key]: next })}
         />
-        {needsBack && (
-          <UploadSlot
-            label="Back of your document"
-            file={value.back}
-            onPick={(f) => pick('back', f)}
-            onClear={() => pick('back', null)}
-          />
-        )}
-      </div>
+      ))}
 
-      {error && <p className="text-coral text-xs">{error}</p>}
+      {error && <p className="text-coral text-sm">{error}</p>}
     </div>
   );
 }

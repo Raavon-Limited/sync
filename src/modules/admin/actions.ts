@@ -77,7 +77,16 @@ export async function reviewDocument(input: {
  * decides a vendor is real. The screen shows how many documents are approved so
  * that decision is informed, but it does not make it for them.
  */
-export async function setVendorVerification(input: { vendorId: string; decision: VendorDecision }) {
+export async function setVendorVerification(input: {
+  vendorId: string;
+  decision: VendorDecision;
+  /**
+   * Fraud, not a blurry photo. A permanent rejection is the only decision that
+   * stops a business re-submitting; every other outcome lifts it again, so a
+   * reviewer who blocks in error can undo it by deciding again.
+   */
+  permanent?: boolean;
+}) {
   await assertStaff();
 
   // THROUGH THE RPC, NOT A COLUMN WRITE.
@@ -98,10 +107,24 @@ export async function setVendorVerification(input: { vendorId: string; decision:
   // session, so auth.uid() would be NULL and the call refused. Same reasoning
   // as resolveDispute below.
   const supabase = await createServerClient();
-  const { error } = await supabase.rpc('set_verification_status', {
+  // `p_permanent` IS SENT ONLY WHEN TRUE, and that is not tidiness.
+  //
+  // PostgREST resolves an RPC by the exact set of argument names it is given.
+  // Until 20260901260000 is applied the function is still the two-argument
+  // form, and naming a third argument makes the call resolve to nothing — so
+  // sending `p_permanent: false` on every decision would break Verify and
+  // Reject on an un-migrated database. Omitting it keeps the ordinary path
+  // working either way; only "Reject as fraud" needs the new signature, and it
+  // is the one that should fail loudly if the migration has not landed.
+  //
+  // The cast is because `p_permanent` postdates types/database.types.ts.
+  // REGENERATE THE TYPES once the migration is applied and it can go.
+  const args = {
     p_vendor: input.vendorId,
     p_status: input.decision,
-  });
+    ...(input.permanent ? { p_permanent: true } : {}),
+  };
+  const { error } = await supabase.rpc('set_verification_status', args as never);
 
   if (error) throw new Error(userMessage(error, 'We could not update this verification.'));
   revalidatePath('/admin/vendors');

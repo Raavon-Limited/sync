@@ -148,6 +148,9 @@ export function VerificationReview({
           >
             Verify
           </Button>
+          {/* An ORDINARY rejection. The business fixes what was wrong and
+              submits again — a blurry NIN photo is the common case and the
+              cure is another photo, not a support ticket. */}
           <Button
             variant="outline"
             className="text-coral"
@@ -157,6 +160,37 @@ export function VerificationReview({
             }
           >
             Reject
+          </Button>
+
+          {/* THE PERMANENT ONE. Confirmed in the browser rather than done on a
+              single click: it is the only control here that takes an option
+              away from somebody, and a reviewer reaching for Reject must not
+              land on it by half a centimetre. */}
+          <Button
+            variant="outline"
+            className="text-coral border-coral/40"
+            disabled={busy}
+            onClick={() => {
+              const ok = window.confirm(
+                `Permanently block ${vendor.businessName} from verification?
+
+` +
+                  'Use this only for fraud — a forged document or a stolen identity. ' +
+                  'They will not be able to submit again. Deciding on this business ' +
+                  'any other way afterwards lifts the block.',
+              );
+              if (ok) {
+                run(() =>
+                  setVendorVerification({
+                    vendorId: vendor.id,
+                    decision: 'rejected',
+                    permanent: true,
+                  }),
+                );
+              }
+            }}
+          >
+            Reject as fraud
           </Button>
         </div>
       </div>

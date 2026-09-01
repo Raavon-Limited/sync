@@ -6,6 +6,8 @@
  */
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/modules/auth/queries';
+import { createClient } from '@/lib/supabase/server';
+import type { Row } from '@/lib/supabase/row';
 import type { VendorCategory } from '@/lib/validations';
 import { OnboardingWizard } from '@/components/verification/onboarding-wizard';
 
@@ -14,6 +16,23 @@ export const metadata: Metadata = { title: 'Vendor onboarding' };
 export default async function Page() {
   const user = await getCurrentUser();
   const meta = user?.user_metadata ?? {};
+
+  // The business name comes from `vendor_profiles`, not from metadata.
+  // vendor_profiles is what claim_business_name writes and what it checks
+  // before refusing a change, so it is the only source that agrees with the
+  // rule the form is about to be judged against. Metadata is a record of what
+  // was typed at signup and can be stale by the time anybody re-verifies.
+  let businessName: string | undefined;
+  if (user?.id) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('vendor_profiles')
+      .select('business_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    businessName =
+      ((data as unknown as Row | null)?.business_name as string | undefined) ?? undefined;
+  }
 
   return (
     <section className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-10 md:py-16">
@@ -32,6 +51,7 @@ export default async function Page() {
           fullName: (meta.full_name as string | undefined) ?? '',
           phone: (meta.phone as string | undefined) ?? '',
           vendorCategory: meta.vendor_category as VendorCategory | undefined,
+          businessName,
         }}
       />
     </section>
