@@ -138,12 +138,24 @@ export async function inviteStaff(input: {
 }
 
 /**
- * Deliver it.
+ * Deliver it. Emailing the link IS the feature — the copyable link in the
+ * console is the fallback for when this fails, not the way it is meant to work.
  *
- * SPLIT FROM CREATION, and a failure here does not undo the invite. If Resend
- * is misconfigured the invitation still exists and the console still shows the
- * link to copy — which is the difference between "email is broken" and "you
- * cannot hire anybody today".
+ * SPLIT FROM CREATION, and a failure here does not undo the invite. The
+ * invitation still exists and the link is still recoverable, which is the
+ * difference between "email is broken" and "you cannot hire anybody today".
+ *
+ * IT REPORTS WHAT ACTUALLY WENT WRONG, VERBATIM.
+ *   The first cut returned the same sentence — "We could not send the email" —
+ *   for a missing API key, a rejection from Resend and an exception in
+ *   rendering. Three unrelated faults with three different fixes, wearing one
+ *   message, and the real reason went only to the server log where the person
+ *   looking at the screen cannot see it. Diagnosing a live failure meant
+ *   guessing.
+ *
+ *   This screen is super-admin-only, so the provider's own words are safe to
+ *   put on it and are worth more than anything paraphrased. `stage` says which
+ *   of the three failed, because that alone narrows the fix.
  */
 async function sendStaffInvite(input: {
   email: string;
@@ -155,7 +167,11 @@ async function sendStaffInvite(input: {
 
   if (!apiKey) {
     console.error('[staff-invite] RESEND_API_KEY missing — invite created but not emailed');
-    return { ok: false, error: 'Email is not configured. Copy the link and send it yourself.' };
+    return {
+      ok: false,
+      error:
+        'RESEND_API_KEY is not set in this environment, so nothing was sent. Copy the link below.',
+    };
   }
 
   // What the role actually opens, in the words the console uses, so the
@@ -175,6 +191,11 @@ async function sendStaffInvite(input: {
 
   const invitedBy = (await getCurrentUser())?.email ?? SITE.name;
 
+  // Which step we are on, so a thrown exception can say where it came from.
+  // Rendering and sending fail for entirely different reasons and the stack
+  // alone does not make that obvious in a server-action log.
+  let stage: 'rendering the email' | 'sending the email' = 'rendering the email';
+
   try {
     const html = await render(
       createElement(StaffInviteEmail, {
@@ -185,6 +206,8 @@ async function sendStaffInvite(input: {
         expiresIn: '10 minutes',
       }),
     );
+
+    stage = 'sending the email';
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
       from,
@@ -192,18 +215,20 @@ async function sendStaffInvite(input: {
       subject: `You have been invited to the ${SITE.name} admin console`,
       html,
     });
+
     if (error) {
-      // Usually an unverified sender domain. Logged verbatim — the sender's
-      // copy of this message cannot say that usefully.
+      // The usual causes are an unverified sender domain, a key without send
+      // permission, or a `from` that is not on a domain this account owns —
+      // and Resend names which. Passing that through is the difference between
+      // a fixable report and "it did not work".
       console.error('[staff-invite] Resend rejected the send. from=%s error=%o', from, error);
-      return {
-        ok: false,
-        error: 'We could not send the email. Copy the link and send it yourself.',
-      };
+      const detail = [error.name, error.message].filter(Boolean).join(': ');
+      return { ok: false, error: `Resend refused it (from ${from}) — ${detail}` };
     }
   } catch (e) {
-    console.error('[staff-invite] send threw:', e);
-    return { ok: false, error: 'We could not send the email. Copy the link and send it yourself.' };
+    console.error('[staff-invite] send threw while %s:', stage, e);
+    const detail = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: `Failed while ${stage}: ${detail}` };
   }
 
   return { ok: true };

@@ -28,7 +28,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Check, Clock, Copy, Loader2, Mail, ShieldCheck, UserMinus, X } from 'lucide-react';
+import { Check, Clock, Copy, Loader2, Mail, Send, ShieldCheck, UserMinus, X } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { setAccountRole, setRoleMembership } from '@/modules/admin/actions';
@@ -63,16 +63,25 @@ export function StaffConsole({
   const [roleId, setRoleId] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /* The link, kept on screen after an invite is created.
-     It is shown whether or not the email went out: the token is returned
-     exactly once and is never readable again, so a link dismissed before the
-     mail failed would be a link nobody can recover. */
+  /* The link, shown ONLY when the email did not go.
+     It has to be shown then, and cannot be recovered later: the token is
+     returned exactly once by `create_staff_invite` and is never readable
+     again, so a failed send with the link hidden would strand the invitation
+     with no way to deliver it but sending a fresh one. */
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /* Why the email did not go, in the provider's own words. Separate from
+     `message` so a delivery failure cannot be mistaken for part of a success,
+     and separate from `error` because the invitation itself did succeed. */
+  const [failure, setFailure] = useState<string | null>(null);
 
   function run(fn: () => Promise<unknown>, onDone?: (v: unknown) => void) {
     setError(null);
     setMessage(null);
+    // A stale link from the last attempt must not survive into this one — it
+    // is a live credential for a different address.
+    setFailure(null);
+    setLink(null);
     startTransition(async () => {
       try {
         const v = await fn();
@@ -138,14 +147,32 @@ export function StaffConsole({
                     setCopied(false);
                     if (res.kind === 'granted') {
                       setLink(null);
+                      setFailure(null);
                       setMessage(`${res.name} already had an account, and now has console access.`);
                       return;
                     }
+                    /*
+                     * THE LINK IS SHOWN ONLY WHEN THE EMAIL DID NOT GO.
+                     *
+                     * It used to appear on every invitation, which made
+                     * copying it look like the intended way to use this
+                     * screen. Sending is the feature; the link is the fallback
+                     * for when sending breaks, and putting it on screen after
+                     * a successful send invites somebody to deliver the
+                     * invitation twice by two different routes.
+                     */
+                    if (res.emailed) {
+                      setLink(null);
+                      setFailure(null);
+                      setMessage(
+                        `Invitation emailed to ${res.email}. The link works for 10 minutes.`,
+                      );
+                      return;
+                    }
                     setLink(res.link);
+                    setFailure(res.emailError ?? 'The email did not send.');
                     setMessage(
-                      res.emailed
-                        ? `Invitation sent to ${res.email}. The link works for 10 minutes.`
-                        : `Invitation created for ${res.email}, but the email did not send. ${res.emailError ?? ''}`,
+                      `The invitation exists for ${res.email}, but it was not emailed. Send them this link instead — it still works for 10 minutes.`,
                     );
                   },
                 )
@@ -165,7 +192,16 @@ export function StaffConsole({
             could reach through a hijacked session.
           </p>
 
+          {/* Green for what happened, amber for why delivery failed. The
+              failure used to be appended to the success line, so "invitation
+              created" and "the email did not send" arrived as one sentence in
+              one colour and read as a success. */}
           {message && <p className="text-xs text-emerald-600">{message}</p>}
+          {failure && (
+            <p className="border-line/10 bg-surface text-content-muted rounded-lg border px-3 py-2 font-mono text-xs">
+              {failure}
+            </p>
+          )}
           {error && <p className="text-coral text-xs">{error}</p>}
 
           {link && (
@@ -212,6 +248,40 @@ export function StaffConsole({
                       })}`}
                 </p>
               </div>
+              {isSuperAdmin && (
+                /* Send again, because a 10-minute link lapses faster than
+                   people read their email, and the token behind this row can
+                   never be shown again — `create_staff_invite` returns it once.
+                   So "re-send" has to mean a NEW invitation: this revokes the
+                   old token and emails a fresh one to the same address, with
+                   the same role. */
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => inviteStaff({ email: inv.email, roleId: inv.roleId }),
+                      (result) => {
+                        const res = result as Awaited<ReturnType<typeof inviteStaff>>;
+                        if (res.kind === 'granted') {
+                          setMessage(`${res.name} already had an account, and now has access.`);
+                          return;
+                        }
+                        if (res.emailed) {
+                          setMessage(`A new invitation was emailed to ${res.email}.`);
+                          return;
+                        }
+                        setLink(res.link);
+                        setFailure(res.emailError ?? 'The email did not send.');
+                        setMessage(`A new link exists for ${res.email}, but it was not emailed.`);
+                      },
+                    )
+                  }
+                >
+                  <Send aria-hidden="true" />
+                  Send again
+                </Button>
+              )}
               {isSuperAdmin && (
                 <Button
                   variant="ghost"

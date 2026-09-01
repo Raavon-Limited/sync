@@ -31,6 +31,9 @@ export interface StaffInvite {
   email: string;
   /** The role they will land in, already resolved to its name. */
   roleName: string | null;
+  /** The same role as an id, so "send again" can recreate the invitation
+   *  with it rather than silently dropping to no role. */
+  roleId: string | null;
   invitedByName: string;
   createdAt: string;
   expiresAt: string;
@@ -95,6 +98,7 @@ export async function getStaffInvites(): Promise<StaffInvite[]> {
     id: r.id as string,
     email: r.email as string,
     roleName: r.role_id ? (roleName.get(r.role_id as string) ?? null) : null,
+    roleId: (r.role_id as string) ?? null,
     invitedByName: personName.get(r.invited_by as string) ?? 'Someone',
     createdAt: r.created_at as string,
     expiresAt: r.expires_at as string,
