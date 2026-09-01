@@ -63,6 +63,18 @@ export interface DashboardNavItem {
    * all — which is every row on every other dashboard, so they are unaffected.
    */
   area?: string;
+  /**
+   * For one row that fronts several routes — Accounts is Vendors, Landlords
+   * and Riders, switched between by the tab bar on those pages.
+   *
+   * The row appears if ANY of these areas is held and points at the first one
+   * that is, so a reviewer granted only `riders` gets a row that opens Riders
+   * rather than one that opens Vendors and bounces them to /403. It also
+   * highlights on every listed path, not only the one it links to.
+   *
+   * Takes precedence over `area` when present.
+   */
+  targets?: { area: string; href: string }[];
 }
 
 export interface DashboardNavSection {
@@ -169,24 +181,30 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/admin', label: 'Overview', icon: LayoutDashboard, area: 'overview' },
-          // Named "Businesses" for a while because the page behind it listed
-          // every business awaiting a decision, landlords included. The page
-          // now filters them out and landlords are reviewed under their own
-          // item below, so the honest name is back.
+          /*
+           * ONE ROW FOR EVERY KIND OF ACCOUNT STAFF REVIEW.
+           *
+           * Vendors, Landlords and Riders were three sidebar rows, and the
+           * sidebar is where they competed with Analytics and Disputes for
+           * space while all three asked the same question — is this account
+           * real, and should it be trading. They are one row now, and the tab
+           * bar on those pages switches between them, including per-trade
+           * views of the business queue.
+           *
+           * They stay three ROUTES, which is why this is `targets` rather than
+           * a merged page: each fetches only its own data, keeps its own
+           * filters, and stays linkable.
+           */
           {
             href: '/admin/vendors',
-            label: 'Vendors',
-            heading: 'Vendor verification',
+            label: 'Accounts',
+            heading: 'Accounts & verification',
             icon: ShieldCheck,
-            area: 'vendors',
-          },
-          { href: '/admin/landlord', label: 'Landlords', icon: Building2, area: 'landlords' },
-          {
-            href: '/admin/riders',
-            label: 'Riders',
-            heading: 'Riders & fleets',
-            icon: Truck,
-            area: 'riders',
+            targets: [
+              { area: 'vendors', href: '/admin/vendors' },
+              { area: 'landlords', href: '/admin/landlord' },
+              { area: 'riders', href: '/admin/riders' },
+            ],
           },
           {
             href: '/admin/verify-visits',
@@ -219,7 +237,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           {
             href: '/admin/staff',
             label: 'Staff',
-            heading: 'Who runs Sync',
+            // "Who runs Sync" is the name of a tab on that page now. Leaving it
+            // here too meant the sticky header announced one tab by name while
+            // you were reading the other.
+            heading: 'Staff & access',
             icon: UserCog,
             area: 'staff',
           },

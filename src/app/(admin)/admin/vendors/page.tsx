@@ -13,15 +13,44 @@ import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
+import { AccountTabs, type AccountTabKey } from '@/components/admin/account-tabs';
 import { VerificationQueue, type AdminVendor } from './(components)/verification-queue';
 
 export const metadata: Metadata = { title: 'Vendors — Admin' };
 
 type Row = Record<string, unknown>;
 
-export default async function Page() {
+/**
+ * The business categories this page can be narrowed to.
+ *
+ * 'landlord' is deliberately absent: it is a vendor_profiles category like the
+ * rest, but landlords are reviewed on their own screen where their properties
+ * can be shown, and the query below excludes them outright. Anything not in
+ * this list is ignored rather than passed to the database — a category comes
+ * from the URL, and an unrecognised one should show the full list, not an empty
+ * one or a query error.
+ */
+const CATEGORIES = {
+  food: 'Food',
+  beauty: 'Beauty',
+  laundry: 'Laundry',
+  tradesman: 'Workmanship',
+} as const;
+
+type Category = keyof typeof CATEGORIES;
+
+function parseCategory(value: string | undefined): Category | null {
+  return value && value in CATEGORIES ? (value as Category) : null;
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   await requireStaffArea('vendors');
 
+  const category = parseCategory((await searchParams).category);
   const admin = createAdminClient();
 
   const [{ data: vendors }, { data: docs }] = await Promise.all([
@@ -30,12 +59,22 @@ export default async function Page() {
     // is how this page ended up being every business on the platform under a
     // nav item named "Vendors". Landlords are reviewed on /admin/landlord,
     // which shows the property context this page has no column for.
-    admin
-      .from('vendor_profiles')
-      .select('id, business_name, slug, category, area, verification_status, created_at')
-      .is('archived_at', null)
-      .neq('category', 'landlord')
-      .order('created_at', { ascending: false }),
+    //
+    // `category` narrows it further, for the per-trade tabs. Filtered in the
+    // query rather than in the client, so a trade with two hundred businesses
+    // does not ship the other categories to the browser to be hidden.
+    (category
+      ? admin
+          .from('vendor_profiles')
+          .select('id, business_name, slug, category, area, verification_status, created_at')
+          .is('archived_at', null)
+          .eq('category', category)
+      : admin
+          .from('vendor_profiles')
+          .select('id, business_name, slug, category, area, verification_status, created_at')
+          .is('archived_at', null)
+          .neq('category', 'landlord')
+    ).order('created_at', { ascending: false }),
     // Documents are fetched separately rather than embedded: verification_documents
     // has no FK to vendor_profiles (it points at profiles), and this codebase has
     // been bitten repeatedly by embeds that cannot resolve.
@@ -79,11 +118,17 @@ export default async function Page() {
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / VENDORS</h1>
+        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ACCOUNTS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
-          Vendor <span className="text-lime-deep">verification.</span>
+          {category ? CATEGORIES[category] : 'Vendor'}{' '}
+          <span className="text-lime-deep">verification.</span>
         </h2>
       </div>
+
+      {/* The active tab is named, not inferred: this one route serves five of
+          them and the pathname is identical for all five. */}
+      <AccountTabs active={(category ?? 'vendors') as AccountTabKey} />
+
       <VerificationQueue vendors={rows} />
     </section>
   );

@@ -73,11 +73,28 @@ export function DashboardSidebar({
    * up empty is dropped whole — an "INSIGHTS" heading with nothing under it
    * reads as a screen that failed to load rather than as a screen they were
    * never given.
+   *
+   * A row with `targets` fronts several routes behind one label — Accounts is
+   * Vendors, Landlords and Riders. It survives if ANY of them is held, and it
+   * points at the FIRST one that is: a reviewer granted only `riders` gets an
+   * Accounts row that opens Riders, rather than one that opens Vendors and
+   * bounces them to /403.
    */
+  const holds = (area?: string) => !areas || !area || areas.includes(area);
+
   const sections = allSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !areas || !item.area || areas.includes(item.area)),
+      items: section.items
+        .filter((item) =>
+          item.targets ? item.targets.some((t) => holds(t.area)) : holds(item.area),
+        )
+        .map((item) => ({
+          ...item,
+          href: item.targets
+            ? (item.targets.find((t) => holds(t.area))?.href ?? item.href)
+            : item.href,
+        })),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -87,10 +104,17 @@ export function DashboardSidebar({
   const handle = navKey === 'student' || navKey === 'vendor' ? profile.handle : undefined;
   const toHref = (href: string) => (handle ? `/${handle}${href.slice(rootHref.length)}` : href);
 
-  // Best match = the longest item href that the current path falls under, so the
+  // Every path a row can be highlighted for. A row with `targets` answers for
+  // all of them, not only the one it happens to point at — otherwise Accounts
+  // would go dark the moment you switched to the Landlords tab, which is a
+  // route it owns.
+  const pathsOf = (item: (typeof sections)[number]['items'][number]) =>
+    item.targets ? item.targets.map((t) => toHref(t.href)) : [toHref(item.href)];
+
+  // Best match = the longest of those the current path falls under, so the
   // overview row (e.g. /muiz-owolabi) stays inactive on /muiz-owolabi/orders.
   const activeHref = sections
-    .flatMap((s) => s.items.map((i) => toHref(i.href)))
+    .flatMap((s) => s.items.flatMap(pathsOf))
     .filter((href) => pathname === href || pathname.startsWith(href + '/'))
     .sort((a, b) => b.length - a.length)[0];
 
@@ -173,9 +197,12 @@ export function DashboardSidebar({
             {section.label && (
               <p className="eyebrow text-content-muted mb-1 px-3">{section.label}</p>
             )}
-            {section.items.map(({ href, label, icon: Icon, badge }) => {
+            {section.items.map((item) => {
+              const { href, label, icon: Icon, badge } = item;
               const resolved = toHref(href);
-              const active = resolved === activeHref;
+              // Any of the row's paths winning makes the row active, not just
+              // the one it links to. See `pathsOf`.
+              const active = pathsOf(item).includes(activeHref);
               return (
                 <Link
                   key={href}

@@ -11,6 +11,7 @@
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { AccountTabs } from '@/components/admin/account-tabs';
 import { LandlordsBrowser, type LandlordRow } from './(components)/landlords-browser';
 
 export const metadata: Metadata = { title: 'Landlords — Admin' };
@@ -107,7 +108,7 @@ export default async function Page() {
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / LANDLORDS</h1>
+        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ACCOUNTS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
           Who owns <span className="text-lime-deep">what.</span>
         </h2>
@@ -118,6 +119,8 @@ export default async function Page() {
             : 'Nothing waiting on a verification decision.'}
         </p>
       </div>
+
+      <AccountTabs active="landlords" />
 
       {/* Cards by default, with the live photo, and a toggle back to a list.
           See LandlordsBrowser for why the face is on the card. */}

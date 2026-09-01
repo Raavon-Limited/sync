@@ -22,6 +22,7 @@ import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
+import { AccountTabs } from '@/components/admin/account-tabs';
 import { RidersConsole, type AdminRider } from './(components)/riders-console';
 
 export const metadata: Metadata = { title: 'Riders — Admin' };
@@ -150,15 +151,20 @@ export default async function Page() {
   return <Shell rows={rows} />;
 }
 
-function Shell({ rows }: { rows: AdminRider[] }) {
+// Async because AccountTabs asks the database what this viewer may open. The
+// two call sites both already await the page, so nothing else changes.
+async function Shell({ rows }: { rows: AdminRider[] }) {
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / RIDERS</h1>
+        <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ACCOUNTS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
           Riders <span className="text-lime-deep">&amp; fleets.</span>
         </h2>
       </div>
+
+      <AccountTabs active="riders" />
+
       <RidersConsole riders={rows} />
     </section>
   );
