@@ -22,6 +22,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
+import { accessLevel, assertArea } from '@/modules/access/guard';
 import { userMessage } from '@/lib/errors';
 
 export type DocDecision = 'approved' | 'needs_action';
@@ -91,7 +92,7 @@ export async function reviewDocument(input: {
   decision: DocDecision;
   message?: string;
 }) {
-  const reviewerId = await assertStaff();
+  const reviewerId = await assertStaffAnyArea(['vendors', 'landlords', 'riders']);
 
   if (input.decision === 'needs_action' && !input.message?.trim()) {
     throw new Error('Say what needs fixing');
@@ -134,7 +135,7 @@ export async function setVendorVerification(input: {
    */
   permanent?: boolean;
 }) {
-  await assertStaff();
+  await assertStaffArea('vendors');
 
   // THROUGH THE RPC, NOT A COLUMN WRITE.
   //
@@ -182,7 +183,7 @@ export async function setVendorVerification(input: {
  * a leaked passport.
  */
 export async function getDocumentUrl(storagePath: string): Promise<string> {
-  await assertStaff();
+  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'verification'], 'read');
   const admin = createAdminClient();
   const { data, error } = await admin.storage
     .from('verification-docs')
@@ -210,7 +211,7 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
  * review, short enough that a leaked admin screenshot is not a leaked passport.
  */
 export async function getDocumentUrls(storagePaths: string[]): Promise<Record<string, string>> {
-  await assertStaff();
+  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'verification'], 'read');
   if (storagePaths.length === 0) return {};
 
   const admin = createAdminClient();
@@ -248,7 +249,7 @@ export async function resolveDispute(input: {
   refundKobo?: number;
   notes?: string;
 }) {
-  await assertStaff();
+  await assertStaffArea('disputes');
 
   const db = await createServerClient();
   const { error } = await db.rpc('resolve_dispute', {
@@ -275,7 +276,7 @@ export async function decideHostelVisit(input: {
   decision: 'Verified' | 'Rejected';
   notes?: string;
 }) {
-  const reviewerId = await assertStaff();
+  const reviewerId = await assertStaffArea('verify_visits');
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
@@ -308,7 +309,7 @@ export async function scheduleHostelVisit(input: {
   ambassadorId: string | null;
   scheduledFor: string;
 }) {
-  await assertStaff();
+  await assertStaffArea('verify_visits');
   const admin = createAdminClient();
 
   // One live visit per hostel: scheduling again updates the existing row rather
@@ -349,7 +350,7 @@ export async function updateSetting(input: {
   value: number | string;
   kind: 'number' | 'string';
 }) {
-  const editorId = await assertStaff();
+  const editorId = await assertStaffArea('settings');
 
   if (input.kind === 'number') {
     const n = Number(input.value);
@@ -379,7 +380,7 @@ export async function updateFeatureFlag(input: {
   enabled?: boolean;
   rolloutPct?: number;
 }) {
-  const editorId = await assertStaff();
+  const editorId = await assertStaffArea('settings');
 
   if (input.rolloutPct != null && (input.rolloutPct < 0 || input.rolloutPct > 100)) {
     throw new Error('Rollout must be between 0 and 100');
@@ -417,7 +418,7 @@ export async function setRiderVerification(input: {
   /** Fraud. Blocks re-application until a later decision lifts it. */
   permanent?: boolean;
 }) {
-  await assertStaff();
+  await assertStaffArea('riders');
 
   const supabase = await createServerClient();
   const { error } = await supabase.rpc('set_rider_verification', {
@@ -437,7 +438,7 @@ export async function setCompanyVerification(input: {
   decision: VendorDecision;
   permanent?: boolean;
 }) {
-  await assertStaff();
+  await assertStaffArea('riders');
 
   const supabase = await createServerClient();
   const { error } = await supabase.rpc('set_company_verification', {
@@ -465,7 +466,7 @@ export async function setAccountSuspension(input: {
   /** Required when suspending — support reads it back to the person asking why. */
   reason?: string;
 }) {
-  await assertStaff();
+  await assertStaffArea('users');
 
   if (input.suspended && !input.reason?.trim()) {
     throw new Error('Say why this account is being suspended');
@@ -501,7 +502,7 @@ export type AccountRole = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' 
  * to keep in step, and the one that could be bypassed.
  */
 export async function setAccountRole(input: { userId: string; role: AccountRole }) {
-  await assertStaff();
+  await assertStaffArea('staff');
 
   const supabase = await createServerClient();
   const { error } = await supabase.rpc('set_account_role', {
@@ -527,7 +528,7 @@ export async function setAccountRole(input: { userId: string; role: AccountRole 
  * access arriving before the person knew they had it.
  */
 export async function addStaffByEmail(input: { email: string; role: 'admin' | 'super_admin' }) {
-  await assertStaff();
+  await assertStaffArea('staff');
 
   if (!input.email.trim()) throw new Error('Enter an email address');
 
@@ -560,7 +561,7 @@ async function rpcUntyped(name: string, args: Record<string, unknown> = {}) {
 
 /** A new platform-wide role, with no grants until somebody sets them. */
 export async function createAccessRole(input: { name: string; description?: string }) {
-  await assertStaff();
+  await assertStaffArea('staff');
 
   const { data, error } = await rpcUntyped('create_access_role', {
     p_name: input.name,
@@ -582,7 +583,7 @@ export async function setRoleGrant(input: {
   area: string;
   level: 'read' | 'write' | null;
 }) {
-  await assertStaff();
+  await assertStaffArea('staff');
 
   const { error } = await rpcUntyped('set_role_grant', {
     p_role: input.roleId,
@@ -600,7 +601,7 @@ export async function setRoleMembership(input: {
   userId: string;
   member: boolean;
 }) {
-  await assertStaff();
+  await assertStaffArea('staff');
 
   const { error } = await rpcUntyped(input.member ? 'assign_access_role' : 'revoke_access_role', {
     p_role: input.roleId,
