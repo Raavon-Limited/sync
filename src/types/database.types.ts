@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_grants: {
+        Row: {
+          area: string
+          level: string
+          role_id: string
+        }
+        Insert: {
+          area: string
+          level: string
+          role_id: string
+        }
+        Update: {
+          area?: string
+          level?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_grants_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "access_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_members: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_members_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "access_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          scope: string
+          storefront_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          scope: string
+          storefront_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          scope?: string
+          storefront_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_roles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_roles_storefront_id_fkey"
+            columns: ["storefront_id"]
+            isOneToOne: false
+            referencedRelation: "storefronts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_log: {
         Row: {
           created_at: string
@@ -3121,6 +3241,7 @@ export type Database = {
       }
       storefront_staff: {
         Row: {
+          access_role_id: string | null
           created_at: string
           id: string
           invited_by: string | null
@@ -3132,6 +3253,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_role_id?: string | null
           created_at?: string
           id?: string
           invited_by?: string | null
@@ -3143,6 +3265,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_role_id?: string | null
           created_at?: string
           id?: string
           invited_by?: string | null
@@ -3154,6 +3277,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "storefront_staff_access_role_id_fkey"
+            columns: ["access_role_id"]
+            isOneToOne: false
+            referencedRelation: "access_roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "storefront_staff_invited_by_fkey"
             columns: ["invited_by"]
@@ -3777,11 +3907,19 @@ export type Database = {
         }[]
       }
       accept_storefront_invite: { Args: { p_token: string }; Returns: string }
+      access_level: {
+        Args: { p_area: string; p_storefront?: string }
+        Returns: string
+      }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_overview: { Args: never; Returns: Json }
       advance_delivery: {
         Args: { p_delivery_id: string; p_status: string }
         Returns: string
+      }
+      assign_access_role: {
+        Args: { p_role: string; p_user: string }
+        Returns: undefined
       }
       auth_role: { Args: never; Returns: string }
       business_role_count: { Args: { p_roles: string[] }; Returns: number }
@@ -3818,6 +3956,15 @@ export type Database = {
           logo_url: string
           user_id: string
         }[]
+      }
+      create_access_role: {
+        Args: {
+          p_description?: string
+          p_name: string
+          p_scope?: string
+          p_storefront?: string
+        }
+        Returns: string
       }
       create_admin: {
         Args: { p_email: string; p_role: string }
@@ -3883,6 +4030,13 @@ export type Database = {
       login_method: { Args: { p_email: string }; Returns: string }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       max_holds_per_student: { Args: never; Returns: number }
+      my_access: {
+        Args: { p_storefront?: string }
+        Returns: {
+          area: string
+          level: string
+        }[]
+      }
       my_active_delivery: {
         Args: never
         Returns: {
@@ -4029,6 +4183,10 @@ export type Database = {
         Returns: string
       }
       resume_store: { Args: { p_storefront_id: string }; Returns: undefined }
+      revoke_access_role: {
+        Args: { p_role: string; p_user: string }
+        Returns: undefined
+      }
       revoke_storefront_invite: {
         Args: { p_invite_id: string }
         Returns: undefined
@@ -4071,6 +4229,10 @@ export type Database = {
       set_rider_online: { Args: { p_online: boolean }; Returns: boolean }
       set_rider_verification: {
         Args: { p_permanent?: boolean; p_rider: string; p_status: string }
+        Returns: string
+      }
+      set_role_grant: {
+        Args: { p_area: string; p_level: string; p_role: string }
         Returns: string
       }
       set_storefront_archived: {

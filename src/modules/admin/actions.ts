@@ -564,10 +564,10 @@ export async function setRoleMembership(input: {
 }) {
   await assertStaff();
 
-  const { error } = await rpcUntyped(
-    input.member ? 'assign_access_role' : 'revoke_access_role',
-    { p_role: input.roleId, p_user: input.userId },
-  );
+  const { error } = await rpcUntyped(input.member ? 'assign_access_role' : 'revoke_access_role', {
+    p_role: input.roleId,
+    p_user: input.userId,
+  });
 
   if (error) throw new Error(userMessage(error, 'We could not change that.'));
   revalidatePath('/admin/staff');

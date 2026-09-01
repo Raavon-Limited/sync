@@ -33,13 +33,7 @@ const LEVELS: { value: AccessLevel; label: string; hint: string }[] = [
   { value: 'write', label: 'Read & write', hint: 'Can act' },
 ];
 
-export function RolesConsole({
-  roles,
-  canManage,
-}: {
-  roles: AccessRole[];
-  canManage: boolean;
-}) {
+export function RolesConsole({ roles, canManage }: { roles: AccessRole[]; canManage: boolean }) {
   const [busy, startTransition] = useTransition();
   const [name, setName] = useState('');
   const [openRole, setOpenRole] = useState<string | null>(null);
@@ -101,17 +95,17 @@ export function RolesConsole({
           const granted = Object.keys(role.grants).length;
 
           return (
-            <div
-              key={role.id}
-              className="border-line/10 bg-panel flex flex-col rounded-xl border"
-            >
+            <div key={role.id} className="border-line/10 bg-panel flex flex-col rounded-xl border">
               <button
                 type="button"
                 onClick={() => setOpenRole(open ? null : role.id)}
                 aria-expanded={open}
                 className="flex cursor-pointer items-start gap-3 p-4 text-left"
               >
-                <ShieldCheck className="text-content-muted mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <ShieldCheck
+                  className="text-content-muted mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-content flex flex-wrap items-center gap-2 font-medium">
                     {role.name}
@@ -144,10 +138,7 @@ export function RolesConsole({
                   {ADMIN_AREAS.map((area) => {
                     const level: AccessLevel = role.grants[area.key] ?? 'none';
                     return (
-                      <div
-                        key={area.key}
-                        className="flex flex-wrap items-center gap-3 px-4 py-3"
-                      >
+                      <div key={area.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
                         <div className="min-w-[12rem] flex-1">
                           <p className="text-content text-sm font-medium">{area.label}</p>
                           <p className="text-content-muted text-xs">{area.description}</p>
@@ -199,9 +190,7 @@ export function RolesConsole({
       </div>
 
       {!canManage && (
-        <p className="text-content-muted text-xs">
-          Only a super admin can create or change roles.
-        </p>
+        <p className="text-content-muted text-xs">Only a super admin can create or change roles.</p>
       )}
     </div>
   );

@@ -50,6 +50,19 @@ export interface DashboardNavItem {
   badge?: number;
   /** Descriptive page title for the header (falls back to `label`). */
   heading?: string;
+  /**
+   * The access area this row belongs to, from modules/access/areas.
+   *
+   * Present on the admin console only, where what somebody can reach is a
+   * per-role grant rather than a property of being staff. DashboardShell
+   * resolves the caller's areas and drops the rows they hold nothing for, so a
+   * reviewer's sidebar is the four screens they work in rather than fifteen
+   * screens, eleven of which answer /403.
+   *
+   * A row with no `area` is shown to everybody who can see that dashboard at
+   * all — which is every row on every other dashboard, so they are unaffected.
+   */
+  area?: string;
 }
 
 export interface DashboardNavSection {
@@ -155,7 +168,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
     sections: [
       {
         items: [
-          { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+          { href: '/admin', label: 'Overview', icon: LayoutDashboard, area: 'overview' },
           // Named "Businesses" for a while because the page behind it listed
           // every business awaiting a decision, landlords included. The page
           // now filters them out and landlords are reviewed under their own
@@ -165,11 +178,23 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             label: 'Vendors',
             heading: 'Vendor verification',
             icon: ShieldCheck,
+            area: 'vendors',
           },
-          { href: '/admin/landlord', label: 'Landlords', icon: Building2 },
-          { href: '/admin/riders', label: 'Riders', heading: 'Riders & fleets', icon: Truck },
-          { href: '/admin/verify-visits', label: 'Verification visits', icon: ClipboardCheck },
-          { href: '/admin/users', label: 'Users', icon: Users },
+          { href: '/admin/landlord', label: 'Landlords', icon: Building2, area: 'landlords' },
+          {
+            href: '/admin/riders',
+            label: 'Riders',
+            heading: 'Riders & fleets',
+            icon: Truck,
+            area: 'riders',
+          },
+          {
+            href: '/admin/verify-visits',
+            label: 'Verification visits',
+            icon: ClipboardCheck,
+            area: 'verify_visits',
+          },
+          { href: '/admin/users', label: 'Users', icon: Users, area: 'users' },
         ],
       },
       {
@@ -183,26 +208,41 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             label: 'Verification queue',
             heading: 'Verification across the platform',
             icon: ShieldCheck,
+            area: 'verification',
           },
-          // Visible to every admin, editable only by a super admin. An admin
-          // who cannot see who else has access cannot tell a colleague from a
-          // problem.
-          { href: '/admin/staff', label: 'Staff', heading: 'Who runs Sync', icon: UserCog },
+          // Visible to every admin GRANTED IT, editable only by a super admin.
+          // It used to be visible to every admin full stop, on the reasoning
+          // that somebody who cannot see who else has access cannot tell a
+          // colleague from a problem. That still holds for an admin — and it
+          // is now a grant, because "who runs Sync" is not something a
+          // part-time document reviewer needs on their screen.
+          {
+            href: '/admin/staff',
+            label: 'Staff',
+            heading: 'Who runs Sync',
+            icon: UserCog,
+            area: 'staff',
+          },
         ],
       },
       {
         label: 'Insights',
         items: [
-          { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-          { href: '/admin/editorial', label: 'Editorial', icon: Newspaper },
-          { href: '/admin/reviews', label: 'Reviews', icon: MessageSquareQuote },
+          { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, area: 'analytics' },
+          { href: '/admin/editorial', label: 'Editorial', icon: Newspaper, area: 'editorial' },
+          {
+            href: '/admin/reviews',
+            label: 'Reviews',
+            icon: MessageSquareQuote,
+            area: 'reviews',
+          },
         ],
       },
       {
         label: 'Oversight',
         items: [
-          { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon },
-          { href: '/admin/settings', label: 'Settings', icon: Settings },
+          { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon, area: 'disputes' },
+          { href: '/admin/settings', label: 'Settings', icon: Settings, area: 'settings' },
         ],
       },
     ],
