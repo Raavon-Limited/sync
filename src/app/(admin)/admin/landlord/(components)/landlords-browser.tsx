@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Home, LayoutGrid, List, ShieldCheck, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { QueueFilterBar, useQueueFilter, useStatusCounts } from '@/components/admin/account-queue';
 import { cn } from '@/lib/utils';
 
 export interface LandlordRow {
@@ -94,6 +95,18 @@ function Meta({ row }: { row: LandlordRow }) {
 
 export function LandlordsBrowser({ rows }: { rows: LandlordRow[] }) {
   const [view, setView] = useState<View>('grid');
+  // The same chips as the vendor and rider queues. This list had none, so the
+  // one landlord waiting on a decision had to be found by reading every badge —
+  // which is exactly the scan the ordering above already tries to spare you.
+  const counts = useStatusCounts(rows);
+  const [filter, setFilter] = useQueueFilter(counts);
+  const [search, setSearch] = useState('');
+
+  const visible = rows.filter((r) => {
+    if (filter !== 'all' && r.verificationStatus !== filter) return false;
+    if (search && !r.businessName.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
   // Read after mount, not during render: the server has no localStorage, and
   // seeding state from it directly would hydrate a grid over a list.
@@ -134,6 +147,15 @@ export function LandlordsBrowser({ rows }: { rows: LandlordRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <QueueFilterBar
+        filter={filter}
+        onFilter={setFilter}
+        search={search}
+        onSearch={setSearch}
+        counts={counts}
+        placeholder="Search landlords…"
+      />
+
       <div className="flex items-center justify-end gap-1">
         {(
           [
@@ -159,9 +181,17 @@ export function LandlordsBrowser({ rows }: { rows: LandlordRow[] }) {
         ))}
       </div>
 
+      {/* Filtered to nothing, which is different from having no landlords —
+          that case returned above with its own wording. */}
+      {visible.length === 0 && (
+        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
+          {filter === 'pending' ? 'Nothing waiting on you.' : 'No landlords match.'}
+        </p>
+      )}
+
       {view === 'grid' ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => (
+          {visible.map((row) => (
             <Link
               key={row.id}
               href={`/admin/landlord/${row.slug}`}
@@ -182,7 +212,7 @@ export function LandlordsBrowser({ rows }: { rows: LandlordRow[] }) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {rows.map((row) => (
+          {visible.map((row) => (
             <Link
               key={row.id}
               href={`/admin/landlord/${row.slug}`}

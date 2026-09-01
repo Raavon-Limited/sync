@@ -21,13 +21,15 @@
 import { useMemo, useState, useTransition } from 'react';
 import { Bike, Building2, CircleDot, Loader2, ShieldAlert, Star } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
+import {
+  AccountCard,
+  QueueFilterBar,
+  useQueueFilter,
+  useStatusCounts,
+} from '@/components/admin/account-queue';
 import { formatKobo } from '@/lib/utils/format';
 import { setAccountSuspension } from '@/modules/admin/actions';
-import {
-  VerificationReview,
-  VENDOR_BADGE,
-  type AdminDoc,
-} from '@/components/admin/verification-review';
+import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
 export interface AdminRider {
   id: string;
@@ -47,9 +49,8 @@ export interface AdminRider {
   earnedKobo: number;
   createdAt: string;
   docs: AdminDoc[];
+  selfieUrl?: string;
 }
-
-const FILTERS = ['pending', 'unverified', 'verified', 'rejected', 'suspended', 'all'] as const;
 
 function matches(r: AdminRider, filter: string) {
   if (filter === 'all') return true;
@@ -140,18 +141,16 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export function RidersConsole({ riders }: { riders: AdminRider[] }) {
+  const statusCounts = useStatusCounts(riders);
+  // Suspension is not a verification status, so useStatusCounts cannot know
+  // about it — it is counted here and passed alongside.
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: riders.length };
-    for (const r of riders) {
-      c[r.verificationStatus] = (c[r.verificationStatus] ?? 0) + 1;
-      if (r.suspendedAt) c.suspended = (c.suspended ?? 0) + 1;
-    }
+    const c = { ...statusCounts };
+    for (const r of riders) if (r.suspendedAt) c.suspended = (c.suspended ?? 0) + 1;
     return c;
-  }, [riders]);
+  }, [statusCounts, riders]);
 
-  // Open on the work, same as the vendor queue: a queue whose first screen is
-  // not the thing waiting on you is not a queue.
-  const [filter, setFilter] = useState<string>(() => (counts.pending ? 'pending' : 'all'));
+  const [filter, setFilter] = useQueueFilter(counts);
   const [search, setSearch] = useState('');
 
   const visible = riders.filter((r) => {
@@ -167,29 +166,15 @@ export function RidersConsole({ riders }: { riders: AdminRider[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, plate or fleet…"
-          className="max-w-xs"
-        />
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
-              filter === f
-                ? 'border-lime-deep/40 bg-lime/10 text-lime-deep'
-                : 'border-line/10 text-content-muted hover:text-content'
-            }`}
-          >
-            {f}
-            {counts[f] ? <span className="ml-1.5 opacity-60">{counts[f]}</span> : null}
-          </button>
-        ))}
-      </div>
+      <QueueFilterBar
+        filter={filter}
+        onFilter={setFilter}
+        search={search}
+        onSearch={setSearch}
+        counts={counts}
+        placeholder="Search name, plate or fleet…"
+        extra={['suspended']}
+      />
 
       {visible.length === 0 && (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
@@ -203,77 +188,75 @@ export function RidersConsole({ riders }: { riders: AdminRider[] }) {
 
       <div className="flex flex-col gap-3">
         {visible.map((r) => (
-          <div
+          <AccountCard
             key={r.id}
-            className="border-line/10 bg-panel flex flex-col gap-4 rounded-xl border p-4"
+            name={r.name}
+            status={r.verificationStatus}
+            faceUrl={r.selfieUrl}
+            flags={
+              <>
+                {r.blocked && (
+                  <Badge className="bg-rose-500/10 text-rose-600">blocked for fraud</Badge>
+                )}
+                {r.suspendedAt && <Badge className="bg-coral/10 text-coral">suspended</Badge>}
+                {r.isOnline && !r.suspendedAt && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600">
+                    <CircleDot className="size-3" aria-hidden="true" />
+                    online
+                  </span>
+                )}
+              </>
+            }
+            meta={
+              <p className="text-content-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                <span className="flex items-center gap-1">
+                  <Bike className="size-3.5" aria-hidden="true" />
+                  {r.vehicleType}
+                  {r.plateNumber ? ` · ${r.plateNumber}` : ''}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Building2 className="size-3.5" aria-hidden="true" />
+                  {r.companyName ?? 'Independent'}
+                </span>
+                <span>{r.delivered} delivered</span>
+                {/* Surfaced on the COLLAPSED card on purpose: a rider holding
+                    somebody's food is the one fact you need before deciding
+                    whether to open them, not after. */}
+                {r.active > 0 && <span className="text-amber-600">{r.active} in flight</span>}
+              </p>
+            }
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-content flex flex-wrap items-center gap-2 font-medium">
-                  {r.name}
-                  <Badge className={VENDOR_BADGE[r.verificationStatus] ?? VENDOR_BADGE.unverified}>
-                    {r.verificationStatus}
-                  </Badge>
-                  {r.blocked && (
-                    <Badge className="bg-rose-500/10 text-rose-600">blocked for fraud</Badge>
-                  )}
-                  {r.isOnline && !r.suspendedAt && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-600">
-                      <CircleDot className="size-3" aria-hidden="true" />
-                      online
-                    </span>
-                  )}
-                </p>
-                <p className="text-content-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Bike className="size-3.5" aria-hidden="true" />
-                    {r.vehicleType}
-                    {r.plateNumber ? ` · ${r.plateNumber}` : ''}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Building2 className="size-3.5" aria-hidden="true" />
-                    {r.companyName ?? 'Independent'}
-                  </span>
-                  {r.phone && <span>{r.phone}</span>}
-                  <span>
-                    joined{' '}
-                    {new Date(r.createdAt).toLocaleDateString('en-NG', {
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
-                </p>
-              </div>
-
+            <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center gap-5">
                 <Stat label="Delivered" value={String(r.delivered)} />
                 <Stat label="In flight" value={String(r.active)} />
                 <Stat label="Fees earned" value={formatKobo(r.earnedKobo)} />
                 <Stat label="Rating" value={r.ratingAvg > 0 ? r.ratingAvg.toFixed(1) : '—'} />
                 <Star className="text-content-muted size-4" aria-hidden="true" />
+                {r.phone && <Stat label="Phone" value={r.phone} />}
               </div>
+
+              <SuspensionControl rider={r} />
+
+              {/* The documents and the verify/reject/fraud decision, shared with
+                  the vendor queue. `kind` is what points its buttons at
+                  set_rider_verification instead. */}
+              <VerificationReview
+                kind="rider"
+                showHeader={false}
+                vendor={{
+                  id: r.id,
+                  businessName: r.name,
+                  slug: r.id,
+                  category: r.vehicleType,
+                  area: r.plateNumber,
+                  verificationStatus: r.verificationStatus,
+                  createdAt: r.createdAt,
+                  docs: r.docs,
+                }}
+              />
             </div>
-
-            <SuspensionControl rider={r} />
-
-            {/* The documents and the verify/reject/fraud decision, shared with
-                the vendor queue. `kind` is what points its buttons at
-                set_rider_verification instead. */}
-            <VerificationReview
-              kind="rider"
-              showHeader={false}
-              vendor={{
-                id: r.id,
-                businessName: r.name,
-                slug: r.id,
-                category: r.vehicleType,
-                area: r.plateNumber,
-                verificationStatus: r.verificationStatus,
-                createdAt: r.createdAt,
-                docs: r.docs,
-              }}
-            />
-          </div>
+          </AccountCard>
         ))}
       </div>
     </div>

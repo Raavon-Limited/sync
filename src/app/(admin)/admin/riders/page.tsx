@@ -23,6 +23,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { createUntypedAdminClient } from '@/lib/supabase/admin';
+import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { RidersConsole, type AdminRider } from './(components)/riders-console';
 
 export const metadata: Metadata = { title: 'Riders — Admin' };
@@ -118,6 +119,8 @@ export default async function Page() {
     stats.set(key, s);
   }
 
+  const selfieByOwner = await selfieUrlsFor(ids);
+
   const rows: AdminRider[] = riders.map((r) => {
     const id = r.id as string;
     const person = byId.get(id);
@@ -144,6 +147,7 @@ export default async function Page() {
       earnedKobo: s.earnedKobo,
       createdAt: r.created_at as string,
       docs: docsByOwner.get(id) ?? [],
+      selfieUrl: selfieByOwner.get(id),
     };
   });
 

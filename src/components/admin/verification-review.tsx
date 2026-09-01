@@ -69,6 +69,8 @@ export interface AdminVendor {
   verificationStatus: string;
   createdAt: string;
   docs: AdminDoc[];
+  /** Signed link to their live photo, for the queue card. Absent until uploaded. */
+  selfieUrl?: string;
 }
 
 export const VENDOR_BADGE: Record<string, string> = {

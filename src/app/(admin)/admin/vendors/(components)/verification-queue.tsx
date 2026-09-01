@@ -1,23 +1,32 @@
 /**
- * The verification queue — every business awaiting a decision, vendors and
- * landlords alike.
+ * The vendor verification queue — which businesses, in what order, and how to
+ * find one.
  *
  * THE CARD ITSELF LIVES IN components/admin/verification-review, because the
- * landlord page renders the same review. This file is the LIST: which
- * businesses, in what order, and how to find one.
+ * landlord and rider screens render the same review. This file is the LIST.
  *
  * PENDING FIRST, AND IT IS THE DEFAULT FILTER
  *   The list used to open on "all", ordered by signup date, so the one business
  *   actually waiting on staff sat wherever it happened to fall among everyone
- *   who had ever registered. A queue whose first screen is not the work is not
- *   a queue. It now opens on pending — falling back to "all" when there is no
- *   pending work, so the page is never an empty state that looks broken — and
- *   every filter chip carries its own count.
+ *   who had ever registered. It now opens on pending — falling back to "all"
+ *   when there is no pending work, so the page is never an empty state that
+ *   looks broken — and every filter chip carries its own count.
+ *
+ * FOLDERS ARE BEHIND A CLICK
+ *   Every business used to arrive with its documents already open, which meant
+ *   four signed-image requests per business on first paint and a page where a
+ *   verified account nobody needs to look at again was exactly as tall as the
+ *   one waiting on a decision. See components/admin/account-queue.
  */
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Input } from '@/components/ui';
+import { useState } from 'react';
+import {
+  AccountCard,
+  QueueFilterBar,
+  useQueueFilter,
+  useStatusCounts,
+} from '@/components/admin/account-queue';
 import {
   VerificationReview,
   type AdminVendor,
@@ -26,18 +35,9 @@ import {
 
 export type { AdminVendor, AdminDoc };
 
-const FILTERS = ['pending', 'unverified', 'verified', 'rejected', 'all'] as const;
-
 export function VerificationQueue({ vendors }: { vendors: AdminVendor[] }) {
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: vendors.length };
-    for (const v of vendors) c[v.verificationStatus] = (c[v.verificationStatus] ?? 0) + 1;
-    return c;
-  }, [vendors]);
-
-  // Land on the work when there is work. `useState` initialiser, not an effect:
-  // the right tab on first paint, with no flash of the wrong list.
-  const [filter, setFilter] = useState<string>(() => (counts.pending ? 'pending' : 'all'));
+  const counts = useStatusCounts(vendors);
+  const [filter, setFilter] = useQueueFilter(counts);
   const [search, setSearch] = useState('');
 
   const visible = vendors.filter((v) => {
@@ -48,29 +48,14 @@ export function VerificationQueue({ vendors }: { vendors: AdminVendor[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search businesses..."
-          className="max-w-xs"
-        />
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
-              filter === f
-                ? 'border-lime-deep/40 bg-lime/10 text-lime-deep'
-                : 'border-line/10 text-content-muted hover:text-content'
-            }`}
-          >
-            {f}
-            {counts[f] ? <span className="ml-1.5 opacity-60">{counts[f]}</span> : null}
-          </button>
-        ))}
-      </div>
+      <QueueFilterBar
+        filter={filter}
+        onFilter={setFilter}
+        search={search}
+        onSearch={setSearch}
+        counts={counts}
+        placeholder="Search businesses..."
+      />
 
       {visible.length === 0 && (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
@@ -80,7 +65,36 @@ export function VerificationQueue({ vendors }: { vendors: AdminVendor[] }) {
 
       <div className="flex flex-col gap-3">
         {visible.map((v) => (
-          <VerificationReview key={v.id} vendor={v} />
+          <AccountCard
+            key={v.id}
+            name={v.businessName}
+            status={v.verificationStatus}
+            faceUrl={v.selfieUrl}
+            meta={
+              <p className="text-content-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                <span>{v.category}</span>
+                <span>·</span>
+                <span>{v.area ?? 'No area'}</span>
+                <span>·</span>
+                <span>
+                  joined{' '}
+                  {new Date(v.createdAt).toLocaleDateString('en-NG', {
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </span>
+                <span>·</span>
+                {/* The one number that says whether opening this is worth it. */}
+                <span>
+                  {v.docs.length === 0
+                    ? 'nothing uploaded yet'
+                    : `${v.docs.filter((d) => d.status === 'approved').length} of ${v.docs.length} approved`}
+                </span>
+              </p>
+            }
+          >
+            <VerificationReview vendor={v} showHeader={false} />
+          </AccountCard>
         ))}
       </div>
     </div>

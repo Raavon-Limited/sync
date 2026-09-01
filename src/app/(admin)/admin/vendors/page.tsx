@@ -14,6 +14,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { VerificationQueue, type AdminVendor } from './(components)/verification-queue';
 
 export const metadata: Metadata = { title: 'Vendors — Admin' };
@@ -63,6 +64,10 @@ export default async function Page() {
     byOwner.set(d.owner_id as string, list);
   }
 
+  // The face for the card. One round trip for the whole page — see
+  // modules/admin/selfies for why the queue is scannable by sight at all.
+  const selfieByOwner = await selfieUrlsFor(((vendors ?? []) as Row[]).map((v) => v.id as string));
+
   const rows: AdminVendor[] = ((vendors ?? []) as Row[]).map((v) => ({
     id: v.id as string,
     businessName: (v.business_name as string) ?? 'Unnamed business',
@@ -72,6 +77,7 @@ export default async function Page() {
     verificationStatus: (v.verification_status as string) ?? 'unverified',
     createdAt: v.created_at as string,
     docs: byOwner.get(v.id as string) ?? [],
+    selfieUrl: selfieByOwner.get(v.id as string),
   }));
 
   return (
