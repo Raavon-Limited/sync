@@ -13,12 +13,15 @@ export const metadata: Metadata = { title: 'Sign up' };
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; email?: string }>;
 }) {
-  const { next } = await searchParams;
+  // `email` comes from /login, which has just told this visitor there is no
+  // account for that address. Typing it again on the next screen is the same
+  // dead end with extra steps.
+  const { next, email } = await searchParams;
   return (
     <AuthLayout eyebrow="Create your account" title="Sign up to Sync">
-      <SignupForm next={next} />
+      <SignupForm next={next} email={email} />
     </AuthLayout>
   );
 }

@@ -95,7 +95,7 @@ const STEP_FIELDS: Record<number, (keyof SignupInput)[]> = {
   2: ['email', 'password', 'confirmPassword', 'acceptedTerms'],
 };
 
-export function SignupForm({ next }: { next?: string }) {
+export function SignupForm({ next, email: initialEmail }: { next?: string; email?: string }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const { data: campuses = [], isPending: campusesLoading } = useCampuses();
@@ -124,7 +124,9 @@ export function SignupForm({ next }: { next?: string }) {
       acceptedTerms: false,
       fullName: '',
       phone: '',
-      email: '',
+      // Prefilled when /login sent them here because this address has no
+      // account. Step 3 still shows and validates it like any other field.
+      email: initialEmail ?? '',
       password: '',
       confirmPassword: '',
     },
@@ -262,7 +264,17 @@ export function SignupForm({ next }: { next?: string }) {
         <>
           <fieldset className="flex flex-col gap-1.5">
             <legend className="text-content mb-1.5 text-sm font-medium">I am a…</legend>
-            <div className="grid grid-cols-2 gap-3">
+            {/* One full-width card per row, not a 2-up grid.
+                Three roles in two columns left a hole in the grid and squeezed
+                each card into a narrow box, so "I'm a student" wrapped onto
+                three lines and the cards grew tall enough to push the campus
+                field off a phone screen. Full width gives the label a single
+                line and lets the card be short.
+
+                The "ROLE" eyebrow is gone with it: the tick already says which
+                one is selected, and a word repeated on every card is not
+                telling anyone anything. */}
+            <div className="flex flex-col gap-2.5">
               {ROLES.map((r) => {
                 const selected = role === r.id;
                 return (
@@ -272,42 +284,39 @@ export function SignupForm({ next }: { next?: string }) {
                     onClick={() => selectRole(r.id)}
                     aria-pressed={selected}
                     className={cn(
-                      'flex flex-col rounded-2xl border p-5 text-left transition-all',
+                      'flex w-full items-center justify-between gap-3 rounded-2xl border p-4 pr-2 text-left transition-all',
                       selected
                         ? 'border-line bg-lime shadow-[3px_3px_0_0_var(--color-ink)]'
                         : 'border-line/15 hover:border-line/40 bg-panel',
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className={cn('eyebrow', selected ? 'text-ink/60' : 'text-content/60')}>
-                        {selected ? 'Role · Selected' : 'Role'}
+                    <span className="min-w-0">
+                      <span
+                        className={cn(
+                          'font-display block text-base font-bold',
+                          selected ? 'text-ink' : 'text-content',
+                        )}
+                      >
+                        {r.label}
                       </span>
                       <span
                         className={cn(
-                          'flex h-5 w-5 items-center justify-center border',
-                          selected
-                            ? 'border-line bg-ink rounded-md text-white'
-                            : 'border-line/30 rounded-full',
+                          'mt-0.5 block text-sm',
+                          selected ? 'text-ink/70' : 'text-content-muted',
                         )}
                       >
-                        {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+                        {r.desc}
                       </span>
-                    </div>
-                    <span
-                      className={cn(
-                        'font-display mt-4 text-xl font-bold',
-                        selected ? 'text-ink' : 'text-content',
-                      )}
-                    >
-                      {r.label}
                     </span>
                     <span
                       className={cn(
-                        'mt-1 text-sm',
-                        selected ? 'text-ink/70' : 'text-content-muted',
+                        'flex h-5 w-5 shrink-0 items-center justify-center border',
+                        selected
+                          ? 'border-line bg-ink rounded-md text-white'
+                          : 'border-line/30 rounded-full',
                       )}
                     >
-                      {r.desc}
+                      {selected && <Check className="h-3 w-3" strokeWidth={3} />}
                     </span>
                   </button>
                 );

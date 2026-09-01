@@ -2,12 +2,14 @@
  * LoginForm - email-first, adaptive sign-in.
  *
  * Step 1: enter email. We detect the account type (getLoginMethod):
+ *   - no account at all → say so and offer signup, with the address carried
  *   - students / vendors  → reveal a PASSWORD field (signIn)
  *   - admins / super_admins (passwordless) → email a code + show OTP boxes
  *
- * Detection defaults to "password" for unknown emails (and when the backend
- * isn't reachable), and there's still a manual "use an email code" fallback.
- * Both paths route by the trusted role. `next` resumes the requested page.
+ * Detection falls back to "password" whenever the backend cannot answer, so a
+ * bad moment never tells a real account holder to go and sign up, and there's
+ * still a manual "use an email code" fallback. Both paths route by the trusted
+ * role. `next` resumes the requested page.
  */
 'use client';
 
@@ -105,7 +107,7 @@ function offerRoleChoice(roles?: string[]): boolean {
   return (roles ?? []).filter((r) => ROLE_HOME[r]).length > 1;
 }
 
-type Step = 'email' | 'password' | 'otp';
+type Step = 'email' | 'password' | 'otp' | 'unknown';
 
 export function LoginForm({ next, email: initialEmail }: { next?: string; email?: string }) {
   const router = useRouter();
@@ -128,7 +130,19 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
    */
   const [choices, setChoices] = useState<string[] | null>(null);
 
-  const signupHref = next ? `/signup?next=${encodeURIComponent(next)}` : '/signup';
+  /**
+   * /signup, carrying whatever we already know. The email is the point: this
+   * link is offered right after someone typed an address we have no account
+   * for, and making them retype it there is the whole complaint in miniature.
+   */
+  const signupHref = (() => {
+    const q = new URLSearchParams();
+    if (next) q.set('next', next);
+    const value = email.trim();
+    if (value) q.set('email', value);
+    const qs = q.toString();
+    return qs ? `/signup?${qs}` : '/signup';
+  })();
 
   // Tick the resend cooldown down to 0.
   useEffect(() => {
@@ -147,7 +161,9 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     setBusy(true);
     try {
       const { method } = await getLoginMethod(value);
-      if (method === 'otp') {
+      if (method === 'none') {
+        setStep('unknown');
+      } else if (method === 'otp') {
         // Show the OTP boxes regardless; still attempt to send the code.
         setStep('otp');
         const res = await sendLoginOtp(value);
@@ -423,12 +439,17 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </form>
         )}
 
-        <p className="text-content-muted text-center text-sm">
-          Don&rsquo;t have an account?{' '}
-          <Link href={signupHref} className="text-lime-deep font-medium hover:underline">
-            Sign up
-          </Link>
-        </p>
+        {/* Not on the 'unknown' step: that screen is already a "create an
+            account" button and this line under it would be the same offer
+            twice, in weaker words. */}
+        {step !== 'unknown' && (
+          <p className="text-content-muted text-center text-sm">
+            Don&rsquo;t have an account?{' '}
+            <Link href={signupHref} className="text-lime-deep font-medium hover:underline">
+              Sign up
+            </Link>
+          </p>
+        )}
       </div>
     </>
   );

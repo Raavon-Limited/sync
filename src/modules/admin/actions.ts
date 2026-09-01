@@ -500,3 +500,75 @@ export async function addStaffByEmail(input: { email: string; role: 'admin' | 's
   await setAccountRole({ userId: found.id, role: input.role });
   return found.name;
 }
+
+// ── Access roles ────────────────────────────────────────────────────────────
+//
+// Authorisation for all four lives in the database: private.may_manage_roles
+// allows a super admin for platform roles and a branch owner for their own.
+// These do not restate it — a second copy would be one more thing to keep in
+// step, and the one that could be bypassed by a request that never came
+// through this module.
+//
+// REGENERATE THE TYPES once 20260902130000 is applied and `rpcUntyped` can go.
+
+async function rpcUntyped(name: string, args: Record<string, unknown> = {}) {
+  const supabase = await createServerClient();
+  const call = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>;
+  return call(name, args);
+}
+
+/** A new platform-wide role, with no grants until somebody sets them. */
+export async function createAccessRole(input: { name: string; description?: string }) {
+  await assertStaff();
+
+  const { data, error } = await rpcUntyped('create_access_role', {
+    p_name: input.name,
+    p_description: input.description ?? null,
+    p_scope: 'admin',
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not create that role.'));
+  revalidatePath('/admin/staff');
+  return data as string;
+}
+
+/**
+ * Set one area on one role. `level: null` removes the grant, which is how "no
+ * access" is expressed — see 20260902130000 for why 'none' is not stored.
+ */
+export async function setRoleGrant(input: {
+  roleId: string;
+  area: string;
+  level: 'read' | 'write' | null;
+}) {
+  await assertStaff();
+
+  const { error } = await rpcUntyped('set_role_grant', {
+    p_role: input.roleId,
+    p_area: input.area,
+    p_level: input.level,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not change that permission.'));
+  revalidatePath('/admin/staff');
+}
+
+/** Put somebody in a role, or take them out of it. */
+export async function setRoleMembership(input: {
+  roleId: string;
+  userId: string;
+  member: boolean;
+}) {
+  await assertStaff();
+
+  const { error } = await rpcUntyped(
+    input.member ? 'assign_access_role' : 'revoke_access_role',
+    { p_role: input.roleId, p_user: input.userId },
+  );
+
+  if (error) throw new Error(userMessage(error, 'We could not change that.'));
+  revalidatePath('/admin/staff');
+}
