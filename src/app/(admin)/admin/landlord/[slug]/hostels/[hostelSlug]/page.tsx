@@ -62,28 +62,32 @@ export default async function Page({
   if (!hostel) notFound();
   const h = hostel as Row;
 
-  const [{ data: rooms }, { data: bookings }, { data: visits }, { data: avail }] = await Promise.all([
-    // `hostel_room_state` already carries the label and the price coalesced
-    // against the hostel, so reading `hostel_rooms` too would be a second trip
-    // for data this view has.
-    admin.from('hostel_room_state').select('room_id, label, price_kobo, state').eq('hostel_id', h.id),
-    admin
-      .from('bookings')
-      .select('id, status, move_in, end_date, created_at, paid_at')
-      .eq('hostel_id', h.id)
-      .order('created_at', { ascending: false }),
-    // A hostel can be visited more than once — rejected, then revisited. Only
-    // the newest verdict is current, so this is a list-of-one, not a single.
-    admin
-      .from('hostel_verification_visits')
-      .select('status, scheduled_for, notes, photos, video_url, decided_at, created_at')
-      .eq('hostel_id', h.id)
-      .order('created_at', { ascending: false })
-      .limit(1),
-    // One row per hostel always — the view groups by hostel and left-joins
-    // rooms, so a hostel with none still reports 0/0.
-    admin.from('hostel_availability').select('*').eq('hostel_id', h.id).maybeSingle(),
-  ]);
+  const [{ data: rooms }, { data: bookings }, { data: visits }, { data: avail }] =
+    await Promise.all([
+      // `hostel_room_state` already carries the label and the price coalesced
+      // against the hostel, so reading `hostel_rooms` too would be a second trip
+      // for data this view has.
+      admin
+        .from('hostel_room_state')
+        .select('room_id, label, price_kobo, state')
+        .eq('hostel_id', h.id),
+      admin
+        .from('bookings')
+        .select('id, status, move_in, end_date, created_at, paid_at')
+        .eq('hostel_id', h.id)
+        .order('created_at', { ascending: false }),
+      // A hostel can be visited more than once — rejected, then revisited. Only
+      // the newest verdict is current, so this is a list-of-one, not a single.
+      admin
+        .from('hostel_verification_visits')
+        .select('status, scheduled_for, notes, photos, video_url, decided_at, created_at')
+        .eq('hostel_id', h.id)
+        .order('created_at', { ascending: false })
+        .limit(1),
+      // One row per hostel always — the view groups by hostel and left-joins
+      // rooms, so a hostel with none still reports 0/0.
+      admin.from('hostel_availability').select('*').eq('hostel_id', h.id).maybeSingle(),
+    ]);
 
   const v = (((visits ?? []) as Row[])[0] ?? null) as Row | null;
   const a = avail as Row | null;
@@ -142,8 +146,17 @@ export default async function Page({
       {(h.hostel_images ?? []).length > 0 && (
         <div className="flex flex-wrap gap-2">
           {(h.hostel_images as Row[]).map((img, i) => (
-            <div key={i} className="border-line/10 relative size-28 overflow-hidden rounded-lg border">
-              <Image src={img.url} alt={`${h.name} ${i + 1}`} fill sizes="112px" className="object-cover" />
+            <div
+              key={i}
+              className="border-line/10 relative size-28 overflow-hidden rounded-lg border"
+            >
+              <Image
+                src={img.url}
+                alt={`${h.name} ${i + 1}`}
+                fill
+                sizes="112px"
+                className="object-cover"
+              />
             </div>
           ))}
         </div>
@@ -160,7 +173,10 @@ export default async function Page({
         ) : (
           <div className="flex flex-wrap gap-2">
             {((rooms ?? []) as Row[]).map((r) => (
-              <div key={r.room_id} className="border-line/10 flex flex-col gap-1 rounded-lg border px-3 py-2">
+              <div
+                key={r.room_id}
+                className="border-line/10 flex flex-col gap-1 rounded-lg border px-3 py-2"
+              >
                 <span className="text-content flex items-center gap-2 text-sm">
                   {r.label}
                   <Badge className={ROOM_STATE[r.state] ?? ROOM_STATE.unlisted}>{r.state}</Badge>
@@ -181,7 +197,10 @@ export default async function Page({
         ) : (
           <div className="border-line/10 divide-line/5 divide-y rounded-xl border">
             {((bookings ?? []) as Row[]).map((b) => (
-              <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+              <div
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
+              >
                 <span className="text-content font-mono text-xs">
                   {String(b.id).slice(0, 8).toUpperCase()}
                 </span>
@@ -202,7 +221,10 @@ export default async function Page({
         {!v ? (
           <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
             Nobody has been sent to this hostel.{' '}
-            <Link href="/admin/verify-visits" className="text-lime-deep underline underline-offset-2">
+            <Link
+              href="/admin/verify-visits"
+              className="text-lime-deep underline underline-offset-2"
+            >
               Schedule a visit
             </Link>
           </p>
@@ -221,8 +243,17 @@ export default async function Page({
             {(v.photos ?? []).length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {(v.photos as string[]).map((src, i) => (
-                  <div key={i} className="border-line/10 relative size-24 overflow-hidden rounded-lg border">
-                    <Image src={src} alt={`Visit ${i + 1}`} fill sizes="96px" className="object-cover" />
+                  <div
+                    key={i}
+                    className="border-line/10 relative size-24 overflow-hidden rounded-lg border"
+                  >
+                    <Image
+                      src={src}
+                      alt={`Visit ${i + 1}`}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
                   </div>
                 ))}
               </div>

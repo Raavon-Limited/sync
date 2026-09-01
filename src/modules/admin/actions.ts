@@ -148,6 +148,47 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
 }
 
 /**
+ * Signed links for a whole folder at once, keyed by storage path.
+ *
+ * ONE ROUND TRIP, BECAUSE THE REVIEW SCREEN NEEDS THEM ALL AT ONCE. The point
+ * of that screen is comparing a live photo against an ID — you cannot compare
+ * two things you have to open one at a time, so every document is rendered
+ * inline and every one needs a URL before first paint. Calling the single
+ * version in a loop would be four server actions per business and a visible
+ * cascade of images popping in.
+ *
+ * A MISSING FILE IS OMITTED, NOT THROWN. One unreadable object must not blank
+ * the entire review — the reviewer still needs to see the other three, and a
+ * tile with no preview says "this one is missing" far more usefully than an
+ * error page does.
+ *
+ * The links expire in 5 minutes, same as the single version: long enough to
+ * review, short enough that a leaked admin screenshot is not a leaked passport.
+ */
+export async function getDocumentUrls(storagePaths: string[]): Promise<Record<string, string>> {
+  await assertStaff();
+  if (storagePaths.length === 0) return {};
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from('verification-docs')
+    .createSignedUrls(storagePaths, 60 * 5);
+
+  if (error) {
+    console.error('[verification] could not sign documents', error.message);
+    return {};
+  }
+
+  const out: Record<string, string> = {};
+  for (const row of data ?? []) {
+    // `path` comes back null on the entries that failed; those are the missing
+    // objects and they are simply left out of the map.
+    if (row.signedUrl && row.path) out[row.path] = row.signedUrl;
+  }
+  return out;
+}
+
+/**
  * Resolve a dispute.
  *
  * CALLED WITH THE USER'S SESSION, NOT THE SERVICE ROLE.

@@ -45,11 +45,43 @@ export interface DashboardKpi {
  * a new KPI label is introduced; unmatched labels simply render without a
  * badge (CustomCard already handles icon/iconBg being undefined).
  */
+/**
+ * The tint carries BOTH the ground and the ink, and it has to.
+ *
+ * CustomCard puts this string on the wrapper around the icon, and the icon
+ * itself is a bare lucide glyph drawn in `currentColor`. So with a background
+ * alone the glyph inherited whatever the card's text colour was — cream in dark
+ * mode — and a cream wallet on `bg-emerald-100` mint was invisible. Every other
+ * card in the app that uses this component colours its own icon
+ * (`text-blue-600` and so on); this map was the one place that did not.
+ *
+ * THE HUE IS IN THE GROUND; THE CONTRAST IS IN A TOKEN.
+ *   ground  `bg-<hue>-500/15` — an ALPHA tint, not the fixed `-100` shade it
+ *           used to be. A translucent hue composites correctly over cream AND
+ *           over ink, where a fixed pale shade is a light-mode decision baked
+ *           into a theme-aware surface. This is the pattern the rest of the
+ *           codebase already settled on.
+ *   glyph   `text-content` — the same token the card's own text uses, so it is
+ *           ink on the cream theme and cream on the dark one. Legible in both
+ *           by construction rather than by a colour someone eyeballed.
+ *
+ * WHY NOT `dark:text-<hue>-400`, WHICH IS THE OBVIOUS FIX.
+ *   It would not fire. This app switches themes with a `.dark` CLASS on the
+ *   root (see ThemeToggle), while Tailwind's `dark:` variant defaults to
+ *   `@media (prefers-color-scheme: dark)` and no `@custom-variant dark` is
+ *   declared in globals.css. So `dark:` tracks the OS, not the toggle: someone
+ *   on a light OS who switches the app to dark gets the light-mode colour, and
+ *   the auth layout — which forces `.dark` on its subtree — never gets the dark
+ *   one at all. A token has no such gap.
+ *
+ *   The four hues still tell the cards apart; at 40px the tile is what carries
+ *   that, not the stroke inside it.
+ */
 const KPI_STYLE: Record<string, { icon: LucideIcon; iconBg: string }> = {
-  'Total Revenue': { icon: Wallet, iconBg: 'bg-emerald-100' },
-  Orders: { icon: ShoppingBag, iconBg: 'bg-blue-100' },
-  'Store Rating': { icon: Star, iconBg: 'bg-amber-100' },
-  'Stock Alerts': { icon: AlertTriangle, iconBg: 'bg-red-100' },
+  'Total Revenue': { icon: Wallet, iconBg: 'bg-emerald-500/15 text-content' },
+  Orders: { icon: ShoppingBag, iconBg: 'bg-blue-500/15 text-content' },
+  'Store Rating': { icon: Star, iconBg: 'bg-amber-500/15 text-content' },
+  'Stock Alerts': { icon: AlertTriangle, iconBg: 'bg-red-500/15 text-content' },
 };
 
 function withKpiStyle(kpi: DashboardKpi): DashboardKpi {

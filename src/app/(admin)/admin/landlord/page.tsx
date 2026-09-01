@@ -9,24 +9,15 @@
  *   landlords could not reach their own dashboard.
  */
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Home, ShieldCheck, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { LandlordsBrowser, type LandlordRow } from './(components)/landlords-browser';
 
 export const metadata: Metadata = { title: 'Landlords — Admin' };
 
 import type { Row } from '@/lib/supabase/row';
-
-const BADGE: Record<string, string> = {
-  verified: 'bg-emerald-500/10 text-emerald-600',
-  pending: 'bg-amber-500/10 text-amber-600',
-  rejected: 'bg-rose-500/10 text-rose-600',
-  unverified: 'bg-ink/5 text-content-muted',
-};
 
 export default async function Page() {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
@@ -44,6 +35,43 @@ export default async function Page() {
       .order('created_at', { ascending: false }),
     admin.from('hostels').select('id, landlord_id, verified').is('archived_at', null),
   ]);
+
+  // The live photo, for the card. One query for everybody rather than one per
+  // landlord: the list is the place a reviewer scans, and a cascade of images
+  // arriving one request at a time is the thing that makes a queue feel slow.
+  const landlordIds = ((landlords ?? []) as Row[]).map((l) => l.id);
+  const selfieByOwner = new Map<string, string>();
+  if (landlordIds.length) {
+    const { data: selfies } = await admin
+      .from('verification_documents')
+      .select('owner_id, storage_path, uploaded_at')
+      .eq('doc_type', 'selfie')
+      .in('owner_id', landlordIds)
+      // Oldest first, so the last write into the map below is the NEWEST photo.
+      // A landlord who re-submitted after a rejection has more than one.
+      .order('uploaded_at', { ascending: true });
+
+    const pathByOwner = new Map<string, string>();
+    for (const d of (selfies ?? []) as Row[]) pathByOwner.set(d.owner_id, d.storage_path);
+
+    if (pathByOwner.size) {
+      const paths = [...pathByOwner.values()];
+      const { data: signed } = await admin.storage
+        .from('verification-docs')
+        .createSignedUrls(paths, 60 * 5);
+
+      const urlByPath = new Map<string, string>();
+      for (const s of signed ?? []) {
+        // `path` is null on the entries that failed; those owners simply get
+        // the placeholder rather than blanking the whole list.
+        if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+      }
+      for (const [owner, path] of pathByOwner) {
+        const url = urlByPath.get(path);
+        if (url) selfieByOwner.set(owner, url);
+      }
+    }
+  }
 
   const byLandlord = new Map<string, { total: number; verified: number }>();
   for (const h of (hostels ?? []) as Row[]) {
@@ -69,6 +97,17 @@ export default async function Page() {
 
   const waiting = rows.filter((l) => l.verification_status === 'pending').length;
 
+  const browserRows: LandlordRow[] = rows.map((l) => ({
+    id: l.id,
+    slug: l.slug,
+    businessName: l.business_name ?? 'Unnamed',
+    area: l.area ?? null,
+    verificationStatus: l.verification_status ?? 'unverified',
+    hostels: l.counts.total,
+    verifiedHostels: l.counts.verified,
+    selfieUrl: selfieByOwner.get(l.id),
+  }));
+
   return (
     <section className="flex flex-col gap-4">
       <div>
@@ -84,48 +123,9 @@ export default async function Page() {
         </p>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
-          No landlords registered yet.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((l) => (
-            <Link
-              key={l.id}
-              href={`/admin/landlord/${l.slug}`}
-              className="border-line/10 bg-panel hover:border-line/25 flex items-center gap-3 rounded-xl border p-4 transition-colors"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-content flex items-center gap-2 font-medium">
-                  {l.business_name ?? 'Unnamed'}
-                  <Badge className={BADGE[l.verification_status] ?? BADGE.unverified}>
-                    {l.verification_status}
-                  </Badge>
-                </p>
-                <p className="text-content-muted flex flex-wrap items-center gap-3 text-xs">
-                  <span className="flex items-center gap-1">
-                    <Home className="size-3" />
-                    {l.counts.total} hostel{l.counts.total === 1 ? '' : 's'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck className="size-3" />
-                    {/* Hostel verification is separate from landlord
-                        verification: a verified landlord can still list a
-                        property nobody has visited. */}
-                    {l.counts.verified} verified
-                  </span>
-                  <span>{l.area ?? 'No area'}</span>
-                  {l.verification_status === 'pending' && (
-                    <span className="text-amber-600">Review documents</span>
-                  )}
-                </p>
-              </div>
-              <ChevronRight className="text-content-muted size-4 shrink-0" />
-            </Link>
-          ))}
-        </div>
-      )}
+      {/* Cards by default, with the live photo, and a toggle back to a list.
+          See LandlordsBrowser for why the face is on the card. */}
+      <LandlordsBrowser rows={browserRows} />
     </section>
   );
 }
