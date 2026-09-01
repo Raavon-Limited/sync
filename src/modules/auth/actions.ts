@@ -227,23 +227,44 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
   return { ok: true, role, roles, handle: handleFor(data.user, role) };
 }
 
-/** Which input the login form should show for an email: admins/super_admins are
- *  passwordless ('otp'), everyone else uses a password. Defaults to 'password'
- *  for unknown emails (and when Supabase isn't reachable) so we don't reveal
- *  whether an account exists. Backed by the `login_method` SQL function.
+/** Which input the login form should show for an email — and, now, whether
+ *  there is an account to show one for at all.
  *
- *  The env allowlist used to short-circuit this to 'otp'. It does not need to:
- *  `login_method` already answers 'otp' for an account with no password, which
- *  is exactly what seed:admins creates. One source, and it happens to be the
- *  one that knows whether a password exists. */
-export async function getLoginMethod(rawEmail: string): Promise<{ method: 'password' | 'otp' }> {
+ *    'otp'      admins / super_admins, who have no password
+ *    'password' an account that signs in with one
+ *    'none'     no account with this address
+ *
+ *  'none' IS AN ACCOUNT-ENUMERATION ORACLE, AND IT IS DELIBERATE. This used to
+ *  answer 'password' for an address we had never seen, so an unknown email got
+ *  a password box, a rejected password, and no hint that the thing to do was
+ *  sign up. Hiding the answer only worked against a visitor who never tried
+ *  the password — anyone patient enough to type one learned the same fact from
+ *  `signIn`, more slowly. What it cost was every real person who mistyped
+ *  their address or forgot which one they used.
+ *
+ *  So the trade is stated rather than hidden: this endpoint tells a caller
+ *  whether an address has an account here. If that becomes a problem, the fix
+ *  is a rate limit on this action (see lib/security/rate-limit — the `auth`
+ *  limiter is written for exactly this), not going back to lying to the user.
+ *
+ *  BOTH FALLBACKS STAY 'password'. An unreachable backend must never send a
+ *  real account holder to signup, so 'none' is claimed only when the existence
+ *  check actually answered no. Backed by the `login_method` and
+ *  `email_has_account` SQL functions, both service-role only. */
+export async function getLoginMethod(
+  rawEmail: string,
+): Promise<{ method: 'password' | 'otp' | 'none' }> {
   const parsed = emailRule.safeParse(rawEmail);
   if (!parsed.success) return { method: 'password' };
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin.rpc('login_method', { p_email: parsed.data });
-    if (error) return { method: 'password' };
-    return { method: data === 'otp' ? 'otp' : 'password' };
+    const [exists, method] = await Promise.all([
+      admin.rpc('email_has_account', { p_email: parsed.data }),
+      admin.rpc('login_method', { p_email: parsed.data }),
+    ]);
+    if (!exists.error && exists.data === false) return { method: 'none' };
+    if (method.error) return { method: 'password' };
+    return { method: method.data === 'otp' ? 'otp' : 'password' };
   } catch {
     return { method: 'password' };
   }

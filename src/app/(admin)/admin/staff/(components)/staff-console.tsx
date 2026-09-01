@@ -23,13 +23,6 @@
 import { useState, useTransition } from 'react';
 import { Loader2, ShieldCheck, UserPlus, UserMinus } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { addStaffByEmail, setAccountRole } from '@/modules/admin/actions';
 import type { StaffMember } from '@/modules/admin/staff';
 
@@ -52,7 +45,6 @@ export function StaffConsole({
 }) {
   const [busy, startTransition] = useTransition();
   const [email, setEmail] = useState('');
-  const [newRole, setNewRole] = useState<'admin' | 'super_admin'>('admin');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,35 +77,26 @@ export function StaffConsole({
             className="min-w-0 flex-1"
             type="email"
           />
-          <Select value={newRole} onValueChange={(v) => setNewRole(v as 'admin' | 'super_admin')}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="super_admin">Super admin</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             disabled={busy || !email.trim()}
             onClick={() =>
               run(
-                () => addStaffByEmail({ email, role: newRole }),
+                () => addStaffByEmail({ email, role: 'admin' }),
                 (name) => {
                   setEmail('');
-                  setMessage(
-                    `${String(name)} now has ${ROLE_LABEL[newRole].toLowerCase()} access.`,
-                  );
+                  setMessage(`${String(name)} now has admin access.`);
                 },
               )
             }
           >
             {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
-            Give access
+            Give admin access
           </Button>
           <p className="text-content-muted w-full text-xs">
-            They need a Sync account already — this grants access to one, it does not create one. A
-            super admin can appoint and remove other admins; an admin cannot.
+            They need a Sync account already — this grants access to one, it does not create one.
+            Super admin is not offered here: it can appoint and remove everyone else, so it is
+            granted deliberately from the database rather than from a form somebody could reach
+            through a hijacked session.
           </p>
           {message && <p className="w-full text-xs text-emerald-600">{message}</p>}
           {error && <p className="text-coral w-full text-xs">{error}</p>}
@@ -152,25 +135,14 @@ export function StaffConsole({
 
               {isSuperAdmin && (
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Offered only where it would do something. Promoting a
-                      super admin or demoting the last one both fail in the
-                      database, and a button whose only outcome is an error is
-                      worse than no button. */}
-                  {s.role === 'admin' && (
-                    <Button
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() =>
-                        run(
-                          () => setAccountRole({ userId: s.id, role: 'super_admin' }),
-                          () => setMessage(`${s.name} is now a super admin.`),
-                        )
-                      }
-                    >
-                      Make super admin
-                    </Button>
-                  )}
-
+                  {/* NO PROMOTE-TO-SUPER-ADMIN BUTTON, DELIBERATELY.
+                      A super admin can appoint and remove every other one, so
+                      a hijacked super-admin session should not be able to mint
+                      a second permanent way in with one click. Promotion is a
+                      database statement somebody has to mean — see
+                      docs/ADMIN_ACCESS.md. Removing access stays here, because
+                      taking access away in a hurry is the thing you want to be
+                      easy. */}
                   {!(s.role === 'super_admin' && superAdmins <= 1) && (
                     <Button
                       variant="ghost"

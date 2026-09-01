@@ -81,10 +81,10 @@ export function DashboardSidebar({
   }
 
   return (
-    <div className="flex h-full flex-col gap-5">
+    <div className="flex h-full min-h-0 flex-col gap-5">
       {/* Wordmark + role on the left; mode toggle and, in the drawer, the close
           button share the right edge as siblings rather than as a stack. */}
-      <div className="flex items-center justify-between gap-2 px-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-2">
         {/* Points at the dashboard root, NOT `/`. The landing page is a web-only
             surface; from inside a dashboard the lockup should return you to your
             own overview, the way it does in any app. */}
@@ -104,7 +104,7 @@ export function DashboardSidebar({
       </div>
 
       {/* Profile card */}
-      <div className="border-line/10 bg-surface-deep/60 flex flex-col gap-3 rounded-2xl border p-4">
+      <div className="border-line/10 bg-surface-deep/60 flex shrink-0 flex-col gap-3 rounded-2xl border p-4">
         <div className="flex items-center gap-3">
           <span className="bg-lime text-ink font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm">
             {profile.initial}
@@ -125,7 +125,7 @@ export function DashboardSidebar({
         )}
       </div>
 
-      {topSlot && <div className="px-1">{topSlot}</div>}
+      {topSlot && <div className="shrink-0 px-1">{topSlot}</div>}
 
       {/* Grouped nav */}
       {/* No "Home" link here. It pointed at `/`, the marketing landing page,
@@ -133,7 +133,16 @@ export function DashboardSidebar({
           PWA) home is /around, reached from the bottom tab bar. Sending a
           signed-in user to the landing page from their dashboard was a way out
           of the product, not navigation. */}
-      <nav aria-label={`${brandLabel} navigation`} className="flex flex-1 flex-col gap-5">
+      {/* The rail owns no scroll of its own: this list is the only part that
+          scrolls, so the wordmark, the profile card and Log out stay put no
+          matter how long a role's nav gets. min-h-0 is load-bearing - without
+          it a flex child refuses to shrink below its content and the overflow
+          moves back out to the frame. The negative inline margin lets an active
+          row keep its full width while the scrollbar sits in the padding. */}
+      <nav
+        aria-label={`${brandLabel} navigation`}
+        className="rail-scroll -mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1 pb-1"
+      >
         {sections.map((section, i) => (
           <div key={section.label ?? i} className="flex flex-col gap-1">
             {section.label && (
@@ -173,7 +182,7 @@ export function DashboardSidebar({
       </nav>
 
       {/* Log out */}
-      <div className="border-line/10 border-t pt-3">
+      <div className="border-line/10 shrink-0 border-t pt-3">
         <button
           type="button"
           onClick={handleSignOut}

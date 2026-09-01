@@ -47,7 +47,7 @@ export async function DashboardShell({
   return (
     <div className="bg-surface text-content min-h-screen">
       <div className={`mx-auto flex ${maxWidth}`}>
-        <aside className="border-line/10 bg-panel rail-scroll sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r p-4 md:block">
+        <aside className="border-line/10 bg-panel sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r p-4 md:block">
           <DashboardSidebar navKey={navKey} profile={profile} topSlot={sidebarSlot} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
