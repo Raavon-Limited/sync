@@ -26,7 +26,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,6 +50,7 @@ import {
 } from '@/components/verification/document-upload';
 import type { VerificationRole } from '@/modules/verification/requirements';
 import { claimedBusinessName } from '@/lib/business-name';
+import { userMessage } from '@/lib/errors';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -129,6 +130,12 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   // so a future divergence is picked up there rather than frozen in here.
   const [docState, setDocState] = useState<DocumentState>(() => emptyDocumentState('vendor'));
   const [docError, setDocError] = useState<string | null>(null);
+  // Which file is in flight, so a submission that takes ten seconds over a
+  // phone connection looks like progress rather than a frozen button.
+  const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(
+    null,
+  );
+  const [uploadError, setUploadError] = useState<string | null>(null);
   // Where Continue goes, and whether the modal is up. Held together because
   // the destination is only known once the server has told us which business
   // role the submitted category left them on.
@@ -209,33 +216,73 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
     // `verification_documents` says WHICH document and WHICH side rather than
     // just naming a path in a bucket.
     const queued = queueForUpload(reqRole, docState);
+    setUploadError(null);
 
     const uploaded: UploadedDocument[] = [];
     if (queued.length) {
-      try {
-        const supabase = createClient();
-        for (const [i, item] of queued.entries()) {
-          // The index breaks ties: front and back are uploaded in the same
-          // millisecond, so a timestamp alone had them overwrite each other.
-          const path = `${Date.now()}-${i}-${item.file.name.replace(/\s+/g, '-')}`;
-          const { error } = await supabase.storage
-            .from('vendor-verification')
-            .upload(path, item.file, { upsert: true });
-          if (!error) {
-            uploaded.push({
-              docType: item.docType,
-              subtype: item.subtype,
-              title: item.title,
-              storagePath: path,
-            });
-          }
-        }
-      } catch {
-        // Storage not wired yet - submit the details anyway.
+      const supabase = createClient();
+
+      // The path has to START WITH THE UPLOADER'S ID. `vdocs_insert_own`
+      // (20260819180000) checks `(storage.foldername(name))[1] = auth.uid()`,
+      // so a flat filename is refused by RLS no matter which bucket it names.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setUploadError(
+          'Your session has expired. Sign in again and retry — nothing was submitted.',
+        );
+        setStep(3);
+        return;
       }
+
+      for (const [i, item] of queued.entries()) {
+        setProgress({ done: i, total: queued.length, label: item.title });
+
+        // The index breaks ties: front and back are uploaded in the same
+        // millisecond, so a timestamp alone had them overwrite each other.
+        const safe = item.file.name.replace(/[^\w.-]/g, '_');
+        const path = `${user.id}/${item.docType}-${Date.now()}-${i}-${safe}`;
+
+        // `verification-docs`, which is the bucket that EXISTS. This read
+        // `vendor-verification` — a name nothing ever created — so every upload
+        // failed, and because the failure was swallowed the wizard went on to
+        // submit with an empty document list. The review step said "4 file(s)"
+        // while the reviewer got "0 of 0 documents", and once submit_verification
+        // started refusing empty folders it became an outright dead end.
+        //
+        // upsert:false, because the bucket grants INSERT and DELETE but not
+        // UPDATE. An upsert onto an existing object is an update and would be
+        // refused; the paths are unique anyway.
+        const { error } = await supabase.storage
+          .from('verification-docs')
+          .upload(path, item.file, { upsert: false });
+
+        // STOP ON THE FIRST FAILURE, and say which file. Skipping a failed
+        // upload and carrying on is what produced a submission that looked
+        // complete to the applicant and empty to staff. A half-submitted
+        // verification is worse than one that plainly did not go.
+        if (error) {
+          setProgress(null);
+          setUploadError(
+            `"${item.title}" did not upload. ${userMessage(error, 'Check your connection and try again.')} Nothing has been submitted.`,
+          );
+          setStep(3);
+          return;
+        }
+
+        uploaded.push({
+          docType: item.docType,
+          subtype: item.subtype,
+          title: item.title,
+          storagePath: path,
+        });
+      }
+      setProgress({ done: queued.length, total: queued.length, label: 'Saving your submission' });
     }
 
     const res = await submitVendorOnboarding(values, uploaded);
+    setProgress(null);
     if (!res.ok) {
       toast(res.error);
       return;
@@ -532,6 +579,44 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
           )}
         </div>
 
+        {/* THE UPLOAD REPORT. Sits directly above the footer, so the button
+            you just pressed and the reason it has not finished are read
+            together. Files are sent one at a time over what is usually a phone
+            connection; without this the wizard looked frozen for ten seconds
+            and a failure looked like nothing at all. */}
+        {progress && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="border-line/15 bg-surface-deep/40 mt-2 flex flex-col gap-2 rounded-xl border px-3 py-3"
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="text-accent-fg size-4 shrink-0 animate-spin" aria-hidden="true" />
+              <span className="text-content min-w-0 flex-1 truncate text-sm">
+                {progress.done < progress.total
+                  ? `Uploading ${progress.done + 1} of ${progress.total} — ${progress.label}`
+                  : progress.label}
+              </span>
+            </div>
+            {/* A real proportion, not an indeterminate bar: the count is
+                known, so showing it is free and answers "how much longer". */}
+            <div className="bg-ink/30 h-1.5 overflow-hidden rounded-full">
+              <div
+                className="bg-lime h-full rounded-full transition-all duration-300"
+                style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* A failed upload stops the submission outright, so this is the whole
+            explanation of why nothing happened — including which file. */}
+        {uploadError && (
+          <p className="border-coral/40 bg-coral/10 text-coral mt-2 rounded-xl border px-3 py-3 text-sm">
+            {uploadError}
+          </p>
+        )}
+
         {/* Footer. In a panel it is pinned to the bottom: the only two controls
             that move the wizard on must not be something you scroll to find,
             and on a phone the last field plus the keyboard would routinely
@@ -561,8 +646,13 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
               Continue
             </Button>
           ) : (
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? 'Submitting…' : 'Submit for review'}
+            <Button type="submit" disabled={isSubmitting} className="flex-1 gap-2">
+              {isSubmitting && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+              {isSubmitting
+                ? progress && progress.done < progress.total
+                  ? `Uploading ${progress.done + 1} of ${progress.total}…`
+                  : 'Submitting…'
+                : 'Submit for review'}
             </Button>
           )}
         </div>
