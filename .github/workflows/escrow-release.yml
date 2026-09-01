@@ -15,7 +15,10 @@ name: Release matured escrow
 #
 # The endpoint itself is unchanged - it authenticates on a bearer CRON_SECRET,
 # so any scheduler can drive it. If this project moves to a Vercel plan that
-# allows hourly crons, restore the vercel.json entry and delete this file.
+# allows hourly crons, add a release-escrow entry back to vercel.json and delete
+# this file. vercel.json exists again but deliberately does NOT schedule this
+# route - it holds only the DAILY purge-archived cron, which is inside the Hobby
+# limit. Adding an hourly entry there is what broke every deploy before.
 #
 # REQUIRED REPOSITORY SECRETS  (Settings -> Secrets and variables -> Actions)
 #   CRON_SECRET  - must match the CRON_SECRET env var set on Vercel. The route
