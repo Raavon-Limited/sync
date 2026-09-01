@@ -51,7 +51,12 @@ create table if not exists public.staff_invites (
                 default replace(gen_random_uuid()::text, '-', '')
                      || replace(gen_random_uuid()::text, '-', ''),
   invited_by  uuid not null references public.profiles (id) on delete cascade,
-  expires_at  timestamptz not null default now() + interval '7 days',
+  -- TEN MINUTES, not the seven days a storefront invite gets. Console access
+  -- is the whole platform, so a link that reaches the wrong inbox should stop
+  -- being useful before anybody could act on it. The cost is real and worth
+  -- stating: a recipient who does not open their email promptly will need a
+  -- second invite, which is one click in the console.
+  expires_at  timestamptz not null default now() + interval '10 minutes',
   accepted_at timestamptz,
   accepted_by uuid references public.profiles (id) on delete set null,
   revoked_at  timestamptz,
@@ -64,16 +69,29 @@ create unique index if not exists staff_invites_pending_idx
   on public.staff_invites (lower(email))
   where accepted_at is null and revoked_at is null;
 
+-- Re-running this file over an install created before the expiry was shortened
+-- has to actually move it: 'create table if not exists' above is a no-op there,
+-- so the default is set explicitly rather than assumed from the create.
+alter table public.staff_invites
+  alter column expires_at set default now() + interval '10 minutes';
+
 comment on table public.staff_invites is
   'Pending console invitations. The token is the proof of mailbox control and is delivered out of band, by email; the app never selects that column.';
 
 -- === Creating ===============================================================
 -- Returns the token exactly once, to the super admin who created it.
-create or replace function public.create_staff_invite(
+--
+-- DROPPED FIRST, not just replaced. The OUT columns were renamed to fix the
+-- ambiguity below, and Postgres refuses `create or replace` across a change of
+-- return type -- so an install that already has the first version would fail
+-- here instead of being repaired by re-running this file.
+drop function if exists public.create_staff_invite(text, uuid);
+
+create function public.create_staff_invite(
   p_email text,
   p_role  uuid default null
 )
-returns table (id uuid, token text)
+returns table (invite_id uuid, invite_token text)
 language plpgsql
 security definer
 set search_path = ''
@@ -108,6 +126,10 @@ begin
      and accepted_at is null
      and revoked_at is null;
 
+  -- The OUT columns are named invite_id/invite_token rather than id/token on
+  -- purpose: plpgsql puts OUT parameters in the same namespace as the table's
+  -- columns, so 'returning staff_invites.id' was ambiguous and the function
+  -- failed at runtime rather than at creation.
   return query
   insert into public.staff_invites (email, role_id, invited_by)
   values (v_email, p_role, v_uid)
@@ -244,6 +266,18 @@ begin
   end if;
   if to_regprocedure('public.create_staff_invite(text, uuid)') is null then
     raise exception 'create_staff_invite missing';
+  end if;
+
+  -- The first cut of this function returned columns named id/token, which
+  -- collided with the table's own and failed only when CALLED. Asserting the
+  -- signature is what turns that back into a deploy-time failure.
+  if not exists (
+    select 1 from information_schema.parameters
+     where specific_schema = 'public'
+       and parameter_name = 'invite_token'
+       and specific_name like 'create_staff_invite%'
+  ) then
+    raise exception 'create_staff_invite still returns the ambiguous id/token columns';
   end if;
   if to_regprocedure('public.accept_staff_invite(text)') is null then
     raise exception 'accept_staff_invite missing';

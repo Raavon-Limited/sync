@@ -41,7 +41,7 @@ export interface StaffInviteEmailProps {
   /** Area labels the role opens, already resolved. */
   areas: string[];
   joinUrl: string;
-  /** e.g. "7 days". Rendered, not computed, so the copy matches the token. */
+  /** e.g. "10 minutes". Rendered, not computed, so the copy matches the token. */
   expiresIn: string;
 }
 

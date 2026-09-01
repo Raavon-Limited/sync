@@ -26,6 +26,7 @@ import { render } from '@react-email/render';
 import { Resend } from 'resend';
 import { revalidatePath } from 'next/cache';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { StaffInviteEmail } from '@/emails/staff-invite-email';
 import { SITE, canonicalOrigin } from '@/config/site';
@@ -34,6 +35,15 @@ import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
 import { ADMIN_AREAS } from '@/modules/access/areas';
 import type { Row } from '@/lib/supabase/row';
+
+/**
+ * staff_invites postdates the checked-in generated types. REGENERATE once
+ * 20260903090000 is applied and this goes — the access-roles tables above it
+ * needed the same thing and no longer do.
+ */
+function db(): SupabaseClient {
+  return createAdminClient() as unknown as SupabaseClient;
+}
 
 /** The link a recipient clicks. Built in one place so the email and the
  *  copyable link in the console can never point somewhere different. */
@@ -108,8 +118,10 @@ export async function inviteStaff(input: {
   });
   if (error) throw new Error(userMessage(error, 'We could not create that invitation.'));
 
+  // invite_token, not token: the OUT columns are named apart from the table's
+  // own or the RETURNING inside the function is ambiguous. See the migration.
   const row = (Array.isArray(data) ? data[0] : data) as Row | null;
-  const token = row?.token as string | undefined;
+  const token = row?.invite_token as string | undefined;
   if (!token) throw new Error('The invitation was not created. Try again.');
 
   const link = joinUrl(token);
@@ -170,7 +182,7 @@ async function sendStaffInvite(input: {
         roleName,
         areas,
         joinUrl: input.link,
-        expiresIn: '7 days',
+        expiresIn: '10 minutes',
       }),
     );
     const resend = new Resend(apiKey);
@@ -184,7 +196,10 @@ async function sendStaffInvite(input: {
       // Usually an unverified sender domain. Logged verbatim — the sender's
       // copy of this message cannot say that usefully.
       console.error('[staff-invite] Resend rejected the send. from=%s error=%o', from, error);
-      return { ok: false, error: 'We could not send the email. Copy the link and send it yourself.' };
+      return {
+        ok: false,
+        error: 'We could not send the email. Copy the link and send it yourself.',
+      };
     }
   } catch (e) {
     console.error('[staff-invite] send threw:', e);
@@ -225,7 +240,7 @@ export async function previewStaffInvite(token: string): Promise<StaffInvitePrev
   if (!token) return { valid: false, reason: 'No invite token in the link.' };
 
   try {
-    const admin = createAdminClient();
+    const admin = db();
     const { data, error } = await admin
       .from('staff_invites')
       .select('email, role_id, expires_at, accepted_at, revoked_at')
@@ -306,7 +321,7 @@ export async function redeemStaffInvite(input: {
     return { ok: false, error: 'Choose a password of at least 8 characters.' };
   }
 
-  const admin = createAdminClient();
+  const admin = db();
 
   const { data: inviteRow, error: inviteError } = await admin
     .from('staff_invites')

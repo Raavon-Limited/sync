@@ -48,8 +48,8 @@ export function StaffInviteForm({
       <div className="flex flex-col gap-4">
         <p className="text-content text-sm">{preview.reason}</p>
         <p className="text-content-muted text-sm">
-          Invitations last seven days and can only be used once. Ask whoever invited you to send a
-          new one.
+          Invitations last ten minutes and can only be used once. Ask whoever invited you to send a
+          new one — it arrives straight away.
         </p>
         <Button asChild size="lg" className="w-full">
           <Link href="/login">Go to log in</Link>
@@ -121,7 +121,9 @@ export function StaffInviteForm({
           {busy ? 'Accepting…' : 'Accept invitation'}
         </Button>
         <Button asChild variant="outline" size="lg" className="w-full">
-          <Link href={`/login?email=${encodeURIComponent(preview.email ?? '')}&next=${encodeURIComponent(next)}`}>
+          <Link
+            href={`/login?email=${encodeURIComponent(preview.email ?? '')}&next=${encodeURIComponent(next)}`}
+          >
             Sign in as {preview.email}
           </Link>
         </Button>

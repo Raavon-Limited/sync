@@ -13,8 +13,18 @@
  * looked up.
  */
 import 'server-only';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
+
+/**
+ * staff_invites postdates the checked-in generated types. Same escape hatch as
+ * modules/admin/roles — REGENERATE once 20260903090000 is applied and this
+ * goes.
+ */
+function db(): SupabaseClient {
+  return createAdminClient() as unknown as SupabaseClient;
+}
 
 export interface StaffInvite {
   id: string;
@@ -41,7 +51,7 @@ export interface StaffInvite {
  * screen that would tell them what to run.
  */
 export async function getStaffInvites(): Promise<StaffInvite[]> {
-  const c = createAdminClient();
+  const c = db();
 
   const { data, error } = await c
     .from('staff_invites')
@@ -74,7 +84,10 @@ export async function getStaffInvites(): Promise<StaffInvite[]> {
     ((roles.data ?? []) as Row[]).map((r) => [r.id as string, r.name as string]),
   );
   const personName = new Map(
-    ((people.data ?? []) as Row[]).map((p) => [p.id as string, (p.full_name as string) ?? 'Someone']),
+    ((people.data ?? []) as Row[]).map((p) => [
+      p.id as string,
+      (p.full_name as string) ?? 'Someone',
+    ]),
   );
 
   const now = Date.now();

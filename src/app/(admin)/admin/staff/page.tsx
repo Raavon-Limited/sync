@@ -13,6 +13,7 @@ import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { getStaff } from '@/modules/admin/staff';
 import { getAccessRoles } from '@/modules/admin/roles';
+import { getStaffInvites } from '@/modules/admin/invites';
 import { StaffConsole } from './(components)/staff-console';
 import { RolesConsole } from './(components)/roles-console';
 
@@ -22,7 +23,11 @@ export default async function Page() {
   const role = await requireStaffArea('staff');
   const isSuperAdmin = role === 'super_admin';
 
-  const [staff, roles] = await Promise.all([getStaff(), getAccessRoles()]);
+  const [staff, roles, invites] = await Promise.all([
+    getStaff(),
+    getAccessRoles(),
+    getStaffInvites(),
+  ]);
 
   return (
     <section className="flex flex-col gap-8">
@@ -33,12 +38,15 @@ export default async function Page() {
             Who runs <span className="text-lime-deep">Sync.</span>
           </h2>
           <p className="text-content-muted mt-2 text-sm">
-            {staff.length} {staff.length === 1 ? 'person has' : 'people have'} console access. Every
-            change here is recorded against the person who made it.
+            {staff.length} {staff.length === 1 ? 'person has' : 'people have'} console access
+            {invites.length > 0 &&
+              `, and ${invites.length} ${invites.length === 1 ? 'invitation is' : 'invitations are'} outstanding`}
+            . What each of them can reach is the role they hold, below. Every change here is
+            recorded against the person who made it.
           </p>
         </div>
 
-        <StaffConsole staff={staff} isSuperAdmin={isSuperAdmin} />
+        <StaffConsole staff={staff} invites={invites} roles={roles} isSuperAdmin={isSuperAdmin} />
       </div>
 
       <div className="flex flex-col gap-4">
