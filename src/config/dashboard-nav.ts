@@ -183,6 +183,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             heading: 'Verification across the platform',
             icon: ShieldCheck,
           },
+          // Visible to every admin, editable only by a super admin. An admin
+          // who cannot see who else has access cannot tell a colleague from a
+          // problem.
+          { href: '/admin/staff', label: 'Staff', heading: 'Who runs Sync', icon: UserCog },
         ],
       },
       {
