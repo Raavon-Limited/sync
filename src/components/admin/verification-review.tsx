@@ -142,6 +142,10 @@ export function VerificationReview({
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(vendor.docs.length > 0);
   const [viewing, setViewing] = useState<number | null>(null);
+  // WHICH document is mid-decision, not merely THAT one is. `busy` is one flag
+  // for the whole card, so on its own it cannot put a spinner on the button
+  // that was actually clicked - every Approve on the screen would spin at once.
+  const [pendingDoc, setPendingDoc] = useState<string | null>(null);
 
   // The comparison pair first, then the rest in upload order. The modal steps
   // through this same list, so its arrows walk the folder the way the page
@@ -194,13 +198,20 @@ export function VerificationReview({
     url: urls[d.storagePath],
   }));
 
-  function run(fn: () => Promise<unknown>) {
+  function run(fn: () => Promise<unknown>, docId?: string) {
     setError(null);
+    setPendingDoc(docId ?? null);
     startTransition(async () => {
       try {
         await fn();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'That did not go through. Try again.');
+      } finally {
+        // Cleared INSIDE the transition so it commits with the revalidated
+        // markup. Clearing it after would drop the spinner for the frame
+        // between the action resolving and the new status arriving, and the
+        // button would flicker back to "Approve" on its way to "Approved".
+        setPendingDoc(null);
       }
     });
   }
@@ -210,39 +221,74 @@ export function VerificationReview({
   const rest = ordered.filter((d) => !COMPARE_ORDER.includes(d.docType));
 
   function DocActions({ doc }: { doc: AdminDoc }) {
+    // AN APPROVED DOCUMENT IS A FINISHED DECISION, SO IT STOPS OFFERING ONE.
+    // The reason box and Bounce used to sit here greyed out afterwards, which
+    // reads as "you may still do this, just not yet" - the opposite of what is
+    // true. The button keeps its place in the row and states the outcome
+    // instead, so the row still scans as the same row.
+    if (doc.status === 'approved') {
+      return (
+        <Button
+          variant="outline"
+          disabled
+          // disabled:opacity-50 from the base variant would fade this to look
+          // like a control waiting to become available. It is a result.
+          className="border-emerald-500/30 text-emerald-600 disabled:opacity-100"
+        >
+          <CheckCircle2 aria-hidden="true" />
+          Approved
+        </Button>
+      );
+    }
+
+    const approving = busy && pendingDoc === doc.id;
+
     return (
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="outline"
-          disabled={busy || doc.status === 'approved'}
-          onClick={() => run(() => reviewDocument({ documentId: doc.id, decision: 'approved' }))}
-        >
-          Approve
-        </Button>
-        {/* Bouncing requires a reason: "needs action" with no stated action is
-            how a queue stalls. */}
-        <Input
-          value={messages[doc.id] ?? ''}
-          onChange={(e) => setMessages((m) => ({ ...m, [doc.id]: e.target.value }))}
-          placeholder="What needs fixing?"
-          className="min-w-0 flex-1"
-        />
-        <Button
-          variant="outline"
-          className="text-coral"
-          disabled={busy || !messages[doc.id]?.trim()}
+          disabled={busy}
           onClick={() =>
-            run(() =>
-              reviewDocument({
-                documentId: doc.id,
-                decision: 'needs_action',
-                message: messages[doc.id],
-              }),
-            )
+            run(() => reviewDocument({ documentId: doc.id, decision: 'approved' }), doc.id)
           }
         >
-          Bounce
+          {approving && <Loader2 className="animate-spin" aria-hidden="true" />}
+          {approving ? 'Approving…' : 'Approve'}
         </Button>
+        {/* Bouncing requires a reason: "needs action" with no stated action is
+            how a queue stalls.
+
+            Hidden the moment an approval is in flight. The outcome is already
+            decided at that point, and a reason box still standing there invites
+            a reviewer to type into a control that is about to disappear. */}
+        {!approving && (
+          <>
+            <Input
+              value={messages[doc.id] ?? ''}
+              onChange={(e) => setMessages((m) => ({ ...m, [doc.id]: e.target.value }))}
+              placeholder="What needs fixing?"
+              className="min-w-0 flex-1"
+            />
+            <Button
+              variant="outline"
+              className="text-coral"
+              disabled={busy || !messages[doc.id]?.trim()}
+              onClick={() =>
+                run(
+                  () =>
+                    reviewDocument({
+                      documentId: doc.id,
+                      decision: 'needs_action',
+                      message: messages[doc.id],
+                    }),
+                  doc.id,
+                )
+              }
+            >
+              Bounce
+            </Button>
+          </>
+        )}
       </div>
     );
   }

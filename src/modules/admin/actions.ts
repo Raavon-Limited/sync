@@ -68,6 +68,11 @@ export async function reviewDocument(input: {
 
   if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
   revalidatePath('/admin/vendors');
+  // VerificationReview renders on the landlord page too, and a decision made
+  // there was writing to the database without ever refreshing the screen it was
+  // made on: the document sat at "under review" until a manual reload. A
+  // dynamic segment needs the route PATTERN plus a type, not a filled-in slug.
+  revalidatePath('/admin/landlord/[slug]', 'page');
 }
 
 /**
@@ -128,6 +133,7 @@ export async function setVendorVerification(input: {
 
   if (error) throw new Error(userMessage(error, 'We could not update this verification.'));
   revalidatePath('/admin/vendors');
+  revalidatePath('/admin/landlord/[slug]', 'page');
 }
 
 /**
