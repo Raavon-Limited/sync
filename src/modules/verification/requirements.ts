@@ -67,8 +67,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     key: 'selfie',
     label: 'Live photo',
     accepts: 'Taken on camera at sign-up',
-    description:
-      'Taken now, on your camera — not uploaded. A reviewer compares it to your ID.',
+    description: 'Taken now, on your camera — not uploaded. A reviewer compares it to your ID.',
     colour: 'bg-emerald-50 text-emerald-600',
     roles: ['student', 'rider', 'vendor', 'landlord'],
     captureOnly: true,
@@ -81,7 +80,11 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     colour: 'bg-violet-50 text-violet-500',
     roles: ['student', 'rider', 'vendor', 'landlord'],
     options: [
-      { value: 'nin', label: 'NIN slip or card', hint: 'National Identity Number' },
+      // Both forms are in circulation and they are not the same object: the
+      // slip is a one-sided paper printout (what most people hold), the card is
+      // two-sided plastic. The upload step reads this distinction to decide
+      // whether a back side can be insisted on.
+      { value: 'nin', label: 'NIN slip or card', hint: 'Slip is one side; card has a back' },
       { value: 'passport', label: 'International passport', hint: 'The photo page' },
       { value: 'drivers_licence', label: "Driver's licence" },
       { value: 'voters_card', label: "Voter's card" },
@@ -107,8 +110,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     accepts: 'Bank statement, prepaid receipt or NEPA bill',
     // The matching requirement is the whole point — a bill in somebody else's
     // name, or for a different street, proves nothing about this applicant.
-    description:
-      'Dated within the last 3 months, showing the same address you gave us.',
+    description: 'Dated within the last 3 months, showing the same address you gave us.',
     colour: 'bg-amber-50 text-amber-500',
     roles: ['rider', 'vendor', 'landlord'],
     options: [

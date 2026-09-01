@@ -55,11 +55,32 @@ const ACCEPT = 'image/png,image/jpeg,image/jpg,image/tiff,application/pdf';
 const FORMAT_CHIPS = ['PNG', 'JPEG', 'JPG', 'TIFF', 'PDF'];
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
-/** A passport is one page. Asking for its back yields a blank photo or a stall. */
-const SINGLE_SIDED = new Set(['passport']);
+/**
+ * Whether a document HAS a back, and whether we can insist on it.
+ *
+ * NOT EVERY NIGERIAN ID IS TWO PIECES OF PLASTIC, and treating them as if they
+ * were is how a real applicant gets stuck on a step they cannot complete:
+ *
+ *   passport  ONE page. There is no back. Asking for it yields a blank photo
+ *             or an abandoned form.
+ *   nin       Issued BOTH ways. The NIN slip is a single-sided paper printout
+ *             — the overwhelming majority of what people actually hold — while
+ *             the plastic NIN card has a back. So the slot is offered and
+ *             never required: demanding a back from a slip holder is demanding
+ *             a photograph of something that does not exist.
+ *   otherwise A driver's licence and a voter's card both carry details on the
+ *             reverse, and a reviewer needs them.
+ */
+type BackPolicy = 'none' | 'optional' | 'required';
 
-function needsBack(spec: VerificationRequirementSpec, subtype: string | null): boolean {
-  return spec.key === 'gov_id' && !!subtype && !SINGLE_SIDED.has(subtype);
+const BACK_POLICY: Record<string, BackPolicy> = {
+  passport: 'none',
+  nin: 'optional',
+};
+
+function backPolicy(spec: VerificationRequirementSpec, subtype: string | null): BackPolicy {
+  if (spec.key !== 'gov_id' || !subtype) return 'none';
+  return BACK_POLICY[subtype] ?? 'required';
 }
 
 export function emptyDocumentState(role: VerificationRole): DocumentState {
@@ -93,7 +114,7 @@ export function documentsProblem(role: VerificationRole, state: DocumentState): 
         ? `Take your ${spec.label.toLowerCase()}.`
         : `Upload your ${spec.label.toLowerCase()}.`;
     }
-    if (needsBack(spec, held.subtype) && !held.back) {
+    if (backPolicy(spec, held.subtype) === 'required' && !held.back) {
       return 'Upload the back of your government ID.';
     }
   }
@@ -110,16 +131,18 @@ export function queueForUpload(
     const held = state[spec.key];
     if (!held) continue;
     const label = spec.options?.find((o) => o.value === held.subtype)?.label ?? spec.label;
-    const twoSided = needsBack(spec, held.subtype);
+    // Sides are named only when there are two of them. A lone NIN slip filed
+    // as "NIN slip or card (front)" reads to a reviewer as though a back was
+    // expected and is missing.
     if (held.front) {
       out.push({
         docType: spec.key,
         subtype: held.subtype,
-        title: twoSided ? `${label} (front)` : label,
+        title: held.back ? `${label} (front)` : label,
         file: held.front,
       });
     }
-    if (twoSided && held.back) {
+    if (held.back) {
       out.push({
         docType: spec.key,
         subtype: held.subtype,
@@ -135,6 +158,7 @@ function Slot({
   label,
   file,
   capture,
+  optional,
   onPick,
   onClear,
 }: {
@@ -142,6 +166,8 @@ function Slot({
   file: File | null;
   /** Camera only — no file picker. See the spec's `captureOnly` note. */
   capture?: boolean;
+  /** Offered but not insisted on — see BACK_POLICY. */
+  optional?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
 }) {
@@ -150,9 +176,13 @@ function Slot({
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-content text-sm font-medium">
-        <span className="text-coral" aria-hidden="true">
-          *{' '}
-        </span>
+        {optional ? (
+          <span className="text-content-muted font-normal">(optional) </span>
+        ) : (
+          <span className="text-coral" aria-hidden="true">
+            *{' '}
+          </span>
+        )}
         {label}
       </p>
 
@@ -236,8 +266,8 @@ function Requirement({
   onChange: (next: RequirementFiles) => void;
 }) {
   const chosen = spec.options?.find((o) => o.value === held.subtype);
-  const twoSided = needsBack(spec, held.subtype);
-  const done = !!held.front && (!twoSided || !!held.back);
+  const policy = backPolicy(spec, held.subtype);
+  const done = !!held.front && (policy !== 'required' || !!held.back);
 
   return (
     <section className="border-line/10 bg-surface-deep/20 flex flex-col gap-3 rounded-2xl border p-4">
@@ -306,19 +336,28 @@ function Requirement({
             </div>
           )}
           <Slot
-            label={twoSided ? 'Front of your document' : spec.label}
+            label={policy === 'none' ? spec.label : 'Front of your document'}
             file={held.front}
             capture={spec.captureOnly}
             onPick={(f) => onChange({ ...held, front: f })}
             onClear={() => onChange({ ...held, front: null })}
           />
-          {twoSided && (
-            <Slot
-              label="Back of your document"
-              file={held.back}
-              onPick={(f) => onChange({ ...held, back: f })}
-              onClear={() => onChange({ ...held, back: null })}
-            />
+          {policy !== 'none' && (
+            <>
+              <Slot
+                label="Back of your document"
+                file={held.back}
+                optional={policy === 'optional'}
+                onPick={(f) => onChange({ ...held, back: f })}
+                onClear={() => onChange({ ...held, back: null })}
+              />
+              {policy === 'optional' && (
+                <p className="text-content-muted -mt-1 text-xs">
+                  Only if you have the plastic NIN card. A NIN slip is printed on one side — skip
+                  this if that is what you have.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -340,7 +379,7 @@ export function VerificationDocuments({
   const specs = requirementsFor(role);
   const complete = specs.filter((s) => {
     const held = value[s.key];
-    return held?.front && (!needsBack(s, held.subtype) || held.back);
+    return held?.front && (backPolicy(s, held.subtype) !== 'required' || held.back);
   }).length;
 
   return (
