@@ -15,7 +15,6 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { adminRoleForEmail } from '@/lib/admin-emails';
 import { resolveHandle } from '@/lib/handle';
 import { userMessage } from '@/lib/errors';
 import {
@@ -231,12 +230,15 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
 /** Which input the login form should show for an email: admins/super_admins are
  *  passwordless ('otp'), everyone else uses a password. Defaults to 'password'
  *  for unknown emails (and when Supabase isn't reachable) so we don't reveal
- *  whether an account exists. Backed by the env allowlist + the `login_method`
- *  SQL function. */
+ *  whether an account exists. Backed by the `login_method` SQL function.
+ *
+ *  The env allowlist used to short-circuit this to 'otp'. It does not need to:
+ *  `login_method` already answers 'otp' for an account with no password, which
+ *  is exactly what seed:admins creates. One source, and it happens to be the
+ *  one that knows whether a password exists. */
 export async function getLoginMethod(rawEmail: string): Promise<{ method: 'password' | 'otp' }> {
   const parsed = emailRule.safeParse(rawEmail);
   if (!parsed.success) return { method: 'password' };
-  if (adminRoleForEmail(parsed.data)) return { method: 'otp' };
   try {
     const admin = createAdminClient();
     const { data, error } = await admin.rpc('login_method', { p_email: parsed.data });
@@ -289,14 +291,13 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
     if (prof?.role) role = prof.role as Role;
     if (Array.isArray(prof?.roles)) roles = prof.roles as Role[];
 
-    // Bootstrap: a founding admin (env allowlist) lands as admin even if
-    // profiles.role wasn't seeded - self-heal it so the proxy + /admin pages
-    // recognise them on this and future logins.
-    const bootstrap = adminRoleForEmail(email);
-    if (bootstrap && role !== 'admin' && role !== 'super_admin') {
-      role = bootstrap;
-      await admin.from('profiles').upsert({ id: data.user!.id, role }, { onConflict: 'id' });
-    }
+    // THE ENV-ALLOWLIST SELF-HEAL USED TO SIT HERE, and it was the thing that
+    // made ADMIN_EMAILS load-bearing: logging in with a listed address
+    // PROMOTED the account. Staff is a row now, granted by set_account_role,
+    // so signing in grants nothing it did not already have.
+    //
+    // (The upsert could not have worked anyway — guard_profile_privileged_cols
+    // reverts `role` for every PostgREST writer, service role included.)
     if (prof?.archived_at) {
       const days = (Date.now() - new Date(prof.archived_at).getTime()) / 86_400_000;
       if (days < 30) {

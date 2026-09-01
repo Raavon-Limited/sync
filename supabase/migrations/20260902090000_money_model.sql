@@ -1,85 +1,175 @@
--- ############################################################################
--- DO NOT APPLY. SUPERSEDED BEFORE IT EVER RAN.
---
--- This file removes the vendor commission outright. That is NOT the model:
--- the vendor pays 5% capped at N2,000, the rider pays 5% capped, the student
--- pays 5% capped, and a landlord pays 2.5%. Every one of them is DEDUCTED AT
--- ESCROW RELEASE rather than at checkout, and the delivery fee is escrowed too
--- rather than paid out directly.
---
--- Rewrite against that model before applying anything here. The delivery
--- pricing and the quote function below are still right; the charge logic is
--- not.
--- ############################################################################
-
 -- ============================================================================
 -- money_model
 --
--- Sync stops taking a cut of what a vendor sells, and starts charging for the
--- two things it actually provides on top: the platform, and the delivery.
+-- Who pays Sync, and when.
 --
--- WHAT WAS WRONG
---   `apply_escrow_settings` (20260827090000) took 10% of EVERY order out of the
---   vendor's payout, frozen onto the hold at creation. That was the model when
---   vendors paid nothing else. They now pay a subscription, so the commission
---   was charging twice for the same thing.
+--   vendor, landlord   a subscription, plus a per-order service charge
+--   student            5% of the goods, capped at ₦2,000, shown on the invoice
+--                      BEFORE they pay
+--   restaurant/vendor  5% of the goods, capped at ₦2,000, deducted when their
+--                      escrow releases
+--   rider              5% of the delivery fee, capped at ₦2,000, deducted when
+--                      their escrow releases
+--   landlord on rent   2.5% of the rent, deducted when the rent releases
 --
--- WHO PAYS WHAT NOW
---   vendor, landlord   a subscription. Nothing per order. No commission.
---   student            a service charge on what they buy - food, tickets,
---                      rent - at 5%, capped. The cap is the point: a ₦4,000
---                      lunch and a ₦400,000 year's rent are the same amount of
---                      platform, and 5% uncapped on the rent would be absurd.
---   rider              5% of the delivery fee, capped, per completed job,
---                      because riders do not subscribe. Deducted from what they
---                      earn rather than added to what the student pays.
+-- ₦5,000 jollof with a ₦1,500 delivery: the student pays ₦6,750, the restaurant
+-- nets ₦4,750, the rider nets ₦1,425, and Sync takes ₦575 across the three.
 --
--- COMMISSION IS SET TO 0, NOT DELETED
---   `private.setting_int('commission_pct', 10)` falls back to 10 when the key is
---   MISSING, so deleting the row would restore the very charge this migration
---   removes. It is written to 0 explicitly, and the trigger stops computing it
---   at all.
+-- EVERY CHARGE IS FROZEN AT CREATION AND DEDUCTED AT RELEASE
+--   `escrow_holds.commission_kobo` already worked exactly this way for the old
+--   10%, and release_order_escrow already subtracts it and posts the remainder
+--   to platform_revenue. So the rate changes and the column does not: a vendor
+--   looking at a held order sees what they will actually receive before they
+--   cook, and nothing is taken until the money is theirs to be taken from.
 --
---   Holds that already carry a commission KEEP it. They were created under the
---   old arrangement, the vendor was told that at the time, and rewriting
---   settled money to match a new policy is not a migration, it is an
---   adjustment somebody has to explain.
+--   Holds created under the old 10% KEEP it. Those vendors were told that at
+--   the time. Rewriting settled money to match a new policy is an adjustment
+--   somebody has to explain, not a migration.
 --
--- THE DELIVERY FEE IS PRICED FROM DISTANCE THE SERVER MEASURES
---   The caller passes the dropoff COORDINATES, not a distance. A client that
---   hands over "1.2 km" is quoting its own fee; one that hands over a point is
---   stating where it wants the food, which is checkable and is what the rider
---   is going to ride to anyway.
+-- THE RIDER'S MONEY IS ESCROWED TOO, ON A FOURTH SUBJECT
+--   A delivery hold cannot carry `order_id`: release_order_escrow, cancel_order
+--   and resolve_dispute all do `select * into v_hold ... where order_id = X`,
+--   and a second row on the same order would have them pick one at random and
+--   move the wrong money. Adding a `kind` column would mean restating all three
+--   — three rewrites of live money code, each with a silent wrong-row failure.
+--
+--   `delivery_id` as a fourth subject avoids every bit of that. The subject IS
+--   the kind, and those functions keep working untouched because a delivery
+--   hold's order_id is null, so their lookups never match it.
+--
+-- payee_id BECOMES NULLABLE, FOR ONE REASON
+--   The delivery is escrowed at checkout and no rider has taken it yet. It is
+--   filled in by claim_delivery. A hold with money and no payee is exactly what
+--   an unclaimed job is.
 --
 -- ROLLBACK
+--   drop function if exists public.release_delivery_escrow(uuid);
 --   drop function if exists public.quote_delivery(uuid, double precision, double precision);
 --   drop function if exists private.capped_charge(bigint, text, text, integer, bigint);
---   alter table public.deliveries drop column if exists platform_fee_kobo;
+--   alter table public.escrow_holds drop column if exists delivery_id;
+--   alter table public.escrow_holds alter column payee_id set not null;
 --   update public.app_settings set value = '10'::jsonb where key = 'commission_pct';
---   -- and restore apply_escrow_settings and checkout_cart from
---   -- 20260827090000 and 20260829091000 respectively.
+--   -- and restore apply_escrow_settings / checkout_cart / claim_delivery /
+--   -- advance_delivery from 20260827090000, 20260829091000, 20260901270000,
+--   -- 20260901280000.
 -- ============================================================================
 
--- ── 1. The settings ─────────────────────────────────────────────────────────
+-- ── 1. Rates ────────────────────────────────────────────────────────────────
 insert into public.app_settings (key, value) values
   ('service_charge_pct',      '5'::jsonb),
   ('service_charge_cap_kobo', '200000'::jsonb),   -- ₦2,000
   ('rider_charge_pct',        '5'::jsonb),
   ('rider_charge_cap_kobo',   '200000'::jsonb),   -- ₦2,000
-  -- Delivery: a flag-fall plus a per-kilometre rate, with a floor. The floor
-  -- exists because a 200-metre delivery still costs a rider a trip.
-  ('delivery_base_kobo',      '30000'::jsonb),    -- ₦300
+  -- Rent is a much larger number and a much rarer event, so it is a smaller
+  -- share and is deliberately UNCAPPED — a cap here would make the charge on a
+  -- ₦400,000 room the same as on a ₦80,000 one.
+  ('rent_charge_pct',         '2.5'::jsonb),
+  ('delivery_base_kobo',      '30000'::jsonb),    -- ₦300 flag-fall
   ('delivery_per_km_kobo',    '10000'::jsonb),    -- ₦100 / km
-  ('delivery_min_kobo',       '30000'::jsonb),    -- ₦300
-  -- Beyond this a campus delivery is not a campus delivery. Priced at the cap
-  -- rather than refused, so an edge-of-town address does not dead-end checkout.
+  ('delivery_min_kobo',       '30000'::jsonb),    -- ₦300 floor
+  -- Beyond this a campus delivery is not a campus delivery. Priced at the
+  -- ceiling rather than refused, so an edge-of-town address does not dead-end
+  -- checkout.
   ('delivery_max_km',         '20'::jsonb)
 on conflict (key) do nothing;
 
--- Explicit 0, for the fallback reason in the header.
+-- The old flat commission is gone. Written to 0 rather than deleted, because
+-- `private.setting_int('commission_pct', 10)` falls back to 10 when the key is
+-- MISSING — deleting the row would restore the very charge this removes.
 update public.app_settings set value = '0'::jsonb where key = 'commission_pct';
 
--- ── 2. Stop charging commission ─────────────────────────────────────────────
+-- ── 2. A percentage with a ceiling ──────────────────────────────────────────
+create or replace function private.capped_charge(
+  p_amount_kobo bigint,
+  p_pct_key     text,
+  p_cap_key     text,
+  p_pct_default integer,
+  -- 0 means no ceiling. Rent uses it.
+  p_cap_default bigint default 0
+)
+returns bigint
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_pct    integer := private.setting_int(p_pct_key, p_pct_default);
+  v_cap    bigint;
+  v_charge bigint;
+begin
+  if p_amount_kobo <= 0 or v_pct <= 0 then
+    return 0;
+  end if;
+
+  -- Integer division floors, which rounds in the payer's favour. On a ₦3,500
+  -- order that is a few kobo, and favouring the person being charged is the
+  -- right direction to be wrong in.
+  v_charge := (p_amount_kobo * v_pct) / 100;
+
+  if p_cap_key is null then
+    return v_charge;
+  end if;
+
+  v_cap := private.setting_int(p_cap_key, p_cap_default::integer);
+  if v_cap <= 0 then
+    return v_charge;
+  end if;
+  return least(v_charge, v_cap);
+end;
+$fn$;
+
+grant execute on function private.capped_charge(bigint, text, text, integer, bigint) to service_role;
+
+-- Rent's 2.5% is not a whole number of percent, so it cannot go through
+-- setting_int. Basis points, floored, no ceiling.
+create or replace function private.rent_charge(p_amount_kobo bigint)
+returns bigint
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_raw jsonb;
+  v_bps integer := 250;   -- 2.5%
+begin
+  if p_amount_kobo <= 0 then
+    return 0;
+  end if;
+  select value into v_raw from public.app_settings where key = 'rent_charge_pct';
+  if v_raw is not null and jsonb_typeof(v_raw) = 'number' then
+    v_bps := round((v_raw #>> '{}')::numeric * 100)::integer;
+  end if;
+  return (p_amount_kobo * v_bps) / 10000;
+end;
+$fn$;
+
+grant execute on function private.rent_charge(bigint) to service_role;
+
+-- ── 3. The fourth subject ───────────────────────────────────────────────────
+alter table public.escrow_holds
+  add column if not exists delivery_id uuid references public.deliveries (id) on delete cascade;
+
+-- Unclaimed delivery money has no payee yet. See the header.
+alter table public.escrow_holds alter column payee_id drop not null;
+
+alter table public.escrow_holds drop constraint if exists escrow_holds_one_subject;
+alter table public.escrow_holds add constraint escrow_holds_one_subject check (
+  (order_id is not null)::int
+  + (booking_id is not null)::int
+  + (request_id is not null)::int
+  + (delivery_id is not null)::int = 1
+);
+
+-- One hold per delivery. The same protection the order side relies on.
+create unique index if not exists escrow_holds_one_per_delivery_idx
+  on public.escrow_holds (delivery_id) where delivery_id is not null;
+
+comment on column public.escrow_holds.delivery_id is
+  'The rider''s fee, held until the order is delivered. payee_id is null until a rider claims the job.';
+
+-- ── 4. What each hold costs its payee ───────────────────────────────────────
 create or replace function public.apply_escrow_settings()
 returns trigger
 language plpgsql
@@ -89,13 +179,34 @@ as $fn$
 declare
   v_hours integer;
 begin
-  -- COMMISSION IS NO LONGER APPLIED. The column stays, and rows written before
-  -- this migration keep the value they were created with — release_order_escrow
-  -- and resolve_dispute still subtract it, which is correct for those rows and
-  -- a no-op for every new one.
+  -- Frozen at creation, deducted at release. An explicit value survives — a
+  -- negotiated rate or a correction must not be overwritten.
+  if new.commission_kobo is null or new.commission_kobo = 0 then
+    new.commission_kobo := case
+      when new.delivery_id is not null then
+        private.capped_charge(new.amount_kobo, 'rider_charge_pct',
+                              'rider_charge_cap_kobo', 5, 200000)
+      when new.booking_id is not null then
+        private.rent_charge(new.amount_kobo)
+      else
+        private.capped_charge(new.amount_kobo, 'service_charge_pct',
+                              'service_charge_cap_kobo', 5, 200000)
+    end;
+  end if;
+
   if new.release_after is null then
-    v_hours := private.setting_int('escrow_hold_hours', 24);
-    new.release_after := now() + make_interval(hours => v_hours);
+    -- Rent settles a week after move-in, not a day after payment: the student
+    -- has to actually get the room. `move_in` is a date, so this is set from
+    -- the booking rather than from now().
+    if new.booking_id is not null then
+      select coalesce(b.move_in::timestamptz, now()) + interval '7 days'
+        into new.release_after
+        from public.bookings b where b.id = new.booking_id;
+      new.release_after := coalesce(new.release_after, now() + interval '7 days');
+    else
+      v_hours := private.setting_int('escrow_hold_hours', 24);
+      new.release_after := now() + make_interval(hours => v_hours);
+    end if;
   end if;
 
   return new;
@@ -103,43 +214,11 @@ end;
 $fn$;
 
 comment on function public.apply_escrow_settings is
-  'Stamps the maturity window onto a new escrow hold. No longer applies commission - vendors pay a subscription instead (see 20260902090000).';
+  'Freezes the platform charge and the maturity window onto a new hold. 5% capped on goods and delivery, 2.5% uncapped on rent (see 20260902090000).';
 
--- ── 3. A percentage with a ceiling ──────────────────────────────────────────
--- Both charges are the same shape, and the cap is the part that matters: 5% of
--- a year's rent is not a service charge, it is a share of the rent.
-create or replace function private.capped_charge(
-  p_amount_kobo bigint,
-  p_pct_key     text,
-  p_cap_key     text,
-  p_pct_default integer,
-  p_cap_default bigint
-)
-returns bigint
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $fn$
-declare
-  v_pct integer := private.setting_int(p_pct_key, p_pct_default);
-  v_cap bigint  := private.setting_int(p_cap_key, p_cap_default::integer);
-begin
-  if p_amount_kobo <= 0 then
-    return 0;
-  end if;
-  -- Integer division floors, which rounds in the payer's favour. On a ₦3,500
-  -- order that is a few kobo, and favouring the person being charged is the
-  -- right direction to be wrong in.
-  return least((p_amount_kobo * v_pct) / 100, v_cap);
-end;
-$fn$;
-
-grant execute on function private.capped_charge(bigint, text, text, integer, bigint) to service_role;
-
--- ── 4. What a delivery to this point costs ──────────────────────────────────
--- Callable before checkout, so the fee is on screen BEFORE somebody pays it.
--- A delivery fee that first appears on the receipt is a complaint.
+-- ── 5. What a delivery to this point costs ──────────────────────────────────
+-- Callable before checkout, so the fee is on screen BEFORE somebody pays it. A
+-- delivery fee that first appears on the receipt is a complaint.
 create or replace function public.quote_delivery(
   p_storefront uuid,
   p_lat        double precision,
@@ -152,22 +231,21 @@ security definer
 set search_path = ''
 as $fn$
 declare
-  v_geo      extensions.geography;
-  v_metres   double precision;
-  v_base     integer := private.setting_int('delivery_base_kobo', 30000);
-  v_per_km   integer := private.setting_int('delivery_per_km_kobo', 10000);
-  v_min      integer := private.setting_int('delivery_min_kobo', 30000);
-  v_max_km   integer := private.setting_int('delivery_max_km', 20);
-  v_fee      bigint;
+  v_geo    extensions.geography;
+  v_metres double precision;
+  v_base   integer := private.setting_int('delivery_base_kobo', 30000);
+  v_per_km integer := private.setting_int('delivery_per_km_kobo', 10000);
+  v_min    integer := private.setting_int('delivery_min_kobo', 30000);
+  v_max_km integer := private.setting_int('delivery_max_km', 20);
 begin
   select s.geo into v_geo from public.storefronts s where s.id = p_storefront;
 
   -- No pin on the store, or no point from the caller: the flag-fall stands in.
-  -- Refusing here would block checkout over a branch whose owner never dropped
-  -- a pin, which is the store's gap and not the student's problem.
+  -- Refusing would block checkout over a branch whose owner never dropped a
+  -- pin, which is the store's gap and not the student's problem.
   if v_geo is null or p_lat is null or p_lng is null then
     distance_meters := null;
-    fee_kobo := greatest(v_base, v_min);
+    fee_kobo := greatest(v_base, v_min)::bigint;
     return next;
     return;
   end if;
@@ -176,14 +254,10 @@ begin
     v_geo,
     extensions.ST_SetSRID(extensions.ST_MakePoint(p_lng, p_lat), 4326)::extensions.geography
   );
-
-  -- Clamped, not refused. An address the geocoder placed in the next state
-  -- should cost the ceiling and get a phone call, not end the order.
   v_metres := least(v_metres, v_max_km * 1000.0);
 
-  v_fee := v_base + ((v_metres / 1000.0) * v_per_km)::bigint;
   distance_meters := round(v_metres)::integer;
-  fee_kobo := greatest(v_fee, v_min);
+  fee_kobo := greatest(v_base + ((v_metres / 1000.0) * v_per_km)::bigint, v_min::bigint);
   return next;
 end;
 $fn$;
@@ -195,269 +269,84 @@ grant execute on function public.quote_delivery(uuid, double precision, double p
 comment on function public.quote_delivery is
   'What a delivery from this branch to this point costs, and how far it is. Safe to call before checkout so the fee is visible before it is charged.';
 
--- ── 5. The rider's cut, recorded on the delivery ────────────────────────────
-alter table public.deliveries
-  add column if not exists platform_fee_kobo bigint not null default 0
-    check (platform_fee_kobo >= 0);
-
-comment on column public.deliveries.platform_fee_kobo is
-  'Sync''s 5% (capped) of the delivery fee. Deducted from the rider''s earnings, not added to what the student pays. Stamped at creation and frozen, so a later rate change cannot alter a job already taken.';
-
--- Frozen at creation, for the same reason the old commission was: a rider who
--- accepted a job at one rate must not be paid at another.
-create or replace function public.apply_delivery_charge()
-returns trigger
+-- ── 6. Paying the rider ─────────────────────────────────────────────────────
+-- Mirrors release_order_escrow: idempotent, keyed on a ledger reference, and it
+-- refuses to pay a hold nobody has claimed.
+create or replace function public.release_delivery_escrow(p_delivery_id uuid)
+returns uuid
 language plpgsql
 security definer
 set search_path = ''
 as $fn$
+declare
+  v_hold   public.escrow_holds%rowtype;
+  v_d      public.deliveries%rowtype;
+  v_wallet uuid;
+  v_net    bigint;
+  v_ref    text;
+  v_txn    uuid;
 begin
-  if new.platform_fee_kobo is null or new.platform_fee_kobo = 0 then
-    new.platform_fee_kobo := private.capped_charge(
-      new.fee_kobo, 'rider_charge_pct', 'rider_charge_cap_kobo', 5, 200000
-    );
+  select * into v_d from public.deliveries where id = p_delivery_id;
+  if not found then
+    raise exception 'no such delivery' using errcode = 'P0002';
   end if;
-  return new;
+
+  if v_d.status <> 'delivered' then
+    raise exception 'That delivery is not complete' using errcode = 'P0001';
+  end if;
+
+  select * into v_hold from public.escrow_holds
+   where delivery_id = p_delivery_id for update;
+  if not found then
+    -- Orders placed before this migration have no delivery hold. Not an error:
+    -- there is simply nothing to release.
+    return null;
+  end if;
+
+  if v_hold.payee_id is null then
+    raise exception 'That delivery has no rider to pay' using errcode = 'P0001';
+  end if;
+
+  v_ref := 'DELIVERY_' || p_delivery_id::text;
+
+  if v_hold.status <> 'held' then
+    select id into v_txn from private.ledger_transactions where reference = v_ref;
+    return v_txn;
+  end if;
+
+  select id into v_txn from private.ledger_transactions where reference = v_ref;
+  if v_txn is not null then
+    return v_txn;
+  end if;
+
+  select id into v_wallet from public.wallets where owner_id = v_hold.payee_id;
+  if v_wallet is null then
+    raise exception 'rider has no wallet' using errcode = 'P0002';
+  end if;
+
+  v_net := v_hold.amount_kobo - v_hold.commission_kobo;
+
+  insert into private.ledger_transactions (reference, kind, entries)
+  values (
+    v_ref,
+    'escrow_release',
+    jsonb_build_array(
+      jsonb_build_object('wallet_id', v_wallet, 'amount_kobo', v_net),
+      jsonb_build_object('account', 'platform_revenue', 'amount_kobo', v_hold.commission_kobo)
+    )
+  )
+  returning id into v_txn;
+
+  update public.escrow_holds
+     set status = 'released', released_at = now(), updated_at = now()
+   where id = v_hold.id;
+
+  return v_txn;
 end;
 $fn$;
 
-drop trigger if exists deliveries_apply_charge on public.deliveries;
-create trigger deliveries_apply_charge
-  before insert on public.deliveries
-  for each row execute function public.apply_delivery_charge();
+revoke all on function public.release_delivery_escrow(uuid) from public, anon;
+grant execute on function public.release_delivery_escrow(uuid) to authenticated, service_role;
 
--- ── 6. Checkout, priced ─────────────────────────────────────────────────────
--- DROPPED FIRST, NOT REPLACED. Adding two arguments with defaults would leave
--- the four-argument form in place beside this one, and PostgREST resolves an
--- RPC by the exact set of argument names it is given — every existing call
--- would become ambiguous rather than picking up the new behaviour.
-drop function if exists public.checkout_cart(uuid, text, text, text);
-
-create or replace function public.checkout_cart(
-  p_cart_id          uuid,
-  p_delivery_address text,
-  p_note             text default null,
-  p_promotion_code   text default null,
-  -- Where it is going. Optional, because an address typed by hand has no point
-  -- attached; the quote falls back to the flag-fall in that case.
-  p_dropoff_lat      double precision default null,
-  p_dropoff_lng      double precision default null
-)
-returns table (order_id uuid, total_kobo bigint, repriced boolean)
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_uid        uuid := auth.uid();
-  v_cart       public.carts%rowtype;
-  v_order_id   uuid;
-  v_subtotal   bigint := 0;
-  v_cart_total bigint := 0;
-  v_discount   bigint := 0;
-  v_goods      bigint := 0;
-  v_delivery   bigint := 0;
-  v_distance   integer;
-  v_sync_fee   bigint := 0;
-  v_total      bigint := 0;
-  v_promo      public.promotions%rowtype;
-  v_item       record;
-  v_repriced   boolean := false;
-  v_missing    text;
-  v_pickup     text;
-  v_pickup_geo extensions.geography;
-begin
-  if v_uid is null then
-    raise exception 'not authenticated' using errcode = '28000';
-  end if;
-
-  -- Lock the cart so two taps on "Pay" cannot both produce an order.
-  select * into v_cart from public.carts
-   where id = p_cart_id and student_id = v_uid and status = 'open'
-   for update;
-
-  if not found then
-    raise exception 'no open cart % for this user', p_cart_id using errcode = 'P0002';
-  end if;
-
-  if not exists (select 1 from public.cart_items where cart_id = p_cart_id) then
-    raise exception 'cart is empty' using errcode = 'P0001';
-  end if;
-
-  if v_cart.storefront_id is not null
-     and not public.store_accepting_orders(v_cart.storefront_id) then
-    raise exception 'This store has paused new orders. Try again shortly.'
-      using errcode = 'P0001';
-  end if;
-
-  select l.name into v_missing
-    from public.cart_items ci
-    join public.listings l on l.id = ci.listing_id
-   where ci.cart_id = p_cart_id
-     and not exists (
-       select 1 from public.storefront_listings sl
-        where sl.listing_id    = ci.listing_id
-          and sl.storefront_id = v_cart.storefront_id
-          and sl.is_available
-     )
-   limit 1;
-
-  if v_missing is not null then
-    raise exception '% is not available at this store', v_missing
-      using errcode = 'P0001';
-  end if;
-
-  for v_item in
-    select ci.listing_id,
-           ci.quantity,
-           ci.unit_price_kobo                                        as captured,
-           public.store_price(v_cart.storefront_id, ci.listing_id)   as live,
-           l.name,
-           sl.stock
-      from public.cart_items ci
-      join public.listings l on l.id = ci.listing_id
-      join public.storefront_listings sl
-             on sl.listing_id = ci.listing_id
-            and sl.storefront_id = v_cart.storefront_id
-     where ci.cart_id = p_cart_id
-     for update of sl
-  loop
-    if v_item.live is distinct from v_item.captured then
-      v_repriced := true;
-    end if;
-    if v_item.stock is not null and v_item.stock < v_item.quantity then
-      raise exception '% has only % left', v_item.name, v_item.stock using errcode = 'P0001';
-    end if;
-    v_subtotal   := v_subtotal   + (v_item.live * v_item.quantity);
-    v_cart_total := v_cart_total + (v_item.captured * v_item.quantity);
-  end loop;
-
-  if p_promotion_code is not null then
-    select * into v_promo from public.promotions
-     where vendor_id = v_cart.vendor_id
-       and code = p_promotion_code
-       and is_active
-       and starts_at <= now()
-       and (ends_at is null or ends_at > now())
-       and (max_redemptions is null or redemption_count < max_redemptions)
-     for update;
-
-    if found and v_subtotal >= v_promo.min_order_kobo then
-      v_discount := case
-        when v_promo.discount_type = 'percent'
-          then (v_subtotal * v_promo.discount_value) / 100
-        else least(v_promo.discount_value::bigint, v_subtotal)
-      end;
-      update public.promotions
-         set redemption_count = redemption_count + 1
-       where id = v_promo.id;
-    end if;
-  end if;
-
-  -- THE THREE NUMBERS, AND THEY ARE NOT INTERCHANGEABLE.
-  --   v_goods     what the vendor is owed. This and only this is escrowed.
-  --   v_delivery  what the ride costs. The rider's, less Sync's capped cut.
-  --   v_sync_fee  the platform's charge to the student, on the goods.
-  -- The service charge is levied on the GOODS, not on the total: charging a
-  -- percentage of the delivery fee as well would be charging twice for the
-  -- same trip, once through the rider's cut and once through the student's.
-  v_goods := v_subtotal - v_discount;
-
-  select q.distance_meters, q.fee_kobo
-    into v_distance, v_delivery
-    from public.quote_delivery(v_cart.storefront_id, p_dropoff_lat, p_dropoff_lng) q;
-
-  v_sync_fee := private.capped_charge(
-    v_goods, 'service_charge_pct', 'service_charge_cap_kobo', 5, 200000
-  );
-
-  v_total := v_goods + coalesce(v_delivery, 0) + v_sync_fee;
-
-  insert into public.orders (
-    student_id, vendor_id, storefront_id, status,
-    subtotal_kobo, delivery_fee_kobo, sync_fee_kobo, total_kobo, delivery_address
-  )
-  values (
-    v_uid, v_cart.vendor_id, v_cart.storefront_id, 'pending',
-    v_subtotal, coalesce(v_delivery, 0), v_sync_fee, v_total, p_delivery_address
-  )
-  returning id into v_order_id;
-
-  insert into public.order_items (order_id, listing_id, qty, price_kobo, name, image_url)
-  select v_order_id,
-         ci.listing_id,
-         ci.quantity,
-         public.store_price(v_cart.storefront_id, ci.listing_id),
-         l.name,
-         l.image_url
-    from public.cart_items ci
-    join public.listings l on l.id = ci.listing_id
-   where ci.cart_id = p_cart_id;
-
-  update public.storefront_listings sl
-     set stock = sl.stock - ci.quantity,
-         updated_at = now()
-    from public.cart_items ci
-   where ci.cart_id = p_cart_id
-     and sl.listing_id = ci.listing_id
-     and sl.storefront_id = v_cart.storefront_id
-     and sl.stock is not null;
-
-  update public.listings l
-     set sold = l.sold + ci.quantity
-    from public.cart_items ci
-   where ci.cart_id = p_cart_id and l.id = ci.listing_id;
-
-  insert into public.conversations (kind, subject_type, subject_id, created_by)
-  values ('order', 'order', v_order_id, v_uid);
-
-  insert into public.conversation_participants (conversation_id, user_id, role)
-  select c.id, u.uid, u.r
-    from public.conversations c
-    cross join (values (v_uid, 'member'), (v_cart.vendor_id, 'owner')) as u(uid, r)
-   where c.subject_type = 'order' and c.subject_id = v_order_id
-  on conflict do nothing;
-
-  -- THE DELIVERY NOW CARRIES WHAT A RIDER NEEDS TO DECIDE ON IT.
-  -- It used to be inserted with an order id, an address and nothing else, so
-  -- the open board advertised every job at ₦0 with no pickup and no distance.
-  select s.address, s.geo into v_pickup, v_pickup_geo
-    from public.storefronts s where s.id = v_cart.storefront_id;
-
-  insert into public.deliveries (
-    order_id, dropoff_address, dropoff_geo, pickup_address, pickup_geo,
-    distance_meters, fee_kobo, status
-  )
-  values (
-    v_order_id,
-    p_delivery_address,
-    case when p_dropoff_lat is null or p_dropoff_lng is null then null
-         else extensions.ST_SetSRID(
-                extensions.ST_MakePoint(p_dropoff_lng, p_dropoff_lat), 4326
-              )::extensions.geography
-    end,
-    v_pickup,
-    v_pickup_geo,
-    v_distance,
-    coalesce(v_delivery, 0),
-    'pending'
-  );
-
-  -- ESCROW HOLDS THE GOODS ONLY. The delivery fee is the rider's and the
-  -- service charge is Sync's; neither is the vendor's to be released.
-  insert into public.escrow_holds (order_id, payer_id, payee_id, amount_kobo, release_after)
-  values (v_order_id, v_uid, v_cart.vendor_id, v_goods, now() + interval '24 hours');
-
-  update public.carts set status = 'ordered', updated_at = now() where id = p_cart_id;
-
-  return query select v_order_id, v_total, v_repriced;
-end;
-$$;
-
-revoke all on function public.checkout_cart(uuid, text, text, text, double precision, double precision)
-  from public, anon;
-grant execute on function public.checkout_cart(uuid, text, text, text, double precision, double precision)
-  to authenticated, service_role;
-
-comment on function public.checkout_cart is
-  'Cart -> order -> items -> delivery -> escrow. Prices the delivery from the dropoff point and charges the student a capped service charge. Escrow holds the goods only; no vendor commission (see 20260902090000).';
+comment on function public.release_delivery_escrow is
+  'Pays a rider for a delivered job, less Sync''s frozen cut. Idempotent on the DELIVERY_<id> ledger reference; refuses an unclaimed or incomplete delivery.';

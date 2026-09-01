@@ -24,7 +24,7 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database.types';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { isStaffRole } from '@/modules/admin/guard';
 import { userMessage } from '@/lib/errors';
 import { FEATURED_TAG } from '@/app/(admin)/admin/editorial/admin-editorialConstants';
 
@@ -44,8 +44,7 @@ export interface ArticleInput {
 
 async function assertStaff(): Promise<string> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') throw new Error('Not authorised');
+  if (!isStaffRole(profile?.role)) throw new Error('Not authorised');
   if (!user?.id) throw new Error('Not authenticated');
   return user.id;
 }

@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { UsersClient } from './user-componenets/UsersClient';
 
@@ -18,13 +16,7 @@ export type ProfileRow = {
 };
 
 export default async function Page() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-
-  if (role !== 'admin' && role !== 'super_admin') {
-    redirect('/403');
-  }
-
+  const role = await requireStaff();
   const isSuperAdmin = role === 'super_admin';
 
   const admin = createAdminClient();

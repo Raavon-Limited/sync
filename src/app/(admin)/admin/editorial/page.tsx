@@ -8,9 +8,7 @@
  * the filters and modals are interactive, but it owns no data of its own.
  */
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { listArticles } from '@/modules/admin/editorial';
 import { AdminEditorialPage } from './editorial-components';
 
@@ -21,9 +19,7 @@ export const metadata: Metadata = { title: 'Editorial — Admin' };
 export const dynamic = 'force-dynamic';
 
 export default async function EditorialPage() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  await requireStaff();
 
   const { articles, stats, categories } = await listArticles();
 

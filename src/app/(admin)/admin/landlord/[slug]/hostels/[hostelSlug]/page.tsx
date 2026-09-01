@@ -10,11 +10,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, MapPin, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 import type { Row } from '@/lib/supabase/row';
@@ -45,9 +44,7 @@ export default async function Page({
   params: Promise<{ slug: string; hostelSlug: string }>;
 }) {
   const { slug, hostelSlug } = await params;
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  await requireStaff();
 
   const admin = createAdminClient();
 

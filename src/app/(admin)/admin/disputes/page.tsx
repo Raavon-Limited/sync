@@ -5,9 +5,7 @@
  * PURPOSE: Read a dispute and decide where the escrowed money goes.
  */
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DisputesQueue, type AdminDispute } from './(components)/disputes-queue';
 
@@ -16,9 +14,7 @@ export const metadata: Metadata = { title: 'Disputes — Admin' };
 import type { Row } from '@/lib/supabase/row';
 
 export default async function Page() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  await requireStaff();
 
   const admin = createAdminClient();
 

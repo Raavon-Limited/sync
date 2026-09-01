@@ -24,10 +24,35 @@ if (!url || !key) {
   process.exit(1);
 }
 
-const ADMINS = [
-  { email: 'hello@raavon.com', role: 'super_admin' },
-  { email: 'muiz@raavon.com', role: 'admin' },
-] as const;
+/**
+ * WHO TO SEED COMES FROM THE ENVIRONMENT, NOT FROM THIS FILE.
+ *
+ * A staff address committed to the repository is a name handed to anyone who
+ * reads it — not a way in on its own, since access still needs the OTP that
+ * lands in that mailbox, but a target for phishing and for hammering the OTP
+ * endpoint. There is no reason to publish it.
+ *
+ *   ADMIN_SEED=admin@example.com:super_admin,reviews@example.com:admin
+ *
+ * Set it in .env.local (gitignored) for the one run that creates the account,
+ * then delete the line. It is read here and nowhere else in the codebase —
+ * staff access itself is `profiles.role`, granted by set_account_role.
+ */
+const ADMINS = (process.env.ADMIN_SEED ?? '')
+  .split(',')
+  .map((entry) => {
+    const [email, role] = entry.split(':').map((s) => s.trim().toLowerCase());
+    return { email, role: role === 'admin' ? 'admin' : 'super_admin' };
+  })
+  .filter((a) => a.email);
+
+if (ADMINS.length === 0) {
+  console.error(
+    'Nothing to seed. Set ADMIN_SEED in .env.local, e.g.\n' +
+      '  ADMIN_SEED=admin@example.com:super_admin',
+  );
+  process.exit(1);
+}
 
 const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },

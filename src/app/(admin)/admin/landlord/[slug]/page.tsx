@@ -8,11 +8,10 @@
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ChevronRight, MapPin, Phone, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
@@ -31,9 +30,7 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  await requireStaff();
 
   const admin = createAdminClient();
 

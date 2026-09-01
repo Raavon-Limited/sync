@@ -21,19 +21,23 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { isStaffRole } from '@/modules/admin/guard';
 import { userMessage } from '@/lib/errors';
 
 export type DocDecision = 'approved' | 'needs_action';
 export type VendorDecision = 'verified' | 'rejected' | 'pending';
 
-/** Throws unless the caller is staff. Every action calls this first. */
+/**
+ * Throws unless the caller is staff. Every action calls this first.
+ *
+ * Reads profiles.role and nothing else. It used to fall back to the
+ * ADMIN_EMAILS allowlist, which meant an env var could authorise a write that
+ * is_staff() in the database would then refuse - access that looked real right
+ * up to the moment it mattered.
+ */
 async function assertStaff(): Promise<string> {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') {
-    throw new Error('Not authorised');
-  }
+  if (!isStaffRole(profile?.role)) throw new Error('Not authorised');
   if (!user?.id) throw new Error('Not authenticated');
   return user.id;
 }
@@ -443,4 +447,62 @@ export async function setAccountSuspension(input: {
   revalidatePath('/admin/riders');
   revalidatePath('/admin/verification');
   revalidatePath('/admin/users');
+}
+
+export type AccountRole = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
+
+/**
+ * Change what somebody is.
+ *
+ * CALLED WITH THE USER'S SESSION, not the service role: `set_account_role`
+ * reads auth.uid() to check the caller is a super admin, and the service-role
+ * client has no user session, so auth.uid() would be NULL and the call refused.
+ *
+ * Every rule that matters — super admin only, not yourself, not the last one —
+ * lives in the function. This does not restate them; it would be a second copy
+ * to keep in step, and the one that could be bypassed.
+ */
+export async function setAccountRole(input: { userId: string; role: AccountRole }) {
+  await assertStaff();
+
+  const supabase = await createServerClient();
+  // REGENERATE THE TYPES once 20260902110000 is applied and this cast can go.
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ error: { message: string; code?: string } | null }>;
+
+  const { error } = await rpc('set_account_role', {
+    p_user: input.userId,
+    p_role: input.role,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not change that role.'));
+  revalidatePath('/admin/staff');
+  revalidatePath('/admin/users');
+}
+
+/**
+ * Give console access to somebody by the email they signed up with.
+ *
+ * BY EMAIL, BECAUSE THAT IS WHAT YOU KNOW ABOUT A COLLEAGUE. A picker of every
+ * account on the platform would be thousands of students deep, and the person
+ * you are looking for is one you can already name.
+ *
+ * The account has to exist. Sync does not create logins from this screen —
+ * inviting somebody who has never signed up is a different feature with a
+ * different failure mode, and quietly creating an account here would mean staff
+ * access arriving before the person knew they had it.
+ */
+export async function addStaffByEmail(input: { email: string; role: 'admin' | 'super_admin' }) {
+  await assertStaff();
+
+  if (!input.email.trim()) throw new Error('Enter an email address');
+
+  const { findAccountByEmail } = await import('@/modules/admin/staff');
+  const found = await findAccountByEmail(input.email);
+  if (!found) throw new Error('No account with that email. They need to sign up first.');
+
+  await setAccountRole({ userId: found.id, role: input.role });
+  return found.name;
 }

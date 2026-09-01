@@ -9,9 +9,7 @@
  * components they always were.
  */
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { AnalyticsStatCards } from './components/AnalyticsStatCards';
 import { RevenueTrendChart } from './components/RevenueTrendChart';
 import { CategoryPieChart } from './components/CategoryPieChart';
@@ -36,13 +34,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
-  const [{ range: rawRange }, user, profile] = await Promise.all([
-    searchParams,
-    getCurrentUser(),
-    getProfile(),
-  ]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  const [{ range: rawRange }] = await Promise.all([searchParams, requireStaff()]);
 
   const range = rangeFromParam(rawRange);
   const a = await getAnalytics(range);

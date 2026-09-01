@@ -8,7 +8,6 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminRoleForEmail } from '@/lib/admin-emails';
 import type { Database } from '@/types/database.types';
 
 export async function updateSession(request: NextRequest) {
@@ -39,9 +38,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Trusted role for the gate: the env admin allowlist wins for founding admins
-  // (so they're recognised even if profiles.role is still the clamped default),
-  // then the server-controlled `profiles.role`, then editable user_metadata.
+  // Trusted role for the gate: `profiles.role`, then editable user_metadata as
+  // a fallback for the moment between signup and the profile trigger landing.
+  //
+  // THE ENV ALLOWLIST USED TO WIN HERE, AND THAT WAS THE BUG. This resolved
+  // `adminRoleForEmail(email) ?? profile?.role` while every admin PAGE resolved
+  // the opposite way round, so the same person could be staff to the router and
+  // a student to the page they were routed to. There is one source now, and it
+  // is the row — see modules/admin/guard.
   let role: string | undefined;
   if (user) {
     const { data: profile } = await supabase
@@ -50,9 +54,7 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
     role =
-      adminRoleForEmail(user.email) ??
-      (profile?.role as string | undefined) ??
-      (user.user_metadata?.role as string | undefined);
+      (profile?.role as string | undefined) ?? (user.user_metadata?.role as string | undefined);
   }
 
   // MANAGING A STORE IS NOT THE SAME AS BEING A VENDOR.

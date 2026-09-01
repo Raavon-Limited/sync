@@ -10,9 +10,7 @@
  * start at zero.
  */
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaff } from '@/modules/admin/guard';
 import { StatCards } from './overview-components/StatCards';
 import { RevenueChart } from './overview-components/RevenueChart';
 import { GrowthChart } from './overview-components/GrowthChart';
@@ -26,9 +24,7 @@ export const metadata: Metadata = { title: 'Overview — Admin' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOverviewPage() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-  if (role !== 'admin' && role !== 'super_admin') redirect('/403');
+  await requireStaff();
 
   const o = await getOverview();
 
