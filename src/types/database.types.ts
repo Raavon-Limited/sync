@@ -659,6 +659,7 @@ export type Database = {
           picked_up_at: string | null;
           pickup_address: string | null;
           pickup_geo: unknown;
+          platform_fee_kobo: number;
           rider_id: string | null;
           status: string;
           updated_at: string;
@@ -679,6 +680,7 @@ export type Database = {
           picked_up_at?: string | null;
           pickup_address?: string | null;
           pickup_geo?: unknown;
+          platform_fee_kobo?: number;
           rider_id?: string | null;
           status?: string;
           updated_at?: string;
@@ -699,6 +701,7 @@ export type Database = {
           picked_up_at?: string | null;
           pickup_address?: string | null;
           pickup_geo?: unknown;
+          platform_fee_kobo?: number;
           rider_id?: string | null;
           status?: string;
           updated_at?: string;
@@ -3769,6 +3772,8 @@ export type Database = {
         Args: {
           p_cart_id: string;
           p_delivery_address: string;
+          p_dropoff_lat?: number;
+          p_dropoff_lng?: number;
           p_note?: string;
           p_promotion_code?: string;
         };
@@ -3842,6 +3847,16 @@ export type Database = {
       is_staff: { Args: never; Returns: boolean };
       is_super_admin: { Args: never; Returns: boolean };
       is_suspended: { Args: { p_user: string }; Returns: boolean };
+      list_staff: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          email: string;
+          full_name: string;
+          id: string;
+          role: string;
+        }[];
+      };
       login_method: { Args: { p_email: string }; Returns: string };
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number };
       max_holds_per_student: { Args: never; Returns: number };
@@ -3958,6 +3973,13 @@ export type Database = {
         Args: { p_quantity?: number; p_reference?: string; p_tier_id: string };
         Returns: string[];
       };
+      quote_delivery: {
+        Args: { p_lat: number; p_lng: number; p_storefront: string };
+        Returns: {
+          distance_meters: number;
+          fee_kobo: number;
+        }[];
+      };
       release_matured_escrow: {
         Args: { p_limit?: number };
         Returns: {
@@ -3998,6 +4020,10 @@ export type Database = {
           p_phone?: string;
         };
         Returns: undefined;
+      };
+      set_account_role: {
+        Args: { p_role: string; p_user: string };
+        Returns: string;
       };
       set_account_suspension: {
         Args: { p_reason?: string; p_suspended: boolean; p_user: string };

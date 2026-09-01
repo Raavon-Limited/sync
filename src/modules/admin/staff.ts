@@ -27,21 +27,10 @@ export interface StaffMember {
   createdAt: string;
 }
 
-/**
- * `list_staff` and `set_account_role` postdate the checked-in generated types.
- * REGENERATE (`npx supabase gen types typescript --project-id … --schema public`)
- * once 20260902110000 is applied, and these two casts can go.
- */
-type UntypedRpc = (
-  name: string,
-  args?: Record<string, unknown>,
-) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>;
-
 /** Everyone with console access, super admins first. */
 export async function getStaff(): Promise<StaffMember[]> {
   const supabase = await createServerClient();
-  const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
-  const { data } = await rpc('list_staff');
+  const { data } = await supabase.rpc('list_staff');
 
   return ((data ?? []) as Row[]).map((s) => ({
     id: s.id,

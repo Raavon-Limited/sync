@@ -466,13 +466,7 @@ export async function setAccountRole(input: { userId: string; role: AccountRole 
   await assertStaff();
 
   const supabase = await createServerClient();
-  // REGENERATE THE TYPES once 20260902110000 is applied and this cast can go.
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
-    n: string,
-    a: Record<string, unknown>,
-  ) => Promise<{ error: { message: string; code?: string } | null }>;
-
-  const { error } = await rpc('set_account_role', {
+  const { error } = await supabase.rpc('set_account_role', {
     p_user: input.userId,
     p_role: input.role,
   });
