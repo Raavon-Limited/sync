@@ -314,6 +314,37 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </div>
         )}
 
+        {/* No account for this address.
+            `getLoginMethod` used to answer 'password' for an email it had
+            never seen, so this screen was a password box for an account that
+            does not exist — you typed a password, got "invalid email or
+            password", and were left to guess which half was wrong. The answer
+            is the same either way, so say it plainly and offer the thing that
+            actually helps. The address rides along to /signup so it is not
+            typed twice. */}
+        {!choices && step === 'unknown' && (
+          <div className="flex flex-col gap-4">
+            {emailRow}
+            <div className="border-line/15 bg-panel rounded-xl border p-4">
+              <p className="text-content text-sm font-medium">No account for this email</p>
+              <p className="text-content-muted mt-1 text-xs">
+                We couldn&rsquo;t find a Sync account for that address. Create one, or try the email
+                you signed up with.
+              </p>
+            </div>
+            <Button asChild size="lg" className="w-full">
+              <Link href={signupHref}>Create an account</Link>
+            </Button>
+            <button
+              type="button"
+              onClick={changeEmail}
+              className="text-content-muted hover:text-content text-center text-sm"
+            >
+              Use a different email
+            </button>
+          </div>
+        )}
+
         {!choices && step === 'email' && (
           <form onSubmit={continueFromEmail} className="flex flex-col gap-4" noValidate>
             <FormField label="Email" htmlFor="email">
