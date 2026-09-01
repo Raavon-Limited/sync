@@ -33,8 +33,9 @@
  */
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Camera, FileUp, IdCard, RefreshCw, Trash2 } from 'lucide-react';
+import { CameraCapture } from '@/components/verification/camera-capture';
 import {
   requirementsFor,
   type VerificationRequirementSpec,
@@ -172,6 +173,19 @@ function Slot({
   onClear: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  // THE CAMERA, FOR THE SLOTS THAT DEMAND ONE.
+  //
+  // `capture="user"` on the input below only ever asked a PHONE to open its
+  // camera; every desktop browser ignores it and opens the file picker, so the
+  // live photo — the one document whose entire purpose is proving a person is
+  // present — was being satisfied by whatever was in somebody's downloads
+  // folder. <CameraCapture> is a real getUserMedia stream.
+  const [camera, setCamera] = useState(false);
+  // Set when the device has no usable camera or permission was refused. Falling
+  // back to the picker is deliberate: a laptop with no webcam must not be a
+  // dead end in an application form.
+  const [cameraFailed, setCameraFailed] = useState<string | null>(null);
+  const useCamera = capture && !cameraFailed;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -204,12 +218,25 @@ function Slot({
         }}
       />
 
+      {camera && (
+        <CameraCapture
+          onCapture={onPick}
+          onClose={() => setCamera(false)}
+          onUnavailable={(reason) => {
+            setCameraFailed(reason);
+            setCamera(false);
+          }}
+        />
+      )}
+
+      {cameraFailed && !file && <p className="text-content-muted text-xs">{cameraFailed}</p>}
+
       {file ? (
         <div className="border-line/15 bg-surface-deep/40 flex items-center gap-3 rounded-xl border px-3 py-3">
           <span className="text-content min-w-0 flex-1 truncate text-sm">{file.name}</span>
           <button
             type="button"
-            onClick={() => input.current?.click()}
+            onClick={() => (useCamera ? setCamera(true) : input.current?.click())}
             className="text-content-muted hover:text-content inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs"
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
@@ -227,7 +254,7 @@ function Slot({
       ) : (
         <button
           type="button"
-          onClick={() => input.current?.click()}
+          onClick={() => (useCamera ? setCamera(true) : input.current?.click())}
           className="border-line/20 hover:border-line/40 bg-surface-deep/20 flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors"
         >
           {capture ? (

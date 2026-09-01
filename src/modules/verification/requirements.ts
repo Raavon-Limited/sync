@@ -20,7 +20,13 @@
  *   way to read this list.
  */
 
-export type VerificationRole = 'student' | 'rider' | 'vendor' | 'landlord';
+/**
+ * `company` is a LOGISTICS FLEET, not a fifth kind of person. Its owner is
+ * already one of the others; this role exists so the fleet's own paperwork — a
+ * CAC certificate and an address that exists — is asked for separately from the
+ * owner's personal ID, which they may have submitted years ago as a rider.
+ */
+export type VerificationRole = 'student' | 'rider' | 'vendor' | 'landlord' | 'company';
 
 /** One acceptable document for a requirement. The reviewer records which. */
 export interface DocumentOption {
@@ -69,7 +75,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     accepts: 'Taken on camera at sign-up',
     description: 'Taken now, on your camera — not uploaded. A reviewer compares it to your ID.',
     colour: 'bg-emerald-50 text-emerald-600',
-    roles: ['student', 'rider', 'vendor', 'landlord'],
+    roles: ['student', 'rider', 'vendor', 'landlord', 'company'],
     captureOnly: true,
   },
   {
@@ -78,7 +84,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     accepts: 'NIN, passport or driver’s licence',
     description: 'A clear photo of the whole document, with the details readable.',
     colour: 'bg-violet-50 text-violet-500',
-    roles: ['student', 'rider', 'vendor', 'landlord'],
+    roles: ['student', 'rider', 'vendor', 'landlord', 'company'],
     options: [
       // Both forms are in circulation and they are not the same object: the
       // slip is a one-sided paper printout (what most people hold), the card is
@@ -98,7 +104,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     colour: 'bg-blue-50 text-blue-500',
     // A student or rider registers no company. Asking them for one is how
     // onboarding gets abandoned halfway.
-    roles: ['vendor', 'landlord'],
+    roles: ['vendor', 'landlord', 'company'],
     options: [
       { value: 'cac_certificate', label: 'CAC certificate' },
       { value: 'cac_business_name', label: 'CAC business name registration' },
@@ -112,7 +118,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     // name, or for a different street, proves nothing about this applicant.
     description: 'Dated within the last 3 months, showing the same address you gave us.',
     colour: 'bg-amber-50 text-amber-500',
-    roles: ['rider', 'vendor', 'landlord'],
+    roles: ['rider', 'vendor', 'landlord', 'company'],
     options: [
       { value: 'bank_statement', label: 'Bank statement', hint: 'Last 3 months' },
       { value: 'prepaid_receipt', label: 'Prepaid meter receipt' },

@@ -1752,6 +1752,75 @@ export type Database = {
           },
         ];
       };
+      logistics_companies: {
+        Row: {
+          archived_at: string | null;
+          business_address: string | null;
+          campus_id: string | null;
+          contact_email: string | null;
+          contact_phone: string | null;
+          created_at: string;
+          id: string;
+          name: string;
+          owner_id: string;
+          slug: string;
+          updated_at: string;
+          verification_blocked_at: string | null;
+          verification_blocked_reason: string | null;
+          verification_status: string;
+          verified_at: string | null;
+        };
+        Insert: {
+          archived_at?: string | null;
+          business_address?: string | null;
+          campus_id?: string | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          name: string;
+          owner_id: string;
+          slug: string;
+          updated_at?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
+          verification_status?: string;
+          verified_at?: string | null;
+        };
+        Update: {
+          archived_at?: string | null;
+          business_address?: string | null;
+          campus_id?: string | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          slug?: string;
+          updated_at?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
+          verification_status?: string;
+          verified_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'logistics_companies_campus_id_fkey';
+            columns: ['campus_id'];
+            isOneToOne: false;
+            referencedRelation: 'campuses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'logistics_companies_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       message_attachments: {
         Row: {
           created_at: string;
@@ -2270,6 +2339,9 @@ export type Database = {
           role: string;
           roles: string[];
           sells: string | null;
+          suspended_at: string | null;
+          suspended_by: string | null;
+          suspended_reason: string | null;
           trade: string | null;
           updated_at: string;
           vendor_category: string | null;
@@ -2289,6 +2361,9 @@ export type Database = {
           role?: string;
           roles?: string[];
           sells?: string | null;
+          suspended_at?: string | null;
+          suspended_by?: string | null;
+          suspended_reason?: string | null;
           trade?: string | null;
           updated_at?: string;
           vendor_category?: string | null;
@@ -2308,6 +2383,9 @@ export type Database = {
           role?: string;
           roles?: string[];
           sells?: string | null;
+          suspended_at?: string | null;
+          suspended_by?: string | null;
+          suspended_reason?: string | null;
           trade?: string | null;
           updated_at?: string;
           vendor_category?: string | null;
@@ -2319,6 +2397,13 @@ export type Database = {
             columns: ['campus_id'];
             isOneToOne: false;
             referencedRelation: 'campuses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'profiles_suspended_by_fkey';
+            columns: ['suspended_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
@@ -2528,6 +2613,7 @@ export type Database = {
         Row: {
           archived_at: string | null;
           campus_id: string | null;
+          company_id: string | null;
           created_at: string;
           current_geo: unknown;
           deliveries_count: number;
@@ -2541,11 +2627,14 @@ export type Database = {
           rating_count: number;
           updated_at: string;
           vehicle_type: string;
+          verification_blocked_at: string | null;
+          verification_blocked_reason: string | null;
           verification_status: string;
         };
         Insert: {
           archived_at?: string | null;
           campus_id?: string | null;
+          company_id?: string | null;
           created_at?: string;
           current_geo?: unknown;
           deliveries_count?: number;
@@ -2559,11 +2648,14 @@ export type Database = {
           rating_count?: number;
           updated_at?: string;
           vehicle_type?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
           verification_status?: string;
         };
         Update: {
           archived_at?: string | null;
           campus_id?: string | null;
+          company_id?: string | null;
           created_at?: string;
           current_geo?: unknown;
           deliveries_count?: number;
@@ -2577,6 +2669,8 @@ export type Database = {
           rating_count?: number;
           updated_at?: string;
           vehicle_type?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
           verification_status?: string;
         };
         Relationships: [
@@ -2585,6 +2679,13 @@ export type Database = {
             columns: ['campus_id'];
             isOneToOne: false;
             referencedRelation: 'campuses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'rider_profiles_company_id_fkey';
+            columns: ['company_id'];
+            isOneToOne: false;
+            referencedRelation: 'logistics_companies';
             referencedColumns: ['id'];
           },
           {
@@ -3362,6 +3463,8 @@ export type Database = {
           tagline: string | null;
           trade: string | null;
           updated_at: string;
+          verification_blocked_at: string | null;
+          verification_blocked_reason: string | null;
           verification_status: string;
           verified_at: string | null;
         };
@@ -3388,6 +3491,8 @@ export type Database = {
           tagline?: string | null;
           trade?: string | null;
           updated_at?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
           verification_status?: string;
           verified_at?: string | null;
         };
@@ -3414,6 +3519,8 @@ export type Database = {
           tagline?: string | null;
           trade?: string | null;
           updated_at?: string;
+          verification_blocked_at?: string | null;
+          verification_blocked_reason?: string | null;
           verification_status?: string;
           verified_at?: string | null;
         };
@@ -3646,6 +3753,10 @@ export type Database = {
       accept_storefront_invite: { Args: { p_token: string }; Returns: string };
       admin_analytics: { Args: { p_days?: number }; Returns: Json };
       admin_overview: { Args: never; Returns: Json };
+      advance_delivery: {
+        Args: { p_delivery_id: string; p_status: string };
+        Returns: string;
+      };
       auth_role: { Args: never; Returns: string };
       business_role_count: { Args: { p_roles: string[] }; Returns: number };
       campus_pulse: { Args: never; Returns: Json };
@@ -3668,6 +3779,7 @@ export type Database = {
         }[];
       };
       claim_business_name: { Args: { p_name: string }; Returns: string };
+      claim_delivery: { Args: { p_delivery_id: string }; Returns: string };
       claim_role: { Args: { p_role: string }; Returns: string[] };
       conversation_counterparties: {
         Args: { p_conversation_ids?: string[] };
@@ -3729,9 +3841,27 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean };
       is_staff: { Args: never; Returns: boolean };
       is_super_admin: { Args: never; Returns: boolean };
+      is_suspended: { Args: { p_user: string }; Returns: boolean };
       login_method: { Args: { p_email: string }; Returns: string };
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number };
       max_holds_per_student: { Args: never; Returns: number };
+      my_active_delivery: {
+        Args: never;
+        Returns: {
+          assigned_at: string;
+          customer_name: string;
+          customer_phone: string;
+          delivery_id: string;
+          distance_meters: number;
+          dropoff_address: string;
+          fee_kobo: number;
+          order_id: string;
+          pickup_address: string;
+          status: string;
+          vendor_name: string;
+          vendor_phone: string;
+        }[];
+      };
       my_plan_usage: {
         Args: never;
         Returns: {
@@ -3784,6 +3914,19 @@ export type Database = {
       open_booking_conversation: {
         Args: { p_booking_id: string };
         Returns: string;
+      };
+      open_delivery_board: {
+        Args: { p_limit?: number };
+        Returns: {
+          created_at: string;
+          delivery_id: string;
+          distance_meters: number;
+          dropoff_area: string;
+          fee_kobo: number;
+          order_id: string;
+          pickup_address: string;
+          vendor_name: string;
+        }[];
       };
       open_delivery_conversation: {
         Args: { p_order_id: string };
@@ -3856,9 +3999,26 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_account_suspension: {
+        Args: { p_reason?: string; p_suspended: boolean; p_user: string };
+        Returns: boolean;
+      };
+      set_company_verification: {
+        Args: { p_company: string; p_permanent?: boolean; p_status: string };
+        Returns: string;
+      };
       set_primary_storefront: {
         Args: { p_storefront_id: string };
         Returns: undefined;
+      };
+      set_rider_company: {
+        Args: { p_company: string; p_rider: string };
+        Returns: string;
+      };
+      set_rider_online: { Args: { p_online: boolean }; Returns: boolean };
+      set_rider_verification: {
+        Args: { p_permanent?: boolean; p_rider: string; p_status: string };
+        Returns: string;
       };
       set_storefront_archived: {
         Args: { p_archived: boolean; p_storefront_id: string };
@@ -3903,7 +4063,7 @@ export type Database = {
         Returns: string;
       };
       set_verification_status: {
-        Args: { p_status: string; p_vendor: string };
+        Args: { p_permanent?: boolean; p_status: string; p_vendor: string };
         Returns: string;
       };
       settle_payout: {
@@ -4022,6 +4182,10 @@ export type Database = {
           user_id: string;
         }[];
       };
+      submit_company_verification: {
+        Args: { p_company: string };
+        Returns: string;
+      };
       submit_review: {
         Args: {
           p_body?: string;
@@ -4034,6 +4198,7 @@ export type Database = {
         };
         Returns: string;
       };
+      submit_rider_verification: { Args: never; Returns: string };
       submit_verification: { Args: never; Returns: string };
       subscribe_to_plan: { Args: { p_plan_id: string }; Returns: string };
       switch_role: { Args: { p_role: string }; Returns: string };

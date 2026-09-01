@@ -25,7 +25,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
-import { createUntypedAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationOversight, type OversightRow } from './(components)/verification-oversight';
 
 export const metadata: Metadata = { title: 'Verification — Admin' };
@@ -37,7 +37,7 @@ export default async function Page() {
   const role = profile?.role ?? adminRoleForEmail(user?.email);
   if (role !== 'admin' && role !== 'super_admin') redirect('/403');
 
-  const db = createUntypedAdminClient();
+  const db = createAdminClient();
 
   const [{ data: businesses }, { data: riders }, { data: companies }, { data: people }] =
     await Promise.all([
@@ -64,7 +64,7 @@ export default async function Page() {
     ]);
 
   const person = new Map(
-    ((people ?? []) as unknown as Row[]).map((p) => [
+    ((people ?? []) as Row[]).map((p) => [
       p.id as string,
       { name: (p.full_name as string) ?? null, suspended: p.suspended_at != null },
     ]),
@@ -72,7 +72,7 @@ export default async function Page() {
 
   const rows: OversightRow[] = [];
 
-  for (const b of (businesses ?? []) as unknown as Row[]) {
+  for (const b of (businesses ?? []) as Row[]) {
     const id = b.id as string;
     const isLandlord = b.category === 'landlord';
     rows.push({
@@ -83,14 +83,16 @@ export default async function Page() {
       status: (b.verification_status as string) ?? 'unverified',
       blocked: b.verification_blocked_at != null,
       suspended: person.get(id)?.suspended ?? false,
-      // A landlord has a page of its own; a vendor does not, so it goes to the
-      // vendor queue where it can be found by name.
-      href: isLandlord ? `/admin/landlord/${b.slug as string}` : '/admin/vendors',
+      // Both have a page of their own now. Landlords keep their own route
+      // because that page carries the hostel context a vendor has none of.
+      href: isLandlord
+        ? `/admin/landlord/${b.slug as string}`
+        : `/admin/vendors/${b.slug as string}`,
       createdAt: b.created_at as string,
     });
   }
 
-  for (const r of (riders ?? []) as unknown as Row[]) {
+  for (const r of (riders ?? []) as Row[]) {
     const id = r.id as string;
     rows.push({
       id,
@@ -100,12 +102,12 @@ export default async function Page() {
       status: (r.verification_status as string) ?? 'unverified',
       blocked: r.verification_blocked_at != null,
       suspended: person.get(id)?.suspended ?? false,
-      href: '/admin/riders',
+      href: `/admin/riders/${id}`,
       createdAt: r.created_at as string,
     });
   }
 
-  for (const c of (companies ?? []) as unknown as Row[]) {
+  for (const c of (companies ?? []) as Row[]) {
     const id = c.id as string;
     rows.push({
       id,

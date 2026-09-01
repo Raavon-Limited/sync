@@ -115,21 +115,17 @@ export async function setVendorVerification(input: {
   // `p_permanent` IS SENT ONLY WHEN TRUE, and that is not tidiness.
   //
   // PostgREST resolves an RPC by the exact set of argument names it is given.
-  // Until 20260901260000 is applied the function is still the two-argument
-  // form, and naming a third argument makes the call resolve to nothing — so
-  // sending `p_permanent: false` on every decision would break Verify and
-  // Reject on an un-migrated database. Omitting it keeps the ordinary path
-  // working either way; only "Reject as fraud" needs the new signature, and it
-  // is the one that should fail loudly if the migration has not landed.
-  //
-  // The cast is because `p_permanent` postdates types/database.types.ts.
-  // REGENERATE THE TYPES once the migration is applied and it can go.
-  const args = {
+  // Before 20260901260000 landed, the function was still the two-argument form
+  // and naming a third made the call resolve to nothing — so sending
+  // `p_permanent: false` on every decision would have broken Verify and Reject
+  // against an un-migrated database. That migration is applied now, but the
+  // shape is worth keeping: it is what makes an ordinary decision independent
+  // of whether the fraud-block signature exists.
+  const { error } = await supabase.rpc('set_verification_status', {
     p_vendor: input.vendorId,
     p_status: input.decision,
     ...(input.permanent ? { p_permanent: true } : {}),
-  };
-  const { error } = await supabase.rpc('set_verification_status', args as never);
+  });
 
   if (error) throw new Error(userMessage(error, 'We could not update this verification.'));
   revalidatePath('/admin/vendors');
@@ -363,27 +359,6 @@ export async function updateFeatureFlag(input: {
 }
 
 /**
- * Call an RPC whose NAME postdates types/database.types.ts.
- *
- * `supabase.rpc` types its first argument as a union of the functions the
- * generated types know about, so a brand-new one is a compile error rather than
- * a runtime one. Casting the args (as setVendorVerification does) is not enough
- * when the name itself is new.
- *
- * REGENERATE THE TYPES once 20260901270000 is applied, and delete this — the
- * escape hatch is narrow on purpose: it returns only `error`, so nothing can
- * quietly start depending on an untyped result shape.
- */
-async function callUntypedRpc(name: string, args: Record<string, unknown>) {
-  const supabase = await createServerClient();
-  const rpc = supabase.rpc.bind(supabase) as unknown as (
-    n: string,
-    a: Record<string, unknown>,
-  ) => Promise<{ error: { message: string; code?: string } | null }>;
-  return rpc(name, args);
-}
-
-/**
  * Decide a rider's verification.
  *
  * A separate action from setVendorVerification because it is a separate RPC
@@ -402,7 +377,8 @@ export async function setRiderVerification(input: {
 }) {
   await assertStaff();
 
-  const { error } = await callUntypedRpc('set_rider_verification', {
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc('set_rider_verification', {
     p_rider: input.riderId,
     p_status: input.decision,
     ...(input.permanent ? { p_permanent: true } : {}),
@@ -421,7 +397,8 @@ export async function setCompanyVerification(input: {
 }) {
   await assertStaff();
 
-  const { error } = await callUntypedRpc('set_company_verification', {
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc('set_company_verification', {
     p_company: input.companyId,
     p_status: input.decision,
     ...(input.permanent ? { p_permanent: true } : {}),
@@ -452,10 +429,14 @@ export async function setAccountSuspension(input: {
     throw new Error('Say why this account is being suspended');
   }
 
-  const { error } = await callUntypedRpc('set_account_suspension', {
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc('set_account_suspension', {
     p_user: input.userId,
     p_suspended: input.suspended,
-    p_reason: input.suspended ? input.reason!.trim() : null,
+    // `undefined`, not `null`: p_reason has a SQL default, so the generated
+    // type makes it optional and an explicit null is a type error. Omitting it
+    // lets the default apply, which is the same thing.
+    p_reason: input.suspended ? input.reason!.trim() : undefined,
   });
 
   if (error) throw new Error(userMessage(error, 'We could not change that account.'));

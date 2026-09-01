@@ -22,7 +22,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { adminRoleForEmail } from '@/lib/admin-emails';
-import { createUntypedAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { RidersConsole, type AdminRider } from './(components)/riders-console';
 
@@ -38,19 +38,21 @@ export default async function Page() {
   const role = profile?.role ?? adminRoleForEmail(user?.email);
   if (role !== 'admin' && role !== 'super_admin') redirect('/403');
 
-  // Untyped: company_id and the block columns postdate the generated types.
-  const db = createUntypedAdminClient();
+  const db = createAdminClient();
 
   const { data: riderRows } = await db
     .from('rider_profiles')
+    // ONE LITERAL, NOT A CONCATENATION. supabase-js infers the row type from
+    // the select string, and only a literal can be inferred - a concatenation
+    // is just `string`, which silently degrades the result to an unchecked
+    // type and takes the column-name checking with it.
     .select(
-      'id, vehicle_type, plate_number, verification_status, verification_blocked_at, ' +
-        'company_id, is_online, rating_avg, deliveries_count, created_at',
+      'id, vehicle_type, plate_number, verification_status, verification_blocked_at, company_id, is_online, rating_avg, deliveries_count, created_at',
     )
     .is('archived_at', null)
     .order('created_at', { ascending: false });
 
-  const riders = (riderRows ?? []) as unknown as Row[];
+  const riders = (riderRows ?? []) as Row[];
   const ids = riders.map((r) => r.id as string);
 
   // Nothing to join against. Returning early keeps the `.in()` calls below from
@@ -85,13 +87,11 @@ export default async function Page() {
     ],
   );
 
-  const byId = new Map(((people ?? []) as unknown as Row[]).map((p) => [p.id as string, p]));
-  const companyById = new Map(
-    ((companies ?? []) as unknown as Row[]).map((c) => [c.id as string, c]),
-  );
+  const byId = new Map(((people ?? []) as Row[]).map((p) => [p.id as string, p]));
+  const companyById = new Map(((companies ?? []) as Row[]).map((c) => [c.id as string, c]));
 
   const docsByOwner = new Map<string, AdminRider['docs']>();
-  for (const d of (docs ?? []) as unknown as Row[]) {
+  for (const d of (docs ?? []) as Row[]) {
     const list = docsByOwner.get(d.owner_id as string) ?? [];
     list.push({
       id: d.id as string,
@@ -106,7 +106,7 @@ export default async function Page() {
   }
 
   const stats = new Map<string, { delivered: number; active: number; earnedKobo: number }>();
-  for (const j of (jobs ?? []) as unknown as Row[]) {
+  for (const j of (jobs ?? []) as Row[]) {
     const key = j.rider_id as string;
     const s = stats.get(key) ?? { delivered: 0, active: 0, earnedKobo: 0 };
     const status = j.status as string;

@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student';
+export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student' | 'rider';
 
 export interface DashboardNavItem {
   href: string;
@@ -198,6 +198,34 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         items: [
           { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon },
           { href: '/admin/settings', label: 'Settings', icon: Settings },
+        ],
+      },
+    ],
+  },
+  rider: {
+    brandLabel: 'Rider',
+    rootHref: '/rider',
+    sections: [
+      {
+        items: [
+          { href: '/rider', label: 'Today', heading: 'Your shift', icon: LayoutDashboard },
+          // The board is its own screen rather than a panel on the overview:
+          // it is the thing a rider stares at between jobs, and it refreshes.
+          {
+            href: '/rider/board',
+            label: 'Open jobs',
+            heading: 'Jobs to take',
+            icon: ClipboardList,
+          },
+          { href: '/rider/history', label: 'History', heading: 'Completed deliveries', icon: List },
+        ],
+      },
+      {
+        label: 'Business',
+        items: [
+          // Shown to every rider, because an independent one can still find out
+          // what a fleet is here. The page explains itself when there is none.
+          { href: '/rider/fleet', label: 'My fleet', heading: 'Fleet', icon: Truck },
         ],
       },
     ],
