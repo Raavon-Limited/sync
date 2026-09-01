@@ -107,7 +107,7 @@ function offerRoleChoice(roles?: string[]): boolean {
   return (roles ?? []).filter((r) => ROLE_HOME[r]).length > 1;
 }
 
-type Step = 'email' | 'password' | 'otp' | 'unknown';
+type Step = 'email' | 'password' | 'otp';
 
 export function LoginForm({ next, email: initialEmail }: { next?: string; email?: string }) {
   const router = useRouter();
@@ -119,7 +119,11 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
   // Stays true from a successful auth until this page is replaced - keeps the
   // full-screen "Signing you in…" loader up through router.push + refresh, so
   // it never flashes back to an idle form (which reads as "nothing happened").
-  const [redirecting, setRedirecting] = useState(false);
+  /* What the full-screen loader says, or null when it is not up. A string
+     rather than a boolean because this form now sends people two places: into
+     their dashboard, and out to signup. 'Signing you in…' over a redirect to a
+     signup form would be the wrong sentence at the worst moment. */
+  const [redirecting, setRedirecting] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   /**
    * The hats to choose between, when the account holds more than one.
@@ -144,6 +148,27 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     return qs ? `/signup?${qs}` : '/signup';
   })();
 
+  /**
+   * Where an address with no account goes.
+   *
+   * Same as `signupHref` plus `noaccount`, which is what makes the signup page
+   * say WHY somebody arrived there. Without it the redirect is silent and the
+   * person is left on a form they did not ask for, working out for themselves
+   * that their email was not recognised — which is the confusion this whole
+   * path exists to remove.
+   *
+   * The address is passed explicitly rather than read from state: this is
+   * called from inside the submit handler, and `email` there is the value that
+   * was validated a few lines above.
+   */
+  function noAccountHref(value: string): string {
+    const q = new URLSearchParams();
+    if (next) q.set('next', next);
+    q.set('email', value);
+    q.set('noaccount', '1');
+    return `/signup?${q.toString()}`;
+  }
+
   // Tick the resend cooldown down to 0.
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -162,8 +187,24 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     try {
       const { method } = await getLoginMethod(value);
       if (method === 'none') {
-        setStep('unknown');
-      } else if (method === 'otp') {
+        /*
+         * Straight to signup, not a panel on this screen offering to go there.
+         *
+         * The interstitial version told them the account did not exist and
+         * then asked them to click a button to act on it — which is a screen
+         * whose only purpose is to be left. There is exactly one useful thing
+         * to do with "no account for this address", so do it.
+         *
+         * `redirecting` stays set through the push: the loader covers the
+         * navigation rather than letting the email form flash back to idle,
+         * which reads as "nothing happened". Nothing sets it false, because
+         * this page is being replaced.
+         */
+        setRedirecting('Taking you to sign up…');
+        router.push(noAccountHref(value));
+        return;
+      }
+      if (method === 'otp') {
         // Show the OTP boxes regardless; still attempt to send the code.
         setStep('otp');
         const res = await sendLoginOtp(value);
@@ -195,7 +236,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       setChoices(res.roles as string[]);
       return;
     }
-    setRedirecting(true);
+    setRedirecting('Signing you in…');
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
   }
@@ -232,7 +273,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       setChoices(res.roles as string[]);
       return;
     }
-    setRedirecting(true);
+    setRedirecting('Signing you in…');
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
   }
@@ -247,11 +288,11 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
    */
   async function chooseRole(role: string) {
     setChoices(null);
-    setRedirecting(true);
+    setRedirecting('Signing you in…');
     try {
       await switchRole(role);
     } catch (e) {
-      setRedirecting(false);
+      setRedirecting(null);
       toast(e instanceof Error ? e.message : 'Could not open that account');
       return;
     }
@@ -293,7 +334,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           any of which would silently reintroduce the bug. */}
       {redirecting && (
         <FullScreenOverlay>
-          <BrandLoader label="Signing you in…" />
+          <BrandLoader label={redirecting} />
         </FullScreenOverlay>
       )}
       <div className="flex flex-col gap-6">
@@ -327,37 +368,6 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
                   <ArrowRight className="text-content-muted h-4 w-4 shrink-0" />
                 </button>
               ))}
-          </div>
-        )}
-
-        {/* No account for this address.
-            `getLoginMethod` used to answer 'password' for an email it had
-            never seen, so this screen was a password box for an account that
-            does not exist — you typed a password, got "invalid email or
-            password", and were left to guess which half was wrong. The answer
-            is the same either way, so say it plainly and offer the thing that
-            actually helps. The address rides along to /signup so it is not
-            typed twice. */}
-        {!choices && step === 'unknown' && (
-          <div className="flex flex-col gap-4">
-            {emailRow}
-            <div className="border-line/15 bg-panel rounded-xl border p-4">
-              <p className="text-content text-sm font-medium">No account for this email</p>
-              <p className="text-content-muted mt-1 text-xs">
-                We couldn&rsquo;t find a Sync account for that address. Create one, or try the email
-                you signed up with.
-              </p>
-            </div>
-            <Button asChild size="lg" className="w-full">
-              <Link href={signupHref}>Create an account</Link>
-            </Button>
-            <button
-              type="button"
-              onClick={changeEmail}
-              className="text-content-muted hover:text-content text-center text-sm"
-            >
-              Use a different email
-            </button>
           </div>
         )}
 
@@ -439,17 +449,12 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </form>
         )}
 
-        {/* Not on the 'unknown' step: that screen is already a "create an
-            account" button and this line under it would be the same offer
-            twice, in weaker words. */}
-        {step !== 'unknown' && (
-          <p className="text-content-muted text-center text-sm">
-            Don&rsquo;t have an account?{' '}
-            <Link href={signupHref} className="text-lime-deep font-medium hover:underline">
-              Sign up
-            </Link>
-          </p>
-        )}
+        <p className="text-content-muted text-center text-sm">
+          Don&rsquo;t have an account?{' '}
+          <Link href={signupHref} className="text-lime-deep font-medium hover:underline">
+            Sign up
+          </Link>
+        </p>
       </div>
     </>
   );

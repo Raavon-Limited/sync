@@ -95,7 +95,16 @@ const STEP_FIELDS: Record<number, (keyof SignupInput)[]> = {
   2: ['email', 'password', 'confirmPassword', 'acceptedTerms'],
 };
 
-export function SignupForm({ next, email: initialEmail }: { next?: string; email?: string }) {
+export function SignupForm({
+  next,
+  email: initialEmail,
+  noAccount = false,
+}: {
+  next?: string;
+  email?: string;
+  /** Arrived from /login because this address has no account. Said, not assumed. */
+  noAccount?: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const { data: campuses = [], isPending: campusesLoading } = useCampuses();
@@ -141,6 +150,9 @@ export function SignupForm({ next, email: initialEmail }: { next?: string; email
   const [campusText, setCampusText] = useState('');
   const [campus, setCampus] = useState<Campus | null>(null);
   const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : '/login';
+  // The address as it stands now, so the banner keeps naming the right one if
+  // they correct it on step 3 rather than going back to login.
+  const emailValue = watch('email');
   const isLast = step === STEPS.length - 1;
 
   function selectRole(id: SignupInput['role']) {
@@ -234,6 +246,28 @@ export function SignupForm({ next, email: initialEmail }: { next?: string; email
       className="flex flex-col gap-4"
       noValidate
     >
+      {/* Why they are here.
+          Somebody who typed their address into the LOGIN form and ended up on
+          a signup form has to be told what happened, or the redirect reads as
+          the site losing their place. It names the address, because the usual
+          cause is a typo or the wrong one of two mailboxes — and offers the way
+          back for exactly that case. */}
+      {noAccount && (
+        <div className="border-line/15 bg-surface-deep/60 flex flex-col gap-1 rounded-xl border p-4">
+          <p className="text-content text-sm font-medium">
+            {emailValue ? `No account for ${emailValue}` : 'No account for that email'}
+          </p>
+          <p className="text-content-muted text-xs">
+            You are on the sign-up form because that address has never been used here. Create the
+            account below, or{' '}
+            <Link href={loginHref} className="text-accent-fg font-medium">
+              log in with a different email
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       {/* Progress. Labelled, not just dots: "step 2 of 3" is only useful if you
           can also see what step 2 is going to ask for. */}
       <ol className="flex items-center gap-2" aria-label="Signup progress">

@@ -13,15 +13,17 @@ export const metadata: Metadata = { title: 'Sign up' };
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; email?: string }>;
+  searchParams: Promise<{ next?: string; email?: string; noaccount?: string }>;
 }) {
-  // `email` comes from /login, which has just told this visitor there is no
-  // account for that address. Typing it again on the next screen is the same
-  // dead end with extra steps.
-  const { next, email } = await searchParams;
+  // Both come from /login, which sends anybody whose address has no account
+  // straight here. `email` prefills the field — typing it again would be the
+  // same dead end with extra steps — and `noaccount` is what lets this page
+  // say why they arrived. A silent redirect onto a form nobody asked for is
+  // the confusion this path exists to remove.
+  const { next, email, noaccount } = await searchParams;
   return (
     <AuthLayout eyebrow="Create your account" title="Sign up to Sync">
-      <SignupForm next={next} email={email} />
+      <SignupForm next={next} email={email} noAccount={noaccount === '1'} />
     </AuthLayout>
   );
 }
