@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, MapPin, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 import type { Row } from '@/lib/supabase/row';
@@ -44,7 +44,7 @@ export default async function Page({
   params: Promise<{ slug: string; hostelSlug: string }>;
 }) {
   const { slug, hostelSlug } = await params;
-  await requireStaff();
+  await requireStaffArea('landlords');
 
   const admin = createAdminClient();
 

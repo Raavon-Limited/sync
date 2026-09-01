@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { UsersClient } from './user-componenets/UsersClient';
 
@@ -16,7 +16,7 @@ export type ProfileRow = {
 };
 
 export default async function Page() {
-  const role = await requireStaff();
+  const role = await requireStaffArea('users');
   const isSuperAdmin = role === 'super_admin';
 
   const admin = createAdminClient();

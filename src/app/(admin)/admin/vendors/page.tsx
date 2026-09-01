@@ -10,7 +10,7 @@
  * `modules/admin/actions` rather than trusted from here alone.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { VerificationQueue, type AdminVendor } from './(components)/verification-queue';
@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: 'Vendors — Admin' };
 type Row = Record<string, unknown>;
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('vendors');
 
   const admin = createAdminClient();
 

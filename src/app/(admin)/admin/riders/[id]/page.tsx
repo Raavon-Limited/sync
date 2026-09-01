@@ -11,7 +11,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { RiderDetail } from '../(components)/rider-detail';
@@ -24,7 +24,7 @@ const ACTIVE = new Set(['assigned', 'picked_up', 'delivering']);
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  await requireStaff();
+  await requireStaffArea('riders');
 
   const db = createAdminClient();
 

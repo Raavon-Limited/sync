@@ -19,9 +19,11 @@ import type { DashboardProfile } from './dashboard-profile';
 interface DashboardHeaderProps {
   navKey: DashboardNavKey;
   profile: DashboardProfile;
+  /** Passed straight through to the drawer sidebar. See DashboardSidebar. */
+  areas?: string[] | null;
 }
 
-export function DashboardHeader({ navKey, profile }: DashboardHeaderProps) {
+export function DashboardHeader({ navKey, profile, areas = null }: DashboardHeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { brandLabel, rootHref } = DASHBOARD_NAV[navKey];
@@ -54,6 +56,7 @@ export function DashboardHeader({ navKey, profile }: DashboardHeaderProps) {
               <DashboardSidebar
                 navKey={navKey}
                 profile={profile}
+                areas={areas}
                 onNavigate={() => setOpen(false)}
                 // Handed to the sidebar so it sits BESIDE the mode toggle.
                 // Positioned absolutely here, it landed on top of it.

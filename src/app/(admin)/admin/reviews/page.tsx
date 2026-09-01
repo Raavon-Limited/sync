@@ -10,6 +10,7 @@
 import type { Metadata } from 'next';
 
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
+import { requireStaffArea } from '@/modules/admin/guard';
 import {
   countTestimonials,
   listTestimonialsByStatus,
@@ -22,9 +23,7 @@ export const metadata: Metadata = { title: 'Reviews' };
 const STATUSES: TestimonialStatus[] = ['pending', 'approved', 'rejected'];
 
 function parseStatus(value: string | undefined): TestimonialStatus {
-  return STATUSES.includes(value as TestimonialStatus)
-    ? (value as TestimonialStatus)
-    : 'pending';
+  return STATUSES.includes(value as TestimonialStatus) ? (value as TestimonialStatus) : 'pending';
 }
 
 export default async function Page({
@@ -32,6 +31,10 @@ export default async function Page({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  // This page guarded on the proxy alone; every other console screen also
+  // asks here, and 'reviews' is a grantable area like the rest of them.
+  await requireStaffArea('reviews');
+
   const status = parseStatus((await searchParams).status);
 
   const [profile, user, items, counts] = await Promise.all([

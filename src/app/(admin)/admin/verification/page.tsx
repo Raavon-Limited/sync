@@ -22,7 +22,7 @@
  *   Both are separate filters here for that reason, not extra status values.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationOversight, type OversightRow } from './(components)/verification-oversight';
 
@@ -31,7 +31,7 @@ export const metadata: Metadata = { title: 'Verification — Admin' };
 type Row = Record<string, unknown>;
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('verification');
 
   const db = createAdminClient();
 

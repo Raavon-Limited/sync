@@ -5,7 +5,7 @@
  *          decide whether a hostel is real.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VisitsQueue, type AdminVisit, type UnvisitedHostel } from './(components)/visits-queue';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Verification visits — Admin' };
 import type { Row } from '@/lib/supabase/row';
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('verify_visits');
 
   const admin = createAdminClient();
 

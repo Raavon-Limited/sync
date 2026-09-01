@@ -43,6 +43,44 @@ async function assertStaff(): Promise<string> {
 }
 
 /**
+ * Staff, AND granted this area — the check every write below starts with.
+ *
+ * WHY IT IS NOT ENOUGH TO GUARD THE PAGE
+ *   Everything in this file uses the service-role client, which is above RLS by
+ *   construction. So for these writes there is no database policy waiting
+ *   underneath to catch a caller who never loaded the page: this line IS the
+ *   enforcement. A reviewer who cannot see Settings can still POST to the
+ *   action behind it, and until this landed, that worked.
+ *
+ * The level check runs as the CALLER (the server client, their session), not
+ * as the service role, so `access_level` sees the person and not the key.
+ */
+async function assertStaffArea(area: string, needed: 'read' | 'write' = 'write'): Promise<string> {
+  const userId = await assertStaff();
+  await assertArea(area, needed);
+  return userId;
+}
+
+/**
+ * The same, for a write that legitimately belongs to more than one area.
+ *
+ * Document review is the honest case: one queue reviews vendors, landlords and
+ * riders, and somebody granted only `riders` should be able to decide a rider's
+ * documents without also being handed vendors. Requiring all three would make
+ * the narrow grant useless; requiring none would make it decorative.
+ */
+async function assertStaffAnyArea(
+  areas: string[],
+  needed: 'read' | 'write' = 'write',
+): Promise<string> {
+  const userId = await assertStaff();
+  const levels = await Promise.all(areas.map((a) => accessLevel(a)));
+  const ok = levels.some((l) => (needed === 'read' ? l !== 'none' : l === 'write'));
+  if (!ok) throw new Error('You do not have access to do that');
+  return userId;
+}
+
+/**
  * Approve or bounce a single document.
  *
  * `action_message` is required when bouncing: "needs action" without saying

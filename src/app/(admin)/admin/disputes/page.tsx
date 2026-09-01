@@ -5,7 +5,7 @@
  * PURPOSE: Read a dispute and decide where the escrowed money goes.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DisputesQueue, type AdminDispute } from './(components)/disputes-queue';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Disputes — Admin' };
 import type { Row } from '@/lib/supabase/row';
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('disputes');
 
   const admin = createAdminClient();
 

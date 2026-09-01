@@ -20,6 +20,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { getProfile } from '@/modules/auth/queries';
+import { requireArea } from '@/modules/access/guard';
 
 export type StaffRole = 'admin' | 'super_admin';
 
@@ -38,6 +39,32 @@ export async function requireStaff(): Promise<StaffRole> {
   const profile = await getProfile();
   if (!isStaffRole(profile?.role)) redirect('/403');
   return profile!.role as StaffRole;
+}
+
+/**
+ * Staff, AND granted this area.
+ *
+ * The two questions are separate and both have to be asked. `requireStaff`
+ * answers "may this person open the console at all", which is `profiles.role`
+ * and nothing else. `access_level` answers "may they open THIS screen", which
+ * is the roles they hold — and it is the one that makes a Reviewer a reviewer
+ * rather than an administrator with a shorter sidebar.
+ *
+ * Returns the staff role, because pages that need it (Staff, Users) were
+ * already calling requireStaff for exactly that and should not have to call
+ * both.
+ *
+ * `needed: 'write'` is for a page that has no read-only form worth rendering.
+ * Most pages ask for 'read' and hide their own buttons instead — see the
+ * `level` the access guard returns if you need that distinction inside a page.
+ */
+export async function requireStaffArea(
+  area: string,
+  needed: 'read' | 'write' = 'read',
+): Promise<StaffRole> {
+  const role = await requireStaff();
+  await requireArea(area, needed);
+  return role;
 }
 
 /** Stricter: appointing and removing staff is a super admin's job alone. */

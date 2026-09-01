@@ -10,7 +10,7 @@
  *   requires both tabs.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { getStaff } from '@/modules/admin/staff';
 import { getAccessRoles } from '@/modules/admin/roles';
 import { StaffConsole } from './(components)/staff-console';
@@ -19,7 +19,7 @@ import { RolesConsole } from './(components)/roles-console';
 export const metadata: Metadata = { title: 'Staff — Admin' };
 
 export default async function Page() {
-  const role = await requireStaff();
+  const role = await requireStaffArea('staff');
   const isSuperAdmin = role === 'super_admin';
 
   const [staff, roles] = await Promise.all([getStaff(), getAccessRoles()]);

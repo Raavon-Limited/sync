@@ -8,7 +8,7 @@
  * the filters and modals are interactive, but it owns no data of its own.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { listArticles } from '@/modules/admin/editorial';
 import { AdminEditorialPage } from './editorial-components';
 
@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: 'Editorial — Admin' };
 export const dynamic = 'force-dynamic';
 
 export default async function EditorialPage() {
-  await requireStaff();
+  await requireStaffArea('editorial');
 
   const { articles, stats, categories } = await listArticles();
 

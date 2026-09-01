@@ -19,7 +19,7 @@
  *   surfaces in-flight jobs a suspension would strand.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { RidersConsole, type AdminRider } from './(components)/riders-console';
@@ -32,7 +32,7 @@ type Row = Record<string, unknown>;
 const ACTIVE = new Set(['assigned', 'picked_up', 'delivering']);
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('riders');
 
   const db = createAdminClient();
 

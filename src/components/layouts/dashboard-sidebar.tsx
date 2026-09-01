@@ -42,6 +42,14 @@ interface DashboardSidebarProps {
    */
   headerAction?: React.ReactNode;
   profile: DashboardProfile;
+  /**
+   * Area keys this person may open, or null for "everything on this config".
+   *
+   * Resolved server-side by DashboardShell — a client component cannot ask the
+   * database what it is allowed to render, and one that tried would be asking
+   * the browser to be honest about it.
+   */
+  areas?: string[] | null;
   onNavigate?: () => void;
 }
 
@@ -51,10 +59,27 @@ export function DashboardSidebar({
   onNavigate,
   topSlot,
   headerAction,
+  areas = null,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { brandLabel, sections, rootHref } = DASHBOARD_NAV[navKey];
+  const { brandLabel, sections: allSections, rootHref } = DASHBOARD_NAV[navKey];
+
+  /*
+   * The nav this person actually gets.
+   *
+   * A row is kept when it claims no area (every row on every non-admin
+   * dashboard) or when they hold something in that area. A section that ends
+   * up empty is dropped whole — an "INSIGHTS" heading with nothing under it
+   * reads as a screen that failed to load rather than as a screen they were
+   * never given.
+   */
+  const sections = allSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !areas || !item.area || areas.includes(item.area)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   // Student + vendor dashboards live at a name-based root (e.g. /muiz-owolabi),
   // so rewrite each item's href from its static base (/me, /vendor) to the

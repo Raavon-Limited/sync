@@ -14,6 +14,7 @@ import { DashboardHeader } from './dashboard-header';
 import { getDashboardProfile } from './dashboard-profile';
 import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
 import type { DashboardNavKey } from '@/config/dashboard-nav';
+import { visibleAreas } from '@/modules/access/guard';
 
 interface DashboardShellProps {
   navKey: DashboardNavKey;
@@ -44,14 +45,30 @@ export async function DashboardShell({
 }: DashboardShellProps) {
   const profile = await getDashboardProfile(navKey);
 
+  /*
+   * Which console rows this person is allowed to see.
+   *
+   * Only asked for the admin console: it is the one dashboard where two people
+   * with the same role can be entitled to different screens. Everywhere else
+   * the dashboard IS the entitlement — a vendor's sidebar is the vendor's
+   * sidebar — so they pass null and nothing is filtered.
+   *
+   * THE SIDEBAR IS NOT THE ENFORCEMENT. Hiding a row stops it being offered;
+   * it does not stop the URL being typed. Every page behind these rows guards
+   * itself with requireStaffArea, and the RPCs check again inside the
+   * database. This is the courtesy layer, and it is the one that must never be
+   * mistaken for the other two.
+   */
+  const areas = navKey === 'admin' ? await visibleAreas() : null;
+
   return (
     <div className="bg-surface text-content min-h-screen">
       <div className={`mx-auto flex ${maxWidth}`}>
         <aside className="border-line/10 bg-panel sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r p-4 md:block">
-          <DashboardSidebar navKey={navKey} profile={profile} topSlot={sidebarSlot} />
+          <DashboardSidebar navKey={navKey} profile={profile} topSlot={sidebarSlot} areas={areas} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <DashboardHeader navKey={navKey} profile={profile} />
+          <DashboardHeader navKey={navKey} profile={profile} areas={areas} />
           {/* No AppFooter here. A dashboard is a working surface - a marketing
               and legal link band under every table and form is noise, and the
               same links are already reachable from the account menu and the
@@ -71,7 +88,9 @@ export async function DashboardShell({
                 art={doodle}
                 tile={620}
                 className={
-                  doodle === 'food' ? 'text-ink/3 dark:text-cream/4' : 'text-ink/4 dark:text-cream/5'
+                  doodle === 'food'
+                    ? 'text-ink/3 dark:text-cream/4'
+                    : 'text-ink/4 dark:text-cream/5'
                 }
               />
             )}

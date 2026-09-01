@@ -74,6 +74,25 @@ export function levelFrom(map: Record<string, AccessLevel>, area: string): Acces
 }
 
 /**
+ * The area keys the caller can at least open, or null for "no restriction".
+ *
+ * Null is not "no access" — it is the answer for a super admin (who bypasses
+ * grants entirely) and for every dashboard that is not the console, where what
+ * you can see is decided by whose dashboard it is rather than by a grant. The
+ * sidebar treats null as "show every row", so passing it is how a screen opts
+ * out of filtering rather than accidentally hiding itself.
+ *
+ * An admin with no roles gets `[]`, and their console is correctly almost
+ * empty. That is a real state — somebody appointed but not yet given a job —
+ * and it should look like one rather than like a broken page.
+ */
+export async function visibleAreas(): Promise<string[] | null> {
+  const map = await accessMap();
+  if (isWildcard(map)) return null;
+  return Object.keys(map);
+}
+
+/**
  * Guard a page. Redirects to /403 rather than rendering something the person
  * cannot use, and returns the level so the page can hide its own controls when
  * the answer is read-only.

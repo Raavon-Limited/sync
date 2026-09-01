@@ -10,7 +10,7 @@
  * start at zero.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { StatCards } from './overview-components/StatCards';
 import { RevenueChart } from './overview-components/RevenueChart';
 import { GrowthChart } from './overview-components/GrowthChart';
@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: 'Overview — Admin' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOverviewPage() {
-  await requireStaff();
+  await requireStaffArea('overview');
 
   const o = await getOverview();
 

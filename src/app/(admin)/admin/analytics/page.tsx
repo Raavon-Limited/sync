@@ -9,7 +9,7 @@
  * components they always were.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { AnalyticsStatCards } from './components/AnalyticsStatCards';
 import { RevenueTrendChart } from './components/RevenueTrendChart';
 import { CategoryPieChart } from './components/CategoryPieChart';
@@ -34,20 +34,19 @@ export default async function Page({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
-  const [{ range: rawRange }] = await Promise.all([searchParams, requireStaff()]);
+  const [{ range: rawRange }] = await Promise.all([searchParams, requireStaffArea('analytics')]);
 
   const range = rangeFromParam(rawRange);
   const a = await getAnalytics(range);
 
   return (
-    <section className="flex select-none flex-col gap-5">
+    <section className="flex flex-col gap-5 select-none">
       <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ANALYTICS</h1>
           <p className="text-content-muted mt-1 text-xs sm:text-sm">
-            Paid orders only, in Africa/Lagos time. Change is against the previous {range
-              .replace('Last ', '')
-              .replace('year', '365 days')}.
+            Paid orders only, in Africa/Lagos time. Change is against the previous{' '}
+            {range.replace('Last ', '').replace('year', '365 days')}.
           </p>
         </div>
         <div className="shrink-0 self-start sm:self-center">

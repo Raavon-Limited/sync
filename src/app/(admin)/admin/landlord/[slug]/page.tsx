@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, MapPin, Phone, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
@@ -30,7 +30,7 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  await requireStaff();
+  await requireStaffArea('landlords');
 
   const admin = createAdminClient();
 

@@ -10,7 +10,7 @@
  * rate that now moves real money.
  */
 import type { Metadata } from 'next';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   PlatformSettings,
@@ -32,7 +32,7 @@ function scalar(value: unknown): string {
 }
 
 export default async function Page() {
-  await requireStaff();
+  await requireStaffArea('settings');
 
   const admin = createAdminClient();
   const [{ data: settings }, { data: flags }] = await Promise.all([

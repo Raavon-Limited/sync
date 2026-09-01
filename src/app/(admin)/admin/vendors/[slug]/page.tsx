@@ -14,7 +14,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { requireStaff } from '@/modules/admin/guard';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: 'Vendor — Admin' };
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  await requireStaff();
+  await requireStaffArea('vendors');
 
   const admin = createAdminClient();
 
