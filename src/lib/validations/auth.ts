@@ -29,15 +29,23 @@ export type Trade = (typeof TRADES)[number];
 
 export const signupSchema = z
   .object({
-    role: z.enum(['student', 'vendor'], { message: 'Choose an account type' }),
+    /**
+     * `rider` is a first-class signup choice, not a role you upgrade into.
+     *
+     * The database has accepted it since 20260901210000 — handle_new_user
+     * clamps the metadata role against a list that already includes it — and
+     * the proxy has gated /rider since before those screens existed. Only this
+     * enum and the form above it were still saying student-or-vendor, which is
+     * why the sole way to become a rider was to sign up as something else
+     * first.
+     */
+    role: z.enum(['student', 'vendor', 'rider'], { message: 'Choose an account type' }),
     fullName: displayName,
     email,
     phone: nigerianPhone,
     password,
     confirmPassword: z.string(),
-    acceptedTerms: z
-      .boolean()
-      .refine((v) => v === true, 'You must accept the terms to continue'),
+    acceptedTerms: z.boolean().refine((v) => v === true, 'You must accept the terms to continue'),
     // Vendor-only. Required when role === 'vendor' (see superRefine); `trade` is
     // required only when the chosen category is 'tradesman'.
     vendorCategory: z.enum(VENDOR_CATEGORIES).optional(),

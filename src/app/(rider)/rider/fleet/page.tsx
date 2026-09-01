@@ -28,7 +28,9 @@ export const metadata: Metadata = { title: 'Fleet — Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();
-  if (!rider) redirect('/rider/join');
+  // Straight to the dashboard, which carries the set-up prompt. Sending them
+  // to the form instead would skip the explanation of what is being asked.
+  if (!rider) redirect('/rider');
 
   const fleet = await getMyFleet();
 

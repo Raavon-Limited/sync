@@ -47,12 +47,7 @@ import { PasswordRequirements } from '@/components/forms/password-requirements';
 import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
-import {
-  signupSchema,
-  type SignupInput,
-  type Trade,
-  type VendorCategory,
-} from '@/lib/validations';
+import { signupSchema, type SignupInput, type Trade, type VendorCategory } from '@/lib/validations';
 import { signUp } from '@/modules/auth/actions';
 import { useCampuses, type Campus } from '@/modules/campuses';
 import { CampusInput } from '@/components/forms/campus-input';
@@ -60,6 +55,10 @@ import { CampusInput } from '@/components/forms/campus-input';
 const ROLES: { id: SignupInput['role']; label: string; desc: string }[] = [
   { id: 'student', label: "I'm a student", desc: 'Find hostels, food & services' },
   { id: 'vendor', label: 'I sell or rent', desc: 'Rooms, food, services & more' },
+  // A rider answers nothing else here. Vehicle, plate and documents belong to
+  // the onboarding they meet on their own dashboard — asking for a plate number
+  // beside a password field is how a signup form stops being a signup form.
+  { id: 'rider', label: 'I deliver', desc: 'Take delivery jobs on your campus' },
 ];
 
 const VENDOR_CATEGORIES: { value: VendorCategory; label: string }[] = [
@@ -185,13 +184,14 @@ export function SignupForm({ next }: { next?: string }) {
          * rather than making them work it out.
          */
         const wantsBusiness = values.role !== 'student';
+        const added = values.role === 'rider' ? 'rider' : 'vendor';
         toast(
           wantsBusiness
-            ? 'You already have an account with this email. Sign in, then add a business account from the menu under your avatar.'
+            ? `You already have an account with this email. Sign in, then add a ${added} account from the menu under your avatar.`
             : 'You already have an account with this email. Sign in to continue.',
         );
         router.push(
-          `/login?email=${encodeURIComponent(values.email)}${wantsBusiness ? '&add=vendor' : ''}`,
+          `/login?email=${encodeURIComponent(values.email)}${wantsBusiness ? `&add=${added}` : ''}`,
         );
         return;
       }
@@ -203,8 +203,13 @@ export function SignupForm({ next }: { next?: string }) {
     // type a code that does not exist is a dead end with no way out, so go
     // straight in. Business roles still need the onboarding wizard.
     if (res.signedIn) {
-      const wantsBusiness = values.role !== 'student';
-      router.push(next ?? (wantsBusiness ? '/onboarding' : '/me'));
+      // A RIDER DOES NOT GO TO /onboarding. That route is the vendor wizard and
+      // the proxy gates it to vendor/landlord, so `role !== 'student'` alone
+      // would drop a new rider straight onto a 403. They land on their own
+      // dashboard, which asks for the rest when they get there.
+      const home =
+        values.role === 'rider' ? '/rider' : values.role === 'student' ? '/me' : '/onboarding';
+      router.push(next ?? home);
       router.refresh();
       return;
     }
@@ -315,11 +320,7 @@ export function SignupForm({ next }: { next?: string }) {
               row, so this one answer is worth more than a typed address would
               be - and it cannot be misspelt. */}
           {role === 'student' && (
-            <FormField
-              label="Your university"
-              htmlFor="campus"
-              error={errors.campusOther?.message}
-            >
+            <FormField label="Your university" htmlFor="campus" error={errors.campusOther?.message}>
               {/* Type-ahead, not a dropdown: there are a hundred-odd
                   institutions and a student knows exactly which is theirs, so
                   typing three letters beats scrolling. A university we do not
@@ -453,9 +454,7 @@ export function SignupForm({ next }: { next?: string }) {
                   value={field.value ?? ''}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  placeholder={
-                    role === 'vendor' ? 'you@yourbusiness.com' : 'you@gmail.com'
-                  }
+                  placeholder={role === 'vendor' ? 'you@yourbusiness.com' : 'you@gmail.com'}
                 />
               )}
             />

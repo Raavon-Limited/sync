@@ -19,7 +19,9 @@ export const metadata: Metadata = { title: 'Open jobs — Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();
-  if (!rider) redirect('/rider/join');
+  // Straight to the dashboard, which carries the set-up prompt. Sending them
+  // to the form instead would skip the explanation of what is being asked.
+  if (!rider) redirect('/rider');
 
   const jobs = await getOpenBoard();
   const canWork = rider.verificationStatus === 'verified' && !rider.suspendedAt;

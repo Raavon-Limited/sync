@@ -9,17 +9,27 @@
  *   an interrupted signup leaves exactly that gap.
  */
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { formatKobo } from '@/lib/utils/format';
 import { getActiveJobs, getCompletedJobs, getRiderProfile } from '@/modules/rider/queries';
 import { RiderStatus } from './(components)/rider-status';
+import { NeedsOnboarding } from './(components)/needs-onboarding';
 import { ActiveJobs } from './(components)/active-jobs';
 
 export const metadata: Metadata = { title: 'Your shift — Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();
-  if (!rider) redirect('/rider/join');
+
+  // No rider row yet: the account exists, nothing has been told to us. The
+  // dashboard is still theirs - it just says what would fill it.
+  if (!rider) {
+    return (
+      <section className="flex flex-col gap-4">
+        <Heading />
+        <NeedsOnboarding />
+      </section>
+    );
+  }
 
   const [active, done] = await Promise.all([getActiveJobs(), getCompletedJobs(50)]);
 
@@ -28,12 +38,7 @@ export default async function Page() {
 
   return (
     <section className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-content-muted font-mono text-sm tracking-wide">RIDER</h1>
-        <h2 className="font-display text-content mt-2 text-3xl font-medium">
-          Your <span className="text-lime-deep">shift.</span>
-        </h2>
-      </div>
+      <Heading />
 
       <RiderStatus rider={rider} />
 
@@ -57,6 +62,17 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="border-line/10 bg-panel rounded-xl border p-3">
       <p className="text-content truncate text-lg font-medium">{value}</p>
       <p className="text-content-muted text-[11px] tracking-wide uppercase">{label}</p>
+    </div>
+  );
+}
+
+function Heading() {
+  return (
+    <div>
+      <h1 className="text-content-muted font-mono text-sm tracking-wide">RIDER</h1>
+      <h2 className="font-display text-content mt-2 text-3xl font-medium">
+        Your <span className="text-lime-deep">shift.</span>
+      </h2>
     </div>
   );
 }

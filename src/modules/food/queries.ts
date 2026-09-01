@@ -475,7 +475,21 @@ export async function removeCartItem(db: Client, itemId: string) {
  */
 export async function checkoutCart(
   db: Client,
-  input: { cartId: string; deliveryAddress: string; note?: string; promotionCode?: string },
+  input: {
+    cartId: string;
+    deliveryAddress: string;
+    note?: string;
+    promotionCode?: string;
+    /**
+     * Where it is going. The server prices the ride from this against the
+     * store's pin — a COORDINATE rather than a distance, because a client that
+     * passes a distance is quoting its own delivery fee.
+     *
+     * Optional: an address typed by hand has no point attached, and the quote
+     * falls back to the flag-fall rather than blocking checkout.
+     */
+    dropoff?: { lat: number; lng: number };
+  },
 ): Promise<CheckoutResult> {
   const rows = unwrapList<Row>(
     await db.rpc('checkout_cart', {
@@ -485,6 +499,8 @@ export async function checkoutCart(
       // signature types an omitted argument as optional rather than nullable.
       p_note: input.note,
       p_promotion_code: input.promotionCode,
+      p_dropoff_lat: input.dropoff?.lat,
+      p_dropoff_lng: input.dropoff?.lng,
     }),
   );
 
