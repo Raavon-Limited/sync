@@ -24,10 +24,10 @@
 import 'server-only';
 import { createElement } from 'react';
 import { render } from '@react-email/render';
-import { Resend } from 'resend';
 import { SITE } from '@/config/site';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
+import { logEmail, sendMail, type MailResult } from '@/modules/admin/mail';
 import {
   VerificationDecisionEmail,
   type VerificationOutcome,
@@ -46,24 +46,13 @@ export interface NotifyInput {
   note?: string | null;
   /** Path on the site to send them to. Defaults to their dashboard. */
   path?: string;
+  /** The staff member who caused it, for the log. Absent when automatic. */
+  sentBy?: string | null;
 }
 
-export type NotifyResult = { ok: true } | { ok: false; error: string };
+export type NotifyResult = MailResult;
 
 export async function notifyVerification(input: NotifyInput): Promise<NotifyResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>`;
-
-  if (!apiKey) {
-    // Deliberately not an error the reviewer has to act on: a deploy without a
-    // key is a configuration fact, not a mistake they made.
-    console.error('[verification-mail] RESEND_API_KEY missing   decision saved, nothing sent');
-    return {
-      ok: false,
-      error: 'Email is not configured in this environment, so nothing was sent.',
-    };
-  }
-
   const admin = createAdminClient();
 
   const [{ data: auth }, { data: profile }] = await Promise.all([
@@ -78,8 +67,16 @@ export async function notifyVerification(input: NotifyInput): Promise<NotifyResu
   const fullName = ((profile as Row | null)?.full_name as string | null) ?? null;
   const name = fullName?.trim().split(/\s+/)[0] || 'there';
 
+  const subject =
+    input.outcome === 'verified'
+      ? `Your ${SITE.name} account is verified`
+      : input.outcome === 'rejected'
+        ? `About your ${SITE.name} verification`
+        : `One more thing for your ${SITE.name} verification`;
+
+  let html: string;
   try {
-    const html = await render(
+    html = await render(
       createElement(VerificationDecisionEmail, {
         name,
         outcome: input.outcome,
@@ -89,32 +86,24 @@ export async function notifyVerification(input: NotifyInput): Promise<NotifyResu
         actionUrl: `${SITE.url}${input.path ?? '/me'}`,
       }),
     );
-
-    const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({
-      from,
-      to,
-      subject:
-        input.outcome === 'verified'
-          ? `Your ${SITE.name} account is verified`
-          : input.outcome === 'rejected'
-            ? `About your ${SITE.name} verification`
-            : `One more thing for your ${SITE.name} verification`,
-      html,
-    });
-
-    if (error) {
-      // Usually an unverified sender domain or a key without send permission,
-      // and Resend names which. Passed through rather than paraphrased   the
-      // console is staff-only and the provider's own words are the fix.
-      console.error('[verification-mail] Resend refused the send. from=%s error=%o', from, error);
-      const detail = [error.name, error.message].filter(Boolean).join(': ');
-      return { ok: false, error: `Resend refused it (from ${from})   ${detail}` };
-    }
   } catch (e) {
-    console.error('[verification-mail] send threw:', e);
+    console.error('[verification-mail] render threw:', e);
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+
+  const result = await sendMail({ to, subject, html });
+  if (!result.ok) return result;
+
+  // Only a SENT email is logged. A row for something Resend refused would make
+  // the Resend button claim somebody had been written to when they had not,
+  // which is worse than no count at all.
+  await logEmail({
+    recipientId: input.userId,
+    email: to,
+    kind: input.outcome === 'needs_info' ? 'verification_request' : 'verification_decision',
+    subject,
+    sentBy: input.sentBy ?? null,
+  });
 
   return { ok: true };
 }

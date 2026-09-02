@@ -56,10 +56,7 @@ export function CampusInput({
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement | null>(null);
 
-  const matches = useMemo(
-    () => searchCampuses(campuses, value),
-    [campuses, value],
-  );
+  const matches = useMemo(() => searchCampuses(campuses, value), [campuses, value]);
 
   useEffect(() => setActive(0), [value]);
 
@@ -200,22 +197,17 @@ function NotHereYet({ campuses, typed }: { campuses: Campus[]; typed?: string })
     <div className="border-line/15 bg-panel/60 flex flex-col gap-2 rounded-xl border p-3">
       <p className="text-content flex items-start gap-2 text-xs font-medium">
         <MapPin className="text-accent-fg mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <span>
-          Sync isn&rsquo;t at {typed ? <strong>{typed}</strong> : 'your school'} yet.
-        </span>
+        <span>Sync isn&rsquo;t at {typed ? <strong>{typed}</strong> : 'your school'} yet.</span>
       </p>
       <p className="text-content-muted text-xs leading-relaxed">
         {where ? (
           <>
-            We&rsquo;re live at <strong className="text-content">{where}</strong> for now.
-            Create your account anyway   we&rsquo;ll let you know the moment we reach your
-            campus, and signups like yours are how we choose where to open next.
+            We&rsquo;re live at <strong className="text-content">{where}</strong> for now. Create
+            your account anyway we’ll let you know the moment we reach your campus, and signups like
+            yours are how we choose where to open next.
           </>
         ) : (
-          <>
-            Create your account anyway   we&rsquo;ll let you know the moment we reach your
-            campus.
-          </>
+          <>Create your account anyway we’ll let you know the moment we reach your campus.</>
         )}
       </p>
       {live.length > 0 && (

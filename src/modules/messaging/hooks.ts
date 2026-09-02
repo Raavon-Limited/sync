@@ -21,6 +21,7 @@ import { qk } from '@/lib/query/keys';
 import type { PageParams } from '@/lib/query/helpers';
 import { useRealtime } from '@/lib/query/use-realtime';
 import { useSession } from '@/providers/session-provider';
+import { toast } from '@/components/ui/toast';
 import * as api from './queries';
 import type { Message } from './types';
 
@@ -230,8 +231,7 @@ export function useMarkConversationRead() {
   const { userId } = useSession();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (conversationId: string) =>
-      api.markConversationRead(db(), conversationId, userId!),
+    mutationFn: (conversationId: string) => api.markConversationRead(db(), conversationId, userId!),
     onSuccess() {
       qc.invalidateQueries({ queryKey: qk.conversations.all });
       qc.invalidateQueries({ queryKey: qk.unreadCounts.all });
@@ -271,8 +271,27 @@ export function useConversationRealtime(conversationId: string | undefined) {
 }
 
 /**
- * Live notifications for the signed-in user   the bell badge. Mount once, high
- * in the tree; mounting it per page would open a socket per navigation.
+ * Live notifications for the signed-in user   the bell badge, and a toast when
+ * one lands. Mount once, high in the tree; mounting it per page would open a
+ * socket per navigation.
+ *
+ * THE BELL ALONE IS NOT A NOTIFICATION
+ *   A count going from 2 to 3 in the corner is only seen by somebody already
+ *   looking at the corner. When staff send "maintenance at six" from the mail
+ *   centre, the whole point is that it interrupts   so the arrival raises a
+ *   toast as well as the badge, and the toast carries the title and a way to
+ *   open it.
+ *
+ * ONLY WHAT ARRIVES WHILE YOU WATCH
+ *   This fires on INSERT over an open socket, so it is strictly "something
+ *   happened just now". Anything from before this page loaded is history and
+ *   belongs in the bell, not in front of your work.
+ *
+ * The payload is used directly here, which the shared primitive warns against
+ * for CACHE writes   splicing a flat row into a joined cache entry loses its
+ * relations. Reading two of its own columns to render a toast has no such
+ * problem, and the alternative (refetch, then diff to find which one is new) is
+ * a great deal of machinery for a line of text.
  */
 export function useNotificationsRealtime() {
   const { userId } = useSession();
@@ -281,6 +300,11 @@ export function useNotificationsRealtime() {
     enabled: !!userId,
     bindings: [{ table: 'notifications', event: 'INSERT', filter: `user_id=eq.${userId}` }],
     invalidate: [qk.notifications.all, qk.unreadCounts.all],
+    onChange(payload) {
+      const row = payload.new as { title?: string; body?: string } | null;
+      if (!row?.title) return;
+      toast(row.title, { description: row.body });
+    },
   });
 }
 

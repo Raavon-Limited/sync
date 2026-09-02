@@ -195,6 +195,7 @@ export function VerificationReview({
   blockVerify = null,
   extraMissing = [],
   notifyPath = '/me',
+  mailsSent = 0,
 }: {
   vendor: AdminVendor;
   showHeader?: boolean;
@@ -213,6 +214,11 @@ export function VerificationReview({
   extraMissing?: string[];
   /** Where the email sends them to fix it. */
   notifyPath?: string;
+  /**
+   * How many "what is missing" emails this person has already had, from
+   * email_log. Turns the button into Resend and puts a number beside it.
+   */
+  mailsSent?: number;
 }) {
   const decide = DECIDE[kind];
   const noun = NOUN[kind];
@@ -521,6 +527,7 @@ export function VerificationReview({
               subject={noun}
               path={notifyPath}
               suggested={outstanding}
+              sent={mailsSent}
             />
           )}
           {/* THE PERMANENT ONE. Confirmed in the browser rather than done on a
@@ -657,14 +664,21 @@ function AskForMore({
   subject,
   path,
   suggested,
+  sent,
 }: {
   userId: string;
   subject: string;
   path: string;
   /** Everything outstanding, pre-computed. Ticked to start with. */
   suggested: string[];
+  /** How many of these have already gone to this person. */
+  sent: number;
 }) {
   const [open, setOpen] = useState(false);
+  // Kept in state, not read from the prop, so the button becomes "Resend" the
+  // moment one is sent rather than at the next reload   which is exactly when
+  // a second reviewer would otherwise send a duplicate.
+  const [sentCount, setSentCount] = useState(sent);
   const [chosen, setChosen] = useState<string[]>(suggested);
   const [note, setNote] = useState('');
   const [sending, startSending] = useTransition();
@@ -680,6 +694,7 @@ function AskForMore({
         note,
         path,
       });
+      if (res.ok) setSentCount(res.count);
       setResult(
         res.ok
           ? { ok: true, text: 'Sent. Their status has not changed.' }
@@ -692,9 +707,13 @@ function AskForMore({
   if (!open) {
     return (
       <div className="flex flex-col items-end gap-1">
+        {/* THE WORD CHANGES WITH THE HISTORY. "Ask" and "Resend" are different
+            acts, and a reviewer who cannot tell which one they are about to do
+            is how somebody gets the same email from three people. */}
         <Button variant="outline" onClick={() => setOpen(true)}>
-          Ask for what is missing
+          {sentCount > 0 ? 'Resend what is missing' : 'Ask for what is missing'}
         </Button>
+        {sentCount > 0 && <p className="text-content-muted text-xs">{sentCount} sent so far</p>}
         {result && (
           <p className={cn('text-xs', result.ok ? 'text-emerald-600' : 'text-coral')}>
             {result.text}
@@ -706,7 +725,15 @@ function AskForMore({
 
   return (
     <div className="border-line/10 bg-surface-deep flex w-full flex-col gap-3 rounded-xl border p-3">
-      <p className="text-content text-sm font-medium">Email them what is outstanding</p>
+      <p className="text-content text-sm font-medium">
+        Email them what is outstanding
+        {sentCount > 0 && (
+          <span className="text-content-muted font-normal">
+            {'  '}
+            {sentCount} already sent
+          </span>
+        )}
+      </p>
 
       {suggested.length > 0 ? (
         <div className="flex flex-col gap-1.5">

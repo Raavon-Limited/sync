@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { emailFor } from '@/modules/admin/emails';
+import { mailCount } from '@/modules/admin/mail';
 import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
 import type { Row } from '@/lib/supabase/row';
@@ -45,7 +46,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
   if (!landlord) notFound();
 
-  const [{ data: hostels }, { data: owner }, { data: docs }, email] = await Promise.all([
+  const [{ data: hostels }, { data: owner }, { data: docs }, email, asked] = await Promise.all([
     admin
       .from('hostels')
       .select('id, slug, name, area, room_type, price_per_session_kobo, verified')
@@ -70,6 +71,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     // The address a reviewer would write to. auth.users, not profiles   see
     // modules/admin/emails.
     emailFor((landlord as Row).id as string),
+    mailCount((landlord as Row).id as string, 'verification_request'),
   ]);
 
   // Scoped to this landlord's hostels. Reading the whole availability and visit
@@ -170,6 +172,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             createdAt: l.created_at,
             docs: reviewDocs,
           }}
+          mailsSent={asked.count}
+          notifyPath="/landlord/settings"
         />
       </section>
 

@@ -25,6 +25,7 @@ import { isStaffRole } from '@/modules/admin/guard';
 import { accessLevel, assertArea } from '@/modules/access/guard';
 import { userMessage } from '@/lib/errors';
 import { notifyVerification } from '@/modules/admin/verification-mail';
+import { mailCount } from '@/modules/admin/mail';
 import type { Row } from '@/lib/supabase/row';
 
 export type DocDecision = 'approved' | 'needs_action';
@@ -764,8 +765,14 @@ export async function requestVerificationInfo(input: {
   note?: string;
   /** Where to send them to fix it. */
   path?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'students', 'events']);
+}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  const reviewerId = await assertStaffAnyArea([
+    'vendors',
+    'landlords',
+    'riders',
+    'students',
+    'events',
+  ]);
 
   const missing = input.missing.map((m) => m.trim()).filter(Boolean);
   const note = input.note?.trim();
@@ -783,7 +790,14 @@ export async function requestVerificationInfo(input: {
     missing,
     note: note ?? null,
     path: input.path,
+    sentBy: reviewerId,
   });
 
-  return result;
+  if (!result.ok) return result;
+
+  // The new total, handed straight back: the button that sent this becomes
+  // "Resend" and has to say how many times, without a round trip or a reload
+  // the reviewer did not ask for.
+  const { count } = await mailCount(input.userId, 'verification_request');
+  return { ok: true, count };
 }

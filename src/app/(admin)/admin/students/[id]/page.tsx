@@ -27,6 +27,7 @@ import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStudentIdentities } from '@/modules/students';
 import { emailFor } from '@/modules/admin/emails';
+import { mailCount } from '@/modules/admin/mail';
 import { Badge } from '@/components/ui';
 import { STATUS_BADGE } from '@/components/admin/account-queue';
 import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
@@ -53,7 +54,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const p = profileRow as Row | null;
   if (!p) notFound();
 
-  const [{ data: docs }, identities, { data: campus }, email] = await Promise.all([
+  const [{ data: docs }, identities, { data: campus }, email, asked] = await Promise.all([
     admin
       .from('verification_documents')
       .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
@@ -66,6 +67,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     // The address a reviewer would actually write to. It lives in auth.users,
     // not profiles   see modules/admin/emails.
     emailFor(id),
+    // How many times somebody has already been asked for the missing half.
+    mailCount(id, 'verification_request'),
   ]);
 
   const identity = identities.get(id);
@@ -182,6 +185,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             : null
         }
         extraMissing={missingIdentity}
+        mailsSent={asked.count}
         notifyPath="/me/settings"
       />
     </section>

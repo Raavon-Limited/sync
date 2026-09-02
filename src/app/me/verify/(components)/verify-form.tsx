@@ -88,23 +88,41 @@ export function VerifyForm({
   const [department, setDepartment] = useState(identity?.department ?? '');
   const [level, setLevel] = useState(identity?.level ?? '');
 
+  /*
+   * VERIFIED AND PENDING BOTH END THE DOCUMENT FLOW, AND NEITHER ENDS THE
+   * DETAILS.
+   *
+   * This used to be a bare panel, which left a verified student whose matric
+   * number was never captured with nowhere to type it: the page said "nothing
+   * else to do" while the reviewer's screen said "Not given". Saving these
+   * re-submits nothing - see StudentIdentityCard.
+   */
   if (status === 'verified') {
     return (
-      <Panel
-        icon={<CheckCircle2 className="text-lime-deep size-5 shrink-0" aria-hidden="true" />}
-        title="You are verified"
-        body="Nothing else to do. Everyone you deal with on Sync can see that a person checked your documents."
-      />
+      <div className="flex flex-col gap-5">
+        <Panel
+          icon={<CheckCircle2 className="text-lime-deep size-5 shrink-0" aria-hidden="true" />}
+          title="You are verified"
+          body="Nothing else to do. Everyone you deal with on Sync can see that a person checked your documents."
+        />
+        {isStudent && <StudentIdentityCard initial={identity} />}
+      </div>
     );
   }
 
   if (status === 'pending') {
     return (
-      <Panel
-        icon={<Clock className="text-content-muted size-5 shrink-0" aria-hidden="true" />}
-        title="With a reviewer now"
-        body="Your documents are in the queue. You will hear back here — there is nothing to resend."
-      />
+      <div className="flex flex-col gap-5">
+        <Panel
+          icon={<Clock className="text-content-muted size-5 shrink-0" aria-hidden="true" />}
+          title="With a reviewer now"
+          body="Your documents are in the queue. You will hear back here — there is nothing to resend."
+        />
+        {/* Still editable while it sits in the queue: a reviewer who cannot find
+            a matric number is about to ask for one, and the answer arriving
+            before the question is strictly better. */}
+        {isStudent && <StudentIdentityCard initial={identity} />}
+      </div>
     );
   }
 
@@ -251,6 +269,97 @@ function Panel({ icon, title, body }: { icon: React.ReactNode; title: string; bo
       <div className="min-w-0">
         <p className="text-content text-sm font-medium">{title}</p>
         <p className="text-content-muted mt-1 text-sm">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The student details, editable on their own.
+ *
+ * WHY IT EXISTS SEPARATELY FROM THE FORM ABOVE
+ *   The submission flow collects these alongside the documents and sends both
+ *   at once. But a verified or pending account never reaches that flow - the
+ *   page answers "you are verified, nothing else to do" and stops - so a
+ *   student whose matric number was never captured had no way in at all. They
+ *   were verified, told there was nothing to do, and their profile still read
+ *   "Not given" on the reviewer's screen.
+ *
+ *   These details also change on their own: level moves every session, and a
+ *   department can be corrected. Neither is a re-verification, so neither
+ *   belongs behind one.
+ *
+ * SAVING DOES NOT RE-SUBMIT ANYTHING. It writes student_profiles through
+ * save_student_identity, which cannot touch verification_status - the column
+ * guard in 20260903180000 is what makes offering this to a verified account
+ * safe.
+ */
+function StudentIdentityCard({ initial }: { initial?: StudentIdentityFields | null }) {
+  const router = useRouter();
+  const [matricNumber, setMatric] = useState(initial?.matricNumber ?? '');
+  const [department, setDepartment] = useState(initial?.department ?? '');
+  const [level, setLevel] = useState(initial?.level ?? '');
+  const [saving, startSaving] = useTransition();
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const incomplete = !matricNumber.trim() || !department.trim();
+
+  function save() {
+    setNote(null);
+    startSaving(async () => {
+      const res = await saveStudentIdentity({ matricNumber, department, level });
+      setNote(res.ok ? { ok: true, text: 'Saved.' } : { ok: false, text: res.error });
+      if (res.ok) router.refresh();
+    });
+  }
+
+  return (
+    <div className="border-line/15 bg-panel flex flex-col gap-4 rounded-xl border p-4">
+      <div>
+        <h3 className="text-content text-base font-semibold">Your studentship</h3>
+        <p className="text-content-muted text-sm">
+          {incomplete
+            ? 'A reviewer has nothing to check your school ID against until these are filled in.'
+            : 'What a reviewer checks your school ID against. Correct them whenever they change.'}
+        </p>
+      </div>
+
+      <FormField label="Matriculation number" htmlFor="matric-standalone">
+        <Input
+          id="matric-standalone"
+          value={matricNumber}
+          onChange={(e) => setMatric(e.target.value)}
+          placeholder="e.g. 19/52HA011"
+        />
+      </FormField>
+
+      <FormField label="Department" htmlFor="department-standalone">
+        <Input
+          id="department-standalone"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          placeholder="e.g. Computer Science"
+        />
+      </FormField>
+
+      <FormField label="Level (optional)" htmlFor="level-standalone">
+        <Input
+          id="level-standalone"
+          value={level}
+          onChange={(e) => setLevel(e.target.value)}
+          placeholder="e.g. 300"
+        />
+      </FormField>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : 'Save details'}
+        </Button>
+        {note && (
+          <span className={note.ok ? 'text-sm text-emerald-600' : 'text-coral text-sm'}>
+            {note.text}
+          </span>
+        )}
       </div>
     </div>
   );

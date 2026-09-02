@@ -137,6 +137,13 @@ export const ADMIN_AREAS: AreaSpec[] = [
     href: '/admin/promotions',
   },
   {
+    key: 'mail',
+    label: 'Mail centre',
+    description:
+      'Write to every account, or to a chosen few, by email and in the app. The one control that reaches everybody at once.',
+    href: '/admin/mail',
+  },
+  {
     key: 'settings',
     label: 'Settings',
     description: 'Rates, fees and feature flags. Changes what everyone else is charged.',

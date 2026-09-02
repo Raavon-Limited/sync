@@ -163,7 +163,7 @@ export function EventForm({
 
       <p className="text-content-muted text-xs">
         Listing it puts it on <code>/events</code> straight away. Ticket tiers are added after, on
-        the event&rsquo;s own page — an event with no tiers is simply a free one.
+        the event’s own page â an event with no tiers is simply a free one.
       </p>
     </form>
   );
