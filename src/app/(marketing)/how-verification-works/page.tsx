@@ -6,7 +6,7 @@
  *          in-person visit by an ambassador.
  *
  * Mirrors the real flow in the codebase: profiles.verification_status, the
- * hostel_verification_visits table, and the admin KYC queue.
+ * verification_visits table, and the admin KYC queue.
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';

@@ -82,7 +82,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     ? await Promise.all([
         admin.from('hostel_availability').select('*').in('hostel_id', hostelIds),
         admin
-          .from('hostel_verification_visits')
+          .from('verification_visits')
           .select('hostel_id, status, scheduled_for, created_at')
           .in('hostel_id', hostelIds)
           // Oldest first, so the last write into the map below is the newest

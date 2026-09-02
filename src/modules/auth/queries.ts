@@ -44,6 +44,12 @@ export type Profile = {
   roles: string[];
   full_name: string | null;
   phone: string | null;
+  /**
+   * The picture the holder uploaded, in `public-media`. Never the verification
+   * selfie   that one is private and only a reviewer opens it. See
+   * 20260905150000.
+   */
+  avatar_url: string | null;
   vendor_category: 'landlord' | 'food' | 'beauty' | 'laundry' | 'tradesman' | null;
   trade: string | null;
   business_name: string | null;

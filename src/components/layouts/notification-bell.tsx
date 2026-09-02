@@ -58,7 +58,7 @@ const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   system: Info,
 };
 
-export function NotificationBell({ basePath = '/me' }: { basePath?: string }) {
+export function NotificationBell({ basePath = '/user' }: { basePath?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 

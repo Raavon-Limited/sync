@@ -83,7 +83,7 @@ export async function notifyVerification(input: NotifyInput): Promise<NotifyResu
         subject: input.subject,
         missing: input.missing ?? [],
         note: input.note ?? null,
-        actionUrl: `${SITE.url}${input.path ?? '/me'}`,
+        actionUrl: `${SITE.url}${input.path ?? '/user'}`,
       }),
     );
   } catch (e) {

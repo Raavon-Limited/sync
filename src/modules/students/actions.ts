@@ -56,7 +56,7 @@ export async function saveStudentIdentity(input: StudentIdentityInput): Promise<
 
   if (error) return { ok: false, error: userMessage(error, 'We could not save those details.') };
 
-  revalidatePath('/me/verify');
+  revalidatePath('/user/verify');
   return { ok: true };
 }
 
@@ -69,7 +69,7 @@ export async function submitStudentVerification(): Promise<StudentResult> {
     };
   }
 
-  revalidatePath('/me/verify');
-  revalidatePath('/me');
+  revalidatePath('/user/verify');
+  revalidatePath('/user');
   return { ok: true };
 }

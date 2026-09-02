@@ -67,7 +67,7 @@ export interface DashboardProfile {
   /** Optional secondary detail (label + value), e.g. "Business · HiFoods". */
   metaLabel?: string;
   metaValue?: string;
-  /** Profile picture URL (Supabase Storage later); falls back to initials. */
+  /** The picture the holder uploaded (public-media); falls back to initials. */
   avatarUrl?: string;
   /**
    * Personalised dashboard handle (student/vendor only) used to build name-based
@@ -127,6 +127,13 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
    * arrives in 20260830090000, and until then everyone holds exactly the role
    * they are wearing, which makes the switcher correctly render nothing.
    */
+  // Set at last: the field has been on this shape since the sidebar was
+  // written and nothing ever filled it, so every avatar in the product fell
+  // back to an initial. Spread into every branch below with the hats, for the
+  // same reason they are   computing it inside one case is how a picture ends
+  // up on the vendor dashboard and nowhere else.
+  const avatarUrl = profile?.avatar_url ?? undefined;
+
   const hats = {
     role: profile?.role,
     roles: profile?.roles ?? (profile?.role ? [profile.role] : []),
@@ -141,6 +148,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         name,
         email,
         initial,
+        avatarUrl,
         handle,
         metaLabel: 'Business',
         metaValue:
@@ -155,6 +163,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         name,
         email,
         initial,
+        avatarUrl,
         handle,
         metaLabel: 'Properties',
         metaValue: profile?.business_name || undefined,
@@ -167,6 +176,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         name,
         email,
         initial,
+        avatarUrl,
       };
     case 'organiser':
       return {
@@ -176,6 +186,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         name,
         email,
         initial,
+        avatarUrl,
       };
     case 'student':
     default:
@@ -186,6 +197,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         name,
         email,
         initial,
+        avatarUrl,
         handle,
         // The university, on the card, using the meta slot every other role
         // already uses for its defining detail (Business, Properties).

@@ -4,7 +4,7 @@
  * WAS LOCALSTORAGE, NOW THE DATABASE
  *   Hearts persisted to `localStorage` under 'sync:food:favorites', so they
  *   vanished on another device and never reached `public.favorites`   which is
- *   what /me/saved reads. Tapping a heart looked like it worked and saved
+ *   what /user/saved reads. Tapping a heart looked like it worked and saved
  *   nothing durable.
  *
  * ENTITY, NOT SLUG

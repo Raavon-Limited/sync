@@ -14,7 +14,7 @@
  *   same applies to a rejection, which carries the reviewer's note.
  *
  * IT IS SENT BECAUSE PEOPLE DO NOT SIT ON THE DASHBOARD
- *   The status has always been on /me. Somebody who uploaded a passport on
+ *   The status has always been on /user. Somebody who uploaded a passport on
  *   Tuesday is not refreshing it   they are waiting to be told, and until this
  *   existed nobody ever was.
  *

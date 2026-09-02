@@ -111,7 +111,7 @@ export function DocumentsPanel({
   status,
   /**
    * Where an unfinished account is sent to finish. Students verify at
-   * /me/verify, which asks for a matric number as well as documents; the
+   * /user/verify, which asks for a matric number as well as documents; the
    * vendor wizard behind VerifyNowSheet would ask them for a trade.
    */
   continueHref,
@@ -210,7 +210,7 @@ export function DocumentsPanel({
             copy is kept so a reviewer sees both. It reads as the secondary
             action it is. */}
         {/* A LINK, NOT THE WIZARD, when the caller named a destination.
-            /me/verify asks a student for a matric number and a school ID;
+            /user/verify asks a student for a matric number and a school ID;
             VerifyNowSheet asks for a business name and a trade. Same button,
             same place, and pointing a student at the wrong one is how they
             abandon it. */}

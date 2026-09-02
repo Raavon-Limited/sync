@@ -68,13 +68,13 @@ function destFor(role: string | undefined, handle?: string, next?: string) {
   if (role === 'admin' || role === 'super_admin') return '/admin';
 
   // The personalised handle root (/<name>). The proxy rewrites it to the right
-  // per-type dashboard - /me, /vendor, /landlord - so we never hardcode the
+  // per-type dashboard - /user, /vendor, /landlord - so we never hardcode the
   // wrong one.
   //
   // The fallback, for an account with no handle yet, has to name the role's own
   // root EXPLICITLY. The proxy gates each dashboard prefix by role
-  // (`/me` -> student, `/vendor` -> vendor, `/landlord` -> landlord), so a
-  // catch-all of '/me' would bounce a landlord straight back out of the page we
+  // (`/user` -> student, `/vendor` -> vendor, `/landlord` -> landlord), so a
+  // catch-all of '/user' would bounce a landlord straight back out of the page we
   // had just sent them to.
   const roots: Record<string, string> = {
     vendor: '/vendor',
@@ -82,14 +82,14 @@ function destFor(role: string | undefined, handle?: string, next?: string) {
     rider: '/rider',
     event_manager: '/organiser',
   };
-  const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/me');
+  const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/user');
 
   return readAppSurface() ? '/around' : dashboard;
 }
 
 /** What each hat is called, and where it lives. Mirrors RoleSwitcher. */
 const ROLE_HOME: Record<string, { label: string; blurb: string; href: string }> = {
-  student: { label: 'Student', blurb: 'Book rooms, order food, browse campus', href: '/me' },
+  student: { label: 'Student', blurb: 'Book rooms, order food, browse campus', href: '/user' },
   vendor: { label: 'Business', blurb: 'Your listings, orders and earnings', href: '/vendor' },
   landlord: { label: 'Landlord', blurb: 'Your properties, tenants and rent', href: '/landlord' },
   rider: { label: 'Rider', blurb: 'Your delivery queue and earnings', href: '/rider' },

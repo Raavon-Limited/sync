@@ -34,6 +34,20 @@ export type VerificationState =
   | 'suspended'
   | 'unknown';
 
+/**
+ * One credential this account holds   a role, and where it stands.
+ *
+ * A person is not one thing: a landlord who is also a student is one human
+ * being with two independent decisions about them, and a card that reported
+ * only the first would be hiding the second. Staff appear here too, because
+ * "this person works for Sync" is the claim most worth being able to test.
+ */
+export interface CardCredential {
+  kind: string;
+  label: string;
+  state: string;
+}
+
 /** One thing the platform checked, and whether it passed. Never the document. */
 export interface VerificationRequirement {
   key: string;
@@ -57,6 +71,10 @@ export interface PublicVerification {
   ratingAvg: number;
   ratingCount: number;
   requirements: VerificationRequirement[];
+  /** Every role this account holds, each with its own state. */
+  credentials: CardCredential[];
+  /** 'business' | 'person' | 'staff'   which words the page uses. */
+  cardKind: string;
   /** When this answer was produced   shown so a screenshot dates itself. */
   checkedAt: string;
 }
@@ -76,12 +94,11 @@ const NOT_FOUND: Omit<PublicVerification, 'checkedAt'> = {
   ratingAvg: 0,
   ratingCount: 0,
   requirements: [],
+  credentials: [],
+  cardKind: 'person',
 };
 
-export async function fetchCardVerification(
-  db: Client,
-  code: string,
-): Promise<PublicVerification> {
+export async function fetchCardVerification(db: Client, code: string): Promise<PublicVerification> {
   const { data, error } = await db.rpc('verify_card', { p_code: code });
   if (error) throw error;
 
@@ -104,7 +121,11 @@ export async function fetchCardVerification(
     storeCount: r.store_count ?? 0,
     ratingAvg: Number(r.rating_avg ?? 0),
     ratingCount: r.rating_count ?? 0,
-    requirements: Array.isArray(r.requirements) ? (r.requirements as VerificationRequirement[]) : [],
+    requirements: Array.isArray(r.requirements)
+      ? (r.requirements as VerificationRequirement[])
+      : [],
+    credentials: Array.isArray(r.credentials) ? (r.credentials as CardCredential[]) : [],
+    cardKind: r.card_kind ?? 'person',
     checkedAt: r.checked_at ?? new Date().toISOString(),
   };
 }
@@ -128,8 +149,7 @@ export const VERIFICATION_PRESENTATION: Record<
   },
   pending: {
     label: 'Not verified yet',
-    blurb:
-      'Documents have been submitted but not approved. Sync has not confirmed who this is.',
+    blurb: 'Documents have been submitted but not approved. Sync has not confirmed who this is.',
     tone: 'wait',
   },
   unverified: {

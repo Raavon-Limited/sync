@@ -132,7 +132,7 @@ export default function CheckoutClient() {
                         </span>{' '}
                         more.
                     </span>
-                    <Link href="/me/wallet" className="text-lime-deep font-medium underline underline-offset-2">
+                    <Link href="/user/wallet" className="text-lime-deep font-medium underline underline-offset-2">
                         Top up
                     </Link>
                 </p>

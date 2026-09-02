@@ -51,7 +51,7 @@ export function MobileMenu({
         ? '/landlord'
         : role === 'vendor'
           ? '/vendor'
-          : '/me';
+          : '/user';
 
   async function handleSignOut() {
     close();

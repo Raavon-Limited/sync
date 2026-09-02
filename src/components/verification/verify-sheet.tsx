@@ -1,7 +1,7 @@
 /**
  * "Get verified" as a side panel, for the roles that verify through profiles.
  *
- * WHY A PANEL AND NOT /me/verify
+ * WHY A PANEL AND NOT /user/verify
  *   Same reasoning as VerifyNowSheet, which does this for businesses: the
  *   button is pressed by somebody standing in their own dashboard, usually
  *   because a banner told them something is locked. Navigating away replaces
@@ -15,7 +15,7 @@
  *   for a trade. Same idea, different form, so it is a second host rather than
  *   a prop that makes the other one mean two things.
  *
- * THE ROUTE STILL EXISTS. /me/verify is a real URL — the reminder email will
+ * THE ROUTE STILL EXISTS. /user/verify is a real URL — the reminder email will
  * want it, and somebody who lands there directly should get a working page.
  * This is a second HOST for the same <VerifyForm>, never a second copy.
  */
@@ -30,7 +30,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { VerifyForm, type StudentIdentityFields } from '@/app/me/verify/(components)/verify-form';
+import { VerifyForm, type StudentIdentityFields } from '@/app/user/verify/(components)/verify-form';
 import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
 
 export function VerifySheet({

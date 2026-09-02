@@ -31,6 +31,25 @@ const nextConfig: NextConfig = {
    */
   distDir: process.env.NEXT_DIST_DIR || '.next',
 
+  /**
+   * /me kept alive, pointing at /user.
+   *
+   * The student dashboard moved from /me to /user, and the old path is not
+   * only in bookmarks: it is in emails Sync has already sent, in the QR on
+   * printed ID cards' verify links, and in every message where somebody shared
+   * "check /me/wallet". A renamed route that 404s its own history is a rename
+   * that costs the user more than it gains anybody.
+   *
+   * PERMANENT, so browsers and search engines stop asking. The pair is
+   * deliberate: `/me/:path*` alone does not match the bare `/me`.
+   */
+  async redirects() {
+    return [
+      { source: '/me', destination: '/user', permanent: true },
+      { source: '/me/:path*', destination: '/user/:path*', permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

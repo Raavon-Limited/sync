@@ -4,7 +4,7 @@
  * PURPOSE: Saved food vendors and menu items, from `public.favorites`.
  *
  * Was reading a localStorage context, so a heart tapped on one device showed
- * nowhere else and never reached the table /me/saved reads.
+ * nowhere else and never reached the table /user/saved reads.
  */
 import type { Metadata } from 'next';
 import { FoodFavorites } from './(components)/food-favorites';

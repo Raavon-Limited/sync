@@ -297,7 +297,7 @@ export function SignupForm({
             : values.role === 'student'
               ? readAppSurface()
                 ? '/around'
-                : '/me'
+                : '/user'
               : '/onboarding';
       router.push(next ?? home);
       router.refresh();

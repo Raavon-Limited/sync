@@ -1,7 +1,7 @@
 /**
  * Personalised dashboard handles. Student and vendor dashboards are reachable at
  * a name-based root URL (e.g. `/muiz-owolabi/insights`, `/hifoods/orders`) which
- * the proxy rewrites to the real `/me` and `/vendor` pages.
+ * the proxy rewrites to the real `/user` and `/vendor` pages.
  *
  * The handle is cosmetic + private: the proxy only rewrites when the first path
  * segment equals the SIGNED-IN user's own handle, so it never exposes other
@@ -61,7 +61,10 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   'landlord',
   'laundry',
   'login',
+  // Kept reserved after the /me → /user rename: the redirect in next.config
+  // lives on this segment, and a handle called "me" would shadow it.
   'me',
+  'user',
   'onboarding',
   // A ROUTE PREFIX MISSING FROM THIS SET IS AN UNGATED ROUTE.
   //
@@ -74,6 +77,8 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   // Anything with a route group and a gate belongs in this list, and the two
   // have to be added together.
   'organiser',
+  'agent',
+  'agent-invite',
   'rider',
   'search',
   'staff-invite',

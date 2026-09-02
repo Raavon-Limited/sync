@@ -1,6 +1,6 @@
 /**
  * UserMenu - the signed-in avatar + dropdown. Replaces the "Sign in / Sign up"
- * buttons once a user is authenticated. Profile → /me, a role-aware dashboard
+ * buttons once a user is authenticated. Profile → /user, a role-aware dashboard
  * link, and Sign out (which clears the session and refreshes so the server
  * components re-render in the signed-out state).
  *
@@ -62,7 +62,7 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
         ? '/landlord'
         : role === 'vendor'
           ? '/vendor'
-          : '/me';
+          : '/user';
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : null;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;

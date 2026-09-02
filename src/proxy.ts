@@ -34,11 +34,12 @@ type Role =
   // somebody notices it is open.
   | 'event_manager'
   | 'creator'
+  | 'agent'
   | 'admin'
   | 'super_admin';
 
 // Shared marketplace modules: any signed-in user can browse and transact. The
-// only role difference is the dashboard (/me vs /vendor vs /landlord vs /rider
+// only role difference is the dashboard (/user vs /vendor vs /landlord vs /rider
 // vs /admin).
 const ALL: Role[] = ['student', 'vendor', 'landlord', 'rider', 'admin', 'super_admin'];
 
@@ -56,11 +57,11 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/checkout', roles: ALL },
   { prefix: '/wallet', roles: ALL },
   // Dashboards - role-specific. This is the only access difference.
-  // BEFORE '/me', and the order is load-bearing: the list is scanned with
-  // startsWith and the first match wins, so a broader '/me' listed above would
+  // BEFORE '/user', and the order is load-bearing: the list is scanned with
+  // startsWith and the first match wins, so a broader '/user' listed above would
   // swallow this and refuse the very roles the screen exists for.
-  { prefix: '/me/verify', roles: ['student', 'creator', 'event_manager'] },
-  { prefix: '/me', roles: ['student'] },
+  { prefix: '/user/verify', roles: ['student', 'creator', 'event_manager'] },
+  { prefix: '/user', roles: ['student'] },
   // Both business roles onboard through the same wizard.
   { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
   { prefix: '/vendor', roles: ['vendor'] },
@@ -69,6 +70,10 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // The route group does not exist yet   this gate is in place so that when it
   // is added it is protected from the first commit rather than retrofitted.
   { prefix: '/rider', roles: ['rider'] },
+  // Agents are invited, never self-served   the role cannot be claimed, so this
+  // gate is the only door and /agent-invite (public, token-guarded) is the only
+  // way to hold the role at all.
+  { prefix: '/agent', roles: ['agent'] },
   // The organiser dashboard. The role is not open for signup yet, so in
   // practice this gate is what stops everybody else - which is exactly what it
   // would have to do on the day it opens anyway.
@@ -104,7 +109,7 @@ export async function proxy(request: NextRequest) {
 
   const { response, user, role: trustedRole, isStorefrontStaff } = await updateSession(request);
 
-  // Personalised dashboard handles: /<handle>/<page> → the real /me or /vendor
+  // Personalised dashboard handles: /<handle>/<page> → the real /user or /vendor
   // page, but ONLY when <handle> is the signed-in user's own handle (private).
   // Non-handle / unknown segments fall through and Next renders 404 as usual.
   if (firstSeg && !isReservedHandle(firstSeg)) {
@@ -122,7 +127,7 @@ export async function proxy(request: NextRequest) {
       });
       const base =
         role === 'student'
-          ? '/me'
+          ? '/user'
           : role === 'landlord'
             ? '/landlord'
             : role === 'vendor'

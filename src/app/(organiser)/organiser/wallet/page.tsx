@@ -16,7 +16,7 @@
  * anywhere in the codebase. Money can arrive; it cannot yet leave.
  */
 import type { Metadata } from 'next';
-import { WalletPanel } from '@/app/me/wallet/(components)/wallet-panel';
+import { WalletPanel } from '@/app/user/wallet/(components)/wallet-panel';
 
 export const metadata: Metadata = { title: 'Wallet' };
 

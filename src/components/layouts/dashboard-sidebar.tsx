@@ -99,7 +99,7 @@ export function DashboardSidebar({
     .filter((section) => section.items.length > 0);
 
   // Student + vendor dashboards live at a name-based root (e.g. /muiz-owolabi),
-  // so rewrite each item's href from its static base (/me, /vendor) to the
+  // so rewrite each item's href from its static base (/user, /vendor) to the
   // handle. Other roles keep their static hrefs.
   const handle = navKey === 'student' || navKey === 'vendor' ? profile.handle : undefined;
   const toHref = (href: string) => (handle ? `/${handle}${href.slice(rootHref.length)}` : href);

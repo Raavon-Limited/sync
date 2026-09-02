@@ -7,10 +7,10 @@
  * WHY THIS ROUTE HAD TO EXIST
  *   The bell in the dashboard header renders "View all notifications" pointing
  *   at `${basePath}/notifications`, and for staff the base is /admin. Only
- *   /me/notifications was ever built, so on every admin screen that link was a
+ *   /user/notifications was ever built, so on every admin screen that link was a
  *   404   the one place an admin would go to catch up on what they had missed.
  *
- * DELIBERATELY NOT A COPY OF /me/notifications
+ * DELIBERATELY NOT A COPY OF /user/notifications
  *   That page carries a preferences tab whose toggles are not persisted (it
  *   says so). There is no reason to grow a second copy of an unwired control.
  *   This is the inbox and nothing else.

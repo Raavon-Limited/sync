@@ -275,7 +275,7 @@ export function MailComposer({ recipients, sent }: { recipients: Recipient[]; se
           <Input
             value={ctaPath}
             onChange={(e) => setCtaPath(e.target.value)}
-            placeholder="Where it goes, e.g. /me/verify"
+            placeholder="Where it goes, e.g. /user/verify"
           />
         </div>
 

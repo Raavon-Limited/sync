@@ -324,7 +324,7 @@ export async function decideHostelVisit(input: {
   const now = new Date().toISOString();
 
   const { error: visitErr } = await admin
-    .from('hostel_verification_visits')
+    .from('verification_visits')
     .update({
       status: input.decision,
       decided_by: reviewerId,
@@ -358,7 +358,7 @@ export async function scheduleHostelVisit(input: {
   // One live visit per hostel: scheduling again updates the existing row rather
   // than leaving two open visits nobody knows which to act on.
   const { data: existing } = await admin
-    .from('hostel_verification_visits')
+    .from('verification_visits')
     .select('id')
     .eq('hostel_id', input.hostelId)
     .not('status', 'in', '("Verified","Rejected")')
@@ -373,8 +373,8 @@ export async function scheduleHostelVisit(input: {
   };
 
   const { error } = existing
-    ? await admin.from('hostel_verification_visits').update(payload).eq('id', existing.id)
-    : await admin.from('hostel_verification_visits').insert(payload);
+    ? await admin.from('verification_visits').update(payload).eq('id', existing.id)
+    : await admin.from('verification_visits').insert(payload);
 
   if (error) throw new Error(userMessage(error, 'We could not schedule that visit.'));
   revalidatePath('/admin/verify-visits');
@@ -565,7 +565,7 @@ export async function setStudentVerification(input: { userId: string; decision: 
   });
 
   if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
-  await announce(input.userId, input.decision, 'student', '/me/verify');
+  await announce(input.userId, input.decision, 'student', '/user/verify');
   revalidatePath('/admin/students');
   revalidatePath('/admin/verification');
 }

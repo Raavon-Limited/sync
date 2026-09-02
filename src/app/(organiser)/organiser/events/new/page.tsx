@@ -61,7 +61,7 @@ export default async function Page() {
           </p>
           {!pending && (
             <Button asChild className="w-fit">
-              <Link href="/me/verify">Get verified</Link>
+              <Link href="/user/verify">Get verified</Link>
             </Button>
           )}
         </div>

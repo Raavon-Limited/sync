@@ -76,7 +76,7 @@ export default async function Page({
       // A hostel can be visited more than once   rejected, then revisited. Only
       // the newest verdict is current, so this is a list-of-one, not a single.
       admin
-        .from('hostel_verification_visits')
+        .from('verification_visits')
         .select('status, scheduled_for, notes, photos, video_url, decided_at, created_at')
         .eq('hostel_id', h.id)
         .order('created_at', { ascending: false })

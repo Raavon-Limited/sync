@@ -8,7 +8,7 @@
  *
  * WHY IT NAVIGATES AFTERWARDS
  *   The gate is evaluated in the proxy, per request. Switching to `vendor`
- *   while sitting on `/me` leaves you on a page your new role is refused,
+ *   while sitting on `/user` leaves you on a page your new role is refused,
  *   so the switch is followed by a move to that role's home. Staying put and
  *   letting the next click 403 would look like the switch had broken.
  *
@@ -30,7 +30,7 @@ import { useAccountSwitch } from '@/providers/account-switch-provider';
 
 /** Where each hat lands, and what to call it. */
 const ROLE_HOME: Record<string, { label: string; href: string }> = {
-  student: { label: 'Student', href: '/me' },
+  student: { label: 'Student', href: '/user' },
   vendor: { label: 'Business', href: '/vendor' },
   landlord: { label: 'Landlord', href: '/landlord' },
   rider: { label: 'Rider', href: '/rider' },

@@ -22,6 +22,9 @@ import {
   Inbox,
   LayoutDashboard,
   List,
+  BadgeCheck,
+  MapPin,
+  UserCheck,
   Mail,
   Megaphone,
   MessageSquareQuote,
@@ -36,12 +39,20 @@ import {
   TrendingUp,
   Truck,
   UserCog,
+  UserRound,
   Users,
   Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student' | 'rider' | 'organiser';
+export type DashboardNavKey =
+  | 'vendor'
+  | 'landlord'
+  | 'admin'
+  | 'student'
+  | 'rider'
+  | 'organiser'
+  | 'agent';
 
 export interface DashboardNavItem {
   href: string;
@@ -268,7 +279,11 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon, area: 'disputes' },
           // Its own area, held by nobody until it is granted   this is the one
           // row that can write to every account on the platform at once.
+          { href: '/admin/agents', label: 'Agents', icon: UserCheck, area: 'agents' },
           { href: '/admin/mail', label: 'Mail centre', icon: Mail, area: 'mail' },
+          // NO AREA, deliberately: it is this person's own ID card, and a
+          // reviewer granted riders alone still knocks on doors.
+          { href: '/admin/card', label: 'My staff ID', icon: BadgeCheck },
           { href: '/admin/settings', label: 'Settings', icon: Settings, area: 'settings' },
         ],
       },
@@ -312,13 +327,35 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       },
       {
         label: 'Account',
-        // /me/verify, not a route of their own: that screen is role-driven and
+        // /user/verify, not a route of their own: that screen is role-driven and
         // serves every account whose status lives in profiles. The proxy admits
         // event managers to that one path specifically.
         items: [
-          { href: '/me/verify', label: 'Verification', icon: ShieldCheck },
+          { href: '/user/verify', label: 'Verification', icon: ShieldCheck },
           { href: '/organiser/settings', label: 'Settings', icon: Settings },
         ],
+      },
+    ],
+  },
+  /*
+   * The agent. One thing they do, so one row plus their card: an agent opens
+   * this on a phone, in a stairwell, with one hand   a nav with sections is a
+   * nav they scroll past to reach the only screen they came for.
+   */
+  agent: {
+    brandLabel: 'Agent',
+    rootHref: '/agent',
+    sections: [
+      {
+        items: [
+          { href: '/agent', label: 'Your visits', heading: 'Where you are expected', icon: MapPin },
+        ],
+      },
+      {
+        label: 'Account',
+        // No area: it is their own ID, and it is the thing a landlord asks to
+        // see before opening a gate.
+        items: [{ href: '/agent/card', label: 'Your Sync ID', icon: BadgeCheck }],
       },
     ],
   },
@@ -359,21 +396,21 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
   },
   student: {
     brandLabel: 'Account',
-    rootHref: '/me',
+    rootHref: '/user',
     sections: [
       {
         items: [
-          { href: '/me', label: 'Overview', heading: 'Your dashboard', icon: LayoutDashboard },
+          { href: '/user', label: 'Overview', heading: 'Your dashboard', icon: LayoutDashboard },
           {
-            href: '/me/insights',
+            href: '/user/insights',
             label: 'Insights',
             heading: 'Your spending & usage',
             icon: TrendingUp,
           },
-          { href: '/me/wallet', label: 'Wallet', heading: 'Your wallet', icon: Wallet },
-          { href: '/me/saved', label: 'Saved', heading: 'Saved places', icon: Bookmark },
+          { href: '/user/wallet', label: 'Wallet', heading: 'Your wallet', icon: Wallet },
+          { href: '/user/saved', label: 'Saved', heading: 'Saved places', icon: Bookmark },
           {
-            href: '/me/bookings',
+            href: '/user/bookings',
             label: 'Bookings',
             heading: 'Your bookings',
             icon: ClipboardList,
@@ -383,15 +420,40 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         label: 'Activity',
         items: [
-          { href: '/me/events', label: 'Events', heading: 'Your events', icon: CalendarDays },
-          { href: '/me/tickets', label: 'Tickets', heading: 'Your tickets', icon: TicketIcon },
+          { href: '/user/events', label: 'Events', heading: 'Your events', icon: CalendarDays },
+          { href: '/user/tickets', label: 'Tickets', heading: 'Your tickets', icon: TicketIcon },
           {
-            href: '/me/notifications',
+            href: '/user/notifications',
             label: 'Notifications',
             heading: 'Notifications',
             icon: Bell,
           },
-          { href: '/me/reviews', label: 'Reviews', heading: 'Your reviews', icon: Star },
+          { href: '/user/reviews', label: 'Reviews', heading: 'Your reviews', icon: Star },
+        ],
+      },
+      {
+        label: 'Account',
+        // THE ONE ROLE THAT HAD NO SETTINGS LINK.
+        //
+        // /user/settings has existed all along - the ID card, the student
+        // details, the documents panel and the delete button are all on it -
+        // and nothing in the shell pointed at it. Worse, `activeNav` matches on
+        // the longest prefix, so with no entry of its own the page fell through
+        // to '/user' and wore the heading "Your dashboard": somebody looking at
+        // their ID card was told they were on the overview. Both halves are
+        // fixed by the row existing.
+        //
+        // Profile sits beside it because that is the page the account menu's
+        // "Profile" already opens, and a link you can only reach from a
+        // dropdown is a link most people never find.
+        items: [
+          { href: '/user/profile', label: 'Profile', heading: 'Your profile', icon: UserRound },
+          {
+            href: '/user/settings',
+            label: 'Settings',
+            heading: 'Account settings',
+            icon: Settings,
+          },
         ],
       },
     ],

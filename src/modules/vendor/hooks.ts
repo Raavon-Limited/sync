@@ -275,7 +275,7 @@ export function useUploadListingImage() {
  * only the folder differs, and that is for humans browsing storage later.
  */
 export function useUploadVendorImage(
-  folder: 'listings' | 'logos' | 'stores' | 'events' = 'listings',
+  folder: 'listings' | 'logos' | 'stores' | 'events' | 'avatars' = 'listings',
 ) {
   const { userId } = useSession();
 

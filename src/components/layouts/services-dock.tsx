@@ -60,7 +60,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
           { href: '/food/search',    label: 'Search',    icon: Search },
           { href: '/food/orders',    label: 'Orders',    icon: ClipboardList },
           { href: '/food/favorites', label: 'Saved',     icon: Heart },
-          // { href: '/me',             label: 'You',       icon: User },
+          // { href: '/user',             label: 'You',       icon: User },
         ]
       : role === 'vendor'
         ? [
@@ -78,9 +78,9 @@ export function ServicesDock({ role }: ServicesDockProps) {
             ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
             : role === 'student'
               ? [
-                  { href: '/me/saved',    label: 'Saved',  icon: Heart },
-                  { href: '/me/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
-                  { href: '/me',          label: 'You',    icon: User, iconName: 'student' },
+                  { href: '/user/saved',    label: 'Saved',  icon: Heart },
+                  { href: '/user/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
+                  { href: '/user',          label: 'You',    icon: User, iconName: 'student' },
                 ]
               : [{ href: '/login', label: 'Sign in', icon: LogIn }];
 

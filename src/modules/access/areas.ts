@@ -137,6 +137,12 @@ export const ADMIN_AREAS: AreaSpec[] = [
     href: '/admin/promotions',
   },
   {
+    key: 'agents',
+    label: 'Agents',
+    description: 'Invite the people who go and look at hostels and shops, and send them somewhere.',
+    href: '/admin/agents',
+  },
+  {
     key: 'mail',
     label: 'Mail centre',
     description:

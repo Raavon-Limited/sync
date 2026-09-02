@@ -20,7 +20,7 @@ export default async function Page() {
 
   const [{ data: visits }, { data: hostels }, { data: profiles }] = await Promise.all([
     admin
-      .from('hostel_verification_visits')
+      .from('verification_visits')
       .select(
         'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, notes, submitted_at, decided_at',
       )

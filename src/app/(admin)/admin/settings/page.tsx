@@ -3,7 +3,7 @@
  * ACCESS: admin / super_admin only.
  * PURPOSE: PLATFORM settings and feature flags.
  *
- * This route previously rendered the same personal danger zone as /me/settings
+ * This route previously rendered the same personal danger zone as /user/settings
  *   an admin deleting their own account, on a page named "admin settings".
  * The admin's personal account controls stay where every other user's are; this
  * page is for the values that govern the platform, including the commission

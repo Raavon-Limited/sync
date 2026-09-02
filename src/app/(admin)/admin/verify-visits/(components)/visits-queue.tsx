@@ -4,7 +4,7 @@
  * THE PREVIOUS SCREEN WAS ABOUT A DIFFERENT THING
  *   It modelled vendor store inspections   statuses Scheduled / In Progress /
  *   Completed / Failed, an "inspector", a vendor category. The table this route
- *   is named after is `hostel_verification_visits`: an ambassador visits a
+ *   is named after is `verification_visits`: an ambassador visits a
  *   HOSTEL, uploads photos, and staff decide whether it is real. Vendor store
  *   inspection has no table at all, so that screen could never have been wired.
  *

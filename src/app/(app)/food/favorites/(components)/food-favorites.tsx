@@ -1,7 +1,7 @@
 /**
  * Saved food   vendors and menu items the student hearted.
  *
- * Scoped to the two food entity types. /me/saved shows everything across all
+ * Scoped to the two food entity types. /user/saved shows everything across all
  * verticals; this page is the food slice of the same table.
  */
 'use client';

@@ -194,7 +194,7 @@ export function VerificationReview({
   kind = 'vendor',
   blockVerify = null,
   extraMissing = [],
-  notifyPath = '/me',
+  notifyPath = '/user',
   mailsSent = 0,
 }: {
   vendor: AdminVendor;

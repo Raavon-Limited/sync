@@ -58,7 +58,7 @@ export function AddAccountItem({ roles }: { roles: string[] }) {
         label: role === 'vendor' ? 'Setting up your business…' : 'Adding your student account…',
         // Claiming vendor grants the right to set a business up, not a
         // business: there is no vendor_profiles row until onboarding writes one.
-        href: role === 'vendor' ? '/onboarding' : '/me',
+        href: role === 'vendor' ? '/onboarding' : '/user',
         action: () => claimRole(role),
       });
     } catch (e) {

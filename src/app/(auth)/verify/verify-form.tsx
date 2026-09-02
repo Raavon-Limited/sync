@@ -67,7 +67,7 @@ export function VerifyForm({ email, next }: { email: string; next?: string }) {
     const organiser = res.role === 'event_manager';
     // Everyone else lands where signing in would put them   the feed on a
     // phone, their dashboard at a desk. See destFor in the login form.
-    const home = readAppSurface() ? '/around' : '/me';
+    const home = readAppSurface() ? '/around' : '/user';
     router.push(needsOnboarding ? '/onboarding' : organiser ? '/organiser' : (next ?? home));
     router.refresh();
   }

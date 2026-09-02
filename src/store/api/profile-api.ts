@@ -13,6 +13,12 @@ import type { Profile } from '@/modules/auth/queries';
 export interface ProfileUpdate {
   full_name?: string;
   phone?: string;
+  /**
+   * A public-media URL, or '' to remove the picture. The route handler is the
+   * authority: it rejects any URL that is not an upload into this project's own
+   * bucket, and stores '' as NULL.
+   */
+  avatar_url?: string;
 }
 
 export const profileApi = baseApi.injectEndpoints({

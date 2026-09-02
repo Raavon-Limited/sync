@@ -1533,7 +1533,7 @@ export type Database = {
           },
         ]
       }
-      hostel_verification_visits: {
+      verification_visits: {
         Row: {
           ambassador_id: string | null
           created_at: string
@@ -1581,28 +1581,28 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "hostel_verification_visits_ambassador_id_fkey"
+            foreignKeyName: "verification_visits_ambassador_id_fkey"
             columns: ["ambassador_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "hostel_verification_visits_decided_by_fkey"
+            foreignKeyName: "verification_visits_decided_by_fkey"
             columns: ["decided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "hostel_verification_visits_hostel_id_fkey"
+            foreignKeyName: "verification_visits_hostel_id_fkey"
             columns: ["hostel_id"]
             isOneToOne: false
             referencedRelation: "hostel_availability"
             referencedColumns: ["hostel_id"]
           },
           {
-            foreignKeyName: "hostel_verification_visits_hostel_id_fkey"
+            foreignKeyName: "verification_visits_hostel_id_fkey"
             columns: ["hostel_id"]
             isOneToOne: false
             referencedRelation: "hostels"
@@ -2473,6 +2473,7 @@ export type Database = {
       profiles: {
         Row: {
           archived_at: string | null
+          avatar_url: string | null
           archived_reason: string | null
           business_address: string | null
           business_name: string | null
@@ -2495,6 +2496,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          avatar_url?: string | null
           archived_reason?: string | null
           business_address?: string | null
           business_name?: string | null
@@ -2517,6 +2519,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          avatar_url?: string | null
           archived_reason?: string | null
           business_address?: string | null
           business_name?: string | null

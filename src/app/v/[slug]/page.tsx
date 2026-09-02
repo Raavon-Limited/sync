@@ -143,16 +143,22 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               </h1>
             )}
             {result.businessName && (
-              <p className={result.holderName ? 'text-content-muted text-sm' : 'font-display text-content text-2xl'}>
+              <p
+                className={
+                  result.holderName
+                    ? 'text-content-muted text-sm'
+                    : 'font-display text-content text-2xl'
+                }
+              >
                 {result.businessName}
               </p>
             )}
-            {!result.found && (
-              <h1 className="font-display text-content text-2xl">Unknown card</h1>
-            )}
+            {!result.found && <h1 className="font-display text-content text-2xl">Unknown card</h1>}
           </div>
 
-          <span className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold ${tone.chip}`}>
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold ${tone.chip}`}
+          >
             <span className={tone.text}>
               <StateIcon state={result.state} />
             </span>
@@ -163,6 +169,44 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
           {result.found && (
             <>
+              {/* EVERY HAT THIS PERSON WEARS, each with its own answer.
+                  A landlord who is also a student is one human being and two
+                  independent decisions; reporting only the first would hide
+                  the second from whoever is standing there. Staff appear here
+                  too   "this person works for Sync" is the claim most worth
+                  being able to test at a door. */}
+              {result.credentials.length > 0 && (
+                <div className="border-line/10 mt-1 w-full rounded-xl border p-3 text-left">
+                  <p className="text-content-muted mb-2 font-mono text-[10px] tracking-widest uppercase">
+                    On {SITE.name} as
+                  </p>
+                  <ul className="flex flex-col gap-2">
+                    {result.credentials.map((c) => (
+                      <li key={c.kind} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-content">{c.label}</span>
+                        <span
+                          className={
+                            c.state === 'verified'
+                              ? 'text-xs font-semibold text-emerald-500'
+                              : c.state === 'pending'
+                                ? 'text-xs font-semibold text-amber-500'
+                                : 'text-content-muted text-xs font-semibold'
+                          }
+                        >
+                          {c.state === 'verified'
+                            ? 'Verified'
+                            : c.state === 'pending'
+                              ? 'In review'
+                              : c.state === 'rejected'
+                                ? 'Not verified'
+                                : 'Not verified'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* What the platform actually checked. Named, so "verified" is a
                   claim with contents rather than a badge. Never the documents
                   themselves   the answer is "we checked", not "here it is". */}
@@ -187,9 +231,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                           <span className="flex min-w-0 flex-col">
                             <span className={r.met ? 'text-content' : 'text-content-muted'}>
                               {spec?.label ?? r.label}
-                              {!r.met && (
-                                <span className="text-content-muted">   not provided</span>
-                              )}
+                              {!r.met && <span className="text-content-muted"> not provided</span>}
                             </span>
                             {/* The documents by the names people use   NIN,
                                 CAC. It lists what SATISFIES the check rather
@@ -229,9 +271,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                   </Row>
                 )}
                 {result.state === 'verified' && result.verifiedAt && (
-                  <Row label="Verified on">
-                    {new Date(result.verifiedAt).toLocaleDateString()}
-                  </Row>
+                  <Row label="Verified on">{new Date(result.verifiedAt).toLocaleDateString()}</Row>
                 )}
                 {result.memberSince && (
                   <Row label={`On ${SITE.name} since`}>
@@ -246,8 +286,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               is; it does not say what they were sent to do, and conflating the
               two is the failure mode this whole page exists to prevent. */}
           <p className="border-line/10 text-content-muted mt-1 border-t pt-4 text-xs">
-            A verified card confirms who this person is   not what they were sent to do. If you
-            were not expecting a visit, check with whoever arranged it before letting anyone in.
+            A verified card confirms who this person is not what they were sent to do. If you were
+            not expecting a visit, check with whoever arranged it before letting anyone in.
           </p>
 
           <p className="text-content-muted text-[11px]">

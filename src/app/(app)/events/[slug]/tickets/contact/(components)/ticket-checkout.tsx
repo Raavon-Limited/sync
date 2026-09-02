@@ -85,7 +85,7 @@ export function TicketCheckout({ slug }: { slug: string }) {
         count += ids.length;
         setBought(count);
       }
-      router.push('/me/tickets');
+      router.push('/user/tickets');
     } catch (e) {
       const reason = e instanceof Error ? e.message : 'Purchase failed';
       setError(
@@ -149,7 +149,7 @@ export function TicketCheckout({ slug }: { slug: string }) {
               <span className="text-content-muted">
                 You need <span className="text-content font-medium">{naira(short)}</span> more.
               </span>
-              <Link href="/me/wallet" className="text-lime-deep font-medium underline underline-offset-2">
+              <Link href="/user/wallet" className="text-lime-deep font-medium underline underline-offset-2">
                 Top up
               </Link>
             </p>
