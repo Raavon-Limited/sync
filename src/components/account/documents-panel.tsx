@@ -39,22 +39,49 @@ import { useMyDocuments } from '@/modules/verification/hooks';
 import { useSession } from '@/providers/session-provider';
 import { VerifyNowSheet } from '@/components/verification/verify-now-sheet';
 import type { DocStatus, DocumentItem } from '@/modules/vendor/types';
-import { VERIFICATION_REQUIREMENTS } from '@/modules/verification/requirements';
+import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
 
 /**
- * What Sync asks every vendor for.
+ * What Sync asks THIS kind of account for.
  *
- * Product config, not database state   and now shared with the public card
- * page, which lists the same checks to whoever scans a vendor's ID. Two copies
- * of this list would drift, and the drift would show up as a card claiming a
- * check the vendor was never asked to pass.
+ * PER ROLE, NOT THE WHOLE LIST. This read every requirement that exists, which
+ * was harmless while every one of them applied to a business and became wrong
+ * the moment one did not: adding a creator-only 'portfolio' requirement made a
+ * landlord's panel say "0 of 5 approved" and hold a row open for a document
+ * nobody would ever ask them for. `requirementsFor` is the only correct way to
+ * read that list, and it always was.
+ *
+ * Product config, not database state   shared with the public card page, which
+ * lists the same checks to whoever scans a vendor's ID.
  */
-const REQUIRED_DOCS = VERIFICATION_REQUIREMENTS.map((r) => ({
-  docType: r.key,
-  title: r.label,
-  description: r.description,
-  colour: r.colour,
-}));
+function requiredFor(role: VerificationRole) {
+  return requirementsFor(role).map((r) => ({
+    docType: r.key,
+    title: r.label,
+    description: r.description,
+    colour: r.colour,
+  }));
+}
+
+/**
+ * Which role's list to use.
+ *
+ * A landlord is a vendor_profiles row with category 'landlord' and its own
+ * requirement set, so it cannot collapse into 'vendor'. Anything this panel is
+ * not built for falls back to 'vendor', which is the widest business set   too
+ * many rows is a visible mistake, too few is an invisible one.
+ */
+function roleFor(role: string | undefined): VerificationRole {
+  const known: VerificationRole[] = [
+    'student',
+    'rider',
+    'vendor',
+    'landlord',
+    'creator',
+    'event_manager',
+  ];
+  return known.includes(role as VerificationRole) ? (role as VerificationRole) : 'vendor';
+}
 
 const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
   approved: { label: 'Approved', cls: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },
@@ -80,9 +107,14 @@ export function DocumentsPanel({
   const verificationStatus = profile?.verificationStatus;
   const { data: docs = [], isLoading } = useMyDocuments();
 
+  const required = useMemo(() => requiredFor(roleFor(profile?.role)), [profile?.role]);
+
   const items = useMemo<DocumentItem[]>(
     () =>
-      REQUIRED_DOCS.map((req) => {
+      required.map((req) => {
+        // fetchMyDocuments orders uploaded_at descending, so the first match
+        // is the NEWEST upload of that type   which is the one that counts
+        // after somebody replaces a document.
         const found = docs.find((d) => d.docType === req.docType);
         return {
           id: req.docType,
@@ -99,12 +131,26 @@ export function DocumentsPanel({
           actionMessage: found?.actionMessage ?? undefined,
         };
       }),
-    [docs],
+    [docs, required],
   );
 
   const approved = items.filter((i) => i.status === 'approved').length;
   const verified = verificationStatus === 'verified';
   const awaitingReview = verificationStatus === 'pending';
+
+  /*
+   * WHAT IS ACTUALLY OUTSTANDING.
+   *
+   * 'not_uploaded' is a gap; 'needs_action' is a reviewer asking for a
+   * different file. Both are work. 'under_review' and 'approved' are not   and
+   * offering "Continue verification" against a full folder was offering to
+   * redo work that is already done, which is how a reviewer ends up with a
+   * second copy of everything and no idea which one to judge.
+   */
+  const outstanding = items.filter(
+    (i) => i.status === 'not_uploaded' || i.status === 'needs_action',
+  );
+  const nothingStarted = items.every((i) => i.status === 'not_uploaded');
 
   if (isLoading) {
     return (
@@ -122,13 +168,19 @@ export function DocumentsPanel({
         <p className="text-content-muted text-sm">
           {/* Counted against the real list, not the literal "three" this used
               to claim while rendering four rows. */}
-          {approved} of {REQUIRED_DOCS.length} approved.
-          {!verified && ` Verification completes when all ${REQUIRED_DOCS.length} are.`}
+          {approved} of {required.length} approved.
+          {!verified && ` Verification completes when all ${required.length} are.`}
         </p>
 
         {/* The only action on this screen, and it is a handoff. Absent while a
             reviewer already has the folder   a second submission is the only
-            thing it could produce   and absent when the door is closed. */}
+            thing it could produce   and absent when the door is closed.
+
+            When nothing is outstanding it is still offered, but as REPLACING a
+            document rather than continuing: uploading a better photo of an ID
+            that is already under review is a real thing to want, and the old
+            copy is kept so a reviewer sees both. It reads as the secondary
+            action it is. */}
         {!verified && !awaitingReview && !blockedReason && (
           <VerifyNowSheet
             initial={{
@@ -140,14 +192,26 @@ export function DocumentsPanel({
               businessName: profile?.businessName ?? undefined,
             }}
           >
-            <Button variant="outline" className="shrink-0">
-              {approved > 0 || items.some((i) => i.status !== 'not_uploaded')
-                ? 'Continue verification'
-                : 'Start verification'}
+            <Button variant={outstanding.length > 0 ? 'outline' : 'ghost'} className="shrink-0">
+              {nothingStarted
+                ? 'Start verification'
+                : outstanding.length > 0
+                  ? `Continue verification (${outstanding.length} left)`
+                  : 'Replace a document'}
             </Button>
           </VerifyNowSheet>
         )}
       </div>
+
+      {/* Everything is in and none of it is a gap. Said plainly, because the
+          button above no longer implies there is work left and somebody should
+          not have to infer that from a verb. */}
+      {!verified && !awaitingReview && !blockedReason && outstanding.length === 0 && (
+        <p className="border-line/15 bg-surface-deep text-content-muted rounded-lg border px-3 py-2 text-sm">
+          Everything asked for has been uploaded. Nothing is missing you only need the button above
+          if you want to replace one of them.
+        </p>
+      )}
 
       {awaitingReview && (
         <p className="border-line/15 bg-surface-deep text-content-muted rounded-lg border px-3 py-2 text-sm">
@@ -167,7 +231,7 @@ export function DocumentsPanel({
         {items.map((item, i) => {
           const meta = STATUS_META[item.status];
           const Icon = meta.icon;
-          const req = REQUIRED_DOCS[i];
+          const req = required[i];
           return (
             <Card key={item.id} className="border-line/10 border">
               <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -217,7 +281,7 @@ export function DocumentsPanel({
               <Circle className="text-content-muted size-4" />
             )}
             <span className={item.status === 'approved' ? 'text-content-muted' : 'text-content'}>
-              {item.title}   {STATUS_META[item.status].label.toLowerCase()}
+              {item.title} {STATUS_META[item.status].label.toLowerCase()}
             </span>
           </div>
         ))}

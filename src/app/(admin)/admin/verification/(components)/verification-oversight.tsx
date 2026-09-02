@@ -1,12 +1,17 @@
 /**
  * The cross-account verification list: filter, find, click through to decide.
  *
- * ONE ROW SHAPE FOR FOUR KINDS OF ACCOUNT
- *   A vendor, a landlord, a rider and a logistics company are four tables with
- *   four different sets of columns, and none of that matters to the question
- *   this page answers. They are flattened to name / kind / state / where-to-go
- *   in the server component, so the filtering here is one predicate rather than
- *   four branches that would drift apart the first time a fifth kind appears.
+ * ONE ROW SHAPE FOR EVERY KIND OF ACCOUNT
+ *   A vendor, a landlord, a rider, a logistics company and a student are five
+ *   tables with five different sets of columns, and none of that matters to the
+ *   question this page answers. They are flattened to name / kind / state /
+ *   where-to-go in the server component, so the filtering here is one predicate
+ *   rather than five branches that would drift apart the first time a sixth
+ *   kind appears.
+ *
+ *   Students were missing from this queue entirely until student_profiles gave
+ *   them a status of their own   they had no row to read, because
+ *   profiles.verification_status is the vendor mirror.
  *
  * BLOCKED AND SUSPENDED ARE CHIPS, NOT STATUSES
  *   Both are separate facts from `verification_status` in the database, and
@@ -19,12 +24,12 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ChevronRight, ShieldAlert, Store, Truck } from 'lucide-react';
+import { Building2, ChevronRight, GraduationCap, ShieldAlert, Store, Truck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge, Input } from '@/components/ui';
 import { VENDOR_BADGE } from '@/components/admin/verification-review';
 
-export type OversightKind = 'vendor' | 'landlord' | 'rider' | 'company';
+export type OversightKind = 'vendor' | 'landlord' | 'rider' | 'company' | 'student';
 
 export interface OversightRow {
   id: string;
@@ -43,6 +48,7 @@ const KIND_ICON: Record<OversightKind, LucideIcon> = {
   landlord: Building2,
   rider: Truck,
   company: Truck,
+  student: GraduationCap,
 };
 
 const KIND_LABEL: Record<OversightKind, string> = {
@@ -50,6 +56,7 @@ const KIND_LABEL: Record<OversightKind, string> = {
   landlord: 'Landlord',
   rider: 'Rider',
   company: 'Fleet',
+  student: 'Student',
 };
 
 const STATUS_FILTERS = ['pending', 'unverified', 'verified', 'rejected'] as const;

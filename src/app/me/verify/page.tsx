@@ -23,6 +23,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getProfile } from '@/modules/auth/queries';
+import { getMyStudentIdentity } from '@/modules/students';
 import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
 import { VerifyForm } from './(components)/verify-form';
 
@@ -60,6 +61,19 @@ export default async function Page() {
 
   const asked = requirementsFor(served).length;
 
+  /*
+   * A STUDENT'S STATUS COMES FROM student_profiles, NOT FROM profiles.
+   *
+   * profiles.verification_status is the mirror of vendor_profiles, so for
+   * somebody who is a student AND a vendor it reports the business decision.
+   * Reading it here would tell a verified student they were rejected the day
+   * their shop was. See modules/students.
+   */
+  const identity = served === 'student' ? await getMyStudentIdentity() : null;
+  const status = identity
+    ? identity.verificationStatus
+    : (profile.verification_status ?? 'unverified');
+
   return (
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <div>
@@ -74,7 +88,19 @@ export default async function Page() {
         </p>
       </div>
 
-      <VerifyForm role={served} status={profile.verification_status ?? 'unverified'} />
+      <VerifyForm
+        role={served}
+        status={status}
+        identity={
+          identity
+            ? {
+                matricNumber: identity.matricNumber,
+                department: identity.department,
+                level: identity.level,
+              }
+            : null
+        }
+      />
     </section>
   );
 }

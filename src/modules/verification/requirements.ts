@@ -157,6 +157,26 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     ],
   },
   {
+    key: 'student_id',
+    label: 'School ID',
+    accepts: 'Student ID card, or an admission letter',
+    description:
+      'Your school ID card, showing your name and matriculation number. An admission letter works if the card has not been issued yet.',
+    colour: 'bg-sky-50 text-sky-500',
+    // STUDENTS ONLY, AND THIS IS THE POINT OF THE ROLE SPLIT.
+    //
+    // A CAC certificate says somebody runs a business; it says nothing about
+    // whether they study here, and one account can be both. The live photo and
+    // the government ID above are shared because they identify the PERSON, who
+    // is the same person in every role. This is the role-specific evidence, and
+    // it cannot be satisfied by anything a business uploaded.
+    roles: ['student'],
+    options: [
+      { value: 'student_id_card', label: 'Student ID card' },
+      { value: 'admission_letter', label: 'Admission letter', hint: 'If your card is not out yet' },
+    ],
+  },
+  {
     key: 'portfolio',
     label: 'Work samples',
     accepts: 'Three recent pieces, or a link to a profile',

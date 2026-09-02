@@ -35,16 +35,47 @@ import {
   queueForUpload,
   type DocumentState,
 } from '@/components/verification/document-upload';
+import { Input } from '@/components/ui/input';
+import { FormField } from '@/components/forms';
 import { uploadQueuedDocuments } from '@/components/verification/upload-documents';
 import { submitPersonalVerification } from '@/modules/verification/actions';
+import { saveStudentIdentity, submitStudentVerification } from '@/modules/students/actions';
 import type { VerificationRole } from '@/modules/verification/requirements';
 
-export function VerifyForm({ role, status }: { role: VerificationRole; status: string }) {
+export interface StudentIdentityFields {
+  matricNumber: string | null;
+  department: string | null;
+  level: string | null;
+}
+
+export function VerifyForm({
+  role,
+  status,
+  identity,
+}: {
+  role: VerificationRole;
+  status: string;
+  /** Present only for a student; the fields nobody else is asked for. */
+  identity?: StudentIdentityFields | null;
+}) {
   const router = useRouter();
   const [docs, setDocs] = useState<DocumentState>(() => emptyDocumentState(role));
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
+
+  /*
+   * A STUDENT IS NOT ONLY DOCUMENTS.
+   *
+   * A school ID card proves somebody holds a card. The matriculation number and
+   * department are what a reviewer checks it AGAINST, and the database refuses
+   * a submission without them - so they are collected here rather than left as
+   * something to chase afterwards.
+   */
+  const isStudent = role === 'student';
+  const [matricNumber, setMatric] = useState(identity?.matricNumber ?? '');
+  const [department, setDepartment] = useState(identity?.department ?? '');
+  const [level, setLevel] = useState(identity?.level ?? '');
 
   if (status === 'verified') {
     return (
@@ -78,6 +109,16 @@ export function VerifyForm({ role, status }: { role: VerificationRole; status: s
     }
 
     startTransition(async () => {
+      // Identity first: it is cheap, it is what the submit checks, and saving
+      // it before a long upload means a failed upload does not lose the typing.
+      if (isStudent) {
+        const saved = await saveStudentIdentity({ matricNumber, department, level });
+        if (!saved.ok) {
+          setError(saved.error);
+          return;
+        }
+      }
+
       const upload = await uploadQueuedDocuments(role, docs, (p) =>
         setProgress(p ? `Uploading ${p.label} (${p.done + 1} of ${p.total})…` : null),
       );
@@ -88,7 +129,12 @@ export function VerifyForm({ role, status }: { role: VerificationRole; status: s
         return;
       }
 
-      const res = await submitPersonalVerification();
+      // Students write student_profiles; creators and event managers still
+      // write profiles, because neither can hold a business row today. See
+      // 20260903180000.
+      const res = isStudent
+        ? await submitStudentVerification()
+        : await submitPersonalVerification();
       if (!res.ok) {
         setError(res.error);
         return;
@@ -99,9 +145,48 @@ export function VerifyForm({ role, status }: { role: VerificationRole; status: s
   }
 
   const queued = queueForUpload(role, docs).length;
+  const identityMissing = isStudent && (!matricNumber.trim() || !department.trim());
 
   return (
     <div className="flex flex-col gap-5">
+      {isStudent && (
+        <div className="border-line/15 bg-panel flex flex-col gap-4 rounded-xl border p-4">
+          <div>
+            <h3 className="text-content text-base font-semibold">Your studentship</h3>
+            <p className="text-content-muted text-sm">
+              What a reviewer checks your school ID against.
+            </p>
+          </div>
+
+          <FormField label="Matriculation number" htmlFor="matric">
+            <Input
+              id="matric"
+              value={matricNumber}
+              onChange={(e) => setMatric(e.target.value)}
+              placeholder="e.g. 19/52HA011"
+            />
+          </FormField>
+
+          <FormField label="Department" htmlFor="department">
+            <Input
+              id="department"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="e.g. Computer Science"
+            />
+          </FormField>
+
+          <FormField label="Level (optional)" htmlFor="level">
+            <Input
+              id="level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              placeholder="e.g. 300"
+            />
+          </FormField>
+        </div>
+      )}
+
       <VerificationDocuments
         role={role}
         value={docs}
@@ -113,7 +198,7 @@ export function VerifyForm({ role, status }: { role: VerificationRole; status: s
       {error && <p className="text-coral text-sm">{error}</p>}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button size="lg" disabled={busy || queued === 0} onClick={submit}>
+        <Button size="lg" disabled={busy || queued === 0 || identityMissing} onClick={submit}>
           {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
           {busy ? 'Submitting…' : 'Submit for review'}
         </Button>
@@ -121,6 +206,12 @@ export function VerifyForm({ role, status }: { role: VerificationRole; status: s
           <Link href="/me">Not now</Link>
         </Button>
       </div>
+
+      {identityMissing && (
+        <p className="text-content-muted text-xs">
+          Add your matriculation number and department to submit.
+        </p>
+      )}
 
       <p className="text-content-muted text-xs">
         Your documents are stored privately and are only ever opened by a reviewer. Nobody browsing

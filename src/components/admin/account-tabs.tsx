@@ -60,14 +60,16 @@ interface TabSpec {
 const TABS: TabSpec[] = [
   { key: 'vendors', label: 'All businesses', href: '/admin/vendors', area: 'vendors' },
   { key: 'food', label: 'Food', href: '/admin/vendors?category=food', area: 'vendors' },
-  { key: 'beauty', label: 'Beauty', href: '/admin/vendors?category=beauty', area: 'vendors' },
-  { key: 'laundry', label: 'Laundry', href: '/admin/vendors?category=laundry', area: 'vendors' },
-  {
-    key: 'tradesman',
-    label: 'Workmanship',
-    href: '/admin/vendors?category=tradesman',
-    area: 'vendors',
-  },
+  // NOT LAUNCHED, so not navigable.
+  //
+  // The category filter behind these works and the rows would load   which is
+  // exactly why they are marked rather than quietly left live. A tab that opens
+  // an empty, correct-looking queue for a trade nobody can sign up for reads as
+  // "no beauty vendors have applied", which is a different and wrong statement
+  // from "beauty is not open yet".
+  { key: 'beauty', label: 'Beauty', soon: true },
+  { key: 'laundry', label: 'Laundry', soon: true },
+  { key: 'tradesman', label: 'Workmanship', soon: true },
   { key: 'landlords', label: 'Landlords', href: '/admin/landlord', area: 'landlords' },
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },
   { key: 'students', label: 'Students', href: '/admin/students', area: 'students' },

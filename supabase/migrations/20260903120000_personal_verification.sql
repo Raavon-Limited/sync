@@ -1,8 +1,13 @@
 -- ============================================================================
 -- personal_verification
 --
--- Letting an account with NO authority table submit itself for review   today
--- a student, tomorrow a content creator or an event manager.
+-- Letting an account with NO authority table submit itself for review   a
+-- content creator or an event manager.
+--
+-- STUDENTS MOVED OUT of this in 20260903180000, which gives them their own
+-- row. Read that file's header before adding a role here: a role that can hold
+-- a business row at the same time cannot use profiles.verification_status,
+-- because that column is the vendor mirror.
 --
 -- WHY submit_verification() CANNOT BE USED
 --   That function is business-only, and not by accident: it calls
@@ -79,7 +84,16 @@ begin
   -- "Not yet". They are listed now so that opening the role is a change to the
   -- signup form and nothing else; a role that arrives here unlisted would be
   -- refused at the last step of its own onboarding.
-  if v_role is null or v_role not in ('student', 'creator', 'event_manager') then
+  -- STUDENTS ARE NOT HERE ANY MORE. 20260903180000 gives them
+  -- student_profiles, for the reason that file's header sets out: one account
+  -- can be a student AND a vendor, and profiles.verification_status is the
+  -- vendor mirror, so writing it for a student loses their decision the next
+  -- time a reviewer touches the business.
+  --
+  -- 'creator' and 'event_manager' stay because neither can co-exist with a
+  -- business row today. The moment one can, they need their own table too, and
+  -- this check is where that will bite.
+  if v_role is null or v_role not in ('creator', 'event_manager') then
     raise exception 'This account verifies through its own dashboard'
       using errcode = '42501';
   end if;
@@ -132,5 +146,80 @@ begin
 
   if has_function_privilege('anon', 'public.submit_personal_verification()', 'execute') then
     raise exception 'submit_personal_verification is executable by anon -- it must not be';
+  end if;
+end $$;
+
+-- ============================================================================
+-- set_personal_verification   the reviewer's half of the same story.
+--
+-- submit_personal_verification above moves an account INTO the queue. This is
+-- how staff move it out, and it is a separate function for the same reason the
+-- submit one exists: setVendorVerification writes vendor_profiles and
+-- setRiderVerification writes rider_profiles, and a student has neither.
+--
+-- WHY IT IS NOT AN UPDATE FROM THE APP
+--   guard_profile_privileged_cols reverts verification_status for anybody
+--   connecting as authenticated or anon, which with the sb_secret_ keys is
+--   every PostgREST request, service role included. A definer function is the
+--   only way past it, and stating its own rules is the point.
+--
+-- IT REFUSES ROLES THAT HAVE AN AUTHORITY TABLE. Writing profiles directly for
+-- a vendor would set the MIRROR, and the next write to vendor_profiles would
+-- silently overwrite the decision   a reviewer's approval undone by a trigger.
+-- ============================================================================
+create or replace function public.set_personal_verification(p_user uuid, p_status text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_role text;
+  v_old  text;
+begin
+  if not public.is_staff() then
+    raise exception 'Only staff can decide a verification' using errcode = '42501';
+  end if;
+
+  if p_status not in ('verified', 'rejected', 'pending', 'unverified') then
+    raise exception 'Unknown status: %', p_status using errcode = '22023';
+  end if;
+
+  select role, verification_status into v_role, v_old
+    from public.profiles where id = p_user for update;
+
+  if not found then
+    raise exception 'no such account' using errcode = 'P0002';
+  end if;
+
+  if v_role is null or v_role not in ('creator', 'event_manager') then
+    raise exception 'That account is verified through its own table, not this one'
+      using errcode = '42501';
+  end if;
+
+  update public.profiles
+     set verification_status = p_status,
+         updated_at          = now()
+   where id = p_user;
+
+  insert into private.audit_log (actor_id, actor_role, action, entity_type, entity_id, before, after)
+  values ((select auth.uid()), 'staff', 'verification.decided', 'profile', p_user::text,
+          jsonb_build_object('status', v_old),
+          jsonb_build_object('status', p_status));
+
+  return p_status;
+end;
+$fn$;
+
+revoke all on function public.set_personal_verification(uuid, text) from public, anon;
+grant execute on function public.set_personal_verification(uuid, text) to authenticated, service_role;
+
+comment on function public.set_personal_verification(uuid, text) is
+  'Staff decision on an account whose status lives in profiles (student, creator, event_manager). Businesses and riders use their own path.';
+
+do $$
+begin
+  if to_regprocedure('public.set_personal_verification(uuid, text)') is null then
+    raise exception 'set_personal_verification missing';
   end if;
 end $$;

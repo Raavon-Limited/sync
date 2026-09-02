@@ -25,7 +25,7 @@
  * THE TWO DECISIONS ARE NOT THE SAME DECISION
  *   Per document: Approve, or Bounce with a reason. Per business: Verify,
  *   Reject, or Reject as fraud. 20260817090000 was explicit that approving the
- *   last document must NOT auto-verify   a human decides a business is real  
+ *   last document must NOT auto-verify   a human decides a business is real
  *   and the database enforces the other half of it: set_verification_status
  *   refuses 'verified' when nothing has been approved.
  */
@@ -44,6 +44,7 @@ import {
   getDocumentUrls,
   reviewDocument,
   setCompanyVerification,
+  setStudentVerification,
   setRiderVerification,
   setVendorVerification,
   type VendorDecision,
@@ -147,7 +148,7 @@ function Preview({
  * a copy of this file for riders would be a copy of the comparison layout, the
  * signed-url handling and the modal, all of which would then drift.
  */
-export type ReviewKind = 'vendor' | 'rider' | 'company';
+export type ReviewKind = 'vendor' | 'rider' | 'company' | 'student';
 
 const DECIDE: Record<
   ReviewKind,
@@ -159,6 +160,10 @@ const DECIDE: Record<
     setRiderVerification({ riderId: id, decision, ...(permanent ? { permanent } : {}) }),
   company: (id, decision, permanent) =>
     setCompanyVerification({ companyId: id, decision, ...(permanent ? { permanent } : {}) }),
+  // No `permanent`: a fraud block is a vendor_profiles / rider_profiles column
+  // and a student has neither. Suspension is the equivalent lever and it lives
+  // on the account, not on the verification.
+  student: (id, decision) => setStudentVerification({ userId: id, decision }),
 };
 
 /** What the confirm dialog and the counts call the thing being reviewed. */
@@ -166,6 +171,7 @@ const NOUN: Record<ReviewKind, string> = {
   vendor: 'business',
   rider: 'rider',
   company: 'company',
+  student: 'student',
 };
 
 export function VerificationReview({
@@ -191,15 +197,44 @@ export function VerificationReview({
   // that was actually clicked - every Approve on the screen would spin at once.
   const [pendingDoc, setPendingDoc] = useState<string | null>(null);
 
-  // The comparison pair first, then the rest in upload order. The modal steps
-  // through this same list, so its arrows walk the folder the way the page
-  // reads it.
+  // The comparison pair first, then the rest   and within one doc_type, the
+  // newest upload first. The modal steps through this same list, so its arrows
+  // walk the folder the way the page reads it.
   const ordered = useMemo(() => {
     const rank = (d: AdminDoc) => {
       const i = COMPARE_ORDER.indexOf(d.docType);
       return i === -1 ? COMPARE_ORDER.length : i;
     };
-    return [...vendor.docs].sort((a, b) => rank(a) - rank(b));
+    return [...vendor.docs].sort(
+      (a, b) =>
+        rank(a) - rank(b) || new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+    );
+  }, [vendor.docs]);
+
+  /*
+   * WHICH UPLOADS HAVE BEEN SUPERSEDED.
+   *
+   * Replacing a document does not overwrite anything: `uploadQueuedDocuments`
+   * writes a fresh row against a timestamped storage path, and every row a
+   * person has ever uploaded reaches this screen. That is the right thing to
+   * keep   a reviewer comparing a new ID against the one bounced last week is
+   * the reason the history exists   but undifferentiated it reads as one
+   * folder with two of everything and no way to tell which is being judged.
+   *
+   * The newest of each type is the live one. Everything behind it is marked,
+   * not hidden: hiding it would lose exactly the comparison it is for.
+   */
+  const supersededIds = useMemo(() => {
+    const newest = new Map<string, string>();
+    for (const d of vendor.docs) {
+      const held = newest.get(d.docType);
+      const heldAt = held
+        ? new Date(vendor.docs.find((x) => x.id === held)!.uploadedAt).getTime()
+        : -1;
+      if (new Date(d.uploadedAt).getTime() > heldAt) newest.set(d.docType, d.id);
+    }
+    const live = new Set(newest.values());
+    return new Set(vendor.docs.filter((d) => !live.has(d.id)).map((d) => d.id));
   }, [vendor.docs]);
 
   // Joined into a string so the effect below depends on the CONTENTS rather
@@ -339,9 +374,19 @@ export function VerificationReview({
 
   function DocMeta({ doc }: { doc: AdminDoc }) {
     const Icon = DOC_ICON[doc.status] ?? Circle;
+    const superseded = supersededIds.has(doc.id);
     return (
       <div className="min-w-0">
-        <p className="text-content truncate text-sm font-medium">{doc.title}</p>
+        <p className="text-content flex flex-wrap items-center gap-2 truncate text-sm font-medium">
+          {doc.title}
+          {/* A replaced copy, kept deliberately. Marked rather than removed so
+              the new one can be held against it. */}
+          {superseded && (
+            <span className="border-line/20 text-content-muted rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
+              replaced
+            </span>
+          )}
+        </p>
         <p
           className={cn(
             'flex items-center gap-1.5 text-xs',

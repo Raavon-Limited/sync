@@ -17,12 +17,13 @@
  *   are not among them:
  *     • fraud-blocked is `rejected` plus verification_blocked_at, deliberately
  *       kept out of the status enum (see 20260901260000's header).
- *     • suspended lives on profiles and is orthogonal to verification entirely  
+ *     • suspended lives on profiles and is orthogonal to verification entirely
  *       a suspended vendor's papers are still real.
  *   Both are separate filters here for that reason, not extra status values.
  */
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationOversight, type OversightRow } from './(components)/verification-oversight';
 
@@ -30,34 +31,55 @@ export const metadata: Metadata = { title: 'Verification   Admin' };
 
 type Row = Record<string, unknown>;
 
+/**
+ * student_profiles postdates the checked-in generated types. REGENERATE once
+ * 20260903180000 is applied and this goes.
+ */
+function loose(c: unknown): SupabaseClient {
+  return c as SupabaseClient;
+}
+
 export default async function Page() {
   await requireStaffArea('verification');
 
   const db = createAdminClient();
 
-  const [{ data: businesses }, { data: riders }, { data: companies }, { data: people }] =
-    await Promise.all([
-      db
-        .from('vendor_profiles')
-        .select(
-          'id, business_name, slug, category, verification_status, verification_blocked_at, created_at',
-        )
-        .is('archived_at', null)
-        .order('created_at', { ascending: false }),
-      db
-        .from('rider_profiles')
-        .select('id, verification_status, verification_blocked_at, created_at')
-        .is('archived_at', null)
-        .order('created_at', { ascending: false }),
-      db
-        .from('logistics_companies')
-        .select('id, name, owner_id, verification_status, verification_blocked_at, created_at')
-        .is('archived_at', null)
-        .order('created_at', { ascending: false }),
-      // Names for riders (rider_profiles has none) and the suspension flag,
-      // which applies to every kind of account because it lives on the person.
-      db.from('profiles').select('id, full_name, suspended_at'),
-    ]);
+  const [
+    { data: businesses },
+    { data: riders },
+    { data: companies },
+    { data: people },
+    { data: students },
+  ] = await Promise.all([
+    db
+      .from('vendor_profiles')
+      .select(
+        'id, business_name, slug, category, verification_status, verification_blocked_at, created_at',
+      )
+      .is('archived_at', null)
+      .order('created_at', { ascending: false }),
+    db
+      .from('rider_profiles')
+      .select('id, verification_status, verification_blocked_at, created_at')
+      .is('archived_at', null)
+      .order('created_at', { ascending: false }),
+    db
+      .from('logistics_companies')
+      .select('id, name, owner_id, verification_status, verification_blocked_at, created_at')
+      .is('archived_at', null)
+      .order('created_at', { ascending: false }),
+    // Names for riders (rider_profiles has none) and the suspension flag,
+    // which applies to every kind of account because it lives on the person.
+    db.from('profiles').select('id, full_name, suspended_at'),
+    // Students. Their status is NOT profiles.verification_status   that
+    // column is the mirror of vendor_profiles, so for somebody who is both it
+    // reports the business decision. student_profiles is the authority for
+    // the student half; see 20260903180000.
+    loose(db)
+      .from('student_profiles')
+      .select('id, matric_number, department, verification_status, created_at')
+      .order('created_at', { ascending: false }),
+  ]);
 
   const person = new Map(
     ((people ?? []) as Row[]).map((p) => [
@@ -100,6 +122,25 @@ export default async function Page() {
       suspended: person.get(id)?.suspended ?? false,
       href: `/admin/riders/${id}`,
       createdAt: r.created_at as string,
+    });
+  }
+
+  for (const st of (students ?? []) as Row[]) {
+    const id = st.id as string;
+    rows.push({
+      id,
+      kind: 'student',
+      name: person.get(id)?.name ?? 'No name set',
+      detail: (st.department as string) ?? (st.matric_number as string) ?? 'student',
+      status: (st.verification_status as string) ?? 'unverified',
+      // A student has no fraud block: verification_blocked_at is a
+      // vendor_profiles / rider_profiles column. Suspension is the equivalent
+      // lever and it lives on the person, which is read below like everyone
+      // else's.
+      blocked: false,
+      suspended: person.get(id)?.suspended ?? false,
+      href: `/admin/students/${id}`,
+      createdAt: st.created_at as string,
     });
   }
 

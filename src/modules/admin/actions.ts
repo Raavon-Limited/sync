@@ -92,7 +92,7 @@ export async function reviewDocument(input: {
   decision: DocDecision;
   message?: string;
 }) {
-  const reviewerId = await assertStaffAnyArea(['vendors', 'landlords', 'riders']);
+  const reviewerId = await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'students']);
 
   if (input.decision === 'needs_action' && !input.message?.trim()) {
     throw new Error('Say what needs fixing');
@@ -183,7 +183,7 @@ export async function setVendorVerification(input: {
  * a leaked passport.
  */
 export async function getDocumentUrl(storagePath: string): Promise<string> {
-  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'verification'], 'read');
+  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'students', 'verification'], 'read');
   const admin = createAdminClient();
   const { data, error } = await admin.storage
     .from('verification-docs')
@@ -240,7 +240,7 @@ export async function getDocumentUrls(storagePaths: string[]): Promise<Record<st
  *   `resolve_dispute` is SECURITY DEFINER and gates on `is_staff()`, which
  *   reads `auth.uid()`. The service-role client has no user session, so
  *   auth.uid() is NULL, is_staff() is false, and every call would be refused.
- *   Using the request-scoped client means the RPC's own guard does its job  
+ *   Using the request-scoped client means the RPC's own guard does its job
  *   defence in depth rather than a guard that can never fire.
  */
 export async function resolveDispute(input: {
@@ -460,6 +460,40 @@ export async function setCompanyVerification(input: {
  * reversible; a permanent rejection says "these documents are forged" and is
  * not. Conflating them would mean lifting a suspension re-opens a fraud case.
  */
+/**
+ * Decide a verification for an account whose status lives in `profiles` -
+ * today a student, later a creator or event manager.
+ *
+ * A SEPARATE ACTION BECAUSE IT IS A SEPARATE TABLE. setVendorVerification
+ * writes vendor_profiles and setRiderVerification writes rider_profiles; a
+ * student has neither, and writing the profiles column by hand would be
+ * writing a MIRROR for the roles that have one - a decision the next trigger
+ * would quietly undo. See 20260903120000.
+ *
+ * Called with the user's session, not the service role: the RPC reads
+ * auth.uid() to check the caller is staff.
+ */
+export async function setStudentVerification(input: { userId: string; decision: VendorDecision }) {
+  await assertStaffArea('students');
+
+  const supabase = await createServerClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+
+  const { error } = await rpc('set_student_verification', {
+    p_user: input.userId,
+    // The queue speaks in 'verified' | 'rejected' | 'pending', which is exactly
+    // what the function accepts.
+    p_status: input.decision,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
+  revalidatePath('/admin/students');
+  revalidatePath('/admin/verification');
+}
+
 export async function setAccountSuspension(input: {
   userId: string;
   suspended: boolean;
@@ -497,7 +531,7 @@ export type AccountRole = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' 
  * reads auth.uid() to check the caller is a super admin, and the service-role
  * client has no user session, so auth.uid() would be NULL and the call refused.
  *
- * Every rule that matters   super admin only, not yourself, not the last one  
+ * Every rule that matters   super admin only, not yourself, not the last one
  * lives in the function. This does not restate them; it would be a second copy
  * to keep in step, and the one that could be bypassed.
  */
@@ -522,7 +556,7 @@ export async function setAccountRole(input: { userId: string; role: AccountRole 
  * account on the platform would be thousands of students deep, and the person
  * you are looking for is one you can already name.
  *
- * The account has to exist. Sync does not create logins from this screen  
+ * The account has to exist. Sync does not create logins from this screen
  * inviting somebody who has never signed up is a different feature with a
  * different failure mode, and quietly creating an account here would mean staff
  * access arriving before the person knew they had it.

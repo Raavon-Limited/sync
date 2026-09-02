@@ -1,19 +1,14 @@
 /**
  * ROUTE: /admin/students
  * ACCESS: staff granted the `students` area.
- * PURPOSE: The people the platform exists for   find one, see their state,
- *          suspend or archive.
+ * PURPOSE: The people the platform exists for - find one, see where they stand,
+ *          open them to decide their documents.
  *
- * IT REUSES THE USERS CONSOLE RATHER THAN GROWING A SECOND ONE
- *   Search, the status filter, the card/table toggle, the detail modal and the
- *   suspend and archive actions are all already built in UsersClient and all
- *   apply unchanged to a student. The only real difference is which rows are on
- *   screen, and that is a `where` clause   a second console would be a copy to
- *   keep in step, and the copy would drift.
- *
- *   The role tab strip is hidden here for the same reason: with the rows
- *   narrowed to students, a "Vendors" tab that can only ever be empty is a
- *   control that lies about what is on the screen.
+ * IT RENDERS THROUGH THE SHARED ACCOUNT BROWSER, like every other tab in the
+ * Accounts strip. It used to render the Users console, which is a different
+ * shape with its own search, its own filters and stat tiles whose deltas were
+ * hardcoded - so one tab behaved unlike the six beside it and showed numbers
+ * that were not computed from anything.
  *
  * NARROWED IN THE QUERY, NOT THE CLIENT. A campus with ten thousand students
  * should not ship every vendor and landlord to the browser to be filtered out
@@ -22,34 +17,88 @@
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs } from '@/components/admin/account-tabs';
-import { UsersClient } from '../users/user-componenets/UsersClient';
-import type { ProfileRow } from '../users/page';
+import { getStudentIdentities } from '@/modules/students';
+import { StudentsBrowser, type StudentRow } from './(components)/students-browser';
+import type { Row } from '@/lib/supabase/row';
 
-export const metadata: Metadata = { title: 'Students   Admin' };
+export const metadata: Metadata = { title: 'Students - Admin' };
 
 export default async function Page() {
-  const role = await requireStaffArea('students');
-  const isSuperAdmin = role === 'super_admin';
+  await requireStaffArea('students');
 
   const admin = createAdminClient();
+
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, role, full_name, vendor_category, verification_status, archived_at, created_at')
+    .select('id, full_name, campus_id, campus_other, suspended_at, created_at')
     .eq('role', 'student')
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
 
-  // listUsers is the only way to an email   the Auth admin API has no
-  // lookup-by-id in bulk   so it is paged once and joined in memory, exactly as
-  // /admin/users does it.
-  const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const emailById = new Map((list?.users ?? []).map((u) => [u.id, u.email ?? ' ']));
+  const students = (profiles ?? []) as Row[];
+  const ids = students.map((s) => s.id as string);
 
-  const rows = ((profiles ?? []) as ProfileRow[]).map((r) => ({
-    ...r,
-    email: emailById.get(r.id) ?? ' ',
-  }));
+  if (ids.length === 0) {
+    return <Shell rows={[]} />;
+  }
 
+  const campusIds = [...new Set(students.map((s) => s.campus_id).filter(Boolean))] as string[];
+
+  const [{ data: campuses }, { data: docs }, selfieByOwner, { data: authList }, identities] =
+    await Promise.all([
+      campusIds.length
+        ? admin.from('campuses').select('id, name').in('id', campusIds)
+        : Promise.resolve({ data: [] }),
+      // Every document for these students in one query, counted per owner. One
+      // request per student is what makes a queue feel slow.
+      admin.from('verification_documents').select('owner_id, status').in('owner_id', ids),
+      selfieUrlsFor(ids),
+      admin.auth.admin.listUsers({ perPage: 1000 }),
+      // The STUDENT status, from student_profiles. profiles.verification_status
+      // is the vendor mirror, so for a student who also sells it reports the
+      // business decision - see modules/students.
+      getStudentIdentities(ids),
+    ]);
+
+  const campusName = new Map(
+    ((campuses ?? []) as Row[]).map((c) => [c.id as string, c.name as string]),
+  );
+  const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? '-']));
+
+  const tally = new Map<string, { total: number; approved: number }>();
+  for (const d of (docs ?? []) as Row[]) {
+    const id = d.owner_id as string;
+    const t = tally.get(id) ?? { total: 0, approved: 0 };
+    t.total++;
+    if (d.status === 'approved') t.approved++;
+    tally.set(id, t);
+  }
+
+  const rows: StudentRow[] = students.map((s) => {
+    const t = tally.get(s.id as string) ?? { total: 0, approved: 0 };
+    return {
+      id: s.id as string,
+      name: (s.full_name as string) ?? 'No name set',
+      email: emailById.get(s.id as string) ?? '-',
+      // The named campus wins; `campus_other` is the free text somebody typed
+      // when their school was not in the list, and is better than nothing.
+      campus: campusName.get(s.campus_id as string) ?? (s.campus_other as string) ?? null,
+      verificationStatus: identities.get(s.id as string)?.verificationStatus ?? 'unverified',
+      matricNumber: identities.get(s.id as string)?.matricNumber ?? null,
+      department: identities.get(s.id as string)?.department ?? null,
+      docs: t.total,
+      approvedDocs: t.approved,
+      suspended: Boolean(s.suspended_at),
+      selfieUrl: selfieByOwner.get(s.id as string),
+    };
+  });
+
+  return <Shell rows={rows} />;
+}
+
+function Shell({ rows }: { rows: StudentRow[] }) {
   return (
     <section className="flex flex-col gap-4">
       <div>
@@ -58,14 +107,14 @@ export default async function Page() {
           The <span className="text-lime-deep">students.</span>
         </h2>
         <p className="text-content-muted mt-2 text-sm">
-          {rows.length} student {rows.length === 1 ? 'account' : 'accounts'}. Everyone else lives
-          under their own tab, or all together under Users.
+          {rows.length} student {rows.length === 1 ? 'account' : 'accounts'}. Open one to review
+          what they have uploaded.
         </p>
       </div>
 
       <AccountTabs active="students" />
 
-      <UsersClient rows={rows} isSuperAdmin={isSuperAdmin} hideRoleTabs />
+      <StudentsBrowser rows={rows} />
     </section>
   );
 }
