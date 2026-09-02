@@ -13,7 +13,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getMyEvents, naira, type OrganiserEvent } from '@/modules/events/organiser-queries';
+import { getMyEvents, type OrganiserEvent } from '@/modules/events/organiser-queries';
+import { formatKobo } from '@/lib/utils/format';
 
 export const metadata: Metadata = { title: 'Your events' };
 
@@ -36,7 +37,7 @@ export default async function Page() {
           <p className="text-content-muted mt-2 text-sm">
             {events.length === 0
               ? 'Nothing listed yet.'
-              : `${events.length} listed · ${sold} ${sold === 1 ? 'ticket' : 'tickets'} sold · ${naira(gross)} taken`}
+              : `${events.length} listed · ${sold} ${sold === 1 ? 'ticket' : 'tickets'} sold · ${formatKobo(gross)} taken`}
           </p>
         </div>
         <Button asChild size="lg">
@@ -100,7 +101,7 @@ function Group({ title, rows, empty }: { title: string; rows: OrganiserEvent[]; 
               <p className="text-content-muted shrink-0 text-xs">
                 {e.ticketsSold === 0
                   ? 'no tickets sold'
-                  : `${e.ticketsSold} sold · ${naira(e.grossKobo)}`}
+                  : `${e.ticketsSold} sold · ${formatKobo(e.grossKobo)}`}
               </p>
             </Link>
           ))}

@@ -119,8 +119,3 @@ export async function getTiers(eventId: string): Promise<TicketTier[]> {
     isActive: t.is_active === true,
   }));
 }
-
-/** ₦ from kobo, for display. */
-export function naira(kobo: number): string {
-  return `₦${(kobo / 100).toLocaleString('en-NG')}`;
-}

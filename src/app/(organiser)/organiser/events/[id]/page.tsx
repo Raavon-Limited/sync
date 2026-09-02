@@ -18,7 +18,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getMyEvent, getTiers, naira } from '@/modules/events/organiser-queries';
+import { getMyEvent, getTiers } from '@/modules/events/organiser-queries';
+import { formatKobo } from '@/lib/utils/format';
 import { EventForm } from '../../(components)/event-form';
 import { TierManager } from '../../(components)/tier-manager';
 
@@ -40,7 +41,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <p className="text-content-muted mt-2 text-sm">
           {event.ticketsSold === 0
             ? 'No tickets sold yet.'
-            : `${event.ticketsSold} sold · ${naira(event.grossKobo)} taken.`}
+            : `${event.ticketsSold} sold · ${formatKobo(event.grossKobo)} taken.`}
           {' · '}
           <Link href={`/events/${event.slug}`} className="underline">
             See the public page

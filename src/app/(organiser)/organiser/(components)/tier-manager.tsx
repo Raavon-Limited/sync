@@ -22,7 +22,8 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
 import { addTicketTier, setTierActive } from '@/modules/events/organiser-actions';
-import { naira, type TicketTier } from '@/modules/events/organiser-queries';
+import type { TicketTier } from '@/modules/events/organiser-queries';
+import { formatKobo } from '@/lib/utils/format';
 
 export function TierManager({ eventId, tiers }: { eventId: string; tiers: TicketTier[] }) {
   const router = useRouter();
@@ -62,7 +63,7 @@ export function TierManager({ eventId, tiers }: { eventId: string; tiers: Ticket
                     )}
                   </p>
                   <p className="text-content-muted text-xs">
-                    {t.priceKobo === 0 ? 'Free' : naira(t.priceKobo)}
+                    {t.priceKobo === 0 ? 'Free' : formatKobo(t.priceKobo)}
                     {' · '}
                     {t.sold} sold
                     {left !== null ? ` · ${Math.max(0, left)} left` : ' · no limit'}
