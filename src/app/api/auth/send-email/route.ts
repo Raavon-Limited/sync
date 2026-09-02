@@ -28,6 +28,7 @@ import { render } from '@react-email/render';
 import { Resend } from 'resend';
 import { Webhook } from 'standardwebhooks';
 import { OtpEmail } from '@/emails/otp-email';
+import { MAIL_FROM } from '@/config/site';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
   // would reject as an unverified sender, so a missing EMAIL_FROM failed with a
   // sender error rather than anything that names the actual problem.
   // NOTE: letsyncyou.com must be a verified domain in Resend for this to send.
-  const from = process.env.EMAIL_FROM ?? 'Sync <no-reply@letsyncyou.com>';
+  const from = process.env.EMAIL_FROM ?? MAIL_FROM;
   // Every failure below is LOGGED as well as returned. Supabase collapses any
   // non-2xx from this endpoint into one message to the user - "Error sending
   // magic link email" - which names neither the cause nor this route, so
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
 
   // The hook fires for EVERY auth email Supabase sends, and they are not the
   // same message. A password reset arriving as "Your Sync code is 481920" tells
-  // somebody who asked to change their password nothing about how to do it  
+  // somebody who asked to change their password nothing about how to do it
   // and reads like a phishing attempt, which is the one impression a security
   // email must not give. The action type is the only thing that distinguishes
   // them, so it is what the subject line branches on.
@@ -113,7 +114,10 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     console.error('[send-email] send threw. from=%s error=%o', from, e);
-    return Response.json({ error: e instanceof Error ? e.message : 'Send failed' }, { status: 502 });
+    return Response.json(
+      { error: e instanceof Error ? e.message : 'Send failed' },
+      { status: 502 },
+    );
   }
 
   return Response.json({});

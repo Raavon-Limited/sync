@@ -8,7 +8,7 @@
  * WHY NOT `window.location.origin`
  *   That is right for a link you click now and wrong for anything durable. A
  *   QR code baked into a downloaded ID card, or an invite link copied and sent
- *   to somebody else, is read later, elsewhere, on another person's device  
+ *   to somebody else, is read later, elsewhere, on another person's device
  *   and one generated from a dev machine would carry `http://localhost:3000`
  *   forever. The card would print, look perfect, and scan to nothing.
  *
@@ -67,3 +67,19 @@ export const SITE = {
  * `router.push('/')` across four sign-out handlers, and they must not drift.
  */
 export const AFTER_SIGN_OUT = '/around';
+
+/**
+ * The one address Sync sends from, and the one it asks people to reply to.
+ *
+ * WHY IT IS DERIVED AND NOT TYPED OUT AGAIN
+ *   Four separate senders   the auth hook, the console invite, the storefront
+ *   invite and the mail centre   each carried their own literal fallback, and
+ *   they had drifted to `no-reply@`: a mailbox nobody reads, on templates whose
+ *   own footer says "replying to this email reaches our support team". One
+ *   constant, one answer, and the copy stops lying.
+ *
+ * IT IS ONLY THE FALLBACK. EMAIL_FROM is still the real setting, because the
+ * verified sender in Resend is a deployment fact rather than a code fact   but
+ * a deploy that forgets it now sends from an address that exists.
+ */
+export const MAIL_FROM = `${SITE.name} <${SITE.support.email}>`;

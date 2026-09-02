@@ -23,7 +23,7 @@
  */
 import 'server-only';
 import { Resend } from 'resend';
-import { SITE } from '@/config/site';
+import { MAIL_FROM, SITE } from '@/config/site';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
@@ -54,7 +54,7 @@ export interface LogEntry {
 export function mailSender(): { apiKey: string; from: string } | null {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return null;
-  return { apiKey, from: process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>` };
+  return { apiKey, from: process.env.EMAIL_FROM ?? MAIL_FROM };
 }
 
 export async function sendMail(input: {
@@ -80,6 +80,11 @@ export async function sendMail(input: {
       to: input.to,
       subject: input.subject,
       html: input.html,
+      // The templates end with "replying to this email reaches our support
+      // team". That was only true by accident of which address EMAIL_FROM
+      // happened to hold   this makes it true by construction, and keeps it
+      // true if the sender is ever moved to a no-reply identity.
+      replyTo: SITE.support.email,
     });
 
     if (error) {
@@ -199,7 +204,13 @@ export async function sendMailBatch(
     const chunk = messages.slice(i, i + 100);
     try {
       const { error } = await resend.batch.send(
-        chunk.map((m) => ({ from: sender.from, to: m.to, subject: m.subject, html: m.html })),
+        chunk.map((m) => ({
+          from: sender.from,
+          to: m.to,
+          subject: m.subject,
+          html: m.html,
+          replyTo: SITE.support.email,
+        })),
       );
       if (error) {
         failed += chunk.length;

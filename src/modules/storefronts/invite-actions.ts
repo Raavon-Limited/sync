@@ -32,7 +32,7 @@ import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { InviteEmail } from '@/emails/invite-email';
-import { SITE, canonicalOrigin } from '@/config/site';
+import { MAIL_FROM, SITE, canonicalOrigin } from '@/config/site';
 import { userMessage } from '@/lib/errors';
 import { scopeLabel, type StaffScope } from './types';
 
@@ -59,7 +59,7 @@ export async function sendInviteEmail(input: {
   scopes: StaffScope[];
 }): Promise<InviteActionResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>`;
+  const from = process.env.EMAIL_FROM ?? MAIL_FROM;
 
   if (!apiKey) {
     console.error('[invite] RESEND_API_KEY missing   invite created but not emailed');
@@ -105,7 +105,10 @@ export async function sendInviteEmail(input: {
       // Usually an unverified sender domain in Resend. Log it verbatim   the
       // owner's copy of this message cannot say that usefully.
       console.error('[invite] Resend rejected the send. from=%s error=%o', from, error);
-      return { ok: false, error: 'We could not send the email. Copy the link and send it yourself.' };
+      return {
+        ok: false,
+        error: 'We could not send the email. Copy the link and send it yourself.',
+      };
     }
   } catch (e) {
     console.error('[invite] send threw:', e);
@@ -131,7 +134,7 @@ export interface InvitePreview {
  * What is behind this token, for the join screen.
  *
  * Safe to expose to whoever holds the token: they were sent it. It returns the
- * invited email so the screen can show which address they are joining as  
+ * invited email so the screen can show which address they are joining as
  * people forward these, and accepting as the wrong person is the mistake this
  * prevents.
  */
@@ -263,7 +266,7 @@ export async function redeemInvite(input: {
   const { error: createError } = await admin.auth.admin.createUser({
     email,
     password,
-    // Sound because the token was delivered to this address and nowhere else  
+    // Sound because the token was delivered to this address and nowhere else
     // holding it is the demonstration of control that a confirmation email
     // would otherwise ask for. See the header.
     email_confirm: true,

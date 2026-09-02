@@ -29,7 +29,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { StaffInviteEmail } from '@/emails/staff-invite-email';
-import { SITE, canonicalOrigin } from '@/config/site';
+import { MAIL_FROM, SITE, canonicalOrigin } from '@/config/site';
 import { userMessage } from '@/lib/errors';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
@@ -146,7 +146,7 @@ export async function inviteStaff(input: {
  * difference between "email is broken" and "you cannot hire anybody today".
  *
  * IT REPORTS WHAT ACTUALLY WENT WRONG, VERBATIM.
- *   The first cut returned the same sentence   "We could not send the email"  
+ *   The first cut returned the same sentence   "We could not send the email"
  *   for a missing API key, a rejection from Resend and an exception in
  *   rendering. Three unrelated faults with three different fixes, wearing one
  *   message, and the real reason went only to the server log where the person
@@ -163,7 +163,7 @@ async function sendStaffInvite(input: {
   roleId: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>`;
+  const from = process.env.EMAIL_FROM ?? MAIL_FROM;
 
   if (!apiKey) {
     console.error('[staff-invite] RESEND_API_KEY missing   invite created but not emailed');
@@ -218,7 +218,7 @@ async function sendStaffInvite(input: {
 
     if (error) {
       // The usual causes are an unverified sender domain, a key without send
-      // permission, or a `from` that is not on a domain this account owns  
+      // permission, or a `from` that is not on a domain this account owns
       // and Resend names which. Passing that through is the difference between
       // a fixable report and "it did not work".
       console.error('[staff-invite] Resend rejected the send. from=%s error=%o', from, error);
