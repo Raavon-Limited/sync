@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/forms';
 import { uploadQueuedDocuments } from '@/components/verification/upload-documents';
+import { recordVerificationDocuments } from '@/modules/verification/record-actions';
 import { submitPersonalVerification } from '@/modules/verification/actions';
 import { saveStudentIdentity, submitStudentVerification } from '@/modules/students/actions';
 import type { VerificationRole } from '@/modules/verification/requirements';
@@ -136,6 +137,16 @@ export function VerifyForm({
 
       if (!upload.ok) {
         setError(upload.error);
+        return;
+      }
+
+      // THE STEP THAT WAS MISSING. Uploading puts files in the bucket; this
+      // writes the rows the reviewer and the submit RPC both count. Without it
+      // the submission was refused for having no documents by somebody who had
+      // just uploaded four.
+      const recorded = await recordVerificationDocuments(upload.uploaded);
+      if (!recorded.ok) {
+        setError(recorded.error);
         return;
       }
 
