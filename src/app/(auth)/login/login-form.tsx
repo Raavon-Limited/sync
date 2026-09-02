@@ -54,7 +54,7 @@ const RESEND_COOLDOWN = 60;
  *              landing on a settings surface reads as the wrong screen.
  *
  * THE TEST IS THE SURFACE, NOT WHETHER THE APP IS INSTALLED. This asked
- * `readStandalone()`, which is true only when launched from the home screen  
+ * `readStandalone()`, which is true only when launched from the home screen
  * so signing in from Safari on a phone counted as desktop and got the
  * dashboard. Installing is a step most people never take, and the ones who have
  * not are still holding a phone. See readAppSurface.
@@ -80,6 +80,7 @@ function destFor(role: string | undefined, handle?: string, next?: string) {
     vendor: '/vendor',
     landlord: '/landlord',
     rider: '/rider',
+    event_manager: '/organiser',
   };
   const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/me');
 
@@ -92,6 +93,11 @@ const ROLE_HOME: Record<string, { label: string; blurb: string; href: string }> 
   vendor: { label: 'Business', blurb: 'Your listings, orders and earnings', href: '/vendor' },
   landlord: { label: 'Landlord', blurb: 'Your properties, tenants and rent', href: '/landlord' },
   rider: { label: 'Rider', blurb: 'Your delivery queue and earnings', href: '/rider' },
+  event_manager: {
+    label: 'Organiser',
+    blurb: 'Your events, tickets and door',
+    href: '/organiser',
+  },
 };
 
 /**

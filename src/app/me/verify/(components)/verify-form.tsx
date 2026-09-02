@@ -52,11 +52,21 @@ export function VerifyForm({
   role,
   status,
   identity,
+  inSheet = false,
 }: {
   role: VerificationRole;
   status: string;
   /** Present only for a student; the fields nobody else is asked for. */
   identity?: StudentIdentityFields | null;
+  /**
+   * Rendered inside VerifySheet rather than on its own page.
+   *
+   * The only difference is the escape hatch: on the page "Not now" goes back to
+   * the dashboard, and in a sheet there is already an X and an Escape key, so a
+   * second way out is clutter that pushes the submit button further down a
+   * panel somebody is scrolling.
+   */
+  inSheet?: boolean;
 }) {
   const router = useRouter();
   const [docs, setDocs] = useState<DocumentState>(() => emptyDocumentState(role));
@@ -202,9 +212,11 @@ export function VerifyForm({
           {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
           {busy ? 'Submitting…' : 'Submit for review'}
         </Button>
-        <Button asChild variant="outline" size="lg">
-          <Link href="/me">Not now</Link>
-        </Button>
+        {!inSheet && (
+          <Button asChild variant="outline" size="lg">
+            <Link href="/me">Not now</Link>
+          </Button>
+        )}
       </div>
 
       {identityMissing && (

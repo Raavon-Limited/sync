@@ -2,7 +2,7 @@
  * Switching between the hats one account holds.
  *
  * `profiles.roles` is what you HOLD; `profiles.role` is what you are WEARING.
- * This flips the second to one of the first, and the whole permission system  
+ * This flips the second to one of the first, and the whole permission system
  * the proxy gate, `current_app_role()`, every RLS policy   reads the same
  * column it always did.
  *
@@ -34,6 +34,7 @@ const ROLE_HOME: Record<string, { label: string; href: string }> = {
   vendor: { label: 'Business', href: '/vendor' },
   landlord: { label: 'Landlord', href: '/landlord' },
   rider: { label: 'Rider', href: '/rider' },
+  event_manager: { label: 'Organiser', href: '/organiser' },
   admin: { label: 'Admin', href: '/admin' },
   super_admin: { label: 'Admin', href: '/admin' },
 };

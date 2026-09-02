@@ -151,3 +151,117 @@ begin
     raise exception 'events_insert_own missing — organisers still cannot list anything';
   end if;
 end $$;
+
+
+-- === 5. The role can actually be granted ====================================
+-- set_account_role refused 'event_manager' - it validates against a fixed list -
+-- so the dashboard above was unreachable by any route. The function is
+-- reproduced here in full with ONE line changed, lifted verbatim from
+-- 20260902110000 rather than retyped: every other line of it is a rule about
+-- who may change what, and a transcription slip would be a rule that quietly
+-- stopped applying.
+--
+-- Grant it from /admin/users, or by hand:
+--   select public.set_account_role('<uuid>', 'event_manager');
+
+create or replace function public.set_account_role(p_user uuid, p_role text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_uid  uuid := (select auth.uid());
+  v_me   text;
+  v_old  text;
+begin
+  if v_uid is null then
+    raise exception 'not authenticated' using errcode = '28000';
+  end if;
+
+  select role into v_me from public.profiles where id = v_uid;
+
+  -- SUPER ADMIN ONLY, not is_staff(). An admin who can appoint admins is a
+  -- super admin by another name, and the distinction between the two roles
+  -- would last exactly as long as the first person noticed.
+  if v_me is distinct from 'super_admin' then
+    raise exception 'Only a super admin can change what someone is'
+      using errcode = '42501';
+  end if;
+
+  -- 'event_manager' and 'creator' added by 20260903150000. They are NOT in
+  -- claim_role, which is self-service: widening that one would let any student
+  -- claim the role for themselves, which is the opposite of "not open yet".
+  -- Granting them stays a super admin's deliberate act, which is what makes the
+  -- /organiser dashboard reachable at all before signup opens.
+  if p_role not in ('student', 'vendor', 'landlord', 'rider',
+                    'event_manager', 'creator',
+                    'admin', 'super_admin') then
+    raise exception 'Unknown role: %', p_role using errcode = '22023';
+  end if;
+
+  select role into v_old from public.profiles where id = p_user for update;
+  if not found then
+    raise exception 'no such account' using errcode = 'P0002';
+  end if;
+
+  -- A super admin removing their own access locks the last one of them out of
+  -- the console with no way back except a migration. Demote somebody else, or
+  -- have somebody else demote you.
+  if p_user = v_uid and p_role <> 'super_admin' then
+    raise exception 'You cannot remove your own super admin access'
+      using errcode = 'P0001';
+  end if;
+
+  -- The last super admin is not removable either, however it is attempted.
+  if v_old = 'super_admin' and p_role <> 'super_admin' then
+    if (select count(*) from public.profiles where role = 'super_admin') <= 1 then
+      raise exception 'That is the only super admin left. Appoint another first.'
+        using errcode = 'P0001';
+    end if;
+  end if;
+
+  perform set_config('sync.role_grant', 'on', true);
+
+  -- BOTH COLUMNS, AND THAT IS NOT TIDINESS.
+  --
+  -- `profiles_active_role_is_held` (20260830090000) checks `role = any(roles)`:
+  -- the role you are currently acting as must be one you actually hold. Writing
+  -- `role` alone leaves the new value outside the array and the constraint
+  -- rejects the whole update   which is exactly how seeding an admin failed
+  -- before this function existed.
+  --
+  -- Appended rather than replaced: an admin who was also a vendor keeps the
+  -- vendor account and the role switcher keeps working.
+  update public.profiles
+     set role  = p_role,
+         -- array[p_role], NOT p_role. `text[] || text` is ambiguous to the
+         -- parser, which tries to read the bare literal as an array and fails
+         -- with "malformed array literal". Concatenating two arrays is not.
+         roles = case
+                   when p_role = any (coalesce(roles, '{}')) then roles
+                   else coalesce(roles, '{}') || array[p_role]
+                 end,
+         updated_at = now()
+   where id = p_user;
+
+  perform set_config('sync.role_grant', 'off', true);
+
+  insert into private.audit_log (actor_id, actor_role, action, entity_type, entity_id, before, after)
+  values (v_uid, 'super_admin', 'role.changed', 'profile', p_user::text,
+          jsonb_build_object('role', v_old),
+          jsonb_build_object('role', p_role));
+
+  return p_role;
+end;
+$fn$;
+
+revoke all on function public.set_account_role(uuid, text) from public, anon;
+grant execute on function public.set_account_role(uuid, text) to authenticated, service_role;
+
+do $$
+begin
+  if to_regprocedure('public.set_account_role(uuid, text)') is null then
+    raise exception 'set_account_role missing after replace';
+  end if;
+end $$;

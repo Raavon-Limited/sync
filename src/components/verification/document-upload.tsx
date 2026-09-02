@@ -37,7 +37,9 @@ import { useRef, useState } from 'react';
 import { Camera, FileUp, IdCard, RefreshCw, Trash2 } from 'lucide-react';
 import { CameraCapture } from '@/components/verification/camera-capture';
 import {
+  isOptionalFor,
   requirementsFor,
+  requiredFor,
   type VerificationRequirementSpec,
   type VerificationRole,
 } from '@/modules/verification/requirements';
@@ -100,12 +102,20 @@ export function emptyDocumentState(role: VerificationRole): DocumentState {
 export function documentsProblem(role: VerificationRole, state: DocumentState): string | null {
   for (const spec of requirementsFor(role)) {
     const held = state[spec.key] ?? { subtype: null, front: null, back: null };
+    const optional = isOptionalFor(spec, role);
 
+    // Size is checked whatever the document is - an oversized file fails the
+    // upload either way, and finding that out at the end is worse.
     for (const file of [held.front, held.back]) {
       if (file && file.size > MAX_DOCUMENT_BYTES) {
         return `"${file.name}" is over 10 MB. Try a smaller photo.`;
       }
     }
+
+    // An optional document nobody touched is finished. One they DID start is
+    // held to the same rules as any other, because a half-supplied document is
+    // worse than none: a reviewer opens a folder with a front and no back.
+    if (optional && !held.front && !held.back && !held.subtype) continue;
 
     if (spec.options && !held.subtype) {
       return `Choose which document you are providing for ${spec.label.toLowerCase()}.`;
@@ -287,10 +297,13 @@ function Requirement({
   spec,
   held,
   onChange,
+  optional = false,
 }: {
   spec: VerificationRequirementSpec;
   held: RequirementFiles;
   onChange: (next: RequirementFiles) => void;
+  /** Asked for, but it cannot block a submission. See optionalFor. */
+  optional?: boolean;
 }) {
   const chosen = spec.options?.find((o) => o.value === held.subtype);
   const policy = backPolicy(spec, held.subtype);
@@ -302,7 +315,11 @@ function Requirement({
         <div className="min-w-0">
           <h3 className="text-content flex items-center gap-2 text-sm font-semibold">
             {spec.label}
-            <span className="text-coral text-xs font-normal">Required</span>
+            {optional ? (
+              <span className="text-content-muted text-xs font-normal">Optional</span>
+            ) : (
+              <span className="text-coral text-xs font-normal">Required</span>
+            )}
           </h3>
           <p className="text-content-muted mt-0.5 text-xs">{spec.description}</p>
         </div>
@@ -380,8 +397,8 @@ function Requirement({
               />
               {policy === 'optional' && (
                 <p className="text-content-muted -mt-1 text-xs">
-                  Only if you have the plastic NIN card. A NIN slip is printed on one side   skip
-                  this if that is what you have.
+                  Only if you have the plastic NIN card. A NIN slip is printed on one side skip this
+                  if that is what you have.
                 </p>
               )}
             </>
@@ -404,20 +421,34 @@ export function VerificationDocuments({
   error?: string;
 }) {
   const specs = requirementsFor(role);
-  const complete = specs.filter((s) => {
-    const held = value[s.key];
-    return held?.front && (backPolicy(s, held.subtype) !== 'required' || held.back);
-  }).length;
+  // Counted against what is REQUIRED, not against everything shown. An
+  // organiser who will never have a CAC certificate should not be looking at
+  // "2 of 3" forever, as though something were still missing.
+  const required = requiredFor(role);
+  const isDone = (spec: VerificationRequirementSpec) => {
+    const held = value[spec.key];
+    return (
+      Boolean(held?.front) &&
+      (backPolicy(spec, held?.subtype ?? null) !== 'required' || Boolean(held?.back))
+    );
+  };
+  const complete = required.filter(isDone).length;
+  const extras = specs.length - required.length;
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h3 className="text-content text-base font-semibold">Verification documents</h3>
         <p className="text-content-muted text-sm">
-          All {specs.length} are required   a reviewer cannot approve a business without them.
+          {/* It used to say "a reviewer cannot approve a business without
+              them", to students and riders as well. Nobody being verified here
+              is necessarily a business. */}
+          {required.length} required
+          {extras > 0 && `, ${extras} optional`} &mdash; a reviewer cannot decide without the
+          required ones.
         </p>
         <p className="text-content-muted mt-1 text-xs">
-          {complete} of {specs.length} added
+          {complete} of {required.length} added
         </p>
       </div>
 
@@ -425,6 +456,7 @@ export function VerificationDocuments({
         <Requirement
           key={spec.key}
           spec={spec}
+          optional={isOptionalFor(spec, role)}
           held={value[spec.key] ?? { subtype: null, front: null, back: null }}
           onChange={(next) => onChange({ ...value, [spec.key]: next })}
         />

@@ -79,16 +79,21 @@ const ROLES: RoleCard[] = [
   // beside a password field is how a signup form stops being a signup form.
   { id: 'rider', label: 'I deliver', desc: 'Take delivery jobs on your campus' },
   {
+    id: 'event_manager',
+    label: 'I run events',
+    desc: 'List parties, shows and sell tickets',
+  },
+  // EVERYTHING SELECTABLE COMES FIRST, and the not-yet cards go last.
+  //
+  // A disabled row sitting between two live ones breaks the scan: the eye stops
+  // at the greyed-out card and reads the rest of the list as unavailable too.
+  // Keeping them at the bottom means the list reads as "here is what you can
+  // be, and here is what is coming" rather than as a list with holes in it.
+  {
     id: null,
     soon: true,
     label: 'I create content',
     desc: 'Shoot and post for campus businesses',
-  },
-  {
-    id: null,
-    soon: true,
-    label: 'I run events',
-    desc: 'List parties, shows and sell tickets',
   },
 ];
 
@@ -121,8 +126,15 @@ const STEPS = ['Who you are', 'About you', 'Your account'];
  * be re-derived every time the role changes.
  */
 const STEP_FIELDS: Record<number, (keyof SignupInput)[]> = {
-  0: ['role', 'campusId', 'campusOther', 'vendorCategory', 'trade'],
-  1: ['fullName', 'phone'],
+  // STEP 1 IS THE ROLE AND NOTHING ELSE.
+  //
+  // The campus and the vendor category used to live here, which meant the
+  // first screen changed shape underneath you the moment you picked something
+  // — the whole reason the wizard was split up in the first place. They are
+  // details ABOUT you, they only exist once a role is chosen, and step 2 is
+  // where the other details about you already are.
+  0: ['role'],
+  1: ['fullName', 'phone', 'campusId', 'campusOther', 'vendorCategory', 'trade'],
   2: ['email', 'password', 'confirmPassword', 'acceptedTerms'],
 };
 
@@ -202,7 +214,17 @@ export function SignupForm({
   }
 
   async function goNext() {
-    const ok = await trigger(STEP_FIELDS[step]);
+    /*
+     * `shouldFocus` is the whole difference between "the button is broken" and
+     * "you missed a field".
+     *
+     * Without it a failed step did nothing visible: the error rendered under
+     * the offending input, which on a phone is often below the fold, and the
+     * button simply appeared dead. Focusing the first invalid field scrolls it
+     * into view and puts the caret in it, which explains the refusal without a
+     * word of copy.
+     */
+    const ok = await trigger(STEP_FIELDS[step], { shouldFocus: true });
     if (!ok) return;
 
     // Clear before advancing. `trigger` runs the WHOLE schema through the
@@ -267,11 +289,16 @@ export function SignupForm({
       const home =
         values.role === 'rider'
           ? '/rider'
-          : values.role === 'student'
-            ? readAppSurface()
-              ? '/around'
-              : '/me'
-            : '/onboarding';
+          : values.role === 'event_manager'
+            ? // Their own dashboard, not /onboarding - that route is the vendor
+              // wizard and the proxy gates it to vendor/landlord, so an
+              // organiser sent there lands on a 403.
+              '/organiser'
+            : values.role === 'student'
+              ? readAppSurface()
+                ? '/around'
+                : '/me'
+              : '/onboarding';
       router.push(next ?? home);
       router.refresh();
       return;
@@ -411,7 +438,7 @@ export function SignupForm({
                     </span>
                     {soon ? (
                       <span className="border-line/20 text-content-muted/60 mr-2 shrink-0 rounded-full border px-2 py-0.5 text-[10px] tracking-wide whitespace-nowrap uppercase">
-                        Not yet
+                        Coming soon
                       </span>
                     ) : (
                       <span
@@ -431,12 +458,47 @@ export function SignupForm({
             </div>
             {errors.role && <p className="text-xs text-red-500">{errors.role.message}</p>}
           </fieldset>
+        </>
+      )}
+
+      {/* ── Step 2 · About you ───────────────────────────────────────── */}
+      {step === 1 && (
+        <>
+          <FormField label="Full name" htmlFor="fullName" error={errors.fullName?.message}>
+            <Input
+              id="fullName"
+              type="text"
+              autoComplete="name"
+              placeholder="Aisha Olawale"
+              {...register('fullName')}
+            />
+          </FormField>
+
+          <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
+            <Input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="0801 234 5678"
+              {...register('phone')}
+            />
+          </FormField>
 
           {/* Students: which campus. The school's ADDRESS comes from the school
               row, so this one answer is worth more than a typed address would
               be - and it cannot be misspelt. */}
           {role === 'student' && (
-            <FormField label="Your university" htmlFor="campus" error={errors.campusOther?.message}>
+            <FormField
+              label="Your university"
+              htmlFor="campus"
+              // Named as required up front, and it says free text is accepted.
+              // It is the only thing on this step a student must supply, so
+              // leaving it looking optional is how the form reads as locked
+              // rather than as incomplete   and somebody whose school is not in
+              // the list needs to know they can just type it.
+              hint="Required. If your school is not listed, type it anyway."
+              error={errors.campusOther?.message}
+            >
               {/* Type-ahead, not a dropdown: there are a hundred-odd
                   institutions and a student knows exactly which is theirs, so
                   typing three letters beats scrolling. A university we do not
@@ -525,31 +587,6 @@ export function SignupForm({
               Your business address and documents come next, after you create the account.
             </p>
           )}
-        </>
-      )}
-
-      {/* ── Step 2 · About you ───────────────────────────────────────── */}
-      {step === 1 && (
-        <>
-          <FormField label="Full name" htmlFor="fullName" error={errors.fullName?.message}>
-            <Input
-              id="fullName"
-              type="text"
-              autoComplete="name"
-              placeholder="Aisha Olawale"
-              {...register('fullName')}
-            />
-          </FormField>
-
-          <FormField label="Phone" htmlFor="phone" error={errors.phone?.message}>
-            <Input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="0801 234 5678"
-              {...register('phone')}
-            />
-          </FormField>
         </>
       )}
 

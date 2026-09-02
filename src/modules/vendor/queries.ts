@@ -483,7 +483,7 @@ export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'i
  */
 export async function uploadVendorImage(
   db: Client,
-  input: { userId: string; file: File; folder?: 'listings' | 'logos' | 'stores' },
+  input: { userId: string; file: File; folder?: 'listings' | 'logos' | 'stores' | 'events' },
 ): Promise<string> {
   if (!ACCEPTED_IMAGE_TYPES.includes(input.file.type)) {
     throw new Error('Please choose a JPEG, PNG, WebP or AVIF image.');

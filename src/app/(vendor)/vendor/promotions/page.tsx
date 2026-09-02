@@ -9,6 +9,7 @@
  */
 import type { Metadata } from 'next';
 import { PromotionsContainer } from './(component)/promotions-container';
+import { UgcPromotionsCard } from '@/components/vendor/ugc-promotions-card';
 
 export const metadata: Metadata = { title: 'Promotions' };
 
@@ -16,6 +17,11 @@ export default function Page() {
   return (
     <section className="flex flex-col gap-3">
       <PromotionsContainer />
+
+      {/* Below the running campaigns, because it is not one yet. A vendor
+          already thinking about promotion is the only person who will read
+          this, which is why it lives here rather than on its own route. */}
+      <UgcPromotionsCard />
     </section>
   );
 }

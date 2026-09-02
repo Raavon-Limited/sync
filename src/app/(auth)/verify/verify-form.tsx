@@ -63,10 +63,12 @@ export function VerifyForm({ email, next }: { email: string; next?: string }) {
     // Both business roles finish setup in the same onboarding wizard, on every
     // surface: it is required work, not a preference.
     const needsOnboarding = res.role === 'vendor' || res.role === 'landlord';
+    // An organiser has their own dashboard and no wizard.
+    const organiser = res.role === 'event_manager';
     // Everyone else lands where signing in would put them   the feed on a
     // phone, their dashboard at a desk. See destFor in the login form.
     const home = readAppSurface() ? '/around' : '/me';
-    router.push(needsOnboarding ? '/onboarding' : (next ?? home));
+    router.push(needsOnboarding ? '/onboarding' : organiser ? '/organiser' : (next ?? home));
     router.refresh();
   }
 

@@ -171,7 +171,11 @@ export async function fetchMyTickets(
 
 export async function fetchTicket(db: Client, id: string): Promise<Ticket | null> {
   const r = unwrapMaybe<Row>(
-    await db.from('tickets').select('*, event:events(name, venue, starts_at)').eq('id', id).maybeSingle(),
+    await db
+      .from('tickets')
+      .select('*, event:events(name, venue, starts_at)')
+      .eq('id', id)
+      .maybeSingle(),
   );
   return r ? toTicket(r) : null;
 }

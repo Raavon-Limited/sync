@@ -33,6 +33,7 @@ type Role =
   // prefix is protected from its first commit rather than retrofitted once
   // somebody notices it is open.
   | 'event_manager'
+  | 'creator'
   | 'admin'
   | 'super_admin';
 
@@ -55,6 +56,10 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/checkout', roles: ALL },
   { prefix: '/wallet', roles: ALL },
   // Dashboards - role-specific. This is the only access difference.
+  // BEFORE '/me', and the order is load-bearing: the list is scanned with
+  // startsWith and the first match wins, so a broader '/me' listed above would
+  // swallow this and refuse the very roles the screen exists for.
+  { prefix: '/me/verify', roles: ['student', 'creator', 'event_manager'] },
   { prefix: '/me', roles: ['student'] },
   // Both business roles onboard through the same wizard.
   { prefix: '/onboarding', roles: ['vendor', 'landlord'] },
@@ -124,7 +129,9 @@ export async function proxy(request: NextRequest) {
               ? '/vendor'
               : role === 'rider'
                 ? '/rider'
-                : null;
+                : role === 'event_manager'
+                  ? '/organiser'
+                  : null;
       if (handle && base && firstSeg === handle) {
         const rest = segments.slice(1).join('/');
         const url = request.nextUrl.clone();

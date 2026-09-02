@@ -50,7 +50,7 @@ export type VerificationRole =
   | 'event_manager';
 
 /** One acceptable document for a requirement. The reviewer records which. */
-export interface DocumentOption { 
+export interface DocumentOption {
   value: string;
   label: string;
   hint?: string;
@@ -58,7 +58,7 @@ export interface DocumentOption {
 
 export interface VerificationRequirementSpec {
   /** Matches `verification_documents.doc_type`. */
-  key: string; 
+  key: string;
   /** Short, for the public card. */
   label: string;
   /** What satisfies it, in the terms people actually use. */
@@ -67,13 +67,27 @@ export interface VerificationRequirementSpec {
   description: string;
   /** Chip colour. */
   colour: string;
-  /** Which accounts must provide it. */
+  /** Which accounts are ASKED for it. */
   roles: VerificationRole[];
+  /**
+   * Roles that are asked for it but not REQUIRED to provide it.
+   *
+   * A separate list rather than a boolean, because the same document is
+   * compulsory for one kind of account and merely useful for another. A vendor
+   * without a CAC certificate is not a vendor we can approve; an event
+   * organiser without one is most event organisers - plenty run parties
+   * without ever registering a company, and refusing them would be refusing
+   * the market rather than protecting it.
+   *
+   * Optional means OFFERED: it still appears, still uploads, and still helps a
+   * reviewer decide. It just cannot block a submission.
+   */
+  optionalFor?: VerificationRole[];
   /**
    * The specific documents that count. Stored on the row as `doc_subtype`, so
    * a reviewer   and later the card   can say WHICH one was seen rather than
    * only the category.
-   */ 
+   */
   options?: DocumentOption[];
   /**
    * Must be taken by the camera, now. No file picker.
@@ -132,6 +146,11 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     // that has not happened yet, which is the same exposure a vendor taking
     // payment for undelivered food has.
     roles: ['vendor', 'landlord', 'company', 'event_manager'],
+    // An organiser is asked, not required. Most of them have never registered
+    // a company, and a CAC certificate is not what establishes that somebody
+    // can run a party - their ID is. Providing one still helps them: it is the
+    // difference between a person and a business to whoever is buying.
+    optionalFor: ['event_manager'],
     options: [
       { value: 'cac_certificate', label: 'CAC certificate' },
       { value: 'cac_business_name', label: 'CAC business name registration' },
@@ -146,9 +165,14 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     description: 'Dated within the last 3 months, showing the same address you gave us.',
     colour: 'bg-amber-50 text-amber-500',
     // A creator is not asked for one: they are paid for files they send, meet
-    // nobody at a door, and hold no money on anyone's behalf. An event manager
-    // is, because a venue and a refund liability are both physical.
-    roles: ['rider', 'vendor', 'landlord', 'company', 'event_manager'],
+    // nobody at a door, and hold no money on anyone's behalf.
+    //
+    // NOR IS AN EVENT ORGANISER ANY MORE. The requirement exists to tie
+    // somebody to a place, and an organiser's whole job is that the place
+    // changes every time - a bill for the flat they sleep in says nothing
+    // about the venue they hired. The address that matters for an event is on
+    // the event, and it is already collected there.
+    roles: ['rider', 'vendor', 'landlord', 'company'],
     options: [
       { value: 'bank_statement', label: 'Bank statement', hint: 'Last 3 months' },
       { value: 'prepaid_receipt', label: 'Prepaid meter receipt' },
@@ -198,6 +222,16 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
 /** What this kind of account has to provide. The only correct way to read the list. */
 export function requirementsFor(role: VerificationRole): VerificationRequirementSpec[] {
   return VERIFICATION_REQUIREMENTS.filter((r) => r.roles.includes(role));
+}
+
+/** Asked of this role, but not compulsory for it. See `optionalFor`. */
+export function isOptionalFor(spec: VerificationRequirementSpec, role: VerificationRole): boolean {
+  return spec.optionalFor?.includes(role) === true;
+}
+
+/** The ones this role actually has to provide. */
+export function requiredFor(role: VerificationRole): VerificationRequirementSpec[] {
+  return requirementsFor(role).filter((r) => !isOptionalFor(r, role));
 }
 
 /** Looked up by key, so an unknown one from the server still renders. */

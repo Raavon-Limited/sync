@@ -20,7 +20,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { FormField } from '@/components/forms';
+import { FormField, ImageField } from '@/components/forms';
 import { createEvent, updateEvent, type EventInput } from '@/modules/events/organiser-actions';
 
 /** An ISO instant back into the "YYYY-MM-DDTHH:mm" the input wants, locally. */
@@ -36,10 +36,17 @@ function toLocalInput(iso: string | undefined): string {
 export function EventForm({
   eventId,
   initial,
+  onDone,
 }: {
   /** Absent when listing something new. */
   eventId?: string;
   initial?: Partial<EventInput> & { startsAtIso?: string };
+  /**
+   * Called after a successful save, before the navigation. Only the sheet
+   * passes it   it needs to close itself. The page host gets the redirect on
+   * its own, which is why this is optional.
+   */
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
@@ -66,7 +73,8 @@ export function EventForm({
         setError(res.error);
         return;
       }
-      router.push('/organiser');
+      onDone?.();
+      router.push('/organiser/events');
       router.refresh();
     });
   }
@@ -110,17 +118,19 @@ export function EventForm({
         />
       </FormField>
 
-      <FormField label="Cover image link" htmlFor="coverUrl">
-        <Input
-          id="coverUrl"
-          value={form.coverUrl ?? ''}
-          onChange={(e) => set('coverUrl', e.target.value)}
-          placeholder="https://…"
-        />
-        <p className="text-content-muted mt-1 text-xs">
-          A link for now. Uploading straight from here comes with the media work.
-        </p>
-      </FormField>
+      {/* THE FLYER IS UPLOADED, NOT PASTED.
+          It was a URL field, which pointed at wherever the organiser happened
+          to host the image and broke the day they deleted it. This puts the
+          file in the same public-media bucket every other image on the platform
+          lives in, under the uploader's own folder — which is what the storage
+          policy authorises on. */}
+      <ImageField
+        label="Event flyer"
+        hint="The image students see on /events and on the ticket page. Landscape reads best."
+        folder="events"
+        value={form.coverUrl ?? ''}
+        onChange={(url) => set('coverUrl', url)}
+      />
 
       <FormField label="What is it" htmlFor="description">
         <Textarea
@@ -139,7 +149,14 @@ export function EventForm({
           {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
           {eventId ? 'Save changes' : 'List this event'}
         </Button>
-        <Button type="button" variant="outline" size="lg" onClick={() => router.push('/organiser')}>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          // In a sheet this closes the panel; on the page it goes back to the
+          // list. One handler, because 'cancel' means the same thing in both.
+          onClick={() => (onDone ? onDone() : router.push('/organiser/events'))}
+        >
           Cancel
         </Button>
       </div>

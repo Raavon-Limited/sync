@@ -18,9 +18,9 @@
  * pending state stays, because "we have it, wait" is the answer to the question
  * somebody would otherwise ask again.
  */
-import Link from 'next/link';
 import { AlertCircle, Clock } from 'lucide-react';
 import { requirementsFor } from '@/modules/verification/requirements';
+import { VerifySheet } from '@/components/verification/verify-sheet';
 
 export function VerifyReminder({ status }: { status: string }) {
   if (status === 'verified') return null;
@@ -31,7 +31,7 @@ export function VerifyReminder({ status }: { status: string }) {
         <Clock className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <p className="text-content-muted text-sm">
           <span className="text-content font-medium">Your documents are with a reviewer.</span> You
-          will hear back here   there is nothing else to send.
+          will hear back here there is nothing else to send.
         </p>
       </div>
     );
@@ -49,12 +49,16 @@ export function VerifyReminder({ status }: { status: string }) {
           booking seriously.
         </p>
       </div>
-      <Link
-        href="/me/verify"
-        className="text-coral shrink-0 text-sm font-medium underline underline-offset-2 sm:ml-3"
-      >
-        Get verified
-      </Link>
+      {/* A panel over the dashboard, not a trip to /me/verify. The reason they
+          are filling it in is the screen behind it. */}
+      <VerifySheet role="student" status={status}>
+        <button
+          type="button"
+          className="text-coral shrink-0 cursor-pointer text-sm font-medium underline underline-offset-2 sm:ml-3"
+        >
+          Get verified
+        </button>
+      </VerifySheet>
     </div>
   );
 }

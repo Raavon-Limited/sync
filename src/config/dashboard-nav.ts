@@ -284,8 +284,9 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
     sections: [
       {
         items: [
+          { href: '/organiser', label: 'Overview', icon: LayoutDashboard },
           {
-            href: '/organiser',
+            href: '/organiser/events',
             label: 'Your events',
             heading: 'What you have on',
             icon: CalendarDays,
@@ -299,7 +300,17 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         ],
       },
       {
+        label: 'Business',
+        items: [
+          { href: '/organiser/wallet', label: 'Wallet', icon: Wallet },
+          { href: '/organiser/promotions', label: 'Promotions', icon: Megaphone },
+        ],
+      },
+      {
         label: 'Account',
+        // /me/verify, not a route of their own: that screen is role-driven and
+        // serves every account whose status lives in profiles. The proxy admits
+        // event managers to that one path specifically.
         items: [{ href: '/me/verify', label: 'Verification', icon: ShieldCheck }],
       },
     ],

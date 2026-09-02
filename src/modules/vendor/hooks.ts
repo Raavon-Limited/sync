@@ -35,8 +35,7 @@ export function useUpdateStorefront() {
   const vendorId = userId!;
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<VendorStorefront>) =>
-      api.updateMyStorefront(db(), vendorId, patch),
+    mutationFn: (patch: Partial<VendorStorefront>) => api.updateMyStorefront(db(), vendorId, patch),
     onSuccess(storefront) {
       qc.setQueryData(qk.vendorProfile.mine(), storefront);
       // The public storefront page is keyed by slug and is now stale.
@@ -220,7 +219,7 @@ export function useDeletePromotion() {
  * socket.
  */
 /**
- * `storefrontId` narrows the socket to one branch. A manager MUST pass it  
+ * `storefrontId` narrows the socket to one branch. A manager MUST pass it
  * a `vendor_id=eq.` filter matches nothing for them, so without it their queue
  * would never update live even though the initial fetch worked.
  */
@@ -275,7 +274,9 @@ export function useUploadListingImage() {
  * a store front. Same bucket, same 5MB limit, same own-folder-only policy;
  * only the folder differs, and that is for humans browsing storage later.
  */
-export function useUploadVendorImage(folder: 'listings' | 'logos' | 'stores' = 'listings') {
+export function useUploadVendorImage(
+  folder: 'listings' | 'logos' | 'stores' | 'events' = 'listings',
+) {
   const { userId } = useSession();
 
   return useMutation({

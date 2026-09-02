@@ -30,7 +30,7 @@ interface ImageFieldProps {
   label?: string;
   hint?: string;
   /** Where it lands in the vendor's own storage folder. Cosmetic. */
-  folder?: 'listings' | 'logos' | 'stores';
+  folder?: 'listings' | 'logos' | 'stores' | 'events';
   /** `circle` for a logo or avatar, `square` for a photo of a thing. */
   shape?: 'circle' | 'square';
 }

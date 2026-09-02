@@ -28,8 +28,8 @@ export function ForgotPasswordForm({ initialEmail }: { initialEmail: string }) {
             If {email} has a Sync account, a reset link is on its way.
           </p>
           <p className="text-content-muted text-sm">
-            The link works once and expires in 10 minutes. Nothing changes until you open it and
-            set a new password.
+            The link works once and expires in 10 minutes. Nothing changes until you open it and set
+            a new password.
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <Button asChild>

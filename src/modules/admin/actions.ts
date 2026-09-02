@@ -522,7 +522,17 @@ export async function setAccountSuspension(input: {
   revalidatePath('/admin/users');
 }
 
-export type AccountRole = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
+export type AccountRole =
+  | 'student'
+  | 'vendor'
+  | 'landlord'
+  | 'rider'
+  // Not open for signup   granted deliberately by a super admin, which is the
+  // only way to reach /organiser before the signup card goes live.
+  | 'event_manager'
+  | 'creator'
+  | 'admin'
+  | 'super_admin';
 
 /**
  * Change what somebody is.

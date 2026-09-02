@@ -39,7 +39,13 @@ export const signupSchema = z
      * why the sole way to become a rider was to sign up as something else
      * first.
      */
-    role: z.enum(['student', 'vendor', 'rider'], { message: 'Choose an account type' }),
+    // 'creator' is deliberately absent: it is still shown as "Not yet" on the
+    // form, and a role the form will not offer must not be a role the schema
+    // will accept - the enum is the last line of defence if a disabled card
+    // ever becomes clickable.
+    role: z.enum(['student', 'vendor', 'rider', 'event_manager'], {
+      message: 'Choose an account type',
+    }),
     fullName: displayName,
     email,
     phone: nigerianPhone,

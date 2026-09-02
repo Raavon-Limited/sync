@@ -94,7 +94,11 @@ export function ResetPasswordForm() {
           router.refresh();
         }}
       >
-        <FormField label="New password" htmlFor="password" error={tooShort ? 'Use at least 8 characters.' : undefined}>
+        <FormField
+          label="New password"
+          htmlFor="password"
+          error={tooShort ? 'Use at least 8 characters.' : undefined}
+        >
           <PasswordInput
             id="password"
             autoComplete="new-password"

@@ -129,6 +129,35 @@ export async function updateEvent(id: string, input: EventInput): Promise<EventR
   return { ok: true, slug: rows[0].slug as string };
 }
 
+/**
+ * Who bears Sync's 5%.
+ *
+ *   absorb   the buyer pays the ticket price and it comes out of takings
+ *   pass_on  it is added to the buyer's total and the organiser keeps the face
+ *            value
+ *
+ * The database is the one that applies it, at purchase, from
+ * `events.fee_mode` — nothing here computes a price. Changing the mode affects
+ * FUTURE purchases only: the charge is frozen onto each hold when it is made,
+ * so tickets already sold keep the deal they were sold under.
+ */
+export async function setEventFeeMode(
+  eventId: string,
+  mode: 'absorb' | 'pass_on',
+): Promise<SimpleResult> {
+  const supabase = await createClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+
+  const { error } = await rpc('set_event_fee_mode', { p_event: eventId, p_mode: mode });
+  if (error) return { ok: false, error: userMessage(error, 'We could not change that.') };
+
+  revalidatePath('/organiser');
+  return { ok: true };
+}
+
 const tierSchema = z.object({
   eventId: z.string().uuid(),
   name: z.string().trim().min(1, 'Name the tier').max(60),
