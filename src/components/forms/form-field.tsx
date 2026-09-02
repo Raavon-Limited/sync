@@ -17,6 +17,17 @@ interface FormFieldProps {
   label: string;
   /** Must match the rendered control's `id`. */
   htmlFor: string;
+  /**
+   * Marks the field compulsory: the same coral asterisk the verification
+   * document list uses, so one convention covers a form whose two halves are
+   * fields and file pickers. Screen readers get the word, not the glyph.
+   *
+   * It is a LABEL, not enforcement   the schema and the database are that.
+   * Its job is to say so BEFORE somebody is refused, which is the half that
+   * was missing: a student filled in what looked optional and met a disabled
+   * Submit button with no explanation on it.
+   */
+  required?: boolean;
   /** Optional helper copy shown below the label. */
   hint?: string;
   /** Error message from zod / react-hook-form. */
@@ -37,6 +48,7 @@ interface FormFieldProps {
 export function FormField({
   label,
   htmlFor,
+  required,
   hint,
   error,
   children,
@@ -56,7 +68,15 @@ export function FormField({
         htmlFor={htmlFor}
         className={cn('text-content text-sm font-medium', srOnlyLabel && 'sr-only')}
       >
+        {required && (
+          <>
+            <span className="text-coral" aria-hidden="true">
+              *
+            </span>{' '}
+          </>
+        )}
         {label}
+        {required && <span className="sr-only"> (required)</span>}
       </Label>
       {hint && (
         <p id={hintId} className="text-content-muted text-xs">

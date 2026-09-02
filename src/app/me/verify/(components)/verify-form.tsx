@@ -193,11 +193,12 @@ export function VerifyForm({
           <div>
             <h3 className="text-content text-base font-semibold">Your studentship</h3>
             <p className="text-content-muted text-sm">
-              What a reviewer checks your school ID against.
+              What a reviewer checks your school ID against. Both are required: a card with nothing
+              to check it against proves only that a card exists.
             </p>
           </div>
 
-          <FormField label="Matriculation number" htmlFor="matric">
+          <FormField label="Matriculation number" htmlFor="matric" required>
             <Input
               id="matric"
               value={matricNumber}
@@ -206,7 +207,7 @@ export function VerifyForm({
             />
           </FormField>
 
-          <FormField label="Department" htmlFor="department">
+          <FormField label="Department" htmlFor="department" required>
             <Input
               id="department"
               value={department}
@@ -248,11 +249,17 @@ export function VerifyForm({
         )}
       </div>
 
-      {identityMissing && (
+      {/* WHY THE BUTTON IS DEAD, BESIDE THE BUTTON. It is disabled for two
+          different reasons and used to explain only one of them   somebody who
+          had typed their details but attached nothing was left looking at a
+          greyed-out Submit with no text under it at all. */}
+      {identityMissing ? (
         <p className="text-content-muted text-xs">
           Add your matriculation number and department to submit.
         </p>
-      )}
+      ) : queued === 0 ? (
+        <p className="text-content-muted text-xs">Attach the documents marked * to submit.</p>
+      ) : null}
 
       <p className="text-content-muted text-xs">
         Your documents are stored privately and are only ever opened by a reviewer. Nobody browsing
@@ -324,7 +331,7 @@ function StudentIdentityCard({ initial }: { initial?: StudentIdentityFields | nu
         </p>
       </div>
 
-      <FormField label="Matriculation number" htmlFor="matric-standalone">
+      <FormField label="Matriculation number" htmlFor="matric-standalone" required>
         <Input
           id="matric-standalone"
           value={matricNumber}
@@ -333,7 +340,7 @@ function StudentIdentityCard({ initial }: { initial?: StudentIdentityFields | nu
         />
       </FormField>
 
-      <FormField label="Department" htmlFor="department-standalone">
+      <FormField label="Department" htmlFor="department-standalone" required>
         <Input
           id="department-standalone"
           value={department}
