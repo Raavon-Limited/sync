@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student' | 'rider';
+export type DashboardNavKey = 'vendor' | 'landlord' | 'admin' | 'student' | 'rider' | 'organiser';
 
 export interface DashboardNavItem {
   href: string;
@@ -267,6 +267,40 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon, area: 'disputes' },
           { href: '/admin/settings', label: 'Settings', icon: Settings, area: 'settings' },
         ],
+      },
+    ],
+  },
+  /*
+   * The event organiser. Three rows, because there are three things they do:
+   * see what is selling, list another one, and get their money.
+   *
+   * No area keys - those are the admin console's, where two people with the
+   * same role can be entitled to different screens. An organiser's dashboard is
+   * their entitlement.
+   */
+  organiser: {
+    brandLabel: 'Organiser',
+    rootHref: '/organiser',
+    sections: [
+      {
+        items: [
+          {
+            href: '/organiser',
+            label: 'Your events',
+            heading: 'What you have on',
+            icon: CalendarDays,
+          },
+          {
+            href: '/organiser/events/new',
+            label: 'List an event',
+            heading: 'List an event',
+            icon: TicketIcon,
+          },
+        ],
+      },
+      {
+        label: 'Account',
+        items: [{ href: '/me/verify', label: 'Verification', icon: ShieldCheck }],
       },
     ],
   },

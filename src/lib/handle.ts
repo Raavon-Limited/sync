@@ -63,7 +63,20 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   'login',
   'me',
   'onboarding',
+  // A ROUTE PREFIX MISSING FROM THIS SET IS AN UNGATED ROUTE.
+  //
+  // The proxy checks the handle rewrite BEFORE the role gate and returns early
+  // from it, so a first segment that is not reserved never reaches
+  // PROTECTED_PREFIXES at all. '/rider' was gated in that list from its first
+  // commit and the gate had never once fired, because 'rider' was not here: a
+  // signed-out visitor got the rider dashboard.
+  //
+  // Anything with a route group and a gate belongs in this list, and the two
+  // have to be added together.
+  'organiser',
+  'rider',
   'search',
+  'staff-invite',
   'signup',
   'vendor',
   'verify',

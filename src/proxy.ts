@@ -24,7 +24,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { isReservedHandle, resolveHandle } from '@/lib/handle';
 
-type Role = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
+type Role =
+  | 'student'
+  | 'vendor'
+  | 'landlord'
+  | 'rider'
+  // Gated here before it is grantable anywhere, the same way /rider was: the
+  // prefix is protected from its first commit rather than retrofitted once
+  // somebody notices it is open.
+  | 'event_manager'
+  | 'admin'
+  | 'super_admin';
 
 // Shared marketplace modules: any signed-in user can browse and transact. The
 // only role difference is the dashboard (/me vs /vendor vs /landlord vs /rider
@@ -54,6 +64,10 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // The route group does not exist yet   this gate is in place so that when it
   // is added it is protected from the first commit rather than retrofitted.
   { prefix: '/rider', roles: ['rider'] },
+  // The organiser dashboard. The role is not open for signup yet, so in
+  // practice this gate is what stops everybody else - which is exactly what it
+  // would have to do on the day it opens anyway.
+  { prefix: '/organiser', roles: ['event_manager'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 

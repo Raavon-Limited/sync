@@ -24,10 +24,12 @@ import type { DashboardNavKey } from '@/config/dashboard-nav';
  * Degrades to undefined - the card simply omits the line. It is decoration on
  * a page that must render, so a failed lookup is not worth an error.
  */
-async function campusLine(profile: {
-  campus_id?: string | null;
-  campus_other?: string | null;
-} | null): Promise<string | undefined> {
+async function campusLine(
+  profile: {
+    campus_id?: string | null;
+    campus_other?: string | null;
+  } | null,
+): Promise<string | undefined> {
   if (!profile) return undefined;
   if (profile.campus_other) return profile.campus_other;
   if (!profile.campus_id) return undefined;
@@ -104,9 +106,10 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
   // matches exactly what the proxy computes when rewriting the name-based URL.
   // vendor and landlord both key off business_name, so they resolve alike - but
   // pass the real role through rather than collapsing landlord into 'vendor'.
-  const handleRole = navKey === 'student' ? 'student' : navKey === 'landlord' ? 'landlord' : 'vendor';
+  const handleRole =
+    navKey === 'student' ? 'student' : navKey === 'landlord' ? 'landlord' : 'vendor';
   const handle =
-    navKey === 'admin'
+    navKey === 'admin' || navKey === 'organiser'
       ? undefined
       : (resolveHandle({
           role: handleRole,
@@ -161,6 +164,15 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         ...hats,
         verificationStatus: status,
         eyebrow: profile?.role === 'super_admin' ? 'Super admin' : 'Admin',
+        name,
+        email,
+        initial,
+      };
+    case 'organiser':
+      return {
+        ...hats,
+        verificationStatus: status,
+        eyebrow: verified ? 'Verified organiser' : 'Organiser',
         name,
         email,
         initial,

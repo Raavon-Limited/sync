@@ -10,7 +10,19 @@
  *
  *  Must stay in step with `profiles_role_check` in the database   the constraint
  *  is the authority, this union is the app's mirror of it. */
-export type Role = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
+export type Role =
+  | 'student'
+  | 'vendor'
+  | 'landlord'
+  | 'rider'
+  // Not open for signup yet   /signup shows both as 'Not yet'. Listed because
+  // the proxy, the dashboards and submit_personal_verification all already
+  // handle them, and a role legal in the database but absent from this union
+  // is one every call site has to cast around.
+  | 'event_manager'
+  | 'creator'
+  | 'admin'
+  | 'super_admin';
 
 /** Business (non-student, non-admin) roles - both onboard and get verified the
  *  same way, and both key their handle off `business_name`. */
