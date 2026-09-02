@@ -9,6 +9,7 @@ import { BookingsTracker } from './(components)/BookingsTracker';
 import { EventsTicketsSummary } from './(components)/EventsTickets';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
 import { VerifyReminder } from './(components)/VerifyReminder';
+import { getMyStudentIdentity } from '@/modules/students';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -20,7 +21,16 @@ const recentActivity = [
 ];
 
 export default async function Page() {
-  const profile = await getDashboardProfile('student');
+  const [profile, identity] = await Promise.all([
+    getDashboardProfile('student'),
+    // NOT profile.verificationStatus. That column is the MIRROR of
+    // vendor_profiles, so a student who also lets a room reads back the
+    // decision made about the business   which is how a student verified by an
+    // admin was still being told on this page to go and get verified.
+    // student_profiles is the authority for the student half; /me/verify has
+    // read it correctly since 20260903180000 and this page had not caught up.
+    getMyStudentIdentity(),
+  ]);
   const studentName = profile.name;
   const base = profile.handle ? `/${profile.handle}` : '/me';
   const savedCount = 12;
@@ -37,7 +47,7 @@ export default async function Page() {
       {/* Above everything, and it renders nothing once verified. Signup does
           not collect documents, so without this a student never finds out
           there is a step left   see /me/verify. */}
-      <VerifyReminder status={profile.verificationStatus} />
+      <VerifyReminder status={identity.verificationStatus} />
 
       {/* Usage / spending summary */}
       <UsageSummary />

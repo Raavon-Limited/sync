@@ -14,6 +14,12 @@ export interface StatCard {
   change: number;
   iconBg: string;
   icon: string;
+  /**
+   * Where the number can be seen as a list. Every card has one: a count on the
+   * front door that cannot be opened is the reason PENDING VERIFICATIONS and
+   * the verification queue were allowed to disagree for as long as they did.
+   */
+  href: string;
 }
 
 export interface RevenuePoint {

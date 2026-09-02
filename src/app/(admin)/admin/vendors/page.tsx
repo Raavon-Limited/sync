@@ -1,8 +1,26 @@
 /**
  * ROUTE: /admin/vendors
  * ACCESS: admin / super_admin only, enforced here AND in every server action.
- * PURPOSE: Vendor verification queue   review uploaded documents and decide
- *          whether a vendor is real.
+ * PURPOSE: The account queue   review what somebody uploaded and decide whether
+ *          they are real.
+ *
+ * "ALL" MEANS ALL
+ *   This page used to list vendor_profiles minus landlords, under a tab reading
+ *   "All businesses". On a platform whose only registered business was a
+ *   landlord that tab said "No vendors registered yet" while the overview card
+ *   two clicks away counted one   and a reviewer had no single screen showing
+ *   who exists and where each of them stands.
+ *
+ *   The unfiltered tab is now every account with a verification state, from
+ *   modules/admin/accounts: businesses, landlords, riders, fleets, students and
+ *   organisers, each with its role and its status on the card. `?category=`
+ *   narrows the same list to one trade.
+ *
+ * IT LISTS EVERYONE, IT DOES NOT DECIDE FOR EVERYONE
+ *   A row opens the review screen belonging to its own kind   a landlord on
+ *   /admin/landlord where the hostels are, a rider on /admin/riders, a student
+ *   on /admin/students. Listing in one place and deciding in the right place is
+ *   the shape here, and the reason this page can afford to hold every kind.
  *
  * The route guard mirrors /admin/users: read the trusted role, redirect to /403
  * otherwise, then use the service-role client. Admin work is cross-tenant, so
@@ -11,24 +29,27 @@
  */
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
+import { visibleAreas } from '@/modules/access/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Row } from '@/lib/supabase/row';
+import { listAccounts } from '@/modules/admin/accounts';
+import { ACCOUNT_AREA } from '@/modules/admin/account-types';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs, type AccountTabKey } from '@/components/admin/account-tabs';
-import { VerificationQueue, type AdminVendor } from './(components)/verification-queue';
+import { VerificationQueue, type QueueEntry } from './(components)/verification-queue';
 
-export const metadata: Metadata = { title: 'Vendors   Admin' };
-
-type Row = Record<string, unknown>;
+export const metadata: Metadata = { title: 'Accounts   Admin' };
 
 /**
  * The business categories this page can be narrowed to.
  *
- * 'landlord' is deliberately absent: it is a vendor_profiles category like the
- * rest, but landlords are reviewed on their own screen where their properties
- * can be shown, and the query below excludes them outright. Anything not in
- * this list is ignored rather than passed to the database   a category comes
- * from the URL, and an unrecognised one should show the full list, not an empty
- * one or a query error.
+ * There is no 'landlord' tab: landlords have a screen of their own, where the
+ * properties they let can be shown. They are still in the unfiltered list
+ * they are businesses   and a landlord row there opens that screen.
+ *
+ * Anything not in this list is ignored rather than passed to the database   a
+ * category comes from the URL, and an unrecognised one should show the full
+ * list, not an empty one or a query error.
  */
 const CATEGORIES = {
   food: 'Food',
@@ -53,66 +74,43 @@ export default async function Page({
   const category = parseCategory((await searchParams).category);
   const admin = createAdminClient();
 
-  const [{ data: vendors }, { data: docs }] = await Promise.all([
-    // VENDORS ONLY. A landlord is a vendor_profiles row with category
-    // 'landlord', so a query that filters on nothing returns them too - which
-    // is how this page ended up being every business on the platform under a
-    // nav item named "Vendors". Landlords are reviewed on /admin/landlord,
-    // which shows the property context this page has no column for.
-    //
-    // `category` narrows it further, for the per-trade tabs. Filtered in the
-    // query rather than in the client, so a trade with two hundred businesses
-    // does not ship the other categories to the browser to be hidden.
-    (category
-      ? admin
-          .from('vendor_profiles')
-          .select('id, business_name, slug, category, area, verification_status, created_at')
-          .is('archived_at', null)
-          .eq('category', category)
-      : admin
-          .from('vendor_profiles')
-          .select('id, business_name, slug, category, area, verification_status, created_at')
-          .is('archived_at', null)
-          .neq('category', 'landlord')
-    ).order('created_at', { ascending: false }),
+  const [accounts, areas, { data: docs }] = await Promise.all([
+    listAccounts(),
+    // null is a super admin: no filtering. Otherwise this list is cut to the
+    // kinds the viewer is allowed to open   see ACCOUNT_AREA.
+    visibleAreas(),
     // Documents are fetched separately rather than embedded: verification_documents
     // has no FK to vendor_profiles (it points at profiles), and this codebase has
     // been bitten repeatedly by embeds that cannot resolve.
-    admin
-      .from('verification_documents')
-      .select('id, owner_id, doc_type, title, status, storage_path, action_message, uploaded_at')
-      .order('uploaded_at', { ascending: false }),
+    admin.from('verification_documents').select('owner_id, status'),
   ]);
 
-  const byOwner = new Map<string, AdminVendor['docs']>();
+  // Narrowed AFTER the read, not in the query: the tabs cut one flattened list
+  // six tables wide, and re-deriving "vendors of this trade" from the tables
+  // would be a second definition of the same thing   which is the bug this
+  // page just came out of. Only the filtered rows are sent to the browser.
+  const rows = accounts.filter(
+    (a) => (!areas || areas.includes(ACCOUNT_AREA[a.kind])) && (!category || a.detail === category),
+  );
+
+  const docCount = new Map<string, { total: number; approved: number }>();
   for (const d of (docs ?? []) as Row[]) {
-    const list = byOwner.get(d.owner_id as string) ?? [];
-    list.push({
-      id: d.id as string,
-      docType: d.doc_type as string,
-      title: d.title as string,
-      status: d.status as string,
-      storagePath: d.storage_path as string,
-      actionMessage: (d.action_message as string) ?? null,
-      uploadedAt: d.uploaded_at as string,
-    });
-    byOwner.set(d.owner_id as string, list);
+    const owner = d.owner_id as string;
+    const c = docCount.get(owner) ?? { total: 0, approved: 0 };
+    c.total += 1;
+    if (d.status === 'approved') c.approved += 1;
+    docCount.set(owner, c);
   }
 
   // The face for the card. One round trip for the whole page   see
   // modules/admin/selfies for why the queue is scannable by sight at all.
-  const selfieByOwner = await selfieUrlsFor(((vendors ?? []) as Row[]).map((v) => v.id as string));
+  const selfieByOwner = await selfieUrlsFor([...new Set(rows.map((r) => r.personId))]);
 
-  const rows: AdminVendor[] = ((vendors ?? []) as Row[]).map((v) => ({
-    id: v.id as string,
-    businessName: (v.business_name as string) ?? 'Unnamed business',
-    slug: v.slug as string,
-    category: (v.category as string) ?? ' ',
-    area: (v.area as string) ?? null,
-    verificationStatus: (v.verification_status as string) ?? 'unverified',
-    createdAt: v.created_at as string,
-    docs: byOwner.get(v.id as string) ?? [],
-    selfieUrl: selfieByOwner.get(v.id as string),
+  const entries: QueueEntry[] = rows.map((r) => ({
+    ...r,
+    selfieUrl: selfieByOwner.get(r.personId),
+    docsTotal: docCount.get(r.personId)?.total ?? 0,
+    docsApproved: docCount.get(r.personId)?.approved ?? 0,
   }));
 
   return (
@@ -120,7 +118,7 @@ export default async function Page({
       <div>
         <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ACCOUNTS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
-          {category ? CATEGORIES[category] : 'Vendor'}{' '}
+          {category ? CATEGORIES[category] : 'Account'}{' '}
           <span className="text-lime-deep">verification.</span>
         </h2>
       </div>
@@ -129,7 +127,7 @@ export default async function Page({
           them and the pathname is identical for all five. */}
       <AccountTabs active={(category ?? 'vendors') as AccountTabKey} />
 
-      <VerificationQueue vendors={rows} />
+      <VerificationQueue rows={entries} />
     </section>
   );
 }

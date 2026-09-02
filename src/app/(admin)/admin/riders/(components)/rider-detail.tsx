@@ -58,6 +58,7 @@ export function RiderDetail({ rider }: { rider: AdminRider }) {
                 <Building2 className="size-3.5" aria-hidden="true" />
                 {rider.companyName ?? 'Independent'}
               </span>
+              {rider.email && <span>{rider.email}</span>}
               {rider.phone && <span>{rider.phone}</span>}
               <span>
                 joined{' '}
@@ -135,7 +136,7 @@ function SuspensionControl({ rider }: { rider: AdminRider }) {
       <div className="border-coral/30 bg-coral/5 flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2">
         <ShieldAlert className="text-coral size-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-coral text-sm font-medium">Suspended   cannot take deliveries</p>
+          <p className="text-coral text-sm font-medium">Suspended cannot take deliveries</p>
           {rider.suspendedReason && (
             <p className="text-content-muted text-xs">{rider.suspendedReason}</p>
           )}

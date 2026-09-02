@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { emailFor } from '@/modules/admin/emails';
 import type { Row } from '@/lib/supabase/row';
 import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
 
@@ -42,11 +43,15 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const v = vendor as Row | null;
   if (!v) notFound();
 
-  const { data: docs } = await admin
-    .from('verification_documents')
-    .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
-    .eq('owner_id', v.id)
-    .order('uploaded_at', { ascending: false });
+  const [{ data: docs }, email] = await Promise.all([
+    admin
+      .from('verification_documents')
+      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+      .eq('owner_id', v.id)
+      .order('uploaded_at', { ascending: false }),
+    // vendor_profiles.id IS the owner profile id, so this is their address.
+    emailFor(v.id as string),
+  ]);
 
   const row: AdminVendor = {
     id: v.id,
@@ -56,6 +61,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     area: v.area ?? null,
     verificationStatus: v.verification_status ?? 'unverified',
     createdAt: v.created_at,
+    email,
     docs: ((docs ?? []) as Row[]).map((d) => ({
       id: d.id,
       docType: d.doc_type,

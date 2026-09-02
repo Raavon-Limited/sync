@@ -50,6 +50,19 @@ export interface BrowserRow {
   faceUrl?: string;
   /** One line under the name. Rendered in both grid and list. */
   meta: ReactNode;
+  /**
+   * The row's own label, pinned to the RIGHT edge   what kind of account this
+   * is. On a list holding six kinds it is the first thing to look for, and a
+   * fixed position is what makes a column of them scannable; inline in the meta
+   * line it moved with the length of every name before it.
+   */
+  tag?: ReactNode;
+  /**
+   * Bottom-right of the card: the one thing this row is asking for. Sits in its
+   * own row so every card is the same height whether it asks for anything or
+   * not, and so the ask is always in the same corner.
+   */
+  action?: ReactNode;
   /** Badges after the status one   fraud block, suspension. */
   flags?: ReactNode;
   /** Matched against the search box, lowercased by the caller's own rules. */
@@ -95,6 +108,10 @@ export function AccountBrowser({
   extraFilters?: readonly string[];
 }) {
   const [view, setView] = useState<View>('grid');
+  // The bottom row is reserved for the whole list or for none of it. Reserving
+  // it per card would put the ask on the bottom edge of the cards that have one
+  // and leave a stub of padding under every card that does not.
+  const hasAction = rows.some((r) => r.action != null);
   const statusCounts = useStatusCounts(rows);
   const counts = { ...statusCounts };
   for (const r of rows) if (r.suspended) counts.suspended = (counts.suspended ?? 0) + 1;
@@ -107,7 +124,7 @@ export function AccountBrowser({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(storageKey);
-      // The directive has to sit on the line immediately above the statement  
+      // The directive has to sit on the line immediately above the statement
       // a disable-next-line followed by further comment lines silences the
       // comment, not the code.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -195,7 +212,7 @@ export function AccountBrowser({
             <Link
               key={row.id}
               href={row.href}
-              className="border-line/10 bg-panel hover:border-line/25 flex flex-col gap-3 rounded-xl border p-4 transition-colors"
+              className="border-line/10 bg-panel hover:border-line/25 flex h-full flex-col gap-3 rounded-xl border p-4 transition-colors"
             >
               <div className="flex items-start gap-3">
                 <Face url={row.faceUrl} className="size-14 rounded-xl border" />
@@ -210,8 +227,13 @@ export function AccountBrowser({
                     {row.flags}
                   </p>
                 </div>
+                {row.tag}
               </div>
               {row.meta}
+              {/* `mt-auto` is what makes the ask sit on the bottom edge of a
+                  card stretched to its row, rather than under the last line of
+                  a shorter one. */}
+              {hasAction && <div className="mt-auto flex justify-end pt-1">{row.action}</div>}
             </Link>
           ))}
         </div>
@@ -236,6 +258,10 @@ export function AccountBrowser({
                 </p>
                 {row.meta}
               </div>
+              {/* Same two slots as the card, in the same order   the list is a
+                  denser view of one thing, not a different one. */}
+              {row.action}
+              {row.tag}
               <ChevronRight className="text-content-muted size-4 shrink-0" />
             </Link>
           ))}

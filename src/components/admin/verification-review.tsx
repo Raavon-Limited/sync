@@ -44,12 +44,15 @@ import {
   getDocumentUrls,
   reviewDocument,
   setCompanyVerification,
+  setPersonalVerification,
   setStudentVerification,
   setRiderVerification,
   setVendorVerification,
   type VendorDecision,
 } from '@/modules/admin/actions';
 import { DocumentViewer, isImagePath, type ViewerDoc } from './document-viewer';
+import { requestVerificationInfo } from '@/modules/admin/actions';
+import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
 
 export interface AdminDoc {
   id: string;
@@ -69,6 +72,13 @@ export interface AdminVendor {
   area: string | null;
   verificationStatus: string;
   createdAt: string;
+  /**
+   * The sign-in address, when the page bothered to look it up. Optional
+   * because it is not in the table this shape otherwise mirrors   it lives in
+   * auth.users and costs a separate call (modules/admin/emails), which a queue
+   * of forty cards should not make forty times.
+   */
+  email?: string | null;
   docs: AdminDoc[];
   /** Signed link to their live photo, for the queue card. Absent until uploaded. */
   selfieUrl?: string;
@@ -148,7 +158,7 @@ function Preview({
  * a copy of this file for riders would be a copy of the comparison layout, the
  * signed-url handling and the modal, all of which would then drift.
  */
-export type ReviewKind = 'vendor' | 'rider' | 'company' | 'student';
+export type ReviewKind = 'vendor' | 'rider' | 'company' | 'student' | 'organiser';
 
 const DECIDE: Record<
   ReviewKind,
@@ -164,6 +174,9 @@ const DECIDE: Record<
   // and a student has neither. Suspension is the equivalent lever and it lives
   // on the account, not on the verification.
   student: (id, decision) => setStudentVerification({ userId: id, decision }),
+  // No `permanent`: a fraud block is a vendor_profiles / rider_profiles column
+  // and an organiser has neither. Suspension is the equivalent lever.
+  organiser: (id, decision) => setPersonalVerification({ userId: id, decision }),
 };
 
 /** What the confirm dialog and the counts call the thing being reviewed. */
@@ -172,17 +185,34 @@ const NOUN: Record<ReviewKind, string> = {
   rider: 'rider',
   company: 'company',
   student: 'student',
+  organiser: 'organiser',
 };
 
 export function VerificationReview({
   vendor,
   showHeader = true,
   kind = 'vendor',
+  blockVerify = null,
+  extraMissing = [],
+  notifyPath = '/me',
 }: {
   vendor: AdminVendor;
   showHeader?: boolean;
   /** Which account type this is. Decides which staff RPC the buttons call. */
   kind?: ReviewKind;
+  /**
+   * Why this account cannot be verified yet, in the words to put on the
+   * button. Set when something OUTSIDE the documents is missing   a student
+   * with no matric number, whose school ID has nothing to be checked against.
+   *
+   * The database refuses these too (20260904180000). Saying so on the button
+   * is what stops a reviewer meeting the refusal as an error.
+   */
+  blockVerify?: string | null;
+  /** Outstanding things that are not documents, for the email. */
+  extraMissing?: string[];
+  /** Where the email sends them to fix it. */
+  notifyPath?: string;
 }) {
   const decide = DECIDE[kind];
   const noun = NOUN[kind];
@@ -192,6 +222,23 @@ export function VerificationReview({
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(vendor.docs.length > 0);
   const [viewing, setViewing] = useState<number | null>(null);
+  // Everything the person still owes, in one list: requirements with nothing
+  // uploaded, documents a reviewer already bounced, and whatever the page
+  // passed in that is not a document at all (a student's matric number). It
+  // seeds the email below   the reviewer edits it before it goes.
+  const outstanding = useMemo(() => {
+    const out: string[] = [...extraMissing];
+    for (const req of requirementsFor(roleForReview(kind, vendor.category))) {
+      const doc = vendor.docs.find((d) => d.docType === req.key);
+      if (!doc) {
+        out.push(`${req.label}   nothing uploaded (${req.accepts})`);
+      } else if (doc.status === 'needs_action') {
+        out.push(`${req.label}   ${doc.actionMessage ?? 'needs uploading again'}`);
+      }
+    }
+    return out;
+  }, [extraMissing, kind, vendor.category, vendor.docs]);
+
   // WHICH document is mid-decision, not merely THAT one is. `busy` is one flag
   // for the whole card, so on its own it cannot put a spinner on the button
   // that was actually clicked - every Approve on the screen would spin at once.
@@ -416,7 +463,8 @@ export function VerificationReview({
                 </Badge>
               </p>
               <p className="text-content-muted text-xs">
-                {vendor.category} · {vendor.area ?? 'No area'} · joined{' '}
+                {vendor.category} · {vendor.area ?? 'No area'}
+                {vendor.email ? ` · ${vendor.email}` : ''} · joined{' '}
                 {new Date(vendor.createdAt).toLocaleDateString('en-NG', {
                   month: 'short',
                   year: 'numeric',
@@ -429,6 +477,10 @@ export function VerificationReview({
             approved
             {vendor.docs.length === 0 && '   nothing uploaded yet'}
           </p>
+          {/* Said on the page, not only in a tooltip on a disabled button:
+              somebody has to go and ask the student for this, and a title
+              attribute is invisible until you hover the thing you cannot use. */}
+          {blockVerify && <p className="text-coral mt-1 text-xs">{blockVerify}</p>}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -437,8 +489,12 @@ export function VerificationReview({
               on the button than to let the click fail. */}
           <Button
             variant="outline"
-            disabled={busy || vendor.verificationStatus === 'verified' || approved === 0}
-            title={approved === 0 ? 'Approve at least one document first' : undefined}
+            disabled={
+              busy || vendor.verificationStatus === 'verified' || approved === 0 || !!blockVerify
+            }
+            title={
+              blockVerify ?? (approved === 0 ? 'Approve at least one document first' : undefined)
+            }
             onClick={() => run(() => decide(vendor.id, 'verified'))}
           >
             Verify
@@ -456,6 +512,17 @@ export function VerificationReview({
             Reject
           </Button>
 
+          {/* The third option, beside the two that decide. Not offered for a
+              company: `vendor.id` is the fleet's id there, and a fleet has no
+              inbox   the owner does, and this screen does not know them. */}
+          {kind !== 'company' && (
+            <AskForMore
+              userId={vendor.id}
+              subject={noun}
+              path={notifyPath}
+              suggested={outstanding}
+            />
+          )}
           {/* THE PERMANENT ONE. Confirmed in the browser rather than done on a
               single click: it is the only control here that takes an option
               away from somebody, and a reviewer reaching for Reject must not
@@ -547,6 +614,146 @@ export function VerificationReview({
         onIndexChange={setViewing}
         onClose={() => setViewing(null)}
       />
+    </div>
+  );
+}
+
+/**
+ * Which requirement list applies to the account being reviewed.
+ *
+ * `kind` says which RPC decides it; the ROLE says what was asked of them, and
+ * the two do not line up: a landlord and a shop are both kind 'vendor' and are
+ * asked for different things, and an organiser's kind is named after the queue
+ * rather than after the role in requirements.ts.
+ */
+function roleForReview(kind: ReviewKind, category: string): VerificationRole {
+  if (kind === 'student') return 'student';
+  if (kind === 'rider') return 'rider';
+  if (kind === 'company') return 'company';
+  if (kind === 'organiser') return 'event_manager';
+  return category === 'landlord' ? 'landlord' : 'vendor';
+}
+
+/**
+ * "Tell them what is missing" - the third option a reviewer never had.
+ *
+ * BETWEEN VERIFY AND REJECT THERE IS A HOLE, and most submissions fall in it.
+ * The folder is not fraudulent and it is not complete: a NIN photo with the
+ * flash across the number, a student with no matric number on file, a CAC
+ * certificate nobody uploaded. Verifying is wrong, rejecting is heavy-handed
+ * and says nothing, and bouncing one document writes a note onto a screen the
+ * person may not open for a week.
+ *
+ * SO IT WRITES NOTHING AND SENDS AN EMAIL. The account stays exactly where the
+ * reviewer found it, because "we asked for more" is not a verification outcome.
+ *
+ * THE LIST IS SUGGESTED, NOT DICTATED. What the database can work out - a
+ * requirement with nothing uploaded, a document already bounced - is ticked by
+ * default, and the reviewer adds the half they can see and it cannot: which
+ * photo is unreadable, and why.
+ */
+function AskForMore({
+  userId,
+  subject,
+  path,
+  suggested,
+}: {
+  userId: string;
+  subject: string;
+  path: string;
+  /** Everything outstanding, pre-computed. Ticked to start with. */
+  suggested: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [chosen, setChosen] = useState<string[]>(suggested);
+  const [note, setNote] = useState('');
+  const [sending, startSending] = useTransition();
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function send() {
+    setResult(null);
+    startSending(async () => {
+      const res = await requestVerificationInfo({
+        userId,
+        subject,
+        missing: chosen,
+        note,
+        path,
+      });
+      setResult(
+        res.ok
+          ? { ok: true, text: 'Sent. Their status has not changed.' }
+          : { ok: false, text: res.error },
+      );
+      if (res.ok) setOpen(false);
+    });
+  }
+
+  if (!open) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          Ask for what is missing
+        </Button>
+        {result && (
+          <p className={cn('text-xs', result.ok ? 'text-emerald-600' : 'text-coral')}>
+            {result.text}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-line/10 bg-surface-deep flex w-full flex-col gap-3 rounded-xl border p-3">
+      <p className="text-content text-sm font-medium">Email them what is outstanding</p>
+
+      {suggested.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          {suggested.map((item) => (
+            <label key={item} className="text-content-muted flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-lime-deep mt-0.5"
+                checked={chosen.includes(item)}
+                onChange={(e) =>
+                  setChosen((prev) =>
+                    e.target.checked ? [...prev, item] : prev.filter((c) => c !== item),
+                  )
+                }
+              />
+              {item}
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="text-content-muted text-xs">
+          Nothing is outstanding on paper - everything asked for has been uploaded. Write below what
+          actually needs fixing.
+        </p>
+      )}
+
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+        placeholder="What a reviewer can see and the database cannot - which photo is unreadable, what does not match."
+        className="border-line/15 bg-panel text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button disabled={sending} onClick={send}>
+          {sending ? 'Sending…' : 'Send email'}
+        </Button>
+        <Button variant="outline" disabled={sending} onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        {/* Said plainly, because the button sits beside Verify and Reject and
+            those two DO change something. */}
+        <span className="text-content-muted text-xs">Nothing is decided by this.</span>
+      </div>
+
+      {result && !result.ok && <p className="text-coral text-xs">{result.text}</p>}
     </div>
   );
 }

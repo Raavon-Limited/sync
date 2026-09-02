@@ -24,44 +24,48 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ChevronRight, GraduationCap, ShieldAlert, Store, Truck } from 'lucide-react';
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  GraduationCap,
+  ShieldAlert,
+  Store,
+  Truck,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge, Input } from '@/components/ui';
 import { VENDOR_BADGE } from '@/components/admin/verification-review';
+import { ACCOUNT_LABEL } from '@/modules/admin/account-types';
+import type { AccountKind, AccountRecord } from '@/modules/admin/account-types';
 
-export type OversightKind = 'vendor' | 'landlord' | 'rider' | 'company' | 'student';
+/** The list is built once, server-side   see modules/admin/accounts. */
+export type OversightRow = AccountRecord;
 
-export interface OversightRow {
-  id: string;
-  kind: OversightKind;
-  name: string;
-  detail: string;
-  status: string;
-  blocked: boolean;
-  suspended: boolean;
-  href: string;
-  createdAt: string;
-}
-
-const KIND_ICON: Record<OversightKind, LucideIcon> = {
+const KIND_ICON: Record<AccountKind, LucideIcon> = {
   vendor: Store,
   landlord: Building2,
   rider: Truck,
   company: Truck,
   student: GraduationCap,
-};
-
-const KIND_LABEL: Record<OversightKind, string> = {
-  vendor: 'Vendor',
-  landlord: 'Landlord',
-  rider: 'Rider',
-  company: 'Fleet',
-  student: 'Student',
+  organiser: CalendarDays,
 };
 
 const STATUS_FILTERS = ['pending', 'unverified', 'verified', 'rejected'] as const;
 const FLAG_FILTERS = ['blocked', 'suspended'] as const;
-const KIND_FILTERS: OversightKind[] = ['vendor', 'landlord', 'rider', 'company'];
+// EVERY KIND THAT CAN APPEAR AS A ROW.
+//
+// Students and organisers were rows in the list but not chips in this row, so
+// the Type filters added up to less than All, and "pending students"  the
+// question a reviewer actually asks  could not be asked at all.
+const KIND_FILTERS: AccountKind[] = [
+  'vendor',
+  'landlord',
+  'rider',
+  'company',
+  'student',
+  'organiser',
+];
 
 export function VerificationOversight({ rows }: { rows: OversightRow[] }) {
   const counts = useMemo(() => {
@@ -79,7 +83,7 @@ export function VerificationOversight({ rows }: { rows: OversightRow[] }) {
   // Kind is a SECOND axis, not another chip in the same row: "pending riders"
   // is the question staff actually ask, and one combined filter list could
   // never express it.
-  const [kind, setKind] = useState<OversightKind | 'all'>('all');
+  const [kind, setKind] = useState<AccountKind | 'all'>('all');
   const [search, setSearch] = useState('');
 
   const visible = rows.filter((r) => {
@@ -124,7 +128,7 @@ export function VerificationOversight({ rows }: { rows: OversightRow[] }) {
         </button>
         {KIND_FILTERS.map((k) => (
           <button key={k} type="button" onClick={() => setKind(k)} className={chip(kind === k)}>
-            {KIND_LABEL[k]}
+            {ACCOUNT_LABEL[k]}
             {counts[k] ? <span className="ml-1.5 opacity-60">{counts[k]}</span> : null}
           </button>
         ))}
@@ -148,7 +152,7 @@ export function VerificationOversight({ rows }: { rows: OversightRow[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-content truncate text-sm font-medium">{r.name}</p>
                   <p className="text-content-muted text-xs">
-                    {KIND_LABEL[r.kind]} · {r.detail} ·{' '}
+                    {ACCOUNT_LABEL[r.kind]} · {r.detail} ·{' '}
                     {new Date(r.createdAt).toLocaleDateString('en-NG', {
                       month: 'short',
                       year: 'numeric',

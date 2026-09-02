@@ -26,6 +26,7 @@ import { ArrowLeft } from 'lucide-react';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStudentIdentities } from '@/modules/students';
+import { emailFor } from '@/modules/admin/emails';
 import { Badge } from '@/components/ui';
 import { STATUS_BADGE } from '@/components/admin/account-queue';
 import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
@@ -52,7 +53,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const p = profileRow as Row | null;
   if (!p) notFound();
 
-  const [{ data: docs }, identities, { data: campus }] = await Promise.all([
+  const [{ data: docs }, identities, { data: campus }, email] = await Promise.all([
     admin
       .from('verification_documents')
       .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
@@ -62,6 +63,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     p.campus_id
       ? admin.from('campuses').select('name').eq('id', p.campus_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    // The address a reviewer would actually write to. It lives in auth.users,
+    // not profiles   see modules/admin/emails.
+    emailFor(id),
   ]);
 
   const identity = identities.get(id);
@@ -87,6 +91,25 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       uploadedAt: d.uploaded_at as string,
     })),
   };
+
+  /*
+   * WHAT IS MISSING THAT IS NOT A DOCUMENT.
+   *
+   * A school ID is only evidence if it can be read against something, and the
+   * matric number and department are that something. Verifying a student whose
+   * profile says "Not given" for both is approving half a check - which is why
+   * set_student_verification refuses it (20260904180000) and why the button
+   * says so here rather than letting the click come back as an error.
+   *
+   * Level is listed for the email but does not block: it changes every year and
+   * is on few cards, so a reviewer cannot check it anyway.
+   */
+  const missingIdentity: string[] = [];
+  if (!identity?.matricNumber) missingIdentity.push('Your matric number');
+  if (!identity?.department) missingIdentity.push('Your department');
+  if (!identity?.level) missingIdentity.push('Your level (e.g. 200 level)');
+
+  const blocksVerify = !identity?.matricNumber || !identity?.department;
 
   // Every role this account holds. A student who also sells has a SECOND,
   // independent verification on the business screen, and a reviewer deciding
@@ -121,6 +144,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </p>
             <p className="text-content-muted text-xs">
               {campusName ?? 'No campus set'}
+              {email ? ` · ${email}` : ''}
               {p.phone ? ` · ${p.phone}` : ''}
               {' · joined '}
               {new Date(p.created_at as string).toLocaleDateString('en-NG', {
@@ -149,7 +173,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         )}
       </div>
 
-      <VerificationReview vendor={subject} kind="student" />
+      <VerificationReview
+        vendor={subject}
+        kind="student"
+        blockVerify={
+          blocksVerify
+            ? 'This student has not given their matric number and department, so the school ID has nothing to be checked against. Ask for them first.'
+            : null
+        }
+        extraMissing={missingIdentity}
+        notifyPath="/me/settings"
+      />
     </section>
   );
 }

@@ -46,6 +46,15 @@ export default async function Page() {
   const verified = profile.verificationStatus === 'verified';
   const pending = profile.verificationStatus === 'pending';
 
+  // The primary action. Which panel it opens depends on whether they can sell
+  // yet; the button itself does not change, so it is declared once.
+  const listButton = (
+    <Button size="lg">
+      <CalendarPlus aria-hidden="true" />
+      List an event
+    </Button>
+  );
+
   return (
     <section className="flex flex-col gap-6">
       <div>
@@ -111,19 +120,17 @@ export default async function Page() {
       </div>
 
       <div className="flex flex-wrap gap-3">
+        {/* ONE button element, two possible hosts.
+            It was written out twice, once per branch, which meant the same
+            control existed as two separate elements that had to be kept
+            identical by hand. Declaring it once makes the rendered tree the
+            same shape whichever panel opens, and there is no second copy to
+            drift. */}
         {verified ? (
-          <ListEventSheet>
-            <Button size="lg">
-              <CalendarPlus aria-hidden="true" />
-              List an event
-            </Button>
-          </ListEventSheet>
+          <ListEventSheet>{listButton}</ListEventSheet>
         ) : (
           <VerifySheet role="event_manager" status={profile.verificationStatus}>
-            <Button size="lg">
-              <CalendarPlus aria-hidden="true" />
-              List an event
-            </Button>
+            {listButton}
           </VerifySheet>
         )}
         <Button asChild variant="outline" size="lg">

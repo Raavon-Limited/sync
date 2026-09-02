@@ -24,9 +24,34 @@ import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
 import { accessLevel, assertArea } from '@/modules/access/guard';
 import { userMessage } from '@/lib/errors';
+import { notifyVerification } from '@/modules/admin/verification-mail';
+import type { Row } from '@/lib/supabase/row';
 
 export type DocDecision = 'approved' | 'needs_action';
 export type VendorDecision = 'verified' | 'rejected' | 'pending';
+
+/**
+ * Tell the person what was decided.
+ *
+ * FIRE AND FORGET, ON PURPOSE. The decision is already written by the time
+ * this runs. Throwing here would put an error on the screen over work that
+ * succeeded, and the natural response   click Verify again   would send the
+ * mail twice. A failure is logged in modules/admin/verification-mail; the
+ * status is the record, the email is the courtesy.
+ *
+ * Only a FINAL decision is announced. Moving somebody back to pending is a
+ * reviewer working, not news   nothing is being asked of them and nothing has
+ * been settled.
+ */
+async function announce(userId: string, decision: VendorDecision, subject: string, path: string) {
+  if (decision === 'pending') return;
+  await notifyVerification({
+    userId,
+    outcome: decision === 'verified' ? 'verified' : 'rejected',
+    subject,
+    path,
+  });
+}
 
 /**
  * Throws unless the caller is staff. Every action calls this first.
@@ -171,6 +196,23 @@ export async function setVendorVerification(input: {
   });
 
   if (error) throw new Error(userMessage(error, 'We could not update this verification.'));
+
+  // A landlord and a shop get different words and different dashboards, and
+  // vendorId IS the owner profile id, so one lookup answers both.
+  const admin = createAdminClient();
+  const { data: biz } = await admin
+    .from('vendor_profiles')
+    .select('category')
+    .eq('id', input.vendorId)
+    .maybeSingle();
+  const isLandlord = ((biz as Row | null)?.category as string) === 'landlord';
+  await announce(
+    input.vendorId,
+    input.decision,
+    isLandlord ? 'landlord' : 'business',
+    isLandlord ? '/landlord/settings' : '/vendor/settings',
+  );
+
   revalidatePath('/admin/vendors');
   revalidatePath('/admin/landlord/[slug]', 'page');
 }
@@ -428,6 +470,7 @@ export async function setRiderVerification(input: {
   });
 
   if (error) throw new Error(userMessage(error, 'We could not update this rider.'));
+  await announce(input.riderId, input.decision, 'rider', '/rider');
   revalidatePath('/admin/riders');
   revalidatePath('/admin/verification');
 }
@@ -473,6 +516,37 @@ export async function setCompanyVerification(input: {
  * Called with the user's session, not the service role: the RPC reads
  * auth.uid() to check the caller is staff.
  */
+/**
+ * Decide verification for a role whose status lives in `profiles` - an event
+ * organiser today, a content creator when that opens.
+ *
+ * A THIRD FUNCTION, AND THAT IS THE MODEL WORKING RATHER THAN SPRAWL.
+ * setVendorVerification writes vendor_profiles, setRiderVerification writes
+ * rider_profiles, setStudentVerification writes student_profiles. These roles
+ * have no table of their own because neither can hold a business row today, so
+ * profiles IS their authority. The RPC refuses any role that has one, which is
+ * what stops this writing the vendor mirror by mistake.
+ */
+export async function setPersonalVerification(input: { userId: string; decision: VendorDecision }) {
+  await assertStaffArea('events');
+
+  const supabase = await createServerClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    n: string,
+    a: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+
+  const { error } = await rpc('set_personal_verification', {
+    p_user: input.userId,
+    p_status: input.decision,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
+  await announce(input.userId, input.decision, 'organiser', '/organiser');
+  revalidatePath('/admin/events');
+  revalidatePath('/admin/verification');
+}
+
 export async function setStudentVerification(input: { userId: string; decision: VendorDecision }) {
   await assertStaffArea('students');
 
@@ -490,6 +564,7 @@ export async function setStudentVerification(input: { userId: string; decision: 
   });
 
   if (error) throw new Error(userMessage(error, 'We could not save that decision.'));
+  await announce(input.userId, input.decision, 'student', '/me/verify');
   revalidatePath('/admin/students');
   revalidatePath('/admin/verification');
 }
@@ -654,4 +729,61 @@ export async function setRoleMembership(input: {
 
   if (error) throw new Error(userMessage(error, 'We could not change that.'));
   revalidatePath('/admin/staff');
+}
+
+/**
+ * Ask somebody for what is missing, by email, from the screen the reviewer is
+ * already looking at.
+ *
+ * THE GAP THIS FILLS
+ *   A reviewer who opens a folder and finds a blurry ID and no matric number
+ *   had two options: verify anyway, or reject. Both are wrong   the submission
+ *   is not fraudulent, it is incomplete, and the person has no way of learning
+ *   which part. Bouncing a single document (reviewDocument) says something to
+ *   a screen they may never open again; this says it to their inbox.
+ *
+ * IT DOES NOT DECIDE ANYTHING
+ *   No status is written. The account stays exactly where the reviewer found
+ *   it, because "we asked for more" is not a verification outcome and pretending
+ *   it is would move somebody out of the queue they still belong in.
+ *
+ * WHAT COUNTS AS MISSING IS THE CALLER'S JUDGEMENT
+ *   The screen computes the obvious list   requirements with nothing uploaded,
+ *   documents bounced, profile details left blank   and the reviewer edits it.
+ *   A list assembled here from the database alone could never include "the
+ *   photo is too dark to read", which is the most common thing a person needs
+ *   to be told.
+ */
+export async function requestVerificationInfo(input: {
+  userId: string;
+  /** What they are being verified as, for the wording: 'student', 'business'. */
+  subject: string;
+  /** Outstanding items, in the words the person will recognise. */
+  missing: string[];
+  /** The reviewer's own note. Optional, but it is usually the useful part. */
+  note?: string;
+  /** Where to send them to fix it. */
+  path?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  await assertStaffAnyArea(['vendors', 'landlords', 'riders', 'students', 'events']);
+
+  const missing = input.missing.map((m) => m.trim()).filter(Boolean);
+  const note = input.note?.trim();
+
+  // An email that lists nothing and says nothing is worse than no email: it
+  // tells somebody they are blocked and gives them no way forward.
+  if (missing.length === 0 && !note) {
+    return { ok: false, error: 'Say what is missing, or write a note. An empty ask helps nobody.' };
+  }
+
+  const result = await notifyVerification({
+    userId: input.userId,
+    outcome: 'needs_info',
+    subject: input.subject,
+    missing,
+    note: note ?? null,
+    path: input.path,
+  });
+
+  return result;
 }

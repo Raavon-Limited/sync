@@ -25,34 +25,27 @@
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs } from '@/components/admin/account-tabs';
-import { Badge } from '@/components/ui';
-import { STATUS_BADGE } from '@/components/admin/account-queue';
+import { OrganisersBrowser, type OrganiserRow } from './(components)/organisers-browser';
 import type { Row } from '@/lib/supabase/row';
 
 export const metadata: Metadata = { title: 'Event organisers - Admin' };
-
-interface Organiser {
-  id: string;
-  name: string;
-  email: string;
-  verificationStatus: string;
-  /** How many they have listed, and how many of those are still to come. */
-  listed: number;
-  upcoming: number;
-  joinedAt: string;
-}
 
 /**
  * Fetching and shaping, outside the component: "still to come" is a comparison
  * against the clock, and reading the clock during a render is impure.
  */
-async function loadOrganisers(): Promise<Organiser[]> {
+async function loadOrganisers(): Promise<OrganiserRow[]> {
   const admin = createAdminClient();
 
   const [{ data: eventRows }, { data: byRole }] = await Promise.all([
     admin.from('events').select('organizer_id, starts_at'),
-    admin.from('profiles').select('id').eq('role', 'event_manager'),
+    admin
+      .from('profiles')
+      .select('id')
+      .in('role', ['event_manager', 'creator'])
+      .is('archived_at', null),
   ]);
 
   const events = (eventRows ?? []) as Row[];
@@ -76,12 +69,17 @@ async function loadOrganisers(): Promise<Organiser[]> {
   ];
   if (ids.length === 0) return [];
 
-  const { data: people } = await admin
-    .from('profiles')
-    .select('id, full_name, verification_status, created_at')
-    .in('id', ids);
+  // The face for the card, in one round trip for the whole page - the same
+  // reason every other account list does it that way.
+  const [{ data: people }, selfieByOwner, { data: authList }] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('id, full_name, role, verification_status, suspended_at')
+      .in('id', ids),
+    selfieUrlsFor(ids),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+  ]);
 
-  const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? '-']));
 
   return ((people ?? []) as Row[])
@@ -92,9 +90,11 @@ async function loadOrganisers(): Promise<Organiser[]> {
         name: (p.full_name as string) ?? 'No name set',
         email: emailById.get(p.id as string) ?? '-',
         verificationStatus: (p.verification_status as string) ?? 'unverified',
+        role: (p.role as string) ?? 'event_manager',
         listed: tally.total,
         upcoming: tally.upcoming,
-        joinedAt: p.created_at as string,
+        suspended: Boolean(p.suspended_at),
+        selfieUrl: selfieByOwner.get(p.id as string),
       };
     })
     .sort((a, b) => b.listed - a.listed);
@@ -118,50 +118,13 @@ export default async function Page() {
             ? 'No event organiser accounts yet.'
             : `${rows.length} ${rows.length === 1 ? 'organiser' : 'organisers'}${
                 waiting > 0 ? `, ${waiting} waiting on a decision` : ''
-              }.`}
+              }. Open one to review what they have uploaded.`}
         </p>
       </div>
 
       <AccountTabs active="events" />
 
-      {rows.length === 0 ? (
-        <div className="border-line/10 rounded-xl border border-dashed p-8 text-center">
-          <p className="text-content text-sm font-medium">Nobody can be an organiser yet</p>
-          <p className="text-content-muted mx-auto mt-2 max-w-prose text-sm">
-            &ldquo;I run events&rdquo; is listed on the signup form as <strong>Not yet</strong>, so
-            no account holds the role. When it opens, an organiser signs up here, submits their ID,
-            business registration and proof of address, and is reviewed on this screen before
-            anything they list goes public - a profile comes first, then events.
-          </p>
-        </div>
-      ) : (
-        <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
-          {rows.map((o) => (
-            <div key={o.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-content flex flex-wrap items-center gap-2 text-sm font-medium">
-                  {o.name}
-                  <Badge className={STATUS_BADGE[o.verificationStatus] ?? STATUS_BADGE.unverified}>
-                    {o.verificationStatus}
-                  </Badge>
-                </p>
-                <p className="text-content-muted text-xs">
-                  {o.email}
-                  {' · '}
-                  {o.listed === 0
-                    ? 'nothing listed'
-                    : `${o.listed} listed, ${o.upcoming} still to come`}
-                  {' · joined '}
-                  {new Date(o.joinedAt).toLocaleDateString('en-NG', {
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <OrganisersBrowser rows={rows} />
     </section>
   );
 }

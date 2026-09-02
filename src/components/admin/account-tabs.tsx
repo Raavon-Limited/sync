@@ -21,10 +21,14 @@
  *   should not be offered Landlords. Resolved from the same `visibleAreas` the
  *   sidebar uses, so the two cannot disagree.
  *
- * 'SOON' TABS ARE NOT LINKS
+ * 'SOON' TABS ARE NOT LINKS, AND THEY COME LAST
  *   They are the surfaces the product has but the console does not review yet.
  *   Rendering them as dead text rather than links is the point: a tab that
  *   navigates to an empty screen is worse than one that admits it is not built.
+ *
+ *   Everything live is listed first and the 'soon' tabs trail it, so the row
+ *   never puts a dead tab between two working ones. Anything added later goes
+ *   in the same order.
  */
 import Link from 'next/link';
 import { visibleAreas } from '@/modules/access/guard';
@@ -33,13 +37,13 @@ import { cn } from '@/lib/utils';
 export type AccountTabKey =
   | 'vendors'
   | 'food'
-  | 'beauty'
-  | 'laundry'
-  | 'tradesman'
   | 'landlords'
   | 'riders'
   | 'students'
-  | 'events';
+  | 'events'
+  | 'beauty'
+  | 'laundry'
+  | 'tradesman';
 
 interface TabSpec {
   key: string;
@@ -58,22 +62,31 @@ interface TabSpec {
  * business queue has no column for them.
  */
 const TABS: TabSpec[] = [
-  { key: 'vendors', label: 'All businesses', href: '/admin/vendors', area: 'vendors' },
+  // 'All' is every account with a verification state, not every business
+  // see modules/admin/accounts. The tabs after it are the same list narrowed,
+  // which is why this one is first and why it is not called anything narrower.
+  { key: 'vendors', label: 'All', href: '/admin/vendors', area: 'vendors' },
   { key: 'food', label: 'Food', href: '/admin/vendors?category=food', area: 'vendors' },
-  // NOT LAUNCHED, so not navigable.
-  //
-  // The category filter behind these works and the rows would load   which is
-  // exactly why they are marked rather than quietly left live. A tab that opens
-  // an empty, correct-looking queue for a trade nobody can sign up for reads as
-  // "no beauty vendors have applied", which is a different and wrong statement
-  // from "beauty is not open yet".
-  { key: 'beauty', label: 'Beauty', soon: true },
-  { key: 'laundry', label: 'Laundry', soon: true },
-  { key: 'tradesman', label: 'Workmanship', soon: true },
   { key: 'landlords', label: 'Landlords', href: '/admin/landlord', area: 'landlords' },
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },
   { key: 'students', label: 'Students', href: '/admin/students', area: 'students' },
   { key: 'events', label: 'Events', href: '/admin/events', area: 'events' },
+  // EVERY LIVE TAB COMES FIRST, and the not-yet ones go last   the same order
+  // /signup uses for its role cards.
+  //
+  // A dead tab sitting between two live ones breaks the scan: the eye stops on
+  // the greyed-out label and reads the rest of the row as unavailable too. At
+  // the end, the bar reads as "here is what you can review, and here is what is
+  // coming" rather than as a row with holes in it.
+  //
+  // The category filter behind the trade tabs works and the rows would load
+  // which is exactly why they are marked rather than quietly left live. A tab
+  // that opens an empty, correct-looking queue for a trade nobody can sign up
+  // for reads as "no beauty vendors have applied", which is a different and
+  // wrong statement from "beauty is not open yet".
+  { key: 'beauty', label: 'Beauty', soon: true },
+  { key: 'laundry', label: 'Laundry', soon: true },
+  { key: 'tradesman', label: 'Workmanship', soon: true },
   // The account type does not exist yet   /signup lists it as "Not yet" for the
   // same reason. Listed here so the shape of what is coming is visible, and so
   // nobody builds a second nav for it later.
@@ -88,9 +101,15 @@ export async function AccountTabs({ active }: { active: AccountTabKey }) {
   return (
     <nav
       aria-label="Account types"
-      // Scrolls rather than wraps: nine tabs on a laptop is one row, and on a
+      // Scrolls rather than wraps: ten tabs on a laptop is one row, and on a
       // narrow window a wrapped tab bar pushes the list itself below the fold.
-      className="border-line/10 -mx-1 flex gap-1 overflow-x-auto border-b px-1 pb-px"
+      //
+      // `no-scrollbar` because the bar under a tab row reads as a second,
+      // uglier underline running the width of the page   and it sat directly
+      // on top of the 2px lime rule that marks the active tab, which is the one
+      // piece of state this row has to show. It still swipes, wheels and
+      // keyboards to scroll.
+      className="no-scrollbar border-line/10 -mx-1 flex gap-1 overflow-x-auto border-b px-1 pb-px"
     >
       {allowed.map((t) =>
         t.soon ? (

@@ -22,6 +22,11 @@ export interface AdminRider {
   id: string;
   name: string;
   phone: string | null;
+  /**
+   * Sign-in address. Only the detail page looks it up   it is in auth.users
+   * and costs a call per account, which a queue of cards should not pay.
+   */
+  email?: string | null;
   vehicleType: string;
   plateNumber: string | null;
   verificationStatus: string;

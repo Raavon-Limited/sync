@@ -10,13 +10,7 @@
  */
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
-import type {
-  Activity,
-  GrowthPoint,
-  RevenuePoint,
-  StatCard,
-  VendorStatusData,
-} from './data';
+import type { Activity, GrowthPoint, RevenuePoint, StatCard, VendorStatusData } from './data';
 
 interface OverviewPayload {
   vendors: number;
@@ -91,6 +85,7 @@ export async function getOverview(): Promise<Overview> {
         change: change(o.vendors, o.vendors_prev),
         iconBg: 'bg-blue-500',
         icon: 'vendors',
+        href: '/admin/vendors',
       },
       {
         key: 'users',
@@ -99,6 +94,7 @@ export async function getOverview(): Promise<Overview> {
         change: change(o.users, o.users_prev),
         iconBg: 'bg-emerald-500',
         icon: 'users',
+        href: '/admin/users',
       },
       {
         key: 'verifications',
@@ -107,6 +103,7 @@ export async function getOverview(): Promise<Overview> {
         change: change(o.verifications, o.verifications_prev),
         iconBg: 'bg-orange-500',
         icon: 'verifications',
+        href: '/admin/verification',
       },
       {
         key: 'disputes',
@@ -115,13 +112,16 @@ export async function getOverview(): Promise<Overview> {
         change: change(o.disputes, o.disputes_prev),
         iconBg: 'bg-red-500',
         icon: 'disputes',
+        href: '/admin/disputes',
       },
     ],
     // The chart's axis is labelled ₦ NGN, so kobo is converted once here.
-    revenue: o.revenue.map((r): RevenuePoint => ({
-      month: r.month,
-      revenue: Math.round(r.revenue_kobo / 100),
-    })),
+    revenue: o.revenue.map(
+      (r): RevenuePoint => ({
+        month: r.month,
+        revenue: Math.round(r.revenue_kobo / 100),
+      }),
+    ),
     growth: o.growth.map((g): GrowthPoint => ({ month: g.month, users: g.users })),
     vendorStatus: o.vendor_status,
     // Ids are positional: these rows come from four different tables and share

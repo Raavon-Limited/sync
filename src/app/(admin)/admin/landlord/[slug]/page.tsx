@@ -9,10 +9,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, MapPin, Phone, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Mail, MapPin, Phone, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { emailFor } from '@/modules/admin/emails';
 import { VerificationReview, type AdminDoc } from '@/components/admin/verification-review';
 
 import type { Row } from '@/lib/supabase/row';
@@ -44,7 +45,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
   if (!landlord) notFound();
 
-  const [{ data: hostels }, { data: owner }, { data: docs }] = await Promise.all([
+  const [{ data: hostels }, { data: owner }, { data: docs }, email] = await Promise.all([
     admin
       .from('hostels')
       .select('id, slug, name, area, room_type, price_per_session_kobo, verified')
@@ -66,6 +67,9 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
       .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
       .eq('owner_id', (landlord as Row).id)
       .order('uploaded_at', { ascending: false }),
+    // The address a reviewer would write to. auth.users, not profiles   see
+    // modules/admin/emails.
+    emailFor((landlord as Row).id as string),
   ]);
 
   // Scoped to this landlord's hostels. Reading the whole availability and visit
@@ -130,6 +134,12 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             <MapPin className="size-4" />
             {l.business_address ?? l.area ?? 'No address'}
           </span>
+          {email && (
+            <span className="flex items-center gap-1">
+              <Mail className="size-4" />
+              {email}
+            </span>
+          )}
           {(l.public_phone || (owner as Row)?.phone) && (
             <span className="flex items-center gap-1">
               <Phone className="size-4" />

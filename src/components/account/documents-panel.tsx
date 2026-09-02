@@ -32,6 +32,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { CheckCircle2, Circle, Clock, FileText, AlertCircle } from 'lucide-react';
 import { Badge, Button, Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -92,6 +93,29 @@ const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof 
 
 export function DocumentsPanel({
   /**
+   * Whose requirement list to show, when the caller knows better than the
+   * session does. A student is the case: their role is right in the session
+   * but their STATUS is not (below), and the two are read together often
+   * enough that guessing one from the other is how they drift.
+   */
+  role,
+  /**
+   * The authoritative verification status, when it does not live on `profiles`.
+   *
+   * profiles.verification_status is the MIRROR of vendor_profiles. For a
+   * student it reports the business decision, so a student who also lets a
+   * room saw their landlord verdict on this panel. student_profiles is the
+   * authority for them   see 20260903180000   and only the server can read it,
+   * so it is passed in rather than fetched here.
+   */
+  status,
+  /**
+   * Where an unfinished account is sent to finish. Students verify at
+   * /me/verify, which asks for a matric number as well as documents; the
+   * vendor wizard behind VerifyNowSheet would ask them for a trade.
+   */
+  continueHref,
+  /**
    * Set when a reviewer rejected this business permanently for fraud. Read on
    * the server from `vendor_profiles.verification_blocked_at`, because the
    * session carries `profiles` and the block lives on the business row.
@@ -101,13 +125,17 @@ export function DocumentsPanel({
    */
   blockedReason,
 }: {
+  role?: VerificationRole;
+  status?: string;
+  continueHref?: string;
   blockedReason?: string | null;
 } = {}) {
   const { profile } = useSession();
-  const verificationStatus = profile?.verificationStatus;
+  const verificationStatus = status ?? profile?.verificationStatus;
   const { data: docs = [], isLoading } = useMyDocuments();
 
-  const required = useMemo(() => requiredFor(roleFor(profile?.role)), [profile?.role]);
+  const shownRole = role ?? roleFor(profile?.role);
+  const required = useMemo(() => requiredFor(shownRole), [shownRole]);
 
   const items = useMemo<DocumentItem[]>(
     () =>
@@ -181,7 +209,28 @@ export function DocumentsPanel({
             that is already under review is a real thing to want, and the old
             copy is kept so a reviewer sees both. It reads as the secondary
             action it is. */}
-        {!verified && !awaitingReview && !blockedReason && (
+        {/* A LINK, NOT THE WIZARD, when the caller named a destination.
+            /me/verify asks a student for a matric number and a school ID;
+            VerifyNowSheet asks for a business name and a trade. Same button,
+            same place, and pointing a student at the wrong one is how they
+            abandon it. */}
+        {!verified && !awaitingReview && !blockedReason && continueHref && (
+          <Button
+            asChild
+            variant={outstanding.length > 0 ? 'outline' : 'ghost'}
+            className="shrink-0"
+          >
+            <Link href={continueHref}>
+              {nothingStarted
+                ? 'Start verification'
+                : outstanding.length > 0
+                  ? `Continue verification (${outstanding.length} left)`
+                  : 'Replace a document'}
+            </Link>
+          </Button>
+        )}
+
+        {!verified && !awaitingReview && !blockedReason && !continueHref && (
           <VerifyNowSheet
             initial={{
               fullName: profile?.fullName ?? '',

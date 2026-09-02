@@ -311,7 +311,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         // /me/verify, not a route of their own: that screen is role-driven and
         // serves every account whose status lives in profiles. The proxy admits
         // event managers to that one path specifically.
-        items: [{ href: '/me/verify', label: 'Verification', icon: ShieldCheck }],
+        items: [
+          { href: '/me/verify', label: 'Verification', icon: ShieldCheck },
+          { href: '/organiser/settings', label: 'Settings', icon: Settings },
+        ],
       },
     ],
   },
@@ -340,6 +343,13 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           // what a fleet is here. The page explains itself when there is none.
           { href: '/rider/fleet', label: 'My fleet', heading: 'Fleet', icon: Truck },
         ],
+      },
+      {
+        label: 'Account',
+        // A rider uploads their licence once, inside /rider/join, and until now
+        // had nowhere to see what a reviewer did with it. Settings is that
+        // place   the same panel a landlord has had all along.
+        items: [{ href: '/rider/settings', label: 'Settings', icon: Settings }],
       },
     ],
   },

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { emailFor } from '@/modules/admin/emails';
 import type { Row } from '@/lib/supabase/row';
 import { RiderDetail } from '../(components)/rider-detail';
 import type { AdminRider } from '../(components)/riders-console';
@@ -40,22 +41,26 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const r = riderRow as Row | null;
   if (!r) notFound();
 
-  const [{ data: person }, { data: company }, { data: docs }, { data: jobs }] = await Promise.all([
-    db
-      .from('profiles')
-      .select('full_name, phone, suspended_at, suspended_reason')
-      .eq('id', id)
-      .maybeSingle(),
-    r.company_id
-      ? db.from('logistics_companies').select('name').eq('id', r.company_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    db
-      .from('verification_documents')
-      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
-      .eq('owner_id', id)
-      .order('uploaded_at', { ascending: false }),
-    db.from('deliveries').select('status, fee_kobo').eq('rider_id', id).limit(1000),
-  ]);
+  const [{ data: person }, { data: company }, { data: docs }, { data: jobs }, email] =
+    await Promise.all([
+      db
+        .from('profiles')
+        .select('full_name, phone, suspended_at, suspended_reason')
+        .eq('id', id)
+        .maybeSingle(),
+      r.company_id
+        ? db.from('logistics_companies').select('name').eq('id', r.company_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      db
+        .from('verification_documents')
+        .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+        .eq('owner_id', id)
+        .order('uploaded_at', { ascending: false }),
+      db.from('deliveries').select('status, fee_kobo').eq('rider_id', id).limit(1000),
+      // The address a reviewer would write to. auth.users, not profiles   see
+      // modules/admin/emails.
+      emailFor(id),
+    ]);
 
   const p = person as Row | null;
 
@@ -75,6 +80,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     id,
     name: p?.full_name ?? 'Unnamed rider',
     phone: p?.phone ?? null,
+    email,
     vehicleType: r.vehicle_type ?? 'motorcycle',
     plateNumber: r.plate_number ?? null,
     verificationStatus: r.verification_status ?? 'unverified',
