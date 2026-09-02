@@ -204,6 +204,8 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
               { area: 'vendors', href: '/admin/vendors' },
               { area: 'landlords', href: '/admin/landlord' },
               { area: 'riders', href: '/admin/riders' },
+              { area: 'students', href: '/admin/students' },
+              { area: 'events', href: '/admin/events' },
             ],
           },
           {

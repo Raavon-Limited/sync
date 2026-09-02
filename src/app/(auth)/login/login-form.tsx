@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { readStandalone } from '@/lib/pwa/use-install';
+import { readAppSurface } from '@/lib/pwa/use-install';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -47,15 +47,17 @@ const RESEND_COOLDOWN = 60;
  * bottom bar's "You" tab on mobile. What differs is only the DEFAULT landing
  * spot, and it differs by surface rather than by role:
  *
- *   web     -> your dashboard. Signing in on a website is an administrative
- *              act; you came to do something with your account.
- *   PWA     -> /around. Home in the installed app is the feed, the same place
- *              the bottom bar's Home tab and signing out both go. Opening an
- *              app from the home screen and landing on a settings surface
- *              reads as the wrong screen.
+ *   desktop -> your dashboard. Signing in at a desk is an administrative act;
+ *              you came to do something with your account.
+ *   phone   -> /around. Home on a phone is the feed, the same place the bottom
+ *              bar's Home tab and signing out both go. Opening the app and
+ *              landing on a settings surface reads as the wrong screen.
  *
- * Students used to land on /around on BOTH, which meant the web had no route
- * into the dashboard except hunting for the user menu.
+ * THE TEST IS THE SURFACE, NOT WHETHER THE APP IS INSTALLED. This asked
+ * `readStandalone()`, which is true only when launched from the home screen —
+ * so signing in from Safari on a phone counted as desktop and got the
+ * dashboard. Installing is a step most people never take, and the ones who have
+ * not are still holding a phone. See readAppSurface.
  *
  * Admins are exempt: /admin is their only surface, so there is no second
  * destination to choose between.
@@ -81,7 +83,7 @@ function destFor(role: string | undefined, handle?: string, next?: string) {
   };
   const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/me');
 
-  return readStandalone() ? '/around' : dashboard;
+  return readAppSurface() ? '/around' : dashboard;
 }
 
 /** What each hat is called, and where it lives. Mirrors RoleSwitcher. */

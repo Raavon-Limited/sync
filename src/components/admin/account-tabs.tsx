@@ -37,7 +37,9 @@ export type AccountTabKey =
   | 'laundry'
   | 'tradesman'
   | 'landlords'
-  | 'riders';
+  | 'riders'
+  | 'students'
+  | 'events';
 
 interface TabSpec {
   key: string;
@@ -68,10 +70,12 @@ const TABS: TabSpec[] = [
   },
   { key: 'landlords', label: 'Landlords', href: '/admin/landlord', area: 'landlords' },
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },
-  // Product surfaces with no review screen yet. Listed so the shape of what is
-  // coming is visible, and so nobody builds a second nav for them later.
-  { key: 'events', label: 'Events', soon: true },
-  { key: 'hotspots', label: 'Hotspots', soon: true },
+  { key: 'students', label: 'Students', href: '/admin/students', area: 'students' },
+  { key: 'events', label: 'Events', href: '/admin/events', area: 'events' },
+  // The account type does not exist yet — /signup lists it as "Not yet" for the
+  // same reason. Listed here so the shape of what is coming is visible, and so
+  // nobody builds a second nav for it later.
+  { key: 'creators', label: 'Content creators', soon: true },
 ];
 
 export async function AccountTabs({ active }: { active: AccountTabKey }) {

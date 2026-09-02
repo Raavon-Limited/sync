@@ -49,16 +49,47 @@ import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { signupSchema, type SignupInput, type Trade, type VendorCategory } from '@/lib/validations';
 import { signUp } from '@/modules/auth/actions';
+import { readAppSurface } from '@/lib/pwa/use-install';
 import { useCampuses, type Campus } from '@/modules/campuses';
 import { CampusInput } from '@/components/forms/campus-input';
 
-const ROLES: { id: SignupInput['role']; label: string; desc: string }[] = [
+/**
+ * The account types, including the ones you cannot pick yet.
+ *
+ * WHY LIST WHAT IS NOT BUILT
+ *   Somebody arriving to sign up as a content creator should find out here,
+ *   in one glance, rather than picking the nearest wrong thing and becoming a
+ *   support ticket. Showing the shape of the platform is also how people learn
+ *   it is coming — a role that only appears the day it ships is a role nobody
+ *   was waiting for.
+ *
+ *   `id` is null for those. It cannot be a real role id: SignupInput['role']
+ *   is a three-value union and the schema rejects anything else, which is the
+ *   second line of defence if one of these ever became clickable by accident.
+ */
+type RoleCard =
+  | { id: SignupInput['role']; label: string; desc: string; soon?: false }
+  | { id: null; label: string; desc: string; soon: true };
+
+const ROLES: RoleCard[] = [
   { id: 'student', label: "I'm a student", desc: 'Find hostels, food & services' },
   { id: 'vendor', label: 'I sell or rent', desc: 'Rooms, food, services & more' },
   // A rider answers nothing else here. Vehicle, plate and documents belong to
   // the onboarding they meet on their own dashboard — asking for a plate number
   // beside a password field is how a signup form stops being a signup form.
   { id: 'rider', label: 'I deliver', desc: 'Take delivery jobs on your campus' },
+  {
+    id: null,
+    soon: true,
+    label: 'I create content',
+    desc: 'Shoot and post for campus businesses',
+  },
+  {
+    id: null,
+    soon: true,
+    label: 'I run events',
+    desc: 'List parties, shows and sell tickets',
+  },
 ];
 
 const VENDOR_CATEGORIES: { value: VendorCategory; label: string }[] = [
@@ -217,12 +248,30 @@ export function SignupForm({
     // type a code that does not exist is a dead end with no way out, so go
     // straight in. Business roles still need the onboarding wizard.
     if (res.signedIn) {
-      // A RIDER DOES NOT GO TO /onboarding. That route is the vendor wizard and
-      // the proxy gates it to vendor/landlord, so `role !== 'student'` alone
-      // would drop a new rider straight onto a 403. They land on their own
-      // dashboard, which asks for the rest when they get there.
+      /*
+       * A RIDER DOES NOT GO TO /onboarding. That route is the vendor wizard and
+       * the proxy gates it to vendor/landlord, so `role !== 'student'` alone
+       * would drop a new rider straight onto a 403. They land on their own
+       * dashboard, which asks for the rest when they get there.
+       *
+       * A STUDENT ON A PHONE LANDS ON /around, the same as signing in — see
+       * destFor in the login form. Home on a phone is the feed, and a brand new
+       * account has nothing on its dashboard to look at yet, which makes it the
+       * worst possible first screen.
+       *
+       * BUSINESS AND RIDER ROLES ARE NOT REROUTED, on any surface. Onboarding
+       * and the rider's own setup are not preferences, they are the work that
+       * has to happen before the account can do anything — sending them to a
+       * feed first would be hiding the one screen they need.
+       */
       const home =
-        values.role === 'rider' ? '/rider' : values.role === 'student' ? '/me' : '/onboarding';
+        values.role === 'rider'
+          ? '/rider'
+          : values.role === 'student'
+            ? readAppSurface()
+              ? '/around'
+              : '/me'
+            : '/onboarding';
       router.push(next ?? home);
       router.refresh();
       return;
@@ -310,25 +359,39 @@ export function SignupForm({
                 telling anyone anything. */}
             <div className="flex flex-col gap-2.5">
               {ROLES.map((r) => {
-                const selected = role === r.id;
+                const selected = r.id !== null && role === r.id;
+                /*
+                 * A role that is not built yet is rendered as a DISABLED
+                 * button, not as a div styled to look inert. The button
+                 * carries `disabled`, so the browser skips it in the tab order
+                 * and screen readers announce it as unavailable — neither of
+                 * which a div would do, and both of which are the actual point
+                 * of showing it.
+                 */
+                const soon = r.soon === true;
                 return (
                   <button
-                    key={r.id}
+                    key={r.label}
                     type="button"
-                    onClick={() => selectRole(r.id)}
-                    aria-pressed={selected}
+                    disabled={soon}
+                    onClick={() => {
+                      if (r.id) selectRole(r.id);
+                    }}
+                    aria-pressed={soon ? undefined : selected}
                     className={cn(
                       'flex w-full items-center justify-between gap-3 rounded-2xl border p-4 pr-2 text-left transition-all',
-                      selected
-                        ? 'border-line bg-lime shadow-[3px_3px_0_0_var(--color-ink)]'
-                        : 'border-line/15 hover:border-line/40 bg-panel',
+                      soon
+                        ? 'border-line/10 bg-panel/50 cursor-not-allowed'
+                        : selected
+                          ? 'border-line bg-lime shadow-[3px_3px_0_0_var(--color-ink)]'
+                          : 'border-line/15 hover:border-line/40 bg-panel',
                     )}
                   >
                     <span className="min-w-0">
                       <span
                         className={cn(
                           'font-display block text-base font-bold',
-                          selected ? 'text-ink' : 'text-content',
+                          soon ? 'text-content/40' : selected ? 'text-ink' : 'text-content',
                         )}
                       >
                         {r.label}
@@ -336,22 +399,32 @@ export function SignupForm({
                       <span
                         className={cn(
                           'mt-0.5 block text-sm',
-                          selected ? 'text-ink/70' : 'text-content-muted',
+                          soon
+                            ? 'text-content-muted/50'
+                            : selected
+                              ? 'text-ink/70'
+                              : 'text-content-muted',
                         )}
                       >
                         {r.desc}
                       </span>
                     </span>
-                    <span
-                      className={cn(
-                        'flex h-5 w-5 shrink-0 items-center justify-center border',
-                        selected
-                          ? 'border-line bg-ink rounded-md text-white'
-                          : 'border-line/30 rounded-full',
-                      )}
-                    >
-                      {selected && <Check className="h-3 w-3" strokeWidth={3} />}
-                    </span>
+                    {soon ? (
+                      <span className="border-line/20 text-content-muted/60 mr-2 shrink-0 rounded-full border px-2 py-0.5 text-[10px] tracking-wide whitespace-nowrap uppercase">
+                        Not yet
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center border',
+                          selected
+                            ? 'border-line bg-ink rounded-md text-white'
+                            : 'border-line/30 rounded-full',
+                        )}
+                      >
+                        {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+                      </span>
+                    )}
                   </button>
                 );
               })}

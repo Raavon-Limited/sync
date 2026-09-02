@@ -37,6 +37,36 @@ export function readStandalone(): boolean {
   }
 }
 
+/**
+ * Is this the APP, as a person would mean it — a phone — rather than a desktop
+ * browser?
+ *
+ * WHY THIS IS NOT `readStandalone`
+ *   Standalone means "launched from the home screen", which is a much narrower
+ *   thing than "on a phone". Signing in from Safari on an iPhone is not
+ *   standalone, so anything gated on that treated a phone as a desktop and sent
+ *   people to a dashboard — the exact complaint this answers. Installing is a
+ *   step most people never take, and the ones who have not are still on a phone.
+ *
+ *   Standalone still counts on its own: an installed app is the app whatever
+ *   size the window is.
+ *
+ * 768px is Tailwind's `md`, which is already where the dashboards swap their
+ * sidebar for a drawer. Landing rules and layout should break at the same
+ * place, or there is a width where you get the phone's destination and the
+ * desktop's furniture.
+ *
+ * Answers false when there is no window (SSR). Every caller uses it to pick a
+ * redirect inside an event handler, which only ever runs in the browser.
+ */
+export function readAppSurface(): boolean {
+  try {
+    return readStandalone() || window.matchMedia('(max-width: 767px)').matches;
+  } catch {
+    return false;
+  }
+}
+
 export function subscribeStandalone(cb: () => void) {
   const mq = window.matchMedia(STANDALONE_QUERY);
   mq.addEventListener('change', cb);

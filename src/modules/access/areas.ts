@@ -77,9 +77,21 @@ export const ADMIN_AREAS: AreaSpec[] = [
     href: '/admin/verify-visits',
   },
   {
+    key: 'students',
+    label: 'Students',
+    description: 'The people the platform is for. Suspend or archive one.',
+    href: '/admin/students',
+  },
+  {
+    key: 'events',
+    label: 'Events',
+    description: 'What is being listed on campus, and who is running it.',
+    href: '/admin/events',
+  },
+  {
     key: 'users',
     label: 'Users',
-    description: 'The account directory, and archiving an account.',
+    description: 'The account directory — every role in one list.',
     href: '/admin/users',
   },
   {
