@@ -20,6 +20,7 @@ import { useState, useTransition } from 'react';
 import { CircleDot, Loader2, ShieldAlert, ShieldCheck, Clock, Upload } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { setRiderOnline } from '@/modules/rider/actions';
+import { SITE } from '@/config/site';
 import type { RiderProfile } from '@/modules/rider/queries';
 
 export function RiderStatus({ rider }: { rider: RiderProfile }) {
@@ -45,7 +46,7 @@ export function RiderStatus({ rider }: { rider: RiderProfile }) {
         title="Your account is suspended"
         body={
           rider.suspendedReason ??
-          'You cannot take deliveries right now. Contact support@letsyncyou.com.'
+          `You cannot take deliveries right now. Contact ${SITE.support.help}.`
         }
       />
     );
@@ -57,7 +58,7 @@ export function RiderStatus({ rider }: { rider: RiderProfile }) {
         tone="coral"
         icon={<ShieldAlert className="size-5 shrink-0" aria-hidden="true" />}
         title="This account cannot be verified"
-        body={rider.blockedReason ?? 'Contact support@letsyncyou.com.'}
+        body={rider.blockedReason ?? `Contact ${SITE.support.help}.`}
       />
     );
   }

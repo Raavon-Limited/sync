@@ -81,10 +81,10 @@ export async function sendMail(input: {
       subject: input.subject,
       html: input.html,
       // The templates end with "replying to this email reaches our support
-      // team". That was only true by accident of which address EMAIL_FROM
-      // happened to hold   this makes it true by construction, and keeps it
-      // true if the sender is ever moved to a no-reply identity.
-      replyTo: SITE.support.email,
+      // team", so the reply lands on the SUPPORT alias rather than the general
+      // one: a reply to a verification decision is somebody with a problem,
+      // and it should arrive looking like one.
+      replyTo: SITE.support.help,
     });
 
     if (error) {
@@ -209,7 +209,7 @@ export async function sendMailBatch(
           to: m.to,
           subject: m.subject,
           html: m.html,
-          replyTo: SITE.support.email,
+          replyTo: SITE.support.help,
         })),
       );
       if (error) {

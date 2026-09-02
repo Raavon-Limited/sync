@@ -36,15 +36,26 @@ export const SITE = {
   url: 'https://www.letsyncyou.com',
   support: {
     /**
-     * The one public address. Was support@sync.ng, on a domain the product no
+     * The general address. Was support@sync.ng, on a domain the product no
      * longer uses - it appeared on all four legal pages, so anyone exercising
      * a data-protection right was writing to a mailbox at the wrong company.
      *
-     * There is deliberately no second address here. sales@ was hardcoded in
-     * the vendor plan card and pointed at the same dead domain; one inbox that
-     * is read beats two that are not.
+     * This is the one on the legal pages, in the footer and on the vendor plan
+     * card: "talk to Sync about Sync". sales@ is deliberately still absent.
      */
     email: 'hello@letsyncyou.com',
+    /**
+     * Where somebody is sent when something has gone WRONG for them   a rider
+     * who cannot take deliveries, an account that will not finish setting up,
+     * a reply to a verification decision.
+     *
+     * A separate alias rather than a second inbox to check: it lands in the
+     * same place, and it means the messages that arrive because the product
+     * failed somebody can be told apart from the ones that do not. Those
+     * strings used to be typed out in four files, which is three too many for
+     * an address that appears at the worst possible moment.
+     */
+    help: 'support@letsyncyou.com',
   },
   socials: {
     x: 'https://x.com/syncng',

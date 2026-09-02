@@ -50,6 +50,15 @@ export interface DbErrorLike {
  *
  * Order matters   first match wins.
  */
+import { SITE } from '@/config/site';
+
+/**
+ * The address a failure sends somebody to. Interpolated rather than typed out,
+ * because it appeared verbatim in four files and an address that only shows up
+ * when the product has already failed is the worst one to let drift.
+ */
+const HELP = SITE.support.help;
+
 const BY_MESSAGE: [RegExp, string][] = [
   // ── Auth: signup ──────────────────────────────────────────────────────────
   // GoTrue's blanket wrapper for "a trigger on auth.users raised". The cause is
@@ -57,7 +66,7 @@ const BY_MESSAGE: [RegExp, string][] = [
   // something wrong.
   [
     /database error (saving|granting|querying|finding|creating|confirming|loading|deleting)/i,
-    'We could not finish setting up your account. This one is on us   please try again, and contact support@letsyncyou.com if it keeps happening.',
+    `We could not finish setting up your account. This one is on us   please try again, and contact ${HELP} if it keeps happening.`,
   ],
   [
     /already registered|already been registered|user already exists|email address is already/i,
@@ -129,8 +138,7 @@ const BY_CODE: Record<string, string> = {
   '23514': 'Some of those details are not valid. Check them and try again.',
   '22P02': 'Some of those details are not in the right format. Check them and try again.',
   // GoTrue slugs, for the cases its message text is unhelpful or absent.
-  unexpected_failure:
-    'Something went wrong on our side. Please try again, and contact support@letsyncyou.com if it keeps happening.',
+  unexpected_failure: `Something went wrong on our side. Please try again, and contact ${HELP} if it keeps happening.`,
   email_exists: 'An account with this email already exists. Log in instead.',
   user_already_exists: 'An account with this email already exists. Log in instead.',
   otp_expired: 'That code has expired. Ask for a new one and try again.',
