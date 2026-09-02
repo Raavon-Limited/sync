@@ -3,9 +3,13 @@
  * ACCESS: authenticated landlord
  * PURPOSE: Account settings, organised into sections - verification documents
  * and the danger zone (delete account). Add further setting classes as sections.
+ *
+ * THE BUSINESS PROFILE IS NOT HERE
+ *   The card, the logo and the shopfront details moved to /landlord/profile. They were
+ *   the largest thing on a page somebody opens to see what a reviewer did with
+ *   their documents, and none of them is a setting.
  */
 import type { Metadata } from 'next';
-import { BusinessProfileForm } from '@/components/account/business-profile-form';
 import { DeleteAccountButton } from '@/components/account/delete-account-button';
 import { DocumentsPanel } from '@/components/account/documents-panel';
 import { SettingsSection } from '@/components/account/settings-section';
@@ -44,13 +48,6 @@ export default async function Page() {
   const blocked = await blockedReason();
   return (
     <section className="flex flex-col gap-8">
-      <SettingsSection
-        title="Business profile"
-        description="Your name, contact details and address as students see them on your hostels."
-      >
-        <BusinessProfileForm />
-      </SettingsSection>
-
       <SettingsSection
         title="Verification documents"
         description="Your uploaded documents (CAC, ID, proof of ownership) and their verification status."

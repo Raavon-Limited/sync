@@ -1,22 +1,29 @@
 /**
  * ROUTE: /landlord/inbox
  * ACCESS: landlord (gated in proxy.ts)
- * STATUS: Coming soon.
+ * PURPOSE: Messages between this landlord and the students booking their rooms.
  *
- * This route exists because config/dashboard-nav lists it, and the sidebar
- * therefore links to it. Before this file the link 404'd - the nav promised a
- * page that had never been built. The codebase's own rule applies: a nav entry
- * that 404s is worse than one that says "not yet".
+ * IT USES THE REAL CHAT, NOT A SECOND ONE
+ *   The landlord branch shipped its own inbox over a mock array of inquiries
+ *   with canned quick-replies. Meanwhile the vendor inbox has been running on
+ *   the actual messaging module - `conversations`, `messages`, realtime
+ *   channels, attachments - since it was built. Porting the mock would have
+ *   given landlords a chat that talks to nobody, and given the platform two
+ *   inboxes to keep in step.
  *
- * Replace <ComingSoon /> with the real screen when the module is built.
+ *   A landlord IS a vendor_profiles row, so the same component works unchanged:
+ *   the threads it lists are the ones this account is a participant in, which
+ *   RLS already scopes.
  */
 import type { Metadata } from 'next';
-import { Inbox } from 'lucide-react';
-
-import { ComingSoon } from '@/components/shared/coming-soon';
+import ChatComponent from '@/app/(vendor)/vendor/inbox/(components)/chat-component';
 
 export const metadata: Metadata = { title: 'Inbox' };
 
 export default function Page() {
-  return <ComingSoon title="Inbox" tagline="Messages from students about your properties." icon={Inbox} note="The messaging module is live; this view reuses it." />;
+  return (
+    <section className="h-full overflow-hidden">
+      <ChatComponent />
+    </section>
+  );
 }

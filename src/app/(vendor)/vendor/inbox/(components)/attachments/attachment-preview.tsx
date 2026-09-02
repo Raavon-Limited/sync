@@ -24,16 +24,16 @@ export function AttachmentPreview({ attachment, onRemove, onPreview }: Attachmen
 
       case 'video':
         return (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl bg-slate-100">
-            <Video className="size-7 text-slate-700" />
+          <div className="bg-surface-deep flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl">
+            <Video className="text-content-muted size-7" />
             <p className="line-clamp-2 px-2 text-center text-[11px]">{file.name}</p>
           </div>
         );
 
       case 'audio':
         return (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl bg-violet-50">
-            <Music className="size-7 text-violet-600" />
+          <div className="bg-accent/15 flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl">
+            <Music className="text-accent-fg size-7" />
             <p className="line-clamp-2 px-2 text-center text-[11px]">{file.name}</p>
           </div>
         );
@@ -53,7 +53,7 @@ export function AttachmentPreview({ attachment, onRemove, onPreview }: Attachmen
       <Button
         type="button"
         onClick={() => onPreview(attachment)}
-        className="border-ink/5 m-0 h-full w-full overflow-hidden rounded-xl border bg-white p-0 hover:bg-transparent"
+        className="border-line/10 bg-panel m-0 h-full w-full overflow-hidden rounded-xl border p-0 hover:bg-transparent"
       >
         {renderPreview()}
       </Button>

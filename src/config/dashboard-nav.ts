@@ -22,7 +22,6 @@ import {
   Inbox,
   LayoutDashboard,
   List,
-  BadgeCheck,
   MapPin,
   UserCheck,
   Mail,
@@ -159,7 +158,17 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       },
       {
         label: 'Account',
-        items: [{ href: '/vendor/settings', label: 'Settings', icon: Settings }],
+        // PROFILE IS ITS OWN ROW ON EVERY DASHBOARD.
+        //
+        // The ID card and the picture used to live under Settings, which put
+        // "who am I on Sync" behind a word that means "configure the product".
+        // They are the account, not a preference   so every role now has the
+        // same pair of rows in the same order, and Settings keeps documents,
+        // verification and the danger zone.
+        items: [
+          { href: '/vendor/profile', label: 'Profile', heading: 'Your profile', icon: UserRound },
+          { href: '/vendor/settings', label: 'Settings', icon: Settings },
+        ],
       },
     ],
   },
@@ -182,7 +191,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       },
       {
         label: 'Account',
-        items: [{ href: '/landlord/settings', label: 'Settings', icon: Settings }],
+        items: [
+          { href: '/landlord/profile', label: 'Profile', heading: 'Your profile', icon: UserRound },
+          { href: '/landlord/settings', label: 'Settings', icon: Settings },
+        ],
       },
     ],
   },
@@ -283,7 +295,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           { href: '/admin/mail', label: 'Mail centre', icon: Mail, area: 'mail' },
           // NO AREA, deliberately: it is this person's own ID card, and a
           // reviewer granted riders alone still knocks on doors.
-          { href: '/admin/card', label: 'My staff ID', icon: BadgeCheck },
+          { href: '/admin/profile', label: 'Profile', heading: 'Your staff ID', icon: UserRound },
           { href: '/admin/settings', label: 'Settings', icon: Settings, area: 'settings' },
         ],
       },
@@ -331,6 +343,12 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         // serves every account whose status lives in profiles. The proxy admits
         // event managers to that one path specifically.
         items: [
+          {
+            href: '/organiser/profile',
+            label: 'Profile',
+            heading: 'Your profile',
+            icon: UserRound,
+          },
           { href: '/user/verify', label: 'Verification', icon: ShieldCheck },
           { href: '/organiser/settings', label: 'Settings', icon: Settings },
         ],
@@ -355,7 +373,9 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         label: 'Account',
         // No area: it is their own ID, and it is the thing a landlord asks to
         // see before opening a gate.
-        items: [{ href: '/agent/card', label: 'Your Sync ID', icon: BadgeCheck }],
+        items: [
+          { href: '/agent/profile', label: 'Profile', heading: 'Your Sync ID', icon: UserRound },
+        ],
       },
     ],
   },
@@ -390,7 +410,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
         // A rider uploads their licence once, inside /rider/join, and until now
         // had nowhere to see what a reviewer did with it. Settings is that
         // place   the same panel a landlord has had all along.
-        items: [{ href: '/rider/settings', label: 'Settings', icon: Settings }],
+        items: [
+          { href: '/rider/profile', label: 'Profile', heading: 'Your profile', icon: UserRound },
+          { href: '/rider/settings', label: 'Settings', icon: Settings },
+        ],
       },
     ],
   },

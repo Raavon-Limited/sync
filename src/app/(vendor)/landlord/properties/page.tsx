@@ -1,22 +1,54 @@
 /**
  * ROUTE: /landlord/properties
  * ACCESS: landlord (gated in proxy.ts)
- * STATUS: Coming soon.
+ * PURPOSE: The hostels this landlord lists, and adding another.
  *
- * This route exists because config/dashboard-nav lists it, and the sidebar
- * therefore links to it. Before this file the link 404'd - the nav promised a
- * page that had never been built. The codebase's own rule applies: a nav entry
- * that 404s is worse than one that says "not yet".
+ * WAS A COMING-SOON PLACEHOLDER. The screen came from the landlord branch,
+ * where it read a mock array and persisted edits to `localStorage` - a hostel
+ * added on a phone did not exist on a laptop, was invisible to a student
+ * searching, and never reached the reviewer whose job is to confirm it is real.
+ * It now reads `hostels`, which is where the rest of the platform has been
+ * looking all along.
  *
- * Replace <ComingSoon /> with the real screen when the module is built.
+ * OCCUPANCY COMES FROM `hostel_availability`, not from counting bookings here.
+ * That view already knows what is free, and a second definition of "occupied"
+ * would disagree with it the first time a booking was cancelled.
  */
 import type { Metadata } from 'next';
-import { Building2 } from 'lucide-react';
-
-import { ComingSoon } from '@/components/shared/coming-soon';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { getCurrentUser } from '@/modules/auth/queries';
+import { PageHeader } from '../(components)/shared/page-header';
+import { getLandlordProperties } from '../(components)/landlord-queries';
+import { PropertiesClient } from './properties-client';
 
 export const metadata: Metadata = { title: 'Properties' };
 
-export default function Page() {
-  return <ComingSoon title="Properties" tagline="Your hostels and rooms, all in one list." icon={Building2} note="Listings live under the vendor dashboard today; the landlord view is next." />;
+// A listing added a moment ago has to be here a moment later.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login?next=/landlord/properties');
+
+  const properties = await getLandlordProperties(user.id);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Properties"
+        description="Your hostels and rooms, and how much of each is taken."
+      >
+        <Button asChild>
+          <Link href="/landlord/properties/new">
+            <Plus className="size-4" /> Add a property
+          </Link>
+        </Button>
+      </PageHeader>
+
+      <PropertiesClient properties={properties} />
+    </div>
+  );
 }

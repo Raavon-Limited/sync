@@ -27,12 +27,7 @@ import { ChatMessage } from '@/modules/vendor/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
-import {
-  ChatTheme,
-  ConversationPrefs,
-  DEFAULT_PREFS,
-  useChatStore,
-} from '@/store/use-chat-store';
+import { ChatTheme, ConversationPrefs, DEFAULT_PREFS, useChatStore } from '@/store/use-chat-store';
 
 /*
  * Stable empty values used before hydration. zustand's persist middleware reads
@@ -56,7 +51,6 @@ function mimeToAttachmentType(mime: string | null): AttachmentType {
   if (mime.startsWith('audio/')) return 'audio';
   return 'document';
 }
-
 
 export default function ChatComponent() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -186,9 +180,7 @@ export default function ChatComponent() {
    */
   const unreadCount = useMemo(
     () =>
-      contacts.filter(
-        (contact) => !deletedIds.includes(contact.id) && contact.hasUnread,
-      ).length,
+      contacts.filter((contact) => !deletedIds.includes(contact.id) && contact.hasUnread).length,
     [contacts, deletedIds],
   );
 
@@ -533,7 +525,7 @@ export default function ChatComponent() {
 
   return (
     <>
-      <div className="border-ink/5 flex h-[calc(100vh-170px)] overflow-hidden rounded-xl border bg-white">
+      <div className="border-line/10 bg-panel flex h-[calc(100vh-170px)] overflow-hidden rounded-xl border">
         {/* Mobile */}
         <div className="h-full w-full lg:hidden">
           {!chatWindowProps ? (

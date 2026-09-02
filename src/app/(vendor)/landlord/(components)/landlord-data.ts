@@ -61,10 +61,7 @@ export async function getLandlordDashboard(landlordId: string): Promise<Landlord
     (s, a) => s + (a.rooms_available ?? 0),
     0,
   );
-  const roomsTotal = ((availability ?? []) as Row[]).reduce(
-    (s, a) => s + (a.rooms_total ?? 0),
-    0,
-  );
+  const roomsTotal = ((availability ?? []) as Row[]).reduce((s, a) => s + (a.rooms_total ?? 0), 0);
 
   const releases = ((ledger ?? []) as Row[]).filter(
     (t) => t.kind === 'escrow_release' && t.direction === 'in',

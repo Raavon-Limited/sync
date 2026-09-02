@@ -69,7 +69,7 @@ function BackItem({ onBack }: { onBack: (event: Event) => void }) {
         Back
       </DropdownMenu.Item>
 
-      <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+      <DropdownMenu.Separator className="bg-line/15 my-1 h-px" />
     </>
   );
 }
@@ -115,7 +115,10 @@ export function ChatMoreMenu({
       }}
     >
       <DropdownMenu.Trigger asChild>
-        <button className="rounded-md p-2 transition hover:bg-gray-100" aria-label="More options">
+        <button
+          className="hover:bg-surface-deep rounded-md p-2 transition"
+          aria-label="More options"
+        >
           <MoreHorizontal className="size-5" />
         </button>
       </DropdownMenu.Trigger>
@@ -124,7 +127,7 @@ export function ChatMoreMenu({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 min-w-[250px] rounded-2xl bg-white p-2 shadow-xl outline-none"
+          className="bg-panel z-50 min-w-[250px] rounded-2xl p-2 shadow-xl outline-none"
         >
           {panel === 'main' && (
             <>
@@ -148,7 +151,7 @@ export function ChatMoreMenu({
                 Search Conversation
               </DropdownMenu.Item>
 
-              <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+              <DropdownMenu.Separator className="bg-line/15 my-1 h-px" />
 
               <DropdownMenu.Item onSelect={onMute} className="menu-item">
                 {muted ? <Bell size={18} /> : <BellOff size={18} />}
@@ -165,12 +168,12 @@ export function ChatMoreMenu({
                 {archived ? 'Unarchive Conversation' : 'Archive Conversation'}
               </DropdownMenu.Item>
 
-              <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+              <DropdownMenu.Separator className="bg-line/15 my-1 h-px" />
 
               <DropdownMenu.Item className="menu-item" onSelect={goTo('theme')}>
                 <Palette size={18} />
                 Chat Theme
-                <span className="text-muted ml-auto flex items-center gap-1.5 text-xs">
+                <span className="text-content-muted ml-auto flex items-center gap-1.5 text-xs">
                   {CHAT_THEMES[theme].label}
                   <ChevronRight size={16} />
                 </span>
@@ -182,7 +185,7 @@ export function ChatMoreMenu({
                 <ChevronRight size={16} className="ml-auto" />
               </DropdownMenu.Item>
 
-              <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
+              <DropdownMenu.Separator className="bg-line/15 my-1 h-px" />
 
               <DropdownMenu.Item className="menu-item" onSelect={goTo('more')}>
                 More
@@ -203,7 +206,7 @@ export function ChatMoreMenu({
                 >
                   <span
                     className={cn(
-                      'border-ink/15 size-4 shrink-0 rounded-full border',
+                      'border-line/20 size-4 shrink-0 rounded-full border',
                       CHAT_THEMES[option].swatch,
                     )}
                   />
@@ -236,7 +239,7 @@ export function ChatMoreMenu({
 
               <DropdownMenu.Item
                 onSelect={onBlock}
-                className={cn('menu-item', !blocked && 'text-red-500')}
+                className={cn('menu-item', !blocked && 'text-coral')}
               >
                 {blocked ? <ShieldOff size={18} /> : <Shield size={18} />}
                 {blocked ? 'Unblock Customer' : 'Block Customer'}
@@ -252,7 +255,7 @@ export function ChatMoreMenu({
                 Clear Conversation
               </DropdownMenu.Item>
 
-              <DropdownMenu.Item onSelect={onDelete} className="menu-item text-red-500">
+              <DropdownMenu.Item onSelect={onDelete} className="menu-item text-coral">
                 <Trash2 size={18} />
                 Delete Conversation
               </DropdownMenu.Item>

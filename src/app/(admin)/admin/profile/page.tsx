@@ -1,9 +1,10 @@
 /**
- * ROUTE: /admin/card
+ * ROUTE: /admin/profile   (was /admin/card, redirected in next.config)
  * ACCESS: any staff account. No area is required and that is deliberate   this
  *         page is about the PERSON, not about a part of the console. A reviewer
  *         granted riders alone still knocks on doors.
- * PURPOSE: The staff ID card, and the QR somebody can scan to check it.
+ * PURPOSE: The staff ID card, the QR somebody can scan to check it, and the
+ *          picture and contact details behind it.
  *
  * WHY STAFF NEED ONE MOST
  *   Every other card answers "is this account real". This one answers a
@@ -13,6 +14,10 @@
  *   makes impersonating staff the cheapest attack on the platform, and the one
  *   with the most to steal at the end of it.
  *
+ *   Which is also why the picture matters here more than anywhere: a card with
+ *   a face on it is checkable by the person at the door, and a face is the one
+ *   thing somebody who stole a printed card cannot bring with them.
+ *
  * WHAT THE CARD SAYS AND WHAT IT DOES NOT
  *   It names the console role they hold, because that is the claim being
  *   tested. It does not list areas, permissions or an email address: a card is
@@ -21,8 +26,8 @@
  */
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { AccountProfile } from '@/components/account/account-profile';
 import { MySyncIdCard } from '@/components/account/my-sync-id-card';
-import { SettingsSection } from '@/components/account/settings-section';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
@@ -74,25 +79,26 @@ export default async function Page() {
         </p>
       </div>
 
-      <SettingsSection
-        title="Your Sync ID"
-        description="Downloadable, printable, and addressed by a code that appears nowhere else. Reissue it the moment a printed one goes missing."
-      >
-        <MySyncIdCard
-          kind="staff"
-          holderName={profile.full_name}
-          context={`Sync staff · ${label}`}
-          // Staff status is a grant, not a document check: holding console
-          // access IS the credential, so the card says so plainly rather than
-          // reporting the personal verification_status, which for a staff
-          // account is usually 'unverified' and would read as a warning.
-          status="verified"
-          memberSince={user?.created_at ?? null}
-          photoUrl={profile.avatar_url}
-          facts={[{ label: 'Console role', value: label }]}
-          fileName="staff"
-        />
-      </SettingsSection>
+      <AccountProfile
+        // Staff status is a grant, not a document check. The form's read-only
+        // line would otherwise report the personal verification_status, which
+        // for a staff account is usually 'unverified' and reads as a warning
+        // next to a card that correctly says VERIFIED.
+        verificationStatus="verified"
+        cardDescription="Downloadable, printable, and addressed by a code that appears nowhere else. Reissue it the moment a printed one goes missing."
+        idCard={
+          <MySyncIdCard
+            kind="staff"
+            holderName={profile.full_name}
+            context={`Sync staff · ${label}`}
+            status="verified"
+            memberSince={user?.created_at ?? null}
+            photoUrl={profile.avatar_url}
+            facts={[{ label: 'Console role', value: label }]}
+            fileName="staff"
+          />
+        }
+      />
     </section>
   );
 }

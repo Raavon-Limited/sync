@@ -47,6 +47,19 @@ const nextConfig: NextConfig = {
     return [
       { source: '/me', destination: '/user', permanent: true },
       { source: '/me/:path*', destination: '/user/:path*', permanent: true },
+
+      /**
+       * The two ID-card pages became profile pages.
+       *
+       * Every dashboard now has one Profile row holding the card and the
+       * details behind it, so the staff and agent pages that were only ever
+       * "your card" are that page for those roles. The old paths are days old
+       * and mostly reached from a sidebar   but an agent standing at a gate
+       * with /agent/card open on their phone is exactly the person who must
+       * not meet a 404, so they redirect rather than disappear.
+       */
+      { source: '/admin/card', destination: '/admin/profile', permanent: true },
+      { source: '/agent/card', destination: '/agent/profile', permanent: true },
     ];
   },
 

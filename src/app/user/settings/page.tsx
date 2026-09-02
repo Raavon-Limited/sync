@@ -3,6 +3,12 @@
  * ACCESS: authenticated student
  * PURPOSE: Account settings - where verification stands, and the danger zone.
  *
+ * THE CARD AND THE PROFILE FORM ARE NOT HERE
+ *   They were, and they were the two biggest things on the page: a person
+ *   opening Settings to see whether a reviewer had replied scrolled past their
+ *   own ID card and a photo upload to get to it. Neither is a setting. Both
+ *   live on /user/profile now - see AccountProfile.
+ *
  * IT SHOWS THE SAME PANEL A LANDLORD GETS
  *   Vendors and landlords have had "Verification documents" on their settings
  *   since the panel was written; a student had a page with nothing on it but a
@@ -28,22 +34,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DeleteAccountButton } from '@/components/account/delete-account-button';
 import { DocumentsPanel } from '@/components/account/documents-panel';
-import { ProfileForm } from '@/components/account/profile-form';
 import { SettingsSection } from '@/components/account/settings-section';
 import { Button } from '@/components/ui';
 import { getMyStudentIdentity } from '@/modules/students';
-import { MySyncIdCard } from '@/components/account/my-sync-id-card';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 
 export const metadata: Metadata = { title: 'Settings' };
 
 export default async function Page() {
-  const [identity, profile, user] = await Promise.all([
-    getMyStudentIdentity(),
-    getProfile(),
-    // The join date lives on the auth user, not on the profile row.
-    getCurrentUser(),
-  ]);
+  const identity = await getMyStudentIdentity();
 
   const details: { label: string; value: string | null }[] = [
     { label: 'Matric number', value: identity.matricNumber },
@@ -54,41 +52,6 @@ export default async function Page() {
 
   return (
     <section className="flex flex-col gap-8">
-      {/* THE CARD FIRST. It is the thing somebody came to this page to get  
-          proof they can hold up   and the sections below are the details that
-          decide what it says. Landlords have had one since the card existed;
-          a student turning up to view a room had nothing to show. */}
-      <SettingsSection
-        title="Your Sync ID"
-        description="Show this when somebody asks whether you are really on Sync. The code is checked live, so it always tells the truth about your account   including if it is ever suspended."
-      >
-        <MySyncIdCard
-          kind="student"
-          holderName={profile?.full_name ?? null}
-          context={identity.department ? `Student · ${identity.department}` : 'Student'}
-          status={identity.verificationStatus}
-          memberSince={user?.created_at ?? null}
-          photoUrl={profile?.avatar_url ?? null}
-          facts={
-            identity.matricNumber ? [{ label: 'Matric number', value: identity.matricNumber }] : []
-          }
-          fileName="student"
-        />
-      </SettingsSection>
-
-      {/* DIRECTLY UNDER THE CARD, because it is what the card is made of.
-          There was nowhere on this page to change a name, and no way anywhere
-          in the product for a person to add a picture of themselves   so every
-          student's card carried an initial in a circle and their own dashboard
-          greeted a letter. The form was private to /user/profile, a page
-          nothing links to prominently; it is shared now. */}
-      <SettingsSection
-        title="Your information"
-        description="Your picture and how you are reached. The picture is yours to choose and yours to remove   it is not the ID document you sent a reviewer, which stays private."
-      >
-        <ProfileForm />
-      </SettingsSection>
-
       <SettingsSection
         title="Your student details"
         description="What a reviewer checks your school ID against. Without the matric number and department there is nothing to compare it to, so verification cannot finish."

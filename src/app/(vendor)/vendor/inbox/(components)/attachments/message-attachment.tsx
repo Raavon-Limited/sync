@@ -31,7 +31,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
       <Button
         type="button"
         onClick={() => onPreview(attachment)}
-        className="group relative block overflow-hidden rounded-2xl border border-white/10 bg-black/5"
+        className="group border-line/10 bg-surface-deep relative block overflow-hidden rounded-2xl border"
       >
         <img
           src={attachment.url}
@@ -52,7 +52,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
       <Button
         type="button"
         onClick={() => onPreview(attachment)}
-        className="group relative flex h-[220px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-2xl bg-slate-900"
+        className="group bg-ink relative flex h-[220px] w-[300px] max-w-full items-center justify-center overflow-hidden rounded-2xl"
       >
         <video
           src={attachment.url}
@@ -63,8 +63,8 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
 
         <div className="absolute inset-0 bg-black/20 transition-colors group-hover:bg-black/30" />
 
-        <div className="relative z-10 flex size-12 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform group-hover:scale-105">
-          <Play className="ml-0.5 size-5 fill-current text-slate-900" />
+        <div className="bg-panel/90 relative z-10 flex size-12 items-center justify-center rounded-full shadow-lg transition-transform group-hover:scale-105">
+          <Play className="text-content ml-0.5 size-5 fill-current" />
         </div>
 
         <div className="absolute right-2 bottom-2 left-2 rounded-lg bg-black/50 px-2.5 py-1.5 text-left backdrop-blur-sm">
@@ -82,19 +82,19 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
       <Button
         type="button"
         onClick={() => onPreview(attachment)}
-        className="flex w-[320px] max-w-full items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-left transition-colors hover:bg-violet-100"
+        className="border-accent/25 bg-accent/10 hover:bg-accent/20 flex w-[320px] max-w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors"
       >
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-violet-600">
-          <Music className="size-5 text-white" />
+        <div className="bg-accent flex size-11 shrink-0 items-center justify-center rounded-full">
+          <Music className="text-ink size-5" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-slate-900">{attachment.name}</p>
+          <p className="text-content truncate text-sm font-medium">{attachment.name}</p>
 
-          <p className="mt-0.5 text-xs text-violet-600">Audio attachment</p>
+          <p className="text-accent-fg mt-0.5 text-xs">Audio attachment</p>
         </div>
 
-        <Play className="size-4 shrink-0 text-violet-600" />
+        <Play className="text-accent-fg size-4 shrink-0" />
       </Button>
     );
   }
@@ -114,7 +114,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         </div>
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-900">{attachment.name}</p>
+          <p className="text-content truncate text-sm font-medium">{attachment.name}</p>
 
           <p className="mt-0.5 text-xs text-orange-600 uppercase">
             {attachment.name.split('.').pop() || 'FILE'}
@@ -126,7 +126,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         <Button
           type="button"
           onClick={handleDownload}
-          className="flex size-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
+          className="text-content-muted hover:bg-panel hover:text-content flex size-8 items-center justify-center rounded-full transition-colors"
           aria-label="Download file"
         >
           <Download className="size-4" />
@@ -135,7 +135,7 @@ export function MessageAttachment({ attachment, onPreview }: MessageAttachmentPr
         <Button
           type="button"
           onClick={() => onPreview(attachment)}
-          className="flex size-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
+          className="text-content-muted hover:bg-panel hover:text-content flex size-8 items-center justify-center rounded-full transition-colors"
           aria-label="Open file"
         >
           <ExternalLink className="size-4" />

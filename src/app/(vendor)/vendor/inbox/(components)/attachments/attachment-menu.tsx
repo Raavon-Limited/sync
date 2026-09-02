@@ -25,7 +25,7 @@ export function AttachmentMenu({
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button className="rounded-full p-2 transition hover:bg-gray-100">
+        <button className="hover:bg-surface-deep rounded-full p-2 transition">
           <Paperclip className="size-5" />
         </button>
       </DropdownMenu.Trigger>
@@ -35,7 +35,7 @@ export function AttachmentMenu({
           side="top"
           align="start"
           sideOffset={10}
-          className="z-50 w-64 rounded-2xl border bg-white p-2 shadow-xl"
+          className="bg-panel z-50 w-64 rounded-2xl border p-2 shadow-xl"
         >
           <DropdownMenu.Item className="menu-item" onClick={onCamera}>
             <Camera size={18} />
@@ -62,7 +62,7 @@ export function AttachmentMenu({
             Audio
           </DropdownMenu.Item>
 
-          <DropdownMenu.Separator className="my-2 h-px bg-gray-200" />
+          <DropdownMenu.Separator className="bg-line/15 my-2 h-px" />
 
           <DropdownMenu.Item className="menu-item" onClick={onProduct}>
             <ShoppingBag size={18} />

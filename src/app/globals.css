@@ -21,6 +21,10 @@
   --color-white: #ffffff;
   --color-muted: #6a6a72;
   --color-coral: #ff8b5c;
+  /* Coral is defined for a DARK ground. On cream it is a pastel that fails
+     contrast as small text, so the ramp has a deep end for exactly the reason
+     lime does - see --color-warning-fg below. */
+  --color-coral-deep: #b4451a;
 
   /* Semantic, THEME-AWARE tokens - these flip under dark mode (values defined
      in the :root / dark layer below). Convert page surfaces to these
@@ -44,6 +48,11 @@
   --color-accent-fg: var(--ac-fg);
   /* accent text: lime-deep ↔ lime */
   --color-warning: var(--color-coral);
+  /* warning TEXT: coral-deep ↔ coral. The twin of --color-accent-fg, and the
+     token that was missing: there was a coral to FILL with and nothing to
+     write in. Anything that put `text-coral` on the light theme was drawing a
+     pastel on cream, which is how "Cancelled" ended up quieter than "Pending". */
+  --color-warning-fg: var(--wn-fg);
   /* Back-compat alias - `text-foreground` still works, maps to content. */
   --color-foreground: var(--ct);
 
@@ -117,6 +126,8 @@
   /* muted */
   --ac-fg: #4a8500;
   /* lime-deep */
+  --wn-fg: #b4451a;
+  /* coral-deep: coral itself is a pastel on cream */
   --ln: #0e0e12;
   /* ink (borders use /opacity) */
   --sb: #0e0e12;
@@ -136,6 +147,8 @@
     --ct-muted: #9b9ba3;
     --ac-fg: #c5ff4a;
     /* bright lime for contrast on dark */
+    --wn-fg: #ff8b5c;
+    /* coral reads as intended on ink */
     --ln: #f4f1e8;
     --sb: #a8db3c;
     /* Deeper lime for fills on dark - less glare than the bright brand lime.
@@ -152,6 +165,7 @@
   --ct: #f4f1e8;
   --ct-muted: #9b9ba3;
   --ac-fg: #c5ff4a;
+  --wn-fg: #ff8b5c;
   --ln: #f4f1e8;
   --sb: #a8db3c;
   /* Deeper lime for fills on dark (see note above). */
@@ -550,7 +564,6 @@ input:-webkit-autofill:focus {
     animation: none;
   }
 }
-
 
 /* Landing headline: the blobby lime band wipes across "Sync" left to right.
    Applied to a WRAPPER, not the band itself - the band already carries the

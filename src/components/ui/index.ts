@@ -23,3 +23,18 @@ export * from './toast';
 export * from './accordion';
 export * from './pagination';
 export * from './stepper';
+// The table primitives. They existed as their own file since the data-table
+// work but were never re-exported here, so every consumer imported them by
+// path while importing everything else from the barrel   which is how the
+// landlord tables arrived asking `@/components/ui` for a `Table` it did not
+// offer.
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from './table';
