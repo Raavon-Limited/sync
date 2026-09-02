@@ -12,7 +12,7 @@
 --   aggregate that runs in the database cannot be truncated by a page size.
 --
 -- WHO CAN CALL IT
---   Staff, or the service role. Not "anyone authenticated" — this is
+--   Staff, or the service role. Not "anyone authenticated"   this is
 --   platform-wide revenue, every vendor's take, and every customer count. The
 --   admin pages already redirect non-staff, but a route guard is a courtesy;
 --   this is the actual boundary.
@@ -21,7 +21,7 @@
 --   Each KPI ships with its previous-period twin so the cards can show change
 --   without a second call. "Previous" is the same number of days immediately
 --   before the current window, so a 30-day view compares against the 30 days
---   before it — not against a calendar month, which would swing with the
+--   before it   not against a calendar month, which would swing with the
 --   length of the month rather than with the business.
 --
 -- TIME IS Africa/Lagos

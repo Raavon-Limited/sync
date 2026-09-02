@@ -2,14 +2,14 @@
  * Redeem a store invitation.
  *
  * TWO ARRIVALS, AND THE SCREEN HAS TO TELL THEM APART
- *   Someone who already has a Sync account just accepts — one RPC, and every
+ *   Someone who already has a Sync account just accepts   one RPC, and every
  *   check lives in the database. Someone who does not needs an account first,
  *   and this is the only place in the product where that can happen without a
  *   second round of email: the token in their hand was delivered to their
  *   address, which is the same proof a confirmation email would have gathered.
  *
  *   Getting this wrong in the other direction matters too. The screen never
- *   offers to set a password for an address that already has an account —
+ *   offers to set a password for an address that already has an account  
  *   that would turn a forwarded invite into a takeover of whoever owns that
  *   mailbox. `redeemInvite` refuses it server-side as well.
  *
@@ -18,7 +18,7 @@
  *
  * Failure modes are the rest of the screen: expired, used, revoked, wrong
  * address, unconfirmed email. Each raises a distinct message from the database
- * or the action, and they are surfaced verbatim — a manager who cannot get in
+ * or the action, and they are surfaced verbatim   a manager who cannot get in
  * needs to know which of those it is.
  */
 'use client';
@@ -64,7 +64,7 @@ export function JoinContainer({ token }: { token: string | null }) {
       <Shell tone="bad" icon={<AlertCircle className="size-8" strokeWidth={1.5} />}>
         <p className="text-content font-medium">No invite token</p>
         <p className="text-content-muted text-sm">
-          Open the link exactly as it was sent to you — the token is part of the address.
+          Open the link exactly as it was sent to you   the token is part of the address.
         </p>
       </Shell>
     );
@@ -222,7 +222,7 @@ export function JoinContainer({ token }: { token: string | null }) {
         <p className="text-content-muted text-xs">
           {/* Worth saying: people expect an emailed password and are briefly
               confused when there is not one. */}
-          Only you will know this password — Sync never sends one by email.
+          Only you will know this password   Sync never sends one by email.
         </p>
       </form>
 

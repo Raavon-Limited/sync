@@ -11,7 +11,7 @@
 --     * READING it back  -> "0101000020E6100000..." (WKB hex, not GeoJSON)
 --   So any client that writes the natural JSON shape fails, and any client that
 --   reads expecting `geo.coordinates` silently gets null forever. The second
---   half is the dangerous one — it does not throw, it just never renders a pin.
+--   half is the dangerous one   it does not throw, it just never renders a pin.
 --
 --   `src/modules/food/queries.ts` has exactly that reader (`geo?.coordinates`),
 --   which is why vendor coordinates have never resolved anywhere in the app.
@@ -108,7 +108,7 @@ update public.storefronts set lat = lat where lat is not null;
 --   adding lat/lng to RETURNS TABLE changes the OUT-parameter row type:
 --     ERROR: cannot change return type of existing function (42P13)
 --   Replacing a RETURNS TABLE signature therefore always means dropping it.
---   Safe here because nothing depends on it — no view, no generated column, no
+--   Safe here because nothing depends on it   no view, no generated column, no
 --   other function calls it. If that ever changes, the dependants must be
 --   dropped and recreated in the same transaction.
 drop function if exists public.nearby_storefronts(

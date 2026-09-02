@@ -2,7 +2,7 @@
  * Building a role: name it, then say what it can reach and whether it can act.
  *
  * A GRID, NOT A LIST OF CHECKBOXES
- *   The question is two-dimensional — area by level — and a flat list of
+ *   The question is two-dimensional   area by level   and a flat list of
  *   "Disputes: read" / "Disputes: write" tickboxes makes people work out for
  *   themselves that ticking both is the same as ticking one. Three exclusive
  *   buttons per row says it once.
@@ -62,7 +62,7 @@ export function RolesConsole({ roles, canManage }: { roles: AccessRole[]; canMan
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Role name — Reviewer, Support, Finance…"
+            placeholder="Role name   Reviewer, Support, Finance…"
             className="min-w-0 flex-1"
           />
           <Button
@@ -130,7 +130,7 @@ export function RolesConsole({ roles, canManage }: { roles: AccessRole[]; canMan
                 <div className="border-line/10 divide-line/10 divide-y border-t">
                   {role.isSystem && (
                     <p className="text-content-muted px-4 py-3 text-xs">
-                      Built-in roles cannot be edited — removing an area from this one would take it
+                      Built-in roles cannot be edited   removing an area from this one would take it
                       from everybody holding it at once. Make a new role instead.
                     </p>
                   )}

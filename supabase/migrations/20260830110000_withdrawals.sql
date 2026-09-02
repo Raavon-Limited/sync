@@ -23,7 +23,7 @@
 --   manual correction is a payout system that loses money quietly.
 --
 -- THE BANK ACCOUNT MUST BE VERIFIED
---   `bank_accounts.is_verified` is set by the Paystack resolve call — the
+--   `bank_accounts.is_verified` is set by the Paystack resolve call   the
 --   account holder's real name, not a name somebody typed. Paying out to an
 --   unverified destination is how money reaches the wrong person and cannot be
 --   recalled.
@@ -32,7 +32,7 @@
 --   A transfer is an external side effect and belongs in a route handler that
 --   can retry, not in a function holding a row lock. This creates the request
 --   and reserves the money; the transfer and its webhook settle it. A pending
---   request with no transfer is visible and recoverable — a transfer with no
+--   request with no transfer is visible and recoverable   a transfer with no
 --   request is not.
 --
 -- ROLLBACK
@@ -79,7 +79,7 @@ create policy "payout_requests_own" on public.payout_requests
 
 -- No insert/update policy on purpose. Requests are created by
 -- request_withdrawal and settled by settle_payout, both of which check things
--- a policy cannot express — a balance, a verified destination, a reversal.
+-- a policy cannot express   a balance, a verified destination, a reversal.
 revoke all on public.payout_requests from anon, authenticated;
 grant select on public.payout_requests to authenticated;
 

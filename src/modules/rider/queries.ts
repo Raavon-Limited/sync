@@ -3,7 +3,7 @@
  *
  * THE BOARD AND THE ACTIVE JOB COME FROM RPCs, NOT FROM `deliveries`
  *   Not a detour. `deliveries_select_party` restricts that table to the student,
- *   the vendor and the ASSIGNED rider — which is exactly right, and exactly why
+ *   the vendor and the ASSIGNED rider   which is exactly right, and exactly why
  *   a rider cannot select an unclaimed job from it. open_delivery_board returns
  *   a redacted row (no dropoff address) and my_active_delivery returns the full
  *   one, and the line between them is the moment a rider actually took the job.
@@ -82,7 +82,7 @@ export async function getRiderProfile(): Promise<RiderProfile | null> {
   if (!data) return null;
 
   // Suspension is a fact about the PERSON, so it is read from profiles rather
-  // than from the rider row. One person, one suspension — see 20260901270000.
+  // than from the rider row. One person, one suspension   see 20260901270000.
   const { data: person } = await supabase
     .from('profiles')
     .select('suspended_at, suspended_reason')
@@ -111,7 +111,7 @@ export async function getRiderProfile(): Promise<RiderProfile | null> {
 /**
  * Unclaimed jobs this rider may take.
  *
- * Returns empty for anyone who is not a verified, unsuspended rider — the RPC
+ * Returns empty for anyone who is not a verified, unsuspended rider   the RPC
  * decides that, not this function, so the rule lives in one place and the screen
  * renders the same either way.
  */
@@ -151,7 +151,7 @@ export async function getActiveJobs(): Promise<ActiveJob[]> {
 }
 
 /**
- * Finished work. Read straight from `deliveries` — legitimately, because
+ * Finished work. Read straight from `deliveries`   legitimately, because
  * deliveries_select_party admits the assigned rider, and by this point they are.
  */
 export async function getCompletedJobs(limit = 20): Promise<CompletedJob[]> {

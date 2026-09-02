@@ -4,7 +4,7 @@
  * It holds no article data of its own. Everything it shows arrives as props
  * from the route's server component, and every change goes back through a
  * server action that revalidates the route. That is why there is no
- * `setArticles` here — the list this renders is the list the database has, not
+ * `setArticles` here   the list this renders is the list the database has, not
  * a local copy that has drifted from it.
  */
 'use client';

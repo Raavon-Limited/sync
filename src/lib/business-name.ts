@@ -3,8 +3,8 @@
  *
  * `vendor_profiles.business_name` is NOT NULL, so a business row that exists
  * before its owner has named it still has to hold something. Since
- * 20260901250000 that something is a per-account placeholder —
- * `Unnamed business 21e446ce` — rather than the shared literal that used to
+ * 20260901250000 that something is a per-account placeholder  
+ * `Unnamed business 21e446ce`   rather than the shared literal that used to
  * collide on the unique index and break onboarding for everybody after the
  * first.
  *
@@ -14,7 +14,7 @@
  *
  * THIS MIRRORS `private.is_placeholder_business_name` IN SQL, deliberately and
  * with the same rule (a leading "unnamed business", case-insensitive). The
- * database is the authority — it decides whether a name may still be claimed —
+ * database is the authority   it decides whether a name may still be claimed  
  * and this is the client's read of the same fact, used only to decide what to
  * put in an input. If the two ever disagree the server still wins: it refuses
  * the write and says why.

@@ -1,10 +1,10 @@
 -- ============================================================================
--- staff_verification_alerts — tell the reviewers a review is waiting.
+-- staff_verification_alerts   tell the reviewers a review is waiting.
 --
 -- THE GAP
 --   A vendor or landlord finishes onboarding, `submit_verification()` moves
 --   them to 'pending', and that is the end of it. The submission writes a row
---   in `private.audit_log` — which nobody reads without a SQL client — and
+--   in `private.audit_log`   which nobody reads without a SQL client   and
 --   nothing else. Whether anyone ever looks depends on an admin happening to
 --   open /admin/vendors and happening to notice a badge that changed colour.
 --
@@ -14,12 +14,12 @@
 --   producer for this event. That is what this adds.
 --
 -- FAN-OUT, BECAUSE NOTIFICATIONS ARE PER-PERSON
---   `notifications.user_id` is a single account — the table has no concept of
+--   `notifications.user_id` is a single account   the table has no concept of
 --   "the staff group". So a submission writes ONE ROW PER STAFF MEMBER. That
 --   is the honest shape: each admin marks their own copy read, and one of them
 --   clearing their inbox does not hide the queue from the rest.
 --
---   Staff are found by role, `role` OR `roles` — since multi-role accounts
+--   Staff are found by role, `role` OR `roles`   since multi-role accounts
 --   (20260830090000) an admin who also runs a shop wears one hat at a time,
 --   and being mid-switch is not a reason to stop being told.
 --
@@ -108,7 +108,7 @@ declare
   v_href text;
 begin
   -- Only the moment it becomes a request. TG_OP is checked rather than assumed
-  -- because the trigger covers INSERT too — a row created straight into
+  -- because the trigger covers INSERT too   a row created straight into
   -- 'pending' is still somebody waiting.
   if new.verification_status is distinct from 'pending' then
     return new;
@@ -175,7 +175,7 @@ begin
      and archived_at is null;
 
   if v_staff = 0 then
-    raise notice 'no admin/super_admin profiles — verification alerts will reach nobody until one is seeded';
+    raise notice 'no admin/super_admin profiles   verification alerts will reach nobody until one is seeded';
   else
     raise notice 'verification alerts will reach % staff account(s)', v_staff;
   end if;

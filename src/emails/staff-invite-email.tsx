@@ -1,5 +1,5 @@
 /**
- * StaffInviteEmail — "come and help run Sync".
+ * StaffInviteEmail   "come and help run Sync".
  *
  * The console counterpart of InviteEmail, and it carries a link for the same
  * reason that one does: a mailed password sits in an inbox indefinitely, gets
@@ -7,12 +7,12 @@
  * is bound to the address it was sent to. The recipient chooses their own
  * password on the way in, so Sync never has it and never sent it.
  *
- * IT SAYS WHAT THE ROLE OPENS. Console access is not one thing — a reviewer and
- * a finance admin are handed very different keys — and somebody being asked to
+ * IT SAYS WHAT THE ROLE OPENS. Console access is not one thing   a reviewer and
+ * a finance admin are handed very different keys   and somebody being asked to
  * take on either should be able to see which before they accept. A role with no
  * areas yet says so rather than pretending.
  *
- * Inline styles only — the rule for email clients.
+ * Inline styles only   the rule for email clients.
  */
 import {
   Body,
@@ -90,7 +90,7 @@ export function StaffInviteEmail({
             {roleName ? `You have been invited as ${roleName}` : 'You have been invited to Sync'}
           </Heading>
           <Text style={{ color: MUTED, fontSize: 14, lineHeight: '22px', margin: 0 }}>
-            {invitedBy} wants you on the team that runs Sync. Accepting takes a minute — you will
+            {invitedBy} wants you on the team that runs Sync. Accepting takes a minute   you will
             pick your own password on the way in.
           </Text>
 
@@ -137,7 +137,7 @@ export function StaffInviteEmail({
           </Section>
 
           <Text style={{ color: FAINT, fontSize: 12, lineHeight: '20px', margin: '0 0 4px' }}>
-            This link works once and expires in {expiresIn}. It was sent to this address only — if
+            This link works once and expires in {expiresIn}. It was sent to this address only   if
             it reached you by mistake, ignore it and nothing happens.
           </Text>
           <Text style={{ color: FAINT, fontSize: 12, lineHeight: '20px', margin: 0 }}>

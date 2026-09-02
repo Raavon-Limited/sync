@@ -2,7 +2,7 @@
  * Data access for the 'storefronts' module.
  *
  * The only file here that knows column names. See ./README.md for the
- * vendor_id (who owns it) vs storefront_id (where it happens) distinction —
+ * vendor_id (who owns it) vs storefront_id (where it happens) distinction  
  * getting those backwards is the most likely bug in anything built on this.
  *
  * Every function takes the Supabase client as its first argument rather than
@@ -38,7 +38,7 @@ import type { Row } from '@/lib/supabase/row';
 /**
  * Coordinates come from the plain `lat`/`lng` columns, never from `geo`.
  * Over PostgREST a geography column reads back as WKB hex ("0101000020E61..."),
- * so `geo.coordinates` is always undefined — a reader written against it fails
+ * so `geo.coordinates` is always undefined   a reader written against it fails
  * silently and simply never renders a pin. See 20260822100000_storefront_coords.
  */
 function toCoords(r: Row) {
@@ -83,7 +83,7 @@ const SELECT = '*';
  * `includeArchived` exists for the owner's own management screen and nothing
  * else. Archived stores are invisible to students at the policy level
  * (`storefronts_select_public` is `using (archived_at is null)`), so this flag
- * cannot leak one — the owner's own policy is what returns them, and only to
+ * cannot leak one   the owner's own policy is what returns them, and only to
  * them. Every other caller wants the default.
  */
 export async function fetchStorefronts(
@@ -95,7 +95,7 @@ export async function fetchStorefronts(
   if (!opts.includeArchived) q = q.is('archived_at', null);
   return unwrapList<Row>(
     await q
-      // Archived stores sink to the bottom of the owner's list — they are
+      // Archived stores sink to the bottom of the owner's list   they are
       // history, not somewhere they are choosing to work today.
       .order('archived_at', { ascending: true, nullsFirst: true })
       .order('is_primary', { ascending: false })
@@ -117,7 +117,7 @@ export async function fetchStorefrontBySlug(db: Client, slug: string): Promise<S
  * RPC already joins the brand columns, which avoids a second round trip AND the
  * class of broken PostgREST embed that bit orders and conversations.
  *
- * Omit `radiusM` to RANK by distance rather than filter by it — a hard cutoff
+ * Omit `radiusM` to RANK by distance rather than filter by it   a hard cutoff
  * shows an empty app to anyone just outside it.
  */
 export async function fetchNearbyStorefronts(
@@ -241,7 +241,7 @@ export async function updateStorefront(
   if (input.isAcceptingOrders !== undefined) patch.is_accepting_orders = input.isAcceptingOrders;
   if (input.imageUrl !== undefined) patch.image_url = input.imageUrl;
   // Capacity is an operational setting like trading hours, so a manager can
-  // set it. `paused_until` is deliberately NOT patchable here — it goes
+  // set it. `paused_until` is deliberately NOT patchable here   it goes
   // through pause_store/resume_store, which carry the permission check and
   // the reason.
   // NOT NULL since 20260901090000, where 0 became the explicit "never". A UI
@@ -252,7 +252,7 @@ export async function updateStorefront(
   }
   if (input.autoPauseMinutes !== undefined) patch.auto_pause_minutes = input.autoPauseMinutes;
   if (input.coords !== undefined) {
-    // Both or neither — storefronts_coords_both_or_neither rejects a half pin.
+    // Both or neither   storefronts_coords_both_or_neither rejects a half pin.
     patch.lat = input.coords?.lat ?? null;
     patch.lng = input.coords?.lng ?? null;
   }
@@ -268,7 +268,7 @@ export async function updateStorefront(
  *
  * ONE RPC, NOT A COLUMN WRITE. The plain update this replaces set
  * `archived_at` and cleared `is_primary`, which could leave a business with no
- * primary store at all — `storefronts_one_primary_idx` permits zero — and
+ * primary store at all   `storefronts_one_primary_idx` permits zero   and
  * happily archived a store with orders a student had already paid for.
  * `set_storefront_archived` refuses both and hands the primary flag on.
  *
@@ -296,7 +296,7 @@ export async function archiveStorefront(db: Client, id: string): Promise<void> {
   await setStorefrontArchived(db, id, true);
 }
 
-/** Atomic — see set_primary_storefront in 20260822090000_storefronts.sql. */
+/** Atomic   see set_primary_storefront in 20260822090000_storefronts.sql. */
 export async function setPrimaryStorefront(db: Client, id: string): Promise<void> {
   const { error } = await db.rpc('set_primary_storefront', { p_storefront_id: id });
   if (error) throw error;
@@ -308,7 +308,7 @@ export async function setPrimaryStorefront(db: Client, id: string): Promise<void
  * Every branch the caller can act on, and in what capacity.
  *
  * `fetchStorefronts` filters on `vendor_id = you`, which is right for an owner
- * and wrong for a manager — an invited manager owns nothing and would see an
+ * and wrong for a manager   an invited manager owns nothing and would see an
  * empty sidebar. This is the query the vendor shell should use.
  *
  * Two round trips rather than one: `storefronts` is publicly readable, so a
@@ -331,7 +331,7 @@ export async function fetchManagedStorefronts(
     // from. They hold every one by definition.
   ).map((r) => ({ ...toStorefront(r), capacity: 'owner' as const, scopes: ALL_STAFF_SCOPES }));
 
-  // storefront_staff_read lets you see your OWN membership rows — including
+  // storefront_staff_read lets you see your OWN membership rows   including
   // the scopes, which is how the shell knows to hide a section this person was
   // never granted rather than let them walk into an empty page.
   const memberships = unwrapList<Row>(
@@ -369,7 +369,7 @@ export async function fetchManagedStorefronts(
 /**
  * A `text[]` column, defended against the two things it can arrive as.
  * PostgREST returns a JSON array, but a row that predates the column (a stale
- * cache, a hand-written fixture) has none at all — and a member with no scopes
+ * cache, a hand-written fixture) has none at all   and a member with no scopes
  * would silently render as "can do nothing" rather than as an error.
  */
 function toScopes(v: unknown): StaffScope[] {
@@ -426,7 +426,7 @@ export async function fetchPendingInvites(
 
 /**
  * Owner only. The returned token is the credential and is never readable again
- * — show it once, or send it. Re-inviting the same address supersedes the
+ *   show it once, or send it. Re-inviting the same address supersedes the
  * previous invite rather than colliding with it.
  */
 export async function createInvite(
@@ -450,7 +450,7 @@ export async function createInvite(
 /**
  * Change what an existing manager may reach.
  *
- * The alternative — revoke and re-invite — loses their history and makes them
+ * The alternative   revoke and re-invite   loses their history and makes them
  * redeem a second token to get back a job they never left.
  */
 export async function setStaffScopes(
@@ -478,7 +478,7 @@ export async function acceptInvite(db: Client, token: string): Promise<string> {
   return data as string;
 }
 
-/** Revokes, never deletes — the activity trail must still resolve the actor. */
+/** Revokes, never deletes   the activity trail must still resolve the actor. */
 export async function revokeStaff(db: Client, staffId: string): Promise<void> {
   const { error } = await db.rpc('revoke_storefront_staff', { p_staff_id: staffId });
   if (error) throw error;
@@ -546,7 +546,7 @@ export async function resumeStore(db: Client, id: string): Promise<void> {
 /**
  * What one store carries, and on what terms.
  *
- * `isAvailable` is a GENERATED column, not something written here — the
+ * `isAvailable` is a GENERATED column, not something written here   the
  * schema derives it from `isListed` and `stock` so a reader cannot disagree
  * with checkout about whether an item can be bought.
  */
@@ -620,7 +620,7 @@ export async function setStoreListing(
  *
  * Sold out is `stock = 0`, not `is_listed = false`: the two mean different
  * things and conflating them loses the distinction between "we ran out today"
- * and "we do not do this here". Coming back sets stock to null — untracked —
+ * and "we do not do this here". Coming back sets stock to null   untracked  
  * because a vendor tapping "back in stock" is saying they have some, not
  * committing to count them.
  */
@@ -636,7 +636,7 @@ export async function setSoldOut(
 // -- Performance ---------------------------------------------------------------
 
 /**
- * Per-store reporting. NOT a second ledger — money is per business and lives on
+ * Per-store reporting. NOT a second ledger   money is per business and lives on
  * `vendor_profiles`; this is a `group by storefront_id` over the same orders
  * and escrow rows the earnings screen reads. See ./README.md.
  */
@@ -652,7 +652,7 @@ export async function fetchStorePerformance(db: Client): Promise<StorePerformanc
     ordersActive: r.orders_active ?? 0,
     ordersCancelled: r.orders_cancelled ?? 0,
     ordersRefunded: r.orders_refunded ?? 0,
-    // bigint arrives as a string over PostgREST once it passes 2^53 — and as a
+    // bigint arrives as a string over PostgREST once it passes 2^53   and as a
     // number below it. Number() takes both; reading it as-is silently gives a
     // string that formats fine and adds up wrong.
     revenueKobo: Number(r.revenue_kobo ?? 0),
@@ -682,7 +682,7 @@ export async function fetchStoreRevenueMonthly(
  * One page of a store's orders.
  *
  * `totalRows` rides along on every row rather than coming from a second COUNT
- * query — two queries with the same filter can still disagree if an order
+ * query   two queries with the same filter can still disagree if an order
  * lands between them, and the pager is what shows the disagreement.
  */
 export async function fetchStoreTransactions(
@@ -718,7 +718,7 @@ export async function fetchStoreTransactions(
       studentName: r.student_name ?? 'Customer',
     })),
     // An empty page carries no row to read the count off, and that is not the
-    // same as "we do not know" — it is zero.
+    // same as "we do not know"   it is zero.
     total: Number(raw[0]?.total_rows ?? 0),
   };
 }

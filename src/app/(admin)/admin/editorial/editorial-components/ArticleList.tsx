@@ -9,7 +9,7 @@ import { Input } from "@/components/ui";
 
 interface ArticleListProps {
   articles: Article[];
-  /** Built from the categories actually in use — see AdminEditorialPage. */
+  /** Built from the categories actually in use   see AdminEditorialPage. */
   categoryOptions: CategoryFilterOption[];
   searchQuery: string;
   statusFilter: StatusFilterOption;

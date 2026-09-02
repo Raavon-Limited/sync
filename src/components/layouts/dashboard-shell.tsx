@@ -23,7 +23,7 @@ interface DashboardShellProps {
   maxWidth?: string;
   /**
    * Hand-drawn sheet behind the content column, saying what this dashboard is
-   * about without a word. Omit for the surfaces that are already dense — admin
+   * about without a word. Omit for the surfaces that are already dense   admin
    * is tables end to end and a texture under them only makes them harder to
    * read.
    */
@@ -50,8 +50,8 @@ export async function DashboardShell({
    *
    * Only asked for the admin console: it is the one dashboard where two people
    * with the same role can be entitled to different screens. Everywhere else
-   * the dashboard IS the entitlement — a vendor's sidebar is the vendor's
-   * sidebar — so they pass null and nothing is filtered.
+   * the dashboard IS the entitlement   a vendor's sidebar is the vendor's
+   * sidebar   so they pass null and nothing is filtered.
    *
    * THE SIDEBAR IS NOT THE ENFORCEMENT. Hiding a row stops it being offered;
    * it does not stop the URL being typed. Every page behind these rows guards

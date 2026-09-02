@@ -2,8 +2,8 @@
  * Everyone who can touch the business, across every store.
  *
  * WHY IT IS NOT PER STORE
- *   Membership IS per store — "manage my Tanke shop" must not also mean "manage
- *   my Gaa Akanbi shop" — but the owner's question is about a person, not a
+ *   Membership IS per store   "manage my Tanke shop" must not also mean "manage
+ *   my Gaa Akanbi shop"   but the owner's question is about a person, not a
  *   location: "who has access, and to what?". Answering that a store at a time
  *   (which is what the old section on /vendor/stores did) means an owner has to
  *   click through every store to find out whether they ever revoked somebody.
@@ -11,7 +11,7 @@
  *
  * OWNER ONLY, AND SAYS SO
  *   `storefront_roster`, `storefront_invites_pending` and `storefront_activity`
- *   are all owner-scoped SECURITY DEFINER functions — a manager gets empty
+ *   are all owner-scoped SECURITY DEFINER functions   a manager gets empty
  *   arrays, not an error. Rendering three empty sections at them would look
  *   broken, so this states the boundary instead.
  */
@@ -166,7 +166,7 @@ export function TeamContainer() {
 
         {stores.length === 0 && (
           <p className="text-content-muted text-sm">
-            Add a store first — access is granted per location.
+            Add a store first   access is granted per location.
           </p>
         )}
 
@@ -174,7 +174,7 @@ export function TeamContainer() {
           <div className="bg-ink/5 h-20 animate-pulse rounded-xl" />
         ) : active.length === 0 && invites.length === 0 ? (
           <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
-            Only you, for now. Inviting someone lets them work the sections you pick at one store —
+            Only you, for now. Inviting someone lets them work the sections you pick at one store  
             never your wallet, payouts or bank details.
           </p>
         ) : null}
@@ -316,7 +316,7 @@ export function TeamContainer() {
           {/* The exact-person filter, offered alongside the free text rather
               than instead of it: "everything Ada did" and "everything about
               the jollof" are different questions and both get asked. Only
-              people who have actually done something are listed — a dropdown
+              people who have actually done something are listed   a dropdown
               full of names with no events behind them is a dead end. */}
           {roster.length > 0 && (
             <Select value={actorId} onValueChange={setActorId}>
@@ -357,7 +357,7 @@ export function TeamContainer() {
         ) : (
           <ol
             className={`border-line/10 bg-panel divide-line/10 divide-y rounded-xl border transition-opacity ${
-              // Dimmed rather than emptied while a search resolves — see the
+              // Dimmed rather than emptied while a search resolves   see the
               // keepPreviousData note on the hook.
               activityLoading ? 'opacity-60' : ''
             }`}
@@ -378,7 +378,7 @@ export function TeamContainer() {
                 <div className="min-w-0 flex-1">
                   <p className="text-content truncate text-sm">
                     {describe(a.action)}
-                    {a.summary.name ? ` — ${a.summary.name}` : ''}
+                    {a.summary.name ? `   ${a.summary.name}` : ''}
                   </p>
                   <p className="text-content-muted truncate text-xs">
                     {a.actorName} · {new Date(a.occurredAt).toLocaleString()}
@@ -429,7 +429,7 @@ export function TeamContainer() {
 
 /**
  * Kept as its own component so the picker's state resets when the owner opens
- * a different person — the `editing &&` guard above unmounts it between the
+ * a different person   the `editing &&` guard above unmounts it between the
  * two, which a persistent dialog would not do.
  */
 function ScopeDialog({

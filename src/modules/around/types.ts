@@ -7,7 +7,7 @@ export {};
 // -- Campus pulse -------------------------------------------------------------
 
 /**
- * What is happening in one area. Every field is an aggregate — there is no
+ * What is happening in one area. Every field is an aggregate   there is no
  * user, order or amount anywhere in this shape, by construction rather than by
  * omission (see `campus_pulse` in 20260829110000).
  */

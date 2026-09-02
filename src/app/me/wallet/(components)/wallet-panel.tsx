@@ -78,7 +78,7 @@ const KIND_LABEL: Record<LedgerKind, string> = {
  * is in escrow, which the wallet reports separately as `pendingKobo`. Marking
  * ledger rows "pending" would misrepresent what the ledger is.
  *
- * counterparty / account / bank are NOT in the ledger — it records movements,
+ * counterparty / account / bank are NOT in the ledger   it records movements,
  * not the parties' bank details. Showing the narrative beats inventing a name.
  */
 function toCard(t: WalletTransaction): WalletTxn {
@@ -91,10 +91,10 @@ function toCard(t: WalletTransaction): WalletTxn {
     direction: t.direction,
     date: when.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }),
     status: 'completed',
-    counterparty: t.narrative || '—',
-    accountNumber: '—',
-    bank: '—',
-    reference: t.reference ?? '—',
+    counterparty: t.narrative || ' ',
+    accountNumber: ' ',
+    bank: ' ',
+    reference: t.reference ?? ' ',
     method: KIND_LABEL[t.kind] ?? 'Sync wallet',
     time: when.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
     // The ledger records commission as its OWN entry rather than a field on the
@@ -139,7 +139,7 @@ export function WalletPanel() {
   /**
    * Dev/demo path: the API reports `mock` when Paystack is not configured. The
    * server still writes the ledger entry, so the wallet is refetched rather
-   * than patched locally — a local patch would disagree with the ledger the
+   * than patched locally   a local patch would disagree with the ledger the
    * moment anything else moved money.
    */
   function refreshWallet() {
@@ -181,7 +181,7 @@ export function WalletPanel() {
       // The wallet is credited by the verified webhook, so we just inform here.
       setOpen(false);
       await openWalletTopup(data.accessCode, {
-        onSuccess: () => toast('Payment received — your wallet will update shortly.'),
+        onSuccess: () => toast('Payment received   your wallet will update shortly.'),
         onCancel: () => toast('Payment cancelled.'),
       });
       setAmount('');

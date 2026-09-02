@@ -72,7 +72,7 @@ const WEB_ROUTES = [
   // THE WAY BACK IN. These were missed when auth was allowlisted, and the two
   // of them fail differently:
   //
-  //   /forgot-password  is reached by clicking "Forgot password?" ON /login —
+  //   /forgot-password  is reached by clicking "Forgot password?" ON /login  
   //                     an allowed page handing you straight to a blocked one.
   //                     Someone who cannot remember their password is exactly
   //                     the person who cannot get past a wall that says "sign
@@ -88,13 +88,13 @@ const WEB_ROUTES = [
   '/forgot-password',
   '/reset-password',
   // ID CARD CHECKS. `/v/<code>` is where a QR on a vendor's or agent's card
-  // resolves, and the person scanning it is a stranger — a tenant at their own
+  // resolves, and the person scanning it is a stranger   a tenant at their own
   // front door deciding whether the caller is who the platform says they are.
   //
   // Gating this is worse than pointless. They have no Sync account and no
   // reason to want one; they have a phone camera and a decision to make in the
   // next ten seconds. An install prompt in that moment does not convert
-  // anybody, it just withholds the answer — and the likely outcome is that
+  // anybody, it just withholds the answer   and the likely outcome is that
   // they let the person in anyway, unverified, which is the exact failure the
   // card exists to prevent.
   '/v',

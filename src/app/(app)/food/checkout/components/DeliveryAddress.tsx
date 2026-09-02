@@ -118,7 +118,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                     <ChevronRight size={16} className="text-content-muted flex-shrink-0" />
                 </button>
 
-                {/* Send to someone else — row reflects saved value only */}
+                {/* Send to someone else   row reflects saved value only */}
                 <button
                     onClick={openRecipientModal}
                     className="w-full flex items-center gap-3 px-4 py-4 border-b border-line/10 hover:bg-content-muted/5 transition cursor-pointer text-left"
@@ -284,7 +284,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                 </div>
             )}
 
-            {/* ── Recipient modal — bottom-sheet on mobile, centered on desktop ── */}
+            {/* ── Recipient modal   bottom-sheet on mobile, centered on desktop ── */}
             {recipientModalOpen && (
                 <div
                     className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center px-4"
@@ -321,7 +321,7 @@ export default function DeliveryAddress({ value, onChange }: Props) {
                                 obtaining their consent and informing them on how their data is processed.
                             </p>
 
-                            {/* Remove — only shown when a recipient was already saved before opening */}
+                            {/* Remove   only shown when a recipient was already saved before opening */}
                             {value.recipientName && (
                                 <button
                                     onClick={removeRecipient}

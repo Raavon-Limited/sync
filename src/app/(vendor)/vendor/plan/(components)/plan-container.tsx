@@ -5,12 +5,12 @@
  *   The mock had a PaymentMethodCard and an UpdateCardModal. There is no
  *   payment-methods table and no card is ever stored: `subscribe_to_plan`
  *   debits wallet balance. Those components are dropped rather than fed
- *   fabricated card digits — showing a "Mastercard ···· 4242" that does not
+ *   fabricated card digits   showing a "Mastercard ···· 4242" that does not
  *   exist is worse than showing the balance that actually pays.
  *
  * BILLING HISTORY IS THE LEDGER
  *   Invoices were a hardcoded array. Real history is `wallet_transactions`
- *   filtered to `subscription_charge` — which cannot drift from what was
+ *   filtered to `subscription_charge`   which cannot drift from what was
  *   charged, because it IS what was charged.
  *
  * COMMISSION IS NOT SHOWN
@@ -54,11 +54,11 @@ export function PlanContainer() {
         // and the card then appended its own "/mo" underneath it.
         priceLabel: p.priceKobo === 0 ? 'Free' : naira(p.priceKobo),
         pricePeriod: p.priceKobo === 0 ? '' : p.interval === 'yearly' ? '/yr' : '/mo',
-        // No commission column on `plans` — see the header.
+        // No commission column on `plans`   see the header.
         commission: null,
         features: [
           // The listing cap leads, because it is the one people compare on.
-          // Everything after it comes from `plans.features`, which is data —
+          // Everything after it comes from `plans.features`, which is data  
           // changing what a plan offers is a row edit, not a deploy.
           {
             label:
@@ -120,7 +120,7 @@ export function PlanContainer() {
         <CurrentPlanBanner plan={current} />
       ) : (
         <p className="text-content-muted border-line/10 rounded-2xl border border-dashed p-5 text-sm">
-          You are not on a plan yet. Pick one below — Starter is free.
+          You are not on a plan yet. Pick one below   Starter is free.
         </p>
       )}
 
@@ -131,7 +131,7 @@ export function PlanContainer() {
           Plans are charged to your Sync wallet
         </span>
         <span className="text-content font-semibold">
-          {wallet ? naira(wallet.balanceKobo) : '—'}
+          {wallet ? naira(wallet.balanceKobo) : ' '}
         </span>
       </div>
 

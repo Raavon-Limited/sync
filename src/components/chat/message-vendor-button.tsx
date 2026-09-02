@@ -1,5 +1,5 @@
 /**
- * "Message vendor" — the student-side entry point into messaging.
+ * "Message vendor"   the student-side entry point into messaging.
  *
  * THE MISSING LINK
  *   `useOpenListingConversation` and its RPC existed with no caller, which is
@@ -12,7 +12,7 @@
  *   the conversation id and we hand it straight to the widget.
  *
  * The RPC is idempotent per (listing, caller), so a student who taps this twice
- * — or comes back a week later — re-enters the same thread instead of opening a
+ *   or comes back a week later   re-enters the same thread instead of opening a
  * second one the vendor would see as a duplicate.
  */
 'use client';
@@ -44,7 +44,7 @@ export function MessageVendorButton({
     setError(null);
     open.mutate(listingId, {
       onSuccess: (conversationId) => openChat(conversationId),
-      // The RPC raises for the cases the UI cannot know about in advance —
+      // The RPC raises for the cases the UI cannot know about in advance  
       // signed out, listing pulled, vendor tapping their own listing. Surface
       // the reason rather than a silent no-op.
       onError: (e: unknown) => setError(e instanceof Error ? e.message : 'Could not open chat'),

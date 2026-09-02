@@ -19,7 +19,7 @@
  * THE SUGGESTION NEVER AUTO-SELECTS
  *   It is a hint from the number's shape, not proof. Picking a bank for the
  *   vendor and being wrong is worse than showing four chips and letting them
- *   tap one — and the resolve call is what confirms the choice either way.
+ *   tap one   and the resolve call is what confirms the choice either way.
  */
 
 import { useEffect, useState } from 'react';
@@ -120,7 +120,7 @@ export function ChangeAccountDialog({ open, onClose, onSave, current }: ChangeAc
     : bankOptions;
 
   function handleSave() {
-    // Saving requires a resolved name, not a typed one — an unverified payout
+    // Saving requires a resolved name, not a typed one   an unverified payout
     // destination is the one thing this form must not be able to produce.
     if (!bank || acct.length !== 10 || !name) return;
     onSave({ bankName: bank.name, bankCode: bank.code, accountNumber: acct, holderName: name });
@@ -226,7 +226,7 @@ export function ChangeAccountDialog({ open, onClose, onSave, current }: ChangeAc
                 // The honest version of the old message: this is a
                 // configuration state, not a network blip.
                 <p className="text-content-muted px-3 py-2 text-sm">
-                  Bank list unavailable — payments are not configured yet.
+                  Bank list unavailable   payments are not configured yet.
                 </p>
               )}
               {filtered.map((b) => (

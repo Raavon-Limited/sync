@@ -4,7 +4,7 @@
  * WHY SERVER-SIDE
  *   `RoleDashboard` is an async server component that takes its KPIs, pending
  *   list and chart as props. A client hook cannot feed it, so the data is
- *   gathered here and passed down — which also means one fetch produces the
+ *   gathered here and passed down   which also means one fetch produces the
  *   headline count and the list, so they cannot disagree.
  *
  * REVENUE IS WHAT ARRIVED, NOT WHAT WAS AGREED
@@ -85,7 +85,7 @@ export async function getLandlordDashboard(landlordId: string): Promise<Landlord
     },
     {
       label: 'Rooms free',
-      value: roomsTotal ? `${roomsFree}/${roomsTotal}` : '—',
+      value: roomsTotal ? `${roomsFree}/${roomsTotal}` : ' ',
       sub: roomsTotal ? 'across all hostels' : 'no rooms listed yet',
       icon: BedDouble,
     },
@@ -99,7 +99,7 @@ export async function getLandlordDashboard(landlordId: string): Promise<Landlord
 
   const pending: PendingRequestItem[] = awaiting.slice(0, 5).map((b) => ({
     id: b.id as string,
-    // The student's name is in `profiles`, which is own-row-only — a landlord
+    // The student's name is in `profiles`, which is own-row-only   a landlord
     // genuinely cannot read it. The hostel and dates are shown instead;
     // inventing a name would be worse than omitting one.
     name: (b.hostel?.name as string) ?? 'Hostel request',
@@ -116,7 +116,7 @@ export async function getLandlordDashboard(landlordId: string): Promise<Landlord
   // The chart comes from the same RPC the period switcher calls. This used to
   // build SEVEN DAILY buckets labelled Mon-Sun under a card titled "REVENUE ·
   // LAST 12 WEEKS", and switching period replaced them with twelve weekly
-  // ones — so the initial paint never matched its own heading. One chart, one
+  // ones   so the initial paint never matched its own heading. One chart, one
   // definition, empty buckets still kept because a gap is information.
   const chart = await fetchRevenueSeries('weekly');
 

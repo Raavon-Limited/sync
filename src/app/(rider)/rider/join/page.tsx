@@ -1,7 +1,7 @@
 /**
  * ROUTE: /rider/join
  * ACCESS: role=rider, enforced by the proxy.
- * PURPOSE: Turn a rider account into a reviewable one — vehicle, optional fleet,
+ * PURPOSE: Turn a rider account into a reviewable one   vehicle, optional fleet,
  *          and the documents staff decide on.
  *
  * REACHABLE AFTER APPROVAL TOO, ON PURPOSE
@@ -15,7 +15,7 @@ import { redirect } from 'next/navigation';
 import { getRiderProfile } from '@/modules/rider/queries';
 import { RiderSignup } from './(components)/rider-signup';
 
-export const metadata: Metadata = { title: 'Start riding — Rider' };
+export const metadata: Metadata = { title: 'Start riding   Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();

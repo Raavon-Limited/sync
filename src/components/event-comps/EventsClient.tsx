@@ -19,7 +19,7 @@ interface Event {
     time: string
     category: string
     // These two were missing here, which meant TypeScript never knew
-    // EventCards actually accepts them — soldOut in particular was being
+    // EventCards actually accepts them   soldOut in particular was being
     // dropped silently even though page.tsx sets it correctly on the
     // underlying event data. Adding them lets {...event} pass both through.
     lineup?: LineupArtist[]
@@ -70,7 +70,7 @@ export default function EventsClient({ events }: Props) {
         ? events
         : events.filter(e => e.category === activeCategory)
 
-    // Sort a COPY — never mutate the array passed down from the parent.
+    // Sort a COPY   never mutate the array passed down from the parent.
     const sorted = [...filtered].sort((a, b) => {
         switch (sortKey) {
             case "date":
@@ -113,7 +113,7 @@ export default function EventsClient({ events }: Props) {
                     ))}
                 </div>
 
-                {/* SORT DROPDOWN — replaces the old decorative "Sort: nearest"
+                {/* SORT DROPDOWN   replaces the old decorative "Sort: nearest"
                     label. Click toggles a small menu; picking an option
                     re-sorts the grid below immediately. */}
                 <div className="relative flex-shrink-0">

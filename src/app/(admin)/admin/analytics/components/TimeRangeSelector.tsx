@@ -1,6 +1,6 @@
 /**
  * The range picker. The page is a server component that reads the window from
- * the URL, so choosing a range navigates rather than setting local state — the
+ * the URL, so choosing a range navigates rather than setting local state   the
  * new numbers have to be fetched, and a `useState` here could only re-render
  * the same data under a different label.
  */

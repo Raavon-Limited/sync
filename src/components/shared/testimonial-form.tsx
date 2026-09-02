@@ -51,7 +51,7 @@ export function TestimonialForm({
       <p className="border-line/10 bg-panel text-content flex items-start gap-2.5 rounded-xl border p-4 text-sm">
         <Check className="text-accent-fg mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <span>
-          Thanks — your review is with our team. It appears here once it&rsquo;s been checked.
+          Thanks   your review is with our team. It appears here once it&rsquo;s been checked.
         </span>
       </p>
     );

@@ -62,7 +62,7 @@ export function UserDetailModal({ user: u, isSuperAdmin, onClose, onPatch, onRem
               {initials(u.full_name)}
             </div>
             <div>
-              <h2 className="font-display text-content text-xl font-bold">{u.full_name ?? '—'}</h2>
+              <h2 className="font-display text-content text-xl font-bold">{u.full_name ?? ' '}</h2>
               <p className="text-content-muted mt-0.5 text-sm capitalize">
                 {formatRole(u.role)}{u.vendor_category ? ` · ${u.vendor_category}` : ''}
               </p>
@@ -105,8 +105,8 @@ export function UserDetailModal({ user: u, isSuperAdmin, onClose, onPatch, onRem
           {/* ── Stats row ── */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Total Spent', value: '—' },
-              { label: 'Total Orders', value: '—' },
+              { label: 'Total Spent', value: ' ' },
+              { label: 'Total Orders', value: ' ' },
               {
                 label: 'Member Since',
                 value: new Date(u.created_at)
@@ -135,7 +135,7 @@ export function UserDetailModal({ user: u, isSuperAdmin, onClose, onPatch, onRem
                   value:
                     formatRole(u.role).charAt(0).toUpperCase() +
                     formatRole(u.role).slice(1) +
-                    (u.vendor_category ? ` — ${u.vendor_category}` : ''),
+                    (u.vendor_category ? `   ${u.vendor_category}` : ''),
                 },
                 { label: 'Joined', value: formatDate(u.created_at) },
                 { label: 'Verification', value: u.verification_status },

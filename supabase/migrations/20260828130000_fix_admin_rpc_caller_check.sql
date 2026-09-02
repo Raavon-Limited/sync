@@ -6,7 +6,7 @@
 --   if not public.is_staff() and current_user <> 'service_role' then
 --
 -- and the second half of that can never be true. Inside a SECURITY DEFINER
--- function `current_user` is the function's OWNER, not the caller — that is
+-- function `current_user` is the function's OWNER, not the caller   that is
 -- the whole point of SECURITY DEFINER. So `current_user` is 'postgres' for
 -- every caller alive, the service-role branch never fires, and both functions
 -- refuse the service role with 42501.
@@ -31,7 +31,7 @@
 --   and never on the success is half a test.
 --
 -- The bodies below are otherwise identical to 20260828100000 and
--- 20260828120000 — Postgres has no way to replace a guard without restating
+-- 20260828120000   Postgres has no way to replace a guard without restating
 -- the function it lives in.
 --
 -- ROLLBACK

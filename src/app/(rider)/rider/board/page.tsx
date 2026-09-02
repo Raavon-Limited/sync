@@ -6,7 +6,7 @@
  * THE EMPTY BOARD IS NOT AN ERROR STATE
  *   open_delivery_board returns nothing for a rider who is unverified,
  *   suspended, or simply has no jobs waiting, and the RPC deliberately does not
- *   distinguish those with an exception — the screen renders the same either
+ *   distinguish those with an exception   the screen renders the same either
  *   way and the banner above the list is what says which it is.
  */
 import type { Metadata } from 'next';
@@ -15,7 +15,7 @@ import { getOpenBoard, getRiderProfile } from '@/modules/rider/queries';
 import { RiderStatus } from '../(components)/rider-status';
 import { JobBoard } from '../(components)/job-board';
 
-export const metadata: Metadata = { title: 'Open jobs — Rider' };
+export const metadata: Metadata = { title: 'Open jobs   Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();

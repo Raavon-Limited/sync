@@ -54,7 +54,7 @@ const RESEND_COOLDOWN = 60;
  *              landing on a settings surface reads as the wrong screen.
  *
  * THE TEST IS THE SURFACE, NOT WHETHER THE APP IS INSTALLED. This asked
- * `readStandalone()`, which is true only when launched from the home screen —
+ * `readStandalone()`, which is true only when launched from the home screen  
  * so signing in from Safari on a phone counted as desktop and got the
  * dashboard. Installing is a step most people never take, and the ones who have
  * not are still holding a phone. See readAppSurface.
@@ -156,7 +156,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
    * Same as `signupHref` plus `noaccount`, which is what makes the signup page
    * say WHY somebody arrived there. Without it the redirect is silent and the
    * person is left on a form they did not ask for, working out for themselves
-   * that their email was not recognised — which is the confusion this whole
+   * that their email was not recognised   which is the confusion this whole
    * path exists to remove.
    *
    * The address is passed explicitly rather than read from state: this is
@@ -193,7 +193,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
          * Straight to signup, not a panel on this screen offering to go there.
          *
          * The interstitial version told them the account did not exist and
-         * then asked them to click a button to act on it — which is a screen
+         * then asked them to click a button to act on it   which is a screen
          * whose only purpose is to be left. There is exactly one useful thing
          * to do with "no account for this address", so do it.
          *
@@ -211,7 +211,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
         setStep('otp');
         const res = await sendLoginOtp(value);
         if (res.ok) setCooldown(RESEND_COOLDOWN);
-        toast(res.ok ? 'Sign-in code sent — check your email.' : res.error);
+        toast(res.ok ? 'Sign-in code sent   check your email.' : res.error);
       } else {
         setStep('password');
       }
@@ -254,7 +254,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     }
     setStep('otp');
     setCooldown(RESEND_COOLDOWN);
-    toast('Sign-in code sent — check your email.');
+    toast('Sign-in code sent   check your email.');
   }
 
   async function verify(e: React.FormEvent) {
@@ -408,7 +408,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
             </FormField>
             {/* Here, not on the email step. Somebody only discovers they have
                 forgotten their password once they are looking at the password
-                box — offering the escape hatch a screen earlier is offering it
+                box   offering the escape hatch a screen earlier is offering it
                 before anyone needs it. The address is carried across so they
                 do not type it twice. */}
             <Link

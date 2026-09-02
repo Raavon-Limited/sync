@@ -32,7 +32,7 @@ export function NewArticleModal({ open, onClose, categories, onSubmit }: NewArti
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // The write can fail — a duplicate slug, a rejected upload, a scheduled time
+  // The write can fail   a duplicate slug, a rejected upload, a scheduled time
   // in the past. Closing optimistically would hide all of it.
   async function submit(mode: PublishMode) {
     setError(null);
@@ -177,7 +177,7 @@ export function NewArticleModal({ open, onClose, categories, onSubmit }: NewArti
               className="w-full bg-surface-deep/40 border border-line/15 outline-none! ring-0! rounded-md px-3 py-2  text-content placeholder:text-content-muted/50 resize-none transition-colors focus:border-line/40 focus:bg-surface-deep/70 font-sans leading-relaxed" />
           </div>
 
-          {/* Publish time — only Schedule reads it, but it has to be set
+          {/* Publish time   only Schedule reads it, but it has to be set
               before Schedule can mean anything. */}
           <div className="space-y-1.5">
             <label className="block text-[12px] uppercase tracking-widest font-bold text-content-muted/90">

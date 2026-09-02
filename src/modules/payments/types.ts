@@ -2,7 +2,7 @@
  * Domain types for the 'payments' module.
  *
  * Every amount is KOBO (integer). Convert at render with `formatKobo` from
- * `@/lib/query/helpers` — never divide by 100 in a component. The mock
+ * `@/lib/query/helpers`   never divide by 100 in a component. The mock
  * `WalletTxn` in src/mock/student.ts used Naira numbers; this does not.
  */
 
@@ -26,7 +26,7 @@ export type PayoutStatus = 'requested' | 'processing' | 'paid' | 'failed' | 'rev
 export interface Wallet {
   id: string;
   ownerId: string;
-  /** Derived from the ledger — never written directly. */
+  /** Derived from the ledger   never written directly. */
   balanceKobo: number;
   /** Earned but still in escrow. */
   pendingKobo: number;
@@ -53,7 +53,7 @@ export interface BankAccount {
   accountNumber: string;
   accountName: string;
   isDefault: boolean;
-  /** Set by the Paystack resolve call — the client cannot claim it. */
+  /** Set by the Paystack resolve call   the client cannot claim it. */
   isVerified: boolean;
 }
 
@@ -95,7 +95,7 @@ export interface Plan {
   maxStores: number | null;
   /**
    * 0 = no team members at all; null = unlimited. Deliberately not the same
-   * value — "you cannot invite anyone" and "invite whoever you like" are
+   * value   "you cannot invite anyone" and "invite whoever you like" are
    * opposite answers and a nullable-only column could not tell them apart.
    */
   maxTeam: number | null;
@@ -108,7 +108,7 @@ export interface Plan {
 
 /**
  * What the caller's plan allows and what they have spent of it, from
- * `my_plan_usage()`. The same numbers the triggers enforce — read these rather
+ * `my_plan_usage()`. The same numbers the triggers enforce   read these rather
  * than counting rows in a component, or the screen and the database will
  * eventually disagree about whether somebody is at their limit.
  */

@@ -4,7 +4,7 @@
  * WHY THIS IS NOT IN THE DATABASE
  *   It is product config, not state. `access_grants` records what a role WAS
  *   given; this is the list of what CAN be given, and an area nobody has been
- *   granted still has to appear in the editor — as ungranted. Deriving the list
+ *   granted still has to appear in the editor   as ungranted. Deriving the list
  *   from the rows would hide exactly the areas that matter most, because an
  *   area with no grants is the interesting one.
  *
@@ -19,7 +19,7 @@
  *
  * READ VERSUS WRITE
  *   read  can open the screen and see what is there
- *   write can also act — approve, refund, publish, invite
+ *   write can also act   approve, refund, publish, invite
  *
  *   The distinction is worth having because most of the risk in this console is
  *   in the acting, not the looking, and "let them see the queue without letting
@@ -91,7 +91,7 @@ export const ADMIN_AREAS: AreaSpec[] = [
   {
     key: 'users',
     label: 'Users',
-    description: 'The account directory — every role in one list.',
+    description: 'The account directory   every role in one list.',
     href: '/admin/users',
   },
   {

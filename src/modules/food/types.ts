@@ -2,7 +2,7 @@
  * Domain types for the 'food' module.
  *
  * These are the shapes COMPONENTS see: camelCase, Naira-agnostic (kobo kept as
- * kobo — format at render with `formatKobo`), and free of database concerns
+ * kobo   format at render with `formatKobo`), and free of database concerns
  * like `archived_at`. `queries.ts` maps rows to these; nothing outside that file
  * should know a column name.
  */
@@ -50,7 +50,7 @@ export interface FoodListing {
   name: string;
   description?: string | null;
   category: string;
-  /** The price AT THIS STORE — the store's override, else the catalogue's. */
+  /** The price AT THIS STORE   the store's override, else the catalogue's. */
   priceKobo: number;
   /** null = untracked (cooked to order). 0 = sold out. Per store. */
   stock: number | null;

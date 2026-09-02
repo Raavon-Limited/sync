@@ -1,5 +1,5 @@
 /**
- * The food storefronts that actually exist — BRANCHES, not brands.
+ * The food storefronts that actually exist   BRANCHES, not brands.
  *
  * WHY BRANCHES
  *   A brand with three locations is three places a student can order from, with
@@ -8,7 +8,7 @@
  *   side of town. Each card links to that branch's own slug.
  *
  * WHY IT SITS ALONGSIDE THE CURATED ROWS
- *   Everything else on /food — the featured carousel, the category rows — is
+ *   Everything else on /food   the featured carousel, the category rows   is
  *   built from hardcoded arrays in FoodMain with stock photography and invented
  *   slugs like `mama-put-tanke`, which resolve to nothing. Replacing that
  *   designed landing is a product decision, not a wiring one, so this section
@@ -45,7 +45,7 @@ export function RealVendorsSection() {
           <FoodCards
             key={b.id}
             // `favorites` has no 'storefront' type, so a branch is saved as its
-            // BRAND — see the note in favorites-context.
+            // BRAND   see the note in favorites-context.
             entityId={b.vendorId}
             entityType="vendor"
             slug={b.slug}
@@ -58,7 +58,7 @@ export function RealVendorsSection() {
             reviewCount={b.ratingCount}
             location={b.area ?? 'Ilorin'}
             time="20 - 30 min"
-            // Three states. `is_accepting_orders` is the manual switch — one
+            // Three states. `is_accepting_orders` is the manual switch   one
             // location closing early does not close the business. A cooldown
             // is different: the store is open and will take orders again in a
             // few minutes on its own, so it must not read as "closed".

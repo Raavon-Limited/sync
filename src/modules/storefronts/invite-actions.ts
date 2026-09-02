@@ -1,5 +1,5 @@
 /**
- * Server Actions for store invitations — delivering them, and redeeming them
+ * Server Actions for store invitations   delivering them, and redeeming them
  * into an account.
  *
  * WHY REDEMPTION IS A SERVER ACTION AND NOT AN RPC
@@ -12,7 +12,7 @@
  *
  * THE TOKEN IS THE PROOF OF MAILBOX CONTROL.
  *   `accept_storefront_invite` insists on a CONFIRMED email matching the
- *   invite, which is right — but a brand new account has no confirmed email
+ *   invite, which is right   but a brand new account has no confirmed email
  *   and no way to get one without a second round of email. The invite token
  *   closes that loop: it was mailed to that address and nowhere else, so
  *   presenting it IS the demonstration that the holder reads that mailbox.
@@ -50,7 +50,7 @@ export type InviteActionResult = { ok: true } | { ok: false; error: string };
  * SPLIT FROM CREATION ON PURPOSE. `create_storefront_invite` returns the token
  * exactly once and is the security boundary; this is delivery. If Resend is
  * down, the invite still exists and the owner can still copy the link by hand
- * — which is why a failure here is reported but does not undo anything.
+ *   which is why a failure here is reported but does not undo anything.
  */
 export async function sendInviteEmail(input: {
   token: string;
@@ -62,7 +62,7 @@ export async function sendInviteEmail(input: {
   const from = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>`;
 
   if (!apiKey) {
-    console.error('[invite] RESEND_API_KEY missing — invite created but not emailed');
+    console.error('[invite] RESEND_API_KEY missing   invite created but not emailed');
     return { ok: false, error: 'Email is not configured. Copy the link and send it yourself.' };
   }
 
@@ -102,7 +102,7 @@ export async function sendInviteEmail(input: {
       html,
     });
     if (error) {
-      // Usually an unverified sender domain in Resend. Log it verbatim — the
+      // Usually an unverified sender domain in Resend. Log it verbatim   the
       // owner's copy of this message cannot say that usefully.
       console.error('[invite] Resend rejected the send. from=%s error=%o', from, error);
       return { ok: false, error: 'We could not send the email. Copy the link and send it yourself.' };
@@ -122,7 +122,7 @@ export interface InvitePreview {
   email?: string;
   storeName?: string;
   sections?: string[];
-  /** True when this address already has a Sync account — they sign in instead. */
+  /** True when this address already has a Sync account   they sign in instead. */
   hasAccount?: boolean;
   expiresAt?: string;
 }
@@ -131,7 +131,7 @@ export interface InvitePreview {
  * What is behind this token, for the join screen.
  *
  * Safe to expose to whoever holds the token: they were sent it. It returns the
- * invited email so the screen can show which address they are joining as —
+ * invited email so the screen can show which address they are joining as  
  * people forward these, and accepting as the wrong person is the mistake this
  * prevents.
  */
@@ -183,7 +183,7 @@ export async function previewInvite(token: string): Promise<InvitePreview> {
  *
  * Via an RPC rather than `auth.admin.listUsers()`, which has no lookup-by-email
  * and would mean paging the entire user table on every invite click. The
- * function is granted to the service role ONLY — it is an account-enumeration
+ * function is granted to the service role ONLY   it is an account-enumeration
  * oracle, which is precisely why it is not reachable from a browser. See
  * 20260901180000.
  *
@@ -206,7 +206,7 @@ export type RedeemResult = { ok: true; redirect: string } | { ok: false; error: 
 
 /**
  * Create the account behind an invite, set the password the recipient chose,
- * and accept the invitation — in that order, because each step needs the one
+ * and accept the invitation   in that order, because each step needs the one
  * before it.
  *
  * REVALIDATES THE TOKEN ITSELF rather than trusting the preview. The preview
@@ -250,7 +250,7 @@ export async function redeemInvite(input: {
   const email = String(invite.email).toLowerCase();
 
   // 2. Create the account, or refuse politely if one already exists. We do NOT
-  //    reset an existing user's password from an invite link — that would turn
+  //    reset an existing user's password from an invite link   that would turn
   //    a forwarded invite into an account takeover of whoever owns that
   //    address.
   if (await emailHasAccount(email)) {
@@ -263,7 +263,7 @@ export async function redeemInvite(input: {
   const { error: createError } = await admin.auth.admin.createUser({
     email,
     password,
-    // Sound because the token was delivered to this address and nowhere else —
+    // Sound because the token was delivered to this address and nowhere else  
     // holding it is the demonstration of control that a confirmation email
     // would otherwise ask for. See the header.
     email_confirm: true,

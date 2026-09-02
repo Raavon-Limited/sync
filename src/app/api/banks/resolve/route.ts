@@ -1,7 +1,7 @@
 /**
  * ROUTE: /api/banks/resolve  (GET ?account_number=&bank_code=)
  *
- * Returns the ACCOUNT HOLDER'S NAME for a (number, bank) pair — the check a
+ * Returns the ACCOUNT HOLDER'S NAME for a (number, bank) pair   the check a
  * banking app does the moment you finish typing, and the only thing here that
  * actually proves anything. `suggest.ts` narrows the bank list from a hundred
  * to a handful; this confirms which one it is by coming back with a name.
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
     if (!res.ok || !payload.status || !payload.data?.account_name) {
       // Paystack says "Could not resolve account name. Check parameters or try
       // again." for a wrong pairing, which is exactly what the user needs to
-      // see — it means "this account number is not at this bank".
+      // see   it means "this account number is not at this bank".
       return Response.json(
         { error: payload.message ?? 'Could not find that account at this bank.' },
         { status: 404 },

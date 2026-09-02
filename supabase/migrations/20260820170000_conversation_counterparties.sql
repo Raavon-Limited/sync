@@ -4,7 +4,7 @@
 -- PROBLEM
 --   The inbox has to answer "who am I talking to", and the answer lives in
 --   public.profiles.full_name. 20260814102248_fix_profile_exposure locked that
---   table to `auth.uid() = id` — your own row only — because it also holds
+--   table to `auth.uid() = id`   your own row only   because it also holds
 --   phone and business_address, which were once world-readable via the
 --   publishable key. That fix is correct and stays.
 --
@@ -15,14 +15,14 @@
 --
 -- WHY A FUNCTION AND NOT A POLICY
 --   The obvious fix is an RLS policy: "you may read profiles of people you
---   share a conversation with". But RLS is ROW level — such a policy hands the
+--   share a conversation with". But RLS is ROW level   such a policy hands the
 --   reader every COLUMN of that row, phone and business_address included. A
 --   student messaging a vendor would leak their personal phone number to them.
 --   This function discloses exactly three display fields and nothing else,
 --   which is the whole point.
 --
 -- WHAT IT WILL NOT RETURN
---   • rows for conversations the caller is not a member of — enforced by
+--   • rows for conversations the caller is not a member of   enforced by
 --     private.is_conversation_member(), the same helper the RLS policies use
 --   • the caller's own participant row (they already have their own profile)
 --   • any column beyond full_name / business_name / logo_url

@@ -13,7 +13,7 @@
  *   The panel is a client component but its parent is an async server
  *   component, and a route handler would need its own auth plumbing. The
  *   action runs as the signed-in user, and the RPC underneath scopes itself
- *   to auth.uid() — there is no owner argument to get wrong.
+ *   to auth.uid()   there is no owner argument to get wrong.
  */
 'use server';
 
@@ -32,7 +32,7 @@ export async function fetchRevenueSeries(period: RevenuePeriod): Promise<Revenue
 
   const rows = (data ?? []) as unknown as { label: string; revenue_kobo: number }[];
 
-  // `week` is the chart's generic bucket-label field across every period —
-  // "Aug 14", "Aug W2", "Aug", "2026" — not a week specifically.
+  // `week` is the chart's generic bucket-label field across every period  
+  // "Aug 14", "Aug W2", "Aug", "2026"   not a week specifically.
   return rows.map((r) => ({ week: r.label, revenue: Math.round(r.revenue_kobo / 100) }));
 }

@@ -152,7 +152,7 @@ export function useMySubscription() {
  *
  * Goes through `/api/banks` rather than a constant because a payout needs a
  * `bank_code`, and the authoritative list lives with Paystack. Cached for the
- * session — banks change on the order of months.
+ * session   banks change on the order of months.
  */
 export function useBanks() {
   return useQuery({
@@ -245,8 +245,8 @@ export function useCancelWithdrawal() {
 /**
  * The caller's plan limits and what they have used.
  *
- * Separate from `usePlans` because that is a catalogue — the same for
- * everybody and cached for an hour — while this is one vendor's own position
+ * Separate from `usePlans` because that is a catalogue   the same for
+ * everybody and cached for an hour   while this is one vendor's own position
  * against it and changes whenever they add a listing or a store.
  */
 export function usePlanUsage() {

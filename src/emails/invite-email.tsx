@@ -13,7 +13,7 @@
  *   and never sent it.
  *
  * IT SAYS WHAT THEY ARE GETTING, AND WHAT THEY ARE NOT. Somebody handed access
- * to a business needs to know the shape of it before they accept — and the
+ * to a business needs to know the shape of it before they accept   and the
  * owner needs them to know that this is not access to the money.
  *
  * Inline styles only - the rule for email clients.
@@ -40,7 +40,7 @@ const FAINT = '#9a9aa2';
 export interface InviteEmailProps {
   /** The store they will be working. */
   storeName: string;
-  /** Who sent it — a business name is more recognisable than an email. */
+  /** Who sent it   a business name is more recognisable than an email. */
   invitedBy: string;
   /** Plain-English section names, already resolved from scopes. */
   sections: string[];
@@ -96,7 +96,7 @@ export function InviteEmail({
             You have been invited to {storeName}
           </Heading>
           <Text style={{ color: MUTED, fontSize: 14, lineHeight: '22px', margin: 0 }}>
-            {invitedBy} wants you to help run their store on Sync. Accepting takes a minute — you
+            {invitedBy} wants you to help run their store on Sync. Accepting takes a minute   you
             will pick your own password on the way in.
           </Text>
 
@@ -159,7 +159,7 @@ export function InviteEmail({
           </Text>
 
           <Text style={{ color: FAINT, fontSize: 12, lineHeight: '18px', margin: '12px 0 0' }}>
-            Not expecting this? Ignore it — nothing happens until you open the link.
+            Not expecting this? Ignore it   nothing happens until you open the link.
           </Text>
         </Container>
 

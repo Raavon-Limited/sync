@@ -30,11 +30,11 @@ import { AboutCta } from '@/components/about/about-cta';
 import { SITE } from '@/config/site';
 
 export const metadata: Metadata = {
-  title: 'About Sync — Connect. Search. Sync.',
+  title: 'About Sync   Connect. Search. Sync.',
   // Brand summary / tagline doubles as the meta + OG description.
   description: SITE.summary,
   openGraph: {
-    title: 'About Sync — Connect. Search. Sync.',
+    title: 'About Sync   Connect. Search. Sync.',
     description: SITE.summary,
     // TODO: add the OG asset at /public/og/about.png (does not exist yet).
     images: ['/og/about.png'],

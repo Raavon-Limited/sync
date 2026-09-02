@@ -21,7 +21,7 @@ export function ResetPasswordForm() {
   const [ready, setReady] = useState<boolean | null>(null);
 
   // Supabase turns the recovery link's fragment into a session on load. The
-  // browser client is what processes it, so the check has to happen here — the
+  // browser client is what processes it, so the check has to happen here   the
   // server has no session until that has finished and the cookie is written.
   useEffect(() => {
     let live = true;

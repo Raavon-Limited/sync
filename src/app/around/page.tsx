@@ -289,7 +289,7 @@ function LaundryCard({
       </div>
       <div className="flex items-end justify-between">
         {/* "Next slot 4pm" needed a booking calendar, which laundry does not
-            have — service_requests carries a single scheduled_for, not slots. */}
+            have   service_requests carries a single scheduled_for, not slots. */}
         <p className="text-content-muted text-xs">Cheapest listed price</p>
         <Button asChild size="sm">
           <Link href={`/laundry/${laundry.slug}`}>

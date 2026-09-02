@@ -31,7 +31,7 @@ export interface Hotspot {
 /**
  * Coordinates come from the plain `lat`/`lng` columns, never from `geo`.
  * A geography column reads back over PostgREST as WKB hex, so `geo.coordinates`
- * is always undefined — a reader written against it fails silently and simply
+ * is always undefined   a reader written against it fails silently and simply
  * never renders a pin. See 20260824090000_hostel_hotspot_coords.
  */
 export function toLatLng(r: Row): { lat: number; lng: number } | null {

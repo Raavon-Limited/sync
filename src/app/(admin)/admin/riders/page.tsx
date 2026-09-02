@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/riders
  * ACCESS: admin / super_admin only, enforced here AND in every server action.
- * PURPOSE: The people who actually move the orders — verify them, see what they
+ * PURPOSE: The people who actually move the orders   verify them, see what they
  *          have delivered, and freeze one who should not be working.
  *
  * WHY THIS PAGE DID NOT EXIST UNTIL NOW
@@ -13,7 +13,7 @@
  *
  * THE COUNTS ARE COMPUTED HERE, NOT READ OFF THE PROFILE
  *   rider_profiles.deliveries_count exists and is maintained by trigger, but it
- *   answers "how many, ever" — and the question a reviewer actually has is
+ *   answers "how many, ever"   and the question a reviewer actually has is
  *   "what has this person been doing lately, and is anything stuck". So the
  *   recent deliveries are fetched and aggregated per rider instead, which also
  *   surfaces in-flight jobs a suspension would strand.
@@ -25,7 +25,7 @@ import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs } from '@/components/admin/account-tabs';
 import { RidersConsole, type AdminRider } from './(components)/riders-console';
 
-export const metadata: Metadata = { title: 'Riders — Admin' };
+export const metadata: Metadata = { title: 'Riders   Admin' };
 
 type Row = Record<string, unknown>;
 

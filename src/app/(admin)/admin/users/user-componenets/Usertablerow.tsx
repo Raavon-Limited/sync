@@ -58,7 +58,7 @@ export function UserTableRow({ user: u, isSuperAdmin, onView, onPatch }: Props) 
           >
             {initials(u.full_name)}
           </div>
-          <p className="text-content text-sm font-semibold">{u.full_name ?? '—'}</p>
+          <p className="text-content text-sm font-semibold">{u.full_name ?? ' '}</p>
         </div>
       </td>
 

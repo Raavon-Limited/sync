@@ -51,7 +51,7 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/vendor', roles: ['vendor'] },
   { prefix: '/landlord', roles: ['landlord'] },
   // Riders get their own dashboard: the delivery queue, active job and earnings.
-  // The route group does not exist yet — this gate is in place so that when it
+  // The route group does not exist yet   this gate is in place so that when it
   // is added it is protected from the first commit rather than retrofitted.
   { prefix: '/rider', roles: ['rider'] },
   // { prefix: '/admin', roles: ['admin', 'super_admin'] },

@@ -4,7 +4,7 @@
  * THREE SCREENS, AND WHICH ONE YOU GET IS DECIDED SERVER-SIDE
  *   invalid       the token is spent, cancelled, expired or made up
  *   sign in       the address already has an account, so there is no password
- *                 to choose — they sign in and come back to accept
+ *                 to choose   they sign in and come back to accept
  *   set password  the ordinary case: no account yet, so make one
  *
  * The branch is on `preview`, which was resolved by the page with the service
@@ -49,7 +49,7 @@ export function StaffInviteForm({
         <p className="text-content text-sm">{preview.reason}</p>
         <p className="text-content-muted text-sm">
           Invitations last ten minutes and can only be used once. Ask whoever invited you to send a
-          new one — it arrives straight away.
+          new one   it arrives straight away.
         </p>
         <Button asChild size="lg" className="w-full">
           <Link href="/login">Go to log in</Link>
@@ -58,7 +58,7 @@ export function StaffInviteForm({
     );
   }
 
-  /* What they are being handed. Shown on both paths — somebody should be able
+  /* What they are being handed. Shown on both paths   somebody should be able
      to see the shape of the job before accepting it, not after. */
   const summary = (
     <div className="border-line/15 bg-panel flex flex-col gap-3 rounded-xl border p-4">
@@ -80,7 +80,7 @@ export function StaffInviteForm({
         </ul>
       ) : (
         <p className="text-content-muted text-xs">
-          No areas are open to this role yet. Whoever invited you will grant them — you will see an
+          No areas are open to this role yet. Whoever invited you will grant them   you will see an
           empty console until they do.
         </p>
       )}
@@ -96,7 +96,7 @@ export function StaffInviteForm({
         {summary}
         <p className="text-content-muted text-sm">
           {preview.email} already has a Sync account. Sign in with it and this invitation is
-          accepted — your existing password does not change.
+          accepted   your existing password does not change.
         </p>
         {error && <p className="text-coral text-sm">{error}</p>}
         <Button
@@ -170,7 +170,7 @@ export function StaffInviteForm({
       </Button>
 
       <p className="text-content-muted text-xs">
-        Your account is created as {preview.email}. Nobody at Sync sees this password — it is set
+        Your account is created as {preview.email}. Nobody at Sync sees this password   it is set
         here and stored hashed, which is why the invitation carried a link rather than one we chose
         for you.
       </p>

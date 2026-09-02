@@ -4,7 +4,7 @@
  * WHY KEYS LIVE IN ONE FILE
  * Cache invalidation is only as good as key agreement. If `useOrders` keys on
  * `['orders', vendorId]` and a mutation invalidates `['order-list', vendorId]`,
- * nothing breaks loudly — the list just silently shows stale data, which is the
+ * nothing breaks loudly   the list just silently shows stale data, which is the
  * worst failure mode there is. One registry means a mutation cannot invalidate a
  * key that does not exist, because it is reaching for the same function the
  * query used.
@@ -34,7 +34,7 @@ export type FilterValue = string | number | boolean | null | undefined;
  * Filters are part of the key: different filters are different cache entries.
  *
  * Typed as `object` rather than `Record<string, FilterValue>` on purpose.
- * TypeScript only gives *type aliases* an implicit index signature — an
+ * TypeScript only gives *type aliases* an implicit index signature   an
  * `interface` never gets one. So `Record<string, FilterValue>` rejects
  * `PageParams` and every `{ status?: string } & PageParams` intersection at the
  * call site, even though those are exactly the filter objects this is for.

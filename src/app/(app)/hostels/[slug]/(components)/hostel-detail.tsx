@@ -1,12 +1,12 @@
 /**
- * Hostel detail — gallery, amenities, rooms, and the two things a student
+ * Hostel detail   gallery, amenities, rooms, and the two things a student
  * actually wants to do: ask a question, or request the room.
  *
  * ASKING COMES BEFORE BOOKING
  *   `open_hostel_conversation` is idempotent per (hostel, student), so a
  *   student can ask "is this still available?" before any booking row exists
  *   and return to the same thread later. That door did not exist until
- *   20260822160000 — the schema permitted hostel threads and nothing could
+ *   20260822160000   the schema permitted hostel threads and nothing could
  *   create one.
  */
 'use client';
@@ -121,7 +121,7 @@ export function HostelDetail({ slug }: { slug: string }) {
           </Button>
 
           {/* The pre-booking door. Deliberately available even when nothing is
-              bookable — "when will a room free up?" is exactly the question a
+              bookable   "when will a room free up?" is exactly the question a
               student has at that moment. */}
           <Button
             variant="outline"
@@ -172,7 +172,7 @@ export function HostelDetail({ slug }: { slug: string }) {
         <h2 className="text-content text-lg font-semibold">Rooms</h2>
         {hostel.rooms.length === 0 ? (
           <p className="text-content-muted text-sm">
-            The landlord has not listed individual rooms yet — request the hostel and they will be
+            The landlord has not listed individual rooms yet   request the hostel and they will be
             in touch.
           </p>
         ) : (

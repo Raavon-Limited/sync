@@ -3,7 +3,7 @@
  *
  * LOSING THE RACE IS A NORMAL OUTCOME, NOT AN ERROR
  *   Two riders tapping the same job at the same instant is the expected case on
- *   a busy campus, and the database settles it — delivery_offers_one_accepted_idx
+ *   a busy campus, and the database settles it   delivery_offers_one_accepted_idx
  *   lets exactly one insert through. The loser gets "somebody already took this
  *   one", which is a sentence about the world rather than a failure of theirs,
  *   so it is shown on the card in plain type and the list refreshes underneath.

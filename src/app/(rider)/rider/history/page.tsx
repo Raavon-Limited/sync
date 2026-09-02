@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui';
 import { formatKobo } from '@/lib/utils/format';
 import { getCompletedJobs, getRiderProfile } from '@/modules/rider/queries';
 
-export const metadata: Metadata = { title: 'History — Rider' };
+export const metadata: Metadata = { title: 'History   Rider' };
 
 const TONE: Record<string, string> = {
   delivered: 'bg-emerald-500/10 text-emerald-600',
@@ -61,7 +61,7 @@ export default async function Page() {
               {/* Only a delivered job paid. Showing the fee against a failed one
                   would read as money the rider is owed. */}
               <p className="text-content text-sm font-medium">
-                {j.status === 'delivered' ? formatKobo(j.feeKobo) : '—'}
+                {j.status === 'delivered' ? formatKobo(j.feeKobo) : ' '}
               </p>
             </div>
           ))}

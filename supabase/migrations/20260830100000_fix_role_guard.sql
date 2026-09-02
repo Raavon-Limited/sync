@@ -11,7 +11,7 @@
 --    own row, so the only thing standing between a student and the admin role
 --    set was a column list written before that column existed.
 --
---    It was not yet exploitable for real access — whatever a user holds in
+--    It was not yet exploitable for real access   whatever a user holds in
 --    `roles`, `current_app_role()` reads `role`, and the same guard was
 --    reverting that. So they could hold admin and not wear it. That is one
 --    line of code away from being real, and `roles` is already read by the UI.
@@ -23,7 +23,7 @@
 --      "With the new Supabase sb_secret_/sb_publishable_ API keys, ALL
 --       PostgREST writes ... are reverted this way and leave role unchanged."
 --
---    `current_user` is `authenticated` for every request through PostgREST —
+--    `current_user` is `authenticated` for every request through PostgREST  
 --    service-role calls and SECURITY DEFINER RPCs included. So the guard's
 --    `current_user in ('authenticated','anon')` is, in practice, always true,
 --    and no RPC can ever move `role`.
@@ -70,7 +70,7 @@ begin
     end if;
 
     -- `role` is which held privilege is active. Moving it is not a grant, so
-    -- it is allowed — but only within the set above, which by this point is
+    -- it is allowed   but only within the set above, which by this point is
     -- either the old set or a legitimately granted one.
     if not (new.role = any (coalesce(new.roles, '{}'))) then
       new.role := old.role;

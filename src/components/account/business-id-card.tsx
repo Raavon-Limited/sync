@@ -1,5 +1,5 @@
 /**
- * The vendor's ID card — something to show a customer who asks "are you real?".
+ * The vendor's ID card   something to show a customer who asks "are you real?".
  *
  * WHY IT IS ONE SVG STRING AND NOT A DIV
  *   The card has to leave the app: downloaded, printed, sent in a WhatsApp
@@ -14,7 +14,7 @@
  *   Anyone can print a card that says VERIFIED. What cannot be printed is a
  *   live answer, so the code encodes `/v/<slug>` and the truth is fetched when
  *   somebody scans it. A suspended vendor's card scans as suspended while the
- *   card in their hand still says otherwise — see 20260901170000.
+ *   card in their hand still says otherwise   see 20260901170000.
  *
  *   That is why the card shows its own status quietly and the QR loudly. The
  *   printed status is a convenience; the code is the check.
@@ -22,7 +22,7 @@
  * EVERYTHING REMOTE IS INLINED BEFORE RASTERISING. A remote <image> href inside
  * an SVG being drawn to a canvas either fails to load in time or taints the
  * canvas and makes `toBlob` throw. Fetching the logo and the rosette and
- * embedding them as data URIs removes both failures — and if either fetch
+ * embedding them as data URIs removes both failures   and if either fetch
  * fails, the card is produced without it rather than not at all.
  */
 'use client';
@@ -49,7 +49,7 @@ const MUTED = '#9b9ba3';
  * The QR is drawn in LIME-DEEP on cream, not bright lime on ink.
  *
  * Bright lime on a dark panel is the obvious reading of "make it lime" and it
- * produces an INVERTED code — light modules on a dark ground. The QR spec
+ * produces an INVERTED code   light modules on a dark ground. The QR spec
  * assumes dark-on-light, and while many modern decoders cope, plenty of older
  * and in-app scanners simply do not. `lime-deep` is the same brand colour at
  * the other end of the ramp: unmistakably Sync, and a normal dark-on-light
@@ -86,7 +86,7 @@ export interface BusinessIdCardProps {
   slug: string;
   /**
    * The card's unguessable address. Absent while it loads, which is why the
-   * QR is not drawn until it arrives — a code-less card would produce a QR
+   * QR is not drawn until it arrives   a code-less card would produce a QR
    * pointing at `/v/undefined`, which resolves to "not a valid card" and looks
    * like the vendor's own account is broken.
    */
@@ -99,7 +99,7 @@ export interface BusinessIdCardProps {
   verificationStatus: VerificationStatus | string;
   memberSince?: string | null;
   storeCount?: number;
-  /** Reissue — invalidates every printed card. Omitted, the control hides. */
+  /** Reissue   invalidates every printed card. Omitted, the control hides. */
   onReissue?: () => void;
   reissuing?: boolean;
 }
@@ -125,13 +125,13 @@ export function BusinessIdCard({
   // The CONFIGURED origin, never `window.location.origin`.
   //
   // This URL is baked into a file that gets downloaded, printed and handed to
-  // strangers — it outlives the page that made it. A card generated on a dev
+  // strangers   it outlives the page that made it. A card generated on a dev
   // machine would otherwise carry `http://localhost:3000/v/...` permanently:
   // it would look perfect, print perfectly, and scan to nothing on anybody
   // else's phone. See canonicalOrigin().
   //
   // Addressed by the CODE, not the slug. `/v/raavon-limited` is guessable from
-  // a business name, and this page shows a photograph of a person — anyone
+  // a business name, and this page shows a photograph of a person   anyone
   // could have walked the slug list and harvested faces. See 20260901190000.
   const verifyUrl = useMemo(() => (code ? `${ORIGIN}/v/${code}` : null), [code]);
 
@@ -213,7 +213,7 @@ export function BusinessIdCard({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* The SVG carries no width/height attributes — only a viewBox — so it
+      {/* The SVG carries no width/height attributes   only a viewBox   so it
           fills whatever column it is given instead of rendering at a fixed
           720px and overflowing narrow ones. */}
       <div
@@ -266,7 +266,7 @@ export function BusinessIdCard({
         <QrCode className="mt-0.5 size-3.5 shrink-0" />
         {/* Said plainly, because it is the reason the card is worth carrying:
             the code is not a picture of a status, it is a lookup. */}
-        Whoever scans this sees your status live — they need no Sync account, and if your
+        Whoever scans this sees your status live   they need no Sync account, and if your
         verification changes, every card already printed shows the new answer. The link works
         only from the card, so keep a lost one from being used by reissuing it above.
       </p>
@@ -303,7 +303,7 @@ function buildCard(o: {
   // THE PERSON LEADS WHEN THERE IS ONE.
   //
   // A shop's card answers "is this business real". An agent's card answers
-  // "should I open this door", and the thing being checked is a human being —
+  // "should I open this door", and the thing being checked is a human being  
   // so their name is the headline and the business becomes the context under
   // it. Falling back to the business name keeps the card correct for a vendor
   // who never filled in a personal name.
@@ -397,7 +397,7 @@ function buildCard(o: {
   <text x="${PAD}" y="356" fill="${MUTED}" font-size="10" letter-spacing="1.6">SCAN TO VERIFY</text>
   <text x="${PAD}" y="378" fill="${GOLD}" font-size="12">${esc(
     // The code is deliberately NOT printed as readable text. Writing it out
-    // would let anyone who photographs the card type it in later — the whole
+    // would let anyone who photographs the card type it in later   the whole
     // point of an unguessable address is that it lives in the QR and nowhere
     // a passing glance can capture.
     o.verifyUrl ? `${SITE.name.toLowerCase()} · scan the code, do not type it` : 'Preparing…',

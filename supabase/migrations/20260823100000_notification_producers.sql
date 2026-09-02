@@ -2,7 +2,7 @@
 -- notification_producers
 --
 -- public.notifications has existed since 20260817090400 and NOTHING has ever
--- written to it. No trigger, no RPC, no app-side insert — and `authenticated`
+-- written to it. No trigger, no RPC, no app-side insert   and `authenticated`
 -- holds only select+update, which is correct: a notification a client can forge
 -- is not a notification. The result is an inbox that is permanently empty and a
 -- bell that can never light up.

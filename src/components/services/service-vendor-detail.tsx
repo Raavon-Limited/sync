@@ -1,5 +1,5 @@
 /**
- * A service pro's page — who they are and what they offer.
+ * A service pro's page   who they are and what they offer.
  *
  * ONE COMPONENT, ANY VERTICAL
  *   Same reasoning as ServicesBrowser: beauty, laundry and workmanship share
@@ -7,13 +7,13 @@
  *
  * NO PORTFOLIO GALLERY
  *   The route header asks for one. `vendor_profiles` has `logo_url` and
- *   `cover_url` and nothing else — there is no portfolio table, so there are no
+ *   `cover_url` and nothing else   there is no portfolio table, so there are no
  *   images to show. Rendering a placeholder grid would imply the vendor
  *   uploaded work they have not.
  *
  * NO SLOT PICKER
  *   It also asks for a calendar. `service_requests.scheduled_for` is a single
- *   timestamp with no availability model behind it — no working hours, no
+ *   timestamp with no availability model behind it   no working hours, no
  *   existing-booking check, nothing to prevent double-booking. A picker over
  *   that would show slots the vendor never offered. The student proposes a time
  *   in the request instead, and the vendor confirms it.
@@ -137,7 +137,7 @@ export function ServiceVendorDetail({ slug, vertical }: { slug: string; vertical
             className="border-line/10 bg-surface-deep text-content rounded-xl border px-3 py-2 text-sm outline-none"
           />
           <span className="text-content-muted text-[11px]">
-            A request, not a confirmed slot — the vendor replies to agree a time.
+            A request, not a confirmed slot   the vendor replies to agree a time.
           </span>
         </label>
 

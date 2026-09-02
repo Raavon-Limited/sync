@@ -151,7 +151,7 @@ export default function MyReviewsPage() {
       </div>
 
       {/* submit_review refuses anything not yours or not yet complete. Its
-          reason is worth showing — "nothing happened" is the worst outcome. */}
+          reason is worth showing   "nothing happened" is the worst outcome. */}
       {error && (
         <p className="text-coral border-coral/30 bg-coral/5 mt-3 rounded-lg border px-3 py-2 text-sm">
           {error}

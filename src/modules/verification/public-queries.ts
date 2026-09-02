@@ -1,5 +1,5 @@
 /**
- * The public side of verification — what a stranger scanning a card can see.
+ * The public side of verification   what a stranger scanning a card can see.
  *
  * Separate from `queries.ts` because the audience is different in a way that
  * matters: everything here is readable by `anon`, and adding a field is a
@@ -57,7 +57,7 @@ export interface PublicVerification {
   ratingAvg: number;
   ratingCount: number;
   requirements: VerificationRequirement[];
-  /** When this answer was produced — shown so a screenshot dates itself. */
+  /** When this answer was produced   shown so a screenshot dates itself. */
   checkedAt: string;
 }
 
@@ -113,7 +113,7 @@ export async function fetchCardVerification(
  * How each state is presented.
  *
  * The copy is written for somebody standing at their own front door deciding
- * whether to let a stranger in — so it says what to DO, not just what the
+ * whether to let a stranger in   so it says what to DO, not just what the
  * status is. "Not verified" on its own reads as a technicality; "do not let
  * them in on the strength of this card" is the actual advice.
  */

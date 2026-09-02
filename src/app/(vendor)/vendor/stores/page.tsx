@@ -1,6 +1,6 @@
 /**
  * ROUTE: /vendor/stores
- * ACCESS: authenticated vendor (owner). Managers see empty lists — every read
+ * ACCESS: authenticated vendor (owner). Managers see empty lists   every read
  *         and write behind this page is owner-scoped in the database.
  * PURPOSE: Branches, the people who run them, and what those people did.
  */

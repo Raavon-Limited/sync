@@ -9,7 +9,7 @@
 --   enforced by absolutely nothing. A vendor on the free plan could add ten
 --   thousand listings and the only thing that ever mentioned the cap was the
 --   card advertising it. A limit nobody enforces is not a limit, it is a
---   claim — and it is the kind that gets noticed by the people you least want
+--   claim   and it is the kind that gets noticed by the people you least want
 --   noticing it.
 --
 -- THE LADDER
@@ -24,7 +24,7 @@
 -- before you hit it.
 --
 -- COUNTS ARE OF WHAT IS LIVE, NOT OF WHAT EVER EXISTED. Archived listings and
--- archived stores do not count — otherwise a vendor who tidied up would be
+-- archived stores do not count   otherwise a vendor who tidied up would be
 -- permanently poorer for having done so, and the only fix would be a hard
 -- delete we deliberately do not offer.
 --
@@ -269,7 +269,7 @@ create trigger storefronts_enforce_plan_limit
 -- ── 5. Team ─────────────────────────────────────────────────────────────────
 -- Checked when the INVITE is created, not when it is redeemed. Refusing at
 -- redemption would mean the owner sends a link, the person signs up, and only
--- then finds out they were never allowed in — the failure lands on the wrong
+-- then finds out they were never allowed in   the failure lands on the wrong
 -- person, days late.
 --
 -- Pending invites count against the cap. Otherwise a Starter vendor could
@@ -435,7 +435,7 @@ revoke all on function public.my_plan_usage() from public, anon;
 grant execute on function public.my_plan_usage() to authenticated, service_role;
 
 comment on function public.my_plan_usage() is
-  'The caller''s plan and what they have used of it. The same numbers the triggers enforce — read this rather than counting in the client.';
+  'The caller''s plan and what they have used of it. The same numbers the triggers enforce   read this rather than counting in the client.';
 
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$

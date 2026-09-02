@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/verify-visits
  * ACCESS: admin / super_admin only, enforced here and again in every action.
- * PURPOSE: Hostel verification visits — review an ambassador's evidence and
+ * PURPOSE: Hostel verification visits   review an ambassador's evidence and
  *          decide whether a hostel is real.
  */
 import type { Metadata } from 'next';
@@ -9,7 +9,7 @@ import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VisitsQueue, type AdminVisit, type UnvisitedHostel } from './(components)/visits-queue';
 
-export const metadata: Metadata = { title: 'Verification visits — Admin' };
+export const metadata: Metadata = { title: 'Verification visits   Admin' };
 
 import type { Row } from '@/lib/supabase/row';
 
@@ -53,7 +53,7 @@ export default async function Page() {
     };
   });
 
-  // Hostels with no open or completed visit at all — nobody has been sent.
+  // Hostels with no open or completed visit at all   nobody has been sent.
   const visitedIds = new Set(rows.map((r) => r.hostelId));
   const unvisited: UnvisitedHostel[] = ((hostels ?? []) as Row[])
     .filter((h) => !visitedIds.has(h.id))

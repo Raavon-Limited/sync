@@ -14,7 +14,7 @@
 --
 -- THE LOCATION PRIVACY PROBLEM
 --   A student must see their rider's position, but only while that rider is
---   carrying their order — not before, not after, and never for other riders.
+--   carrying their order   not before, not after, and never for other riders.
 --   A standing read grant on rider_profiles.current_geo would leak every rider's
 --   live position to everyone. Solved below with `active_delivery_positions`, a
 --   security_invoker view whose predicate ties visibility to an in-flight
@@ -63,7 +63,7 @@ create index if not exists cart_items_cart_idx on public.cart_items (cart_id);
 
 -- ── 2. Favorites ────────────────────────────────────────────────────────────
 -- Polymorphic by design: /food/favorites saves vendors AND dishes, and the same
--- table serves events later. `saved_hostels` (0006) stays as-is — it predates
+-- table serves events later. `saved_hostels` (0006) stays as-is   it predates
 -- this and rewriting it would be churn for no gain.
 create table if not exists public.favorites (
   id           uuid primary key default gen_random_uuid(),
@@ -135,7 +135,7 @@ create table if not exists public.deliveries (
   fee_kobo         bigint  not null default 0 check (fee_kobo >= 0),
 
   -- §24: a delivery is confirmed by a code the student reads out, with a manual
-  -- fallback. Stored hashed — a leaked table must not let anyone close out
+  -- fallback. Stored hashed   a leaked table must not let anyone close out
   -- deliveries they never made.
   confirmation_code_hash text,
   confirmed_by           text check (confirmed_by in ('code', 'manual', 'auto')),
@@ -152,7 +152,7 @@ create index if not exists deliveries_rider_idx on public.deliveries (rider_id, 
 create index if not exists deliveries_open_idx  on public.deliveries (created_at)
   where status in ('pending', 'offered');
 
--- ── 5. Delivery offers — the acceptance race ────────────────────────────────
+-- ── 5. Delivery offers   the acceptance race ────────────────────────────────
 -- §24 warns about two riders accepting the same job. The unique index on
 -- (delivery_id) where accepted is the fix: the second accept violates the
 -- constraint and loses, deterministically, in the database rather than in a
@@ -296,7 +296,7 @@ drop policy if exists "deliveries_staff" on public.deliveries;
 create policy "deliveries_staff" on public.deliveries
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
--- A rider sees only their own offers — never the pool, which would leak demand
+-- A rider sees only their own offers   never the pool, which would leak demand
 -- patterns and let a rider enumerate other riders' work.
 drop policy if exists "delivery_offers_own" on public.delivery_offers;
 create policy "delivery_offers_own" on public.delivery_offers

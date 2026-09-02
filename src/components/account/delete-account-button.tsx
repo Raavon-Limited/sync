@@ -39,7 +39,7 @@ export function DeleteAccountButton() {
     <div className="border-line/10 flex flex-col items-start gap-2 rounded-2xl border border-dashed p-5">
       <p className="text-content text-sm font-medium">Delete account</p>
       <p className="text-content-muted max-w-md text-xs">
-        Your data is archived, not erased — log in again within 30 days to restore it. After 60 days
+        Your data is archived, not erased   log in again within 30 days to restore it. After 60 days
         it&rsquo;s permanently removed.
       </p>
       <Button
@@ -56,7 +56,7 @@ export function DeleteAccountButton() {
         open={open}
         onOpenChange={setOpen}
         title="Delete your account?"
-        description="Your data is archived, not erased — log in again within 30 days to restore it. After 60 days it's permanently removed."
+        description="Your data is archived, not erased   log in again within 30 days to restore it. After 60 days it's permanently removed."
         confirmLabel="Delete account"
         destructive
         loading={pending}

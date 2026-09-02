@@ -3,11 +3,11 @@
  *
  * `ChatContact` / `ChatMessage` in src/modules/vendor/types.ts are the existing
  * MOCK shapes the inbox renders today. These are the real ones. Migrate the
- * components to these — the differences are deliberate:
+ * components to these   the differences are deliberate:
  *   - `timeAgo: string` becomes `createdAt: string` (ISO). Formatting a
  *     relative time on the server bakes in the render moment and goes stale.
  *   - `isVendor: boolean` becomes `isMine: boolean`. Whether a message is
- *     "mine" depends on who is looking, not on which side sent it — the same
+ *     "mine" depends on who is looking, not on which side sent it   the same
  *     thread is read by both parties.
  */
 
@@ -32,7 +32,7 @@ export interface MessageAttachment {
   fileName: string | null;
   mimeType: string | null;
   sizeBytes: number | null;
-  /** Voice notes only — drives the waveform length. */
+  /** Voice notes only   drives the waveform length. */
   durationMs: number | null;
   width: number | null;
   height: number | null;
@@ -57,7 +57,7 @@ export interface Conversation {
   kind: ConversationKind;
   subjectType: string | null;
   subjectId: string | null;
-  /** The counterpart's name — depends on who is asking. */
+  /** The counterpart's name   depends on who is asking. */
   title: string;
   avatarUrl: string | null;
   counterpartId: string | null;

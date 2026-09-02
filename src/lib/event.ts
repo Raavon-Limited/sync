@@ -39,7 +39,7 @@ export interface Event {
     tickets: Ticket[]
     lineup?: LineupArtist[]
     // Drives the red "Sold Out" badge/button on both the listing grid
-    // (EventCards via EventsClient) and the detail page — this file is the
+    // (EventCards via EventsClient) and the detail page   this file is the
     // SINGLE source of truth both consume, so setting it here is enough
     // for it to show up everywhere consistently.
     soldOut?: boolean
@@ -57,7 +57,7 @@ export const events: Event[] = [
         image: partyEvent,
         date: "TUE 28",
         price: "₦3,500",
-        title: "Fresher's Night '26 — Phyno Live",
+        title: "Fresher's Night '26   Phyno Live",
         location: "UNILORIN Sports Hall",
         time: "8pm",
         category: "Concert",

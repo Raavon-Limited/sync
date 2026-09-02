@@ -20,7 +20,7 @@ import { OrdersTable } from './orders-table';
 /**
  * The database tracks six fulfilment states; the table renders four. Collapsing
  * them here rather than widening `Order` keeps the presentation contract stable
- * while the pipeline gains steps — `picked_up` and `on_the_way` are both simply
+ * while the pipeline gains steps   `picked_up` and `on_the_way` are both simply
  * "in progress" from the vendor's point of view, because the rider owns them.
  */
 const STATUS_LABEL: Record<OrderStatus, Order['status']> = {

@@ -46,7 +46,7 @@ import type { VerificationResult } from './types';
  * One uploaded file, already in Storage, described well enough for a reviewer
  * to know what they are opening.
  *
- * `subtype` is the specific document — 'nin', 'passport' — and it is the whole
+ * `subtype` is the specific document   'nin', 'passport'   and it is the whole
  * reason this replaced a bare `string[]` of paths. `doc_type: 'gov_id'` alone
  * told the review queue that SOME identity document had arrived and nothing
  * about which, so a reviewer had to open every file to find out what it was
@@ -120,7 +120,7 @@ export async function submitVendorOnboarding(
   // THE DETAILS HAVE TO LAND IN A TABLE, NOT JUST IN METADATA.
   //
   // Everything in the metadata write above goes to
-  // `auth.users.raw_user_meta_data`, which is read exactly once — by
+  // `auth.users.raw_user_meta_data`, which is read exactly once   by
   // handle_new_user, at signup. So the business name and address a vendor
   // typed here reached nothing the app queries, and Settings (which reads
   // `vendor_profiles`) opened with empty boxes asking for all of it again.
@@ -128,7 +128,7 @@ export async function submitVendorOnboarding(
   // AFTER set_vendor_category AND BEFORE submit_verification, and both halves
   // of that matter:
   //   - after, because this calls ensure_vendor_profile(), which refuses an
-  //     account with no business role — and the category write is what grants
+  //     account with no business role   and the category write is what grants
   //     it. Someone signing up as a student and becoming a vendor here has no
   //     business role until the call above returns.
   //   - before, because claiming the name can legitimately fail (somebody
@@ -156,14 +156,14 @@ export async function submitVendorOnboarding(
   // submitted their documents saw "verify your account" as though the
   // submission had been lost, and the admin queue never listed them.
   //
-  // `submit_verification` writes vendor_profiles — the authority — and its
+  // `submit_verification` writes vendor_profiles   the authority   and its
   // mirror trigger carries the value to profiles, which is what the dashboard
   // gate reads. See 20260901100000.
   // THE DOCUMENTS HAVE TO LAND IN A TABLE TOO, and until now they did not.
   //
   // The uploaded paths went into `user_metadata.documents` and nowhere else.
   // `verification_documents` is what /admin/vendors reads, so every vendor who
-  // uploaded an ID reached a reviewer showing "0 of 0 documents" — and since
+  // uploaded an ID reached a reviewer showing "0 of 0 documents"   and since
   // set_verification_status refuses to verify an account with nothing
   // approved, the submission could not be actioned at all. The files existed in
   // Storage with nothing pointing at them.
@@ -175,7 +175,7 @@ export async function submitVendorOnboarding(
   //
   // Best-effort, deliberately. RLS lets an owner insert their own rows, but a
   // failure here must not strand somebody whose files uploaded and whose
-  // details saved — the submission still goes through and the gap is visible
+  // details saved   the submission still goes through and the gap is visible
   // to staff as a missing document rather than as a lost account.
   if (documents.length) {
     const { error: docsError } = await supabase.from('verification_documents').insert(
@@ -238,7 +238,7 @@ export async function submitVendorVerification(
     data: {
       // `liveness_confirmed: true` was here and is gone. It came from a
       // checkbox in the form, which means it was the applicant asserting a
-      // fact about their own face — see the note in the zod schema. Nothing
+      // fact about their own face   see the note in the zod schema. Nothing
       // reads it, and leaving it would let a future reader mistake it for
       // evidence.
       //
@@ -269,6 +269,49 @@ export async function submitVendorVerification(
         submitError,
         'We saved your details but could not submit them for review. Try again in a moment.',
       ),
+    };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Put an account with no authority table into the review queue   a student
+ * today, a creator or event manager once those roles open.
+ *
+ * There is nothing to save first, which is the whole difference from the
+ * vendor path above. A business submits a name, what it sells and an address
+ * alongside its documents; a student's details were all collected at signup,
+ * so the documents are the submission and this is only the status change.
+ *
+ * THE RPC IS A DIFFERENT ONE, DELIBERATELY. `submit_verification` writes
+ * `vendor_profiles` and calls `ensure_vendor_profile()` on the way   a student
+ * calling it would be handed a business row they never asked for, and the
+ * category trigger would start treating them as one. See 20260903120000.
+ *
+ * It also refuses an empty submission, so the queue never fills with folders a
+ * reviewer can only bounce.
+ */
+export async function submitPersonalVerification(): Promise<VerificationResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'You need to be signed in to submit your documents.' };
+
+  /**
+   * Cast, because the checked-in generated types predate 20260903120000.
+   * Same escape hatch as modules/admin/roles and modules/access/guard
+   * REGENERATE once the migration is applied and this goes.
+   */
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    name: string,
+  ) => Promise<{ error: { message: string; code?: string } | null }>;
+  const { error } = await rpc('submit_personal_verification');
+  if (error) {
+    return {
+      ok: false,
+      error: userMessage(error, 'We could not submit your documents. Try again in a moment.'),
     };
   }
 

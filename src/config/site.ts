@@ -8,7 +8,7 @@
  * WHY NOT `window.location.origin`
  *   That is right for a link you click now and wrong for anything durable. A
  *   QR code baked into a downloaded ID card, or an invite link copied and sent
- *   to somebody else, is read later, elsewhere, on another person's device —
+ *   to somebody else, is read later, elsewhere, on another person's device  
  *   and one generated from a dev machine would carry `http://localhost:3000`
  *   forever. The card would print, look perfect, and scan to nothing.
  *
@@ -16,7 +16,7 @@
  *   and always an address a stranger can reach. Navigation inside the app
  *   still uses relative paths and needs none of this.
  *
- * `NEXT_PUBLIC_` so it is inlined for the browser too — the ID card builds its
+ * `NEXT_PUBLIC_` so it is inlined for the browser too   the ID card builds its
  * QR client-side.
  */
 export function canonicalOrigin(): string {

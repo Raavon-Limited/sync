@@ -54,7 +54,7 @@ create index if not exists profiles_archived_at_idx         on public.profiles (
                                                             where archived_at is not null;
 -- ── Row-Level Security ──────────────────────────────────────────────────────
 alter table public.profiles enable row level security;
--- Anyone (incl. signed-out) can read ACTIVE profiles — needed to browse vendors
+-- Anyone (incl. signed-out) can read ACTIVE profiles   needed to browse vendors
 -- and power the /around map. Archived (soft-deleted) profiles drop out of public
 -- reads but the row is retained for auditing (server/admin can still read it).
 drop policy if exists "profiles_select_all" on public.profiles;

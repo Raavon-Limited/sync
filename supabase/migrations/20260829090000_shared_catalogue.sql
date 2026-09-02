@@ -17,7 +17,7 @@
 --
 --   After: one catalogue row, three `storefront_listings` rows. Renaming the
 --   dish or replacing its photo is one edit. Price and stock stay per store,
---   because those genuinely differ by location — which was the right half of
+--   because those genuinely differ by location   which was the right half of
 --   the original design and is kept.
 --
 -- 20260822090000 ARGUED FOR THE OPPOSITE, DELIBERATELY
@@ -25,22 +25,22 @@
 --   differently by location, and because splitting a shared catalogue apart
 --   later is far harder than consolidating independent ones."
 --   The first clause survives: price and stock are still per store. The second
---   is why this migration is safe to write now — consolidating is the easy
+--   is why this migration is safe to write now   consolidating is the easy
 --   direction, and it is the one we are going in.
 --
 -- NOTHING IS MERGED
 --   The obvious move is to collapse rows with the same (vendor_id, name) into
 --   one catalogue item. This migration does NOT do that. Two stores that both
 --   sell "Jollof Rice" today keep two catalogue rows, each carried by the one
---   store that had it. Merging is lossy and irreversible — different photos,
---   different descriptions, different `sold` counts — and it cannot be
+--   store that had it. Merging is lossy and irreversible   different photos,
+--   different descriptions, different `sold` counts   and it cannot be
 --   distinguished from two genuinely different dishes with the same name. The
 --   vendor consolidates from the UI, where they can see what they are merging.
 --   What this migration buys is the CAPABILITY: from now on, one item can be
 --   carried by many stores.
 --
 -- listings.storefront_id IS KEPT, AND DEMOTED
---   It stays NOT NULL and now means "the store this item was created at" — its
+--   It stays NOT NULL and now means "the store this item was created at"   its
 --   home. Availability is `storefront_listings`. Dropping the column would
 --   break `sync_listing_vendor_to_storefront`, which derives `vendor_id` from
 --   it and is the thing stopping staff writing a listing into another
@@ -69,7 +69,7 @@ create table if not exists public.storefront_listings (
   -- order and do not count portions; forcing them to would empty their menu
   -- the first day they forgot to top the number up. `listings.stock` is
   -- `not null default 0`, which combined with the editor defaulting the field
-  -- to 0 means every listing created without touching it is born unbuyable —
+  -- to 0 means every listing created without touching it is born unbuyable  
   -- visible on the menu, addable to a cart, and refused at the Pay button.
   -- This column is nullable so that the common case (we just cook it) has a
   -- representation, and 0 can mean what it says.
@@ -149,7 +149,7 @@ drop policy if exists "storefront_listings_select_public" on public.storefront_l
 create policy "storefront_listings_select_public" on public.storefront_listings
   for select to anon, authenticated using (true);
 
--- Written by whoever may work that store — the same predicate as listings, so
+-- Written by whoever may work that store   the same predicate as listings, so
 -- widening `can_manage_storefront` widens both together and neither drifts.
 drop policy if exists "storefront_listings_write_manager" on public.storefront_listings;
 create policy "storefront_listings_write_manager" on public.storefront_listings

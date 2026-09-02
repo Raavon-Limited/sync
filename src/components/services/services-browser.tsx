@@ -2,8 +2,8 @@
  * Browse and request a service.
  *
  * ONE COMPONENT, THREE VERTICALS
- *   Beauty, laundry and workmanship are the same shape — a vendor lists
- *   services, a student requests one, the vendor quotes, both agree — and they
+ *   Beauty, laundry and workmanship are the same shape   a vendor lists
+ *   services, a student requests one, the vendor quotes, both agree   and they
  *   already share `modules/services`. Three near-identical pages would be three
  *   places to fix every bug, so the vertical is a prop.
  *
@@ -26,7 +26,7 @@ import type { Service, Vertical } from '@/modules/services/types';
 const VERTICAL_META: Record<Vertical, { title: string; blurb: string; icon: typeof Sparkles }> = {
   beauty: {
     title: 'Beauty',
-    blurb: 'Braids, nails, barbers and more — book someone near you.',
+    blurb: 'Braids, nails, barbers and more   book someone near you.',
     icon: Sparkles,
   },
   laundry: {

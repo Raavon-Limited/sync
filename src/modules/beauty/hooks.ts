@@ -3,7 +3,7 @@
  *
  * Beauty runs on the shared `services` / `service_requests` tables, so this is a
  * thin binding over `@/modules/services` with `vertical` fixed. Everything real
- * lives there — see that module before changing anything here.
+ * lives there   see that module before changing anything here.
  *
  * Typical pricing model: `fixed` (₦3,500 for a haircut).
  */

@@ -5,7 +5,7 @@
  *
  * A LANDLORD IS A vendor_profiles ROW WITH category = 'landlord'
  *   Not a separate table. `profiles.role` is kept in step with that category by
- *   a trigger (20260828090000) — before it existed the two drifted and
+ *   a trigger (20260828090000)   before it existed the two drifted and
  *   landlords could not reach their own dashboard.
  */
 import type { Metadata } from 'next';
@@ -14,7 +14,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { AccountTabs } from '@/components/admin/account-tabs';
 import { LandlordsBrowser, type LandlordRow } from './(components)/landlords-browser';
 
-export const metadata: Metadata = { title: 'Landlords — Admin' };
+export const metadata: Metadata = { title: 'Landlords   Admin' };
 
 import type { Row } from '@/lib/supabase/row';
 
@@ -115,7 +115,7 @@ export default async function Page() {
         {/* Says what is owed before you have to read every badge to find it. */}
         <p className="text-content-muted mt-2 text-sm">
           {waiting > 0
-            ? `${waiting} landlord${waiting === 1 ? '' : 's'} waiting on a verification decision — open one to review their documents.`
+            ? `${waiting} landlord${waiting === 1 ? '' : 's'} waiting on a verification decision   open one to review their documents.`
             : 'Nothing waiting on a verification decision.'}
         </p>
       </div>

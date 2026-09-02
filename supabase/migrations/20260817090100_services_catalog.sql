@@ -6,7 +6,7 @@
 -- WHY THESE ARE NOT `listings`
 --   `listings` (from 0006) models a stocked product: it has `stock` and `sold`
 --   and is bought through `orders`. A haircut, a laundry bag and a plumbing
---   callout have no stock — they are booked for a time, negotiated on price, or
+--   callout have no stock   they are booked for a time, negotiated on price, or
 --   quoted per job. Forcing all four through one table means a `stock` column
 --   that is meaningless for three of them and a status machine that fits none.
 --
@@ -15,9 +15,9 @@
 --   `listings` + `orders`, which already work.
 --
 -- PRICING MODELS
---   fixed      — beauty: ₦3,500 for a haircut.
---   per_unit   — laundry: ₦300 per kg, quantity supplied at request time.
---   quote      — workmanship: price is null until the tradesman responds.
+--   fixed        beauty: ₦3,500 for a haircut.
+--   per_unit     laundry: ₦300 per kg, quantity supplied at request time.
+--   quote        workmanship: price is null until the tradesman responds.
 --   Enforced by a check constraint, not convention.
 --
 -- ROLLBACK
@@ -57,7 +57,7 @@ insert into public.service_categories (vertical, slug, name, sort_order) values
   ('workmanship', 'painter',     'Painter',      6)
 on conflict (vertical, slug) do nothing;
 
--- ── 2. Services — what a vendor offers ──────────────────────────────────────
+-- ── 2. Services   what a vendor offers ──────────────────────────────────────
 create table if not exists public.services (
   id            uuid primary key default gen_random_uuid(),
   vendor_id     uuid not null references public.vendor_profiles (id) on delete cascade,
@@ -88,7 +88,7 @@ create index if not exists services_vendor_idx   on public.services (vendor_id, 
 create index if not exists services_vertical_idx on public.services (vertical) where archived_at is null;
 create index if not exists services_category_idx on public.services (category_id);
 
--- ── 3. Service requests — the transaction ───────────────────────────────────
+-- ── 3. Service requests   the transaction ───────────────────────────────────
 -- One status machine covering all three verticals. `quoted` only ever appears
 -- for pricing_model='quote'; the rest skip straight from requested to accepted.
 create table if not exists public.service_requests (

@@ -1,6 +1,6 @@
 # modules/storefronts
 
-One vendor account is one **storefront** — the business as a whole, with its
+One vendor account is one **storefront**   the business as a whole, with its
 name, logo, verification, rating, wallet and subscription. A storefront trades
 from one or more **stores**: physical locations, each with its own address,
 hours and open/closed switch.
@@ -55,7 +55,7 @@ is the most likely bug in anything built on top:
 The schema used `vendor_id` for both meanings before stores existed and got
 away with it, because one account had exactly one location. Multi-store is what
 pulls them apart. The `20260822090000_storefronts` migration **repoints nothing**
-— it only adds `storefront_id` — so every existing RLS policy written as
+  it only adds `storefront_id`   so every existing RLS policy written as
 `auth.uid() = vendor_id` keeps working, and an owner automatically reaches all of
 their stores.
 
@@ -77,7 +77,7 @@ their stores.
   - `public.store_price(store, listing)` is the only definition of the
     fallback. Checkout, the storefront page and the cart all call it.
   - `listings.storefront_id` still exists and now means *where this item was
-    created* — its home store. It is not what makes an item available; it
+    created*   its home store. It is not what makes an item available; it
     feeds `sync_listing_vendor_to_storefront`, which is what stops staff
     writing a listing into another storefront.
 - **A cart belongs to a store.** `carts_one_open_per_storefront_idx` enforces
@@ -86,34 +86,34 @@ their stores.
   one location does not have.
 - **Exactly one store is primary.** `storefronts_one_primary_idx` enforces it.
   A link to the storefront resolves to the primary store. The index permits
-  *zero*, so anything that clears the flag has to hand it on — see
+  *zero*, so anything that clears the flag has to hand it on   see
   `set_storefront_archived`.
 
 - **The backlog limit is on by default, and 0 is off.**
   `auto_pause_after` shipped nullable and null-by-default, which meant the
   feature existed and protected nobody. Since `20260901090000` it is NOT NULL,
   defaults to `DEFAULT_AUTO_PAUSE_AFTER` (5), and `0` is the explicit "never".
-  Null is no longer a value — `updateStorefront` normalises it to 0 so a UI
+  Null is no longer a value   `updateStorefront` normalises it to 0 so a UI
   sending null for an empty field does not hit a constraint.
 
   **An automatic pause ends when the kitchen catches up, not when a timer
   fires.** `sync_store_backlog_pause` runs on every order status change: under
   the limit clears the pause immediately, still over it rolls `paused_until`
   forward. `auto_pause_minutes` survives as the floor under a store where
-  *nothing* moves — Postgres has no timer, so without a deadline a vendor who
+  *nothing* moves   Postgres has no timer, so without a deadline a vendor who
   walks away from four open tickets has a shop that is shut until someone
   notices. Draining is the normal exit; the clock is what stops a bug becoming
   a closed shop. Manual pauses are never touched by the drain: a vendor who
   tapped "15 minutes" is having a break, and finishing an order is not them
   asking to be reopened.
 - **Three permission questions, three functions. Do not confuse them.**
-  - `private.owns_storefront(storefront, user)` — *do you own this storefront?*
+  - `private.owns_storefront(storefront, user)`   *do you own this storefront?*
     Governs the things only an owner may do: creating, archiving and deleting
     stores, promoting a primary, hiring and firing, reading the activity log.
-  - `private.can_manage_storefront(storefront, user)` — *may you work this
+  - `private.can_manage_storefront(storefront, user)`   *may you work this
     store at all?* True for the owner **or** any active staff. Still the right
     question for anything that is not one section of the product.
-  - `private.storefront_scope(storefront, user, scope)` — *may you work THIS
+  - `private.storefront_scope(storefront, user, scope)`   *may you work THIS
     PART of this store?* True for the owner, or for staff granted that scope.
     This is what the write policies ask (`20260901090000`): `listings` for
     `listings_write_own`, `orders` for `orders_select_own` /
@@ -121,14 +121,14 @@ their stores.
     `storefronts_update_staff`.
 
   All three are `SECURITY DEFINER`, so a policy can ask without the caller
-  needing read access to rows they do not own — and so the policy on
+  needing read access to rows they do not own   and so the policy on
   `storefront_staff` can consult `storefront_staff` without recursing. Widen
   permissions inside these functions, never by editing individual policies.
 
 - **Archiving goes through `set_storefront_archived(store, bool)`, never a
   column write.** It refuses to archive a store with unfinished orders, refuses
   to archive the vendor's last open store, and hands the primary flag to
-  another store on the way out — `storefronts_one_primary_idx` permits *zero*
+  another store on the way out   `storefronts_one_primary_idx` permits *zero*
   primaries, so a plain `update ... set archived_at = now(), is_primary = false`
   could leave a business whose public link resolves to nothing. Students never
   see an archived store: `storefronts_select_public` is
@@ -138,7 +138,7 @@ their stores.
 - **A second store needs a verified business.** `guard_storefront_insert`
   refuses an INSERT when the vendor already has an active store and
   `vendor_profiles.verification_status <> 'verified'`. The FIRST store is never
-  blocked — onboarding could not complete otherwise. The guard is deliberately
+  blocked   onboarding could not complete otherwise. The guard is deliberately
   *invoker-rights*, like `guard_storefront_privileged_cols`: a SECURITY DEFINER
   trigger reports `current_user` as its owner, so the "is this a client call?"
   test would never match and the guard would pass everything.
@@ -165,7 +165,7 @@ storefront_invites  targets an EMAIL, single-use token, 7-day expiry, carries sc
 
 **Staff reach fulfilment, never money.** Listings, stock, orders, their store's
 trading hours, its messages: yes. Wallet, payouts, bank accounts, subscription:
-owner only. That boundary is structural — money lives on `vendor_profiles` (the
+owner only. That boundary is structural   money lives on `vendor_profiles` (the
 storefront) and fulfilment on `storefronts` (the store), so widening store
 permissions cannot reach the money tables. Keep it that way.
 
@@ -181,7 +181,7 @@ rush also handed them the menu and the prices. `storefront_staff.scopes` is a
 | ------------ | ---------------------------------------- | ---------------- | ------------------ |
 | `orders`     | the queue, order status, `pause_store`   | the store        | yes                |
 | `listings`   | `listings` and `storefront_listings`     | the store        | yes                |
-| `inbox`      | customer messages                        | the store        | **no — see below** |
+| `inbox`      | customer messages                        | the store        | **no   see below** |
 | `store`      | trading hours, area, pin, capacity limit | the store        | yes                |
 | `promotions` | discount campaigns                       | **the business** | yes                |
 
@@ -189,7 +189,7 @@ rush also handed them the menu and the prices. `storefront_staff.scopes` is a
 the schema, not a shortcut.** `promotions.vendor_id` references
 `vendor_profiles`, so a campaign belongs to the business and there is no such
 thing as a Tanke-only discount. Granting it at one store therefore lets that
-person create a discount every store honours — the picker says "all your
+person create a discount every store honours   the picker says "all your
 stores" on that row for exactly this reason. It is answered by
 `private.business_scope(vendor, user, scope)` (added in `20260901120000`, a
 separate migration because `20260901090000` had already run), the brand-level
@@ -202,15 +202,15 @@ the boundary that keeps them safe is that no store-derived grant reaches them.
 `inbox` is recorded but opens nothing yet, and both the type and the UI say so
 out loud. `open_listing_conversation` resolves the vendor from
 `listings.vendor_id` and a conversation carries no `storefront_id`, so there is
-nothing to scope against — widening it to "every conversation of the owner"
+nothing to scope against   widening it to "every conversation of the owner"
 would hand one store's manager every store's messages. The grant exists so it
 is already in place when messaging becomes store-routed. Do not quietly make it
 look enforced before it is.
 
 Adding a scope means: the name in `private.storefront_scope_names()`, the CHECK
 constraints on both tables, `STAFF_SCOPES` in `./types.ts`, and the policy that
-consults it. The two RPCs that write scopes — `create_storefront_invite` and
-`set_storefront_staff_scopes` — validate against the function, so a typo is
+consults it. The two RPCs that write scopes   `create_storefront_invite` and
+`set_storefront_staff_scopes`   validate against the function, so a typo is
 refused rather than stored.
 
 Other invariants, each enforced rather than assumed:
@@ -222,11 +222,11 @@ Other invariants, each enforced rather than assumed:
   how an owner loses track of who has access.
 - **A member always has at least one scope.** Both RPCs refuse an empty array
   and the CHECK constraints enforce `cardinality(scopes) > 0`. Somebody who can
-  sign in and do nothing reads as broken, not as revoked — revoking is the way
+  sign in and do nothing reads as broken, not as revoked   revoking is the way
   to take everything away.
 - **Invites are never readable.** The token *is* the credential; there is no
   SELECT policy exposing it. `create_storefront_invite()` returns it once.
-  Redemption matches the caller's **confirmed** email — an unverified address
+  Redemption matches the caller's **confirmed** email   an unverified address
   cannot claim someone else's invite.
 - **Revoke, never delete.** `revoked_at` keeps the activity trail resolvable.
 - **`guard_storefront_privileged_cols`** silently restores `vendor_id`,
@@ -251,12 +251,12 @@ happened at Tanke today" has to come from data rather than trust.
 
 Triggers on `listings`, `orders` and `storefronts` record actor, action and
 before/after images, tagged `owner` or `staff`. Order updates log **status
-transitions only** — logging every UPDATE buries the meaningful events. Rows
+transitions only**   logging every UPDATE buries the meaningful events. Rows
 with no resolvable store are skipped rather than written unfilterable.
 
 `storefront_activity()` is **owner-scoped**. Staff cannot read it by design: it
 is the record of what they did, and someone who can read it can see what has
-been noticed. It also records *attempted* privileged changes — the column guard
+been noticed. It also records *attempted* privileged changes   the column guard
 reverts them, but the attempt still lands in the log.
 
 `storefront_roster()` exists because the owner otherwise cannot see their own
@@ -276,7 +276,7 @@ when inviting.
   to a store requires the staff model above.
 - **The public location feed.** `activity_log` is a *personal* history keyed by
   `user_id`. A public "what is happening in other areas" feed is a different
-  table with a different privacy model — do not overload `activity_log` for it.
+  table with a different privacy model   do not overload `activity_log` for it.
 
 ## Conventions
 - This module never imports from other `modules/*` directly - cross-module composition happens in pages or in `components/shared`.

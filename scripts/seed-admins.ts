@@ -28,14 +28,14 @@ if (!url || !key) {
  * WHO TO SEED COMES FROM THE ENVIRONMENT, NOT FROM THIS FILE.
  *
  * A staff address committed to the repository is a name handed to anyone who
- * reads it — not a way in on its own, since access still needs the OTP that
+ * reads it   not a way in on its own, since access still needs the OTP that
  * lands in that mailbox, but a target for phishing and for hammering the OTP
  * endpoint. There is no reason to publish it.
  *
  *   ADMIN_SEED=admin@example.com:super_admin,reviews@example.com:admin
  *
  * Set it in .env.local (gitignored) for the one run that creates the account,
- * then delete the line. It is read here and nowhere else in the codebase —
+ * then delete the line. It is read here and nowhere else in the codebase  
  * staff access itself is `profiles.role`, granted by set_account_role.
  */
 const ADMINS = (process.env.ADMIN_SEED ?? '')

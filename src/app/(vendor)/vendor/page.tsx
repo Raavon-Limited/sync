@@ -47,7 +47,7 @@ export default async function Page() {
 
   // The chart comes from the same RPC the period switcher calls. It used to
   // come from `bucketWeeks`, which counts GROSS value of delivered orders,
-  // while every period switch counts NET escrow releases — so touching the
+  // while every period switch counts NET escrow releases   so touching the
   // dropdown made the vendor's revenue appear to drop by the commission. One
   // chart, one definition.
   const [dash, listings, chart] = await Promise.all([

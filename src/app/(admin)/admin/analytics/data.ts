@@ -3,7 +3,7 @@
  *
  * This file used to BE the analytics: a `makeTrend()` that produced 148 days of
  * Math.random(), four invented KPI cards, five fictional vendors. All of that
- * now comes from `public.admin_analytics` — see `analytics-data.ts`. What is
+ * now comes from `public.admin_analytics`   see `analytics-data.ts`. What is
  * left here is only what the charts need to draw: the types, the palette, and
  * the range vocabulary.
  *
@@ -68,7 +68,7 @@ export interface TopProduct {
 
 /**
  * Slice colours, assigned by position. Categories come from the database and
- * the set will grow, so this cycles rather than mapping category names — a new
+ * the set will grow, so this cycles rather than mapping category names   a new
  * vendor category should get a colour, not a blank wedge.
  */
 export const SLICE_COLORS = [

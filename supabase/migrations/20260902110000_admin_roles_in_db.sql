@@ -4,8 +4,8 @@
 -- Staff access stops being an environment variable and becomes a row.
 --
 -- WHAT WAS WRONG WITH ADMIN_EMAILS
---   It was written as a bootstrap — "detect the founding admins before
---   profiles.role is set" — and became the mechanism. Three problems came with
+--   It was written as a bootstrap   "detect the founding admins before
+--   profiles.role is set"   and became the mechanism. Three problems came with
 --   that:
 --
 --   1. IT DISAGREED WITH ITSELF. Every admin page resolved
@@ -14,7 +14,7 @@
 --      won. The same person could be staff to the router and a student to the
 --      page, or the reverse.
 --   2. GRANTING ACCESS MEANT A DEPLOY. Adding a reviewer required editing an
---      env var and redeploying, and revoking one required the same — so in
+--      env var and redeploying, and revoking one required the same   so in
 --      practice nobody was ever removed.
 --   3. IT WAS INVISIBLE TO THE DATABASE. `is_staff()` reads profiles.role, so
 --      RLS and every SECURITY DEFINER function already ignored the allowlist
@@ -23,8 +23,8 @@
 --
 -- SO WHY WAS THE ROW NOT JUST WRITTEN DIRECTLY
 --   Because it could not be. `guard_profile_privileged_cols` (0001) reverts
---   `role` for any writer connecting as 'authenticated' or 'anon', which — with
---   the sb_secret_ API keys — is every PostgREST request, service role
+--   `role` for any writer connecting as 'authenticated' or 'anon', which   with
+--   the sb_secret_ API keys   is every PostgREST request, service role
 --   included. That is why 0004 seeds admins from a migration and why
 --   `npm run seed:admins` can create the user but not promote it.
 --
@@ -128,7 +128,7 @@ begin
   -- `profiles_active_role_is_held` (20260830090000) checks `role = any(roles)`:
   -- the role you are currently acting as must be one you actually hold. Writing
   -- `role` alone leaves the new value outside the array and the constraint
-  -- rejects the whole update — which is exactly how seeding an admin failed
+  -- rejects the whole update   which is exactly how seeding an admin failed
   -- before this function existed.
   --
   -- Appended rather than replaced: an admin who was also a vendor keeps the
@@ -164,7 +164,7 @@ comment on function public.set_account_role is
 
 -- ── 3. Who the staff are ────────────────────────────────────────────────────
 -- A super admin needs to see the team to manage it, and profiles' own RLS is
--- own-row plus staff — which is enough, but this saves every screen rebuilding
+-- own-row plus staff   which is enough, but this saves every screen rebuilding
 -- the same join.
 create or replace function public.list_staff()
 returns table (id uuid, full_name text, email text, role text, created_at timestamptz)

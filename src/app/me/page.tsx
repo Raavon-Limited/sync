@@ -8,6 +8,7 @@ import { UsageSummary } from './(components)/UsageSummary';
 import { BookingsTracker } from './(components)/BookingsTracker';
 import { EventsTicketsSummary } from './(components)/EventsTickets';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
+import { VerifyReminder } from './(components)/VerifyReminder';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -32,6 +33,11 @@ export default async function Page() {
           Hi <span className="text-lime-deep">{studentName}</span> - here&apos;s your spot.
         </h1>
       </div>
+
+      {/* Above everything, and it renders nothing once verified. Signup does
+          not collect documents, so without this a student never finds out
+          there is a step left   see /me/verify. */}
+      <VerifyReminder status={profile.verificationStatus} />
 
       {/* Usage / spending summary */}
       <UsageSummary />

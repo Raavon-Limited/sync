@@ -3,23 +3,23 @@
  * opens to reveal the folder.
  *
  * WHY THE DOCUMENTS ARE BEHIND A CLICK NOW
- *   Every queue used to render every folder expanded — four signed image
+ *   Every queue used to render every folder expanded   four signed image
  *   requests per account, on first paint, for accounts the reviewer was only
  *   scrolling past. With a handful of businesses that was merely wasteful; the
  *   real cost is that the screen stopped being scannable, because one pending
  *   submission looked exactly as heavy as twenty verified ones nobody needs to
  *   look at again.
  *
- *   A collapsed card carries what the scan needs — the face, the name, the
- *   state — and opening one is the moment the reviewer has actually chosen it.
+ *   A collapsed card carries what the scan needs   the face, the name, the
+ *   state   and opening one is the moment the reviewer has actually chosen it.
  *   The signed URLs are fetched by <VerificationReview> on mount, so a card
  *   that is never opened never requests anybody's passport.
  *
  * WHY THE FILTER BAR IS SHARED
  *   Vendors, landlords and riders are three different tables and one identical
  *   question: who is waiting on me. Three copies of these chips had already
- *   started to differ — the vendor queue counted, the landlord list did not
- *   filter at all — so it is one component with the counts computed from
+ *   started to differ   the vendor queue counted, the landlord list did not
+ *   filter at all   so it is one component with the counts computed from
  *   whatever it is given.
  */
 'use client';
@@ -82,7 +82,7 @@ export function QueueFilterBar({
   onSearch,
   counts,
   placeholder,
-  /** Extra chips beyond the four statuses — 'suspended', 'blocked'. */
+  /** Extra chips beyond the four statuses   'suspended', 'blocked'. */
   extra = [],
 }: {
   filter: string;
@@ -127,7 +127,7 @@ export function Face({ url, className }: { url?: string; className?: string }) {
       {url ? (
         <img src={url} alt="" className="size-full object-cover" />
       ) : (
-        // Not "no photo" as an error — somebody who has not submitted yet
+        // Not "no photo" as an error   somebody who has not submitted yet
         // legitimately has none.
         <UserRound className="text-content-muted size-6" aria-hidden="true" />
       )}
@@ -140,7 +140,7 @@ export function Face({ url, className }: { url?: string; className?: string }) {
  * whatever the caller puts inside it.
  *
  * The whole header is the toggle, so the click target is the card rather than a
- * chevron somebody has to aim at. `children` is only mounted while open — that
+ * chevron somebody has to aim at. `children` is only mounted while open   that
  * is what keeps the signed-URL requests inside <VerificationReview> from firing
  * for every account on the page.
  */
@@ -157,7 +157,7 @@ export function AccountCard({
   status: string;
   faceUrl?: string;
   meta: ReactNode;
-  /** Badges after the status one — fraud block, suspension. */
+  /** Badges after the status one   fraud block, suspension. */
   flags?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;

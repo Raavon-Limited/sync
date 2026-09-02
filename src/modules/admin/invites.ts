@@ -4,7 +4,7 @@
  * THE TOKEN IS NEVER SELECTED HERE, and the column list is written out rather
  * than `select('*')` for exactly that reason. Postgres has no column-level
  * select policy, so "staff can read this table" means staff can read every
- * column of it — including a live invite token, which is a way into the
+ * column of it   including a live invite token, which is a way into the
  * console for whoever holds it. A `*` in this file would hand every admin a
  * usable link to every outstanding invitation.
  *
@@ -19,7 +19,7 @@ import type { Row } from '@/lib/supabase/row';
 
 /**
  * staff_invites postdates the checked-in generated types. Same escape hatch as
- * modules/admin/roles — REGENERATE once 20260903090000 is applied and this
+ * modules/admin/roles   REGENERATE once 20260903090000 is applied and this
  * goes.
  */
 function db(): SupabaseClient {

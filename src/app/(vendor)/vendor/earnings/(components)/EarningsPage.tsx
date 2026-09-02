@@ -275,7 +275,7 @@ function buildCsvRows(data: EarningsData, transactions: Transaction[], range?: D
         year: 'numeric',
       })}`,
     ],
-    [`Account: ${data.bankName} — ${data.accountNumber} (${data.accountHolderName})`],
+    [`Account: ${data.bankName}   ${data.accountNumber} (${data.accountHolderName})`],
     range?.from
       ? [
           `Period: ${range.from.toLocaleDateString('en-NG')}${
@@ -342,7 +342,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
   const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null); // 👈 new
   /**
-   * The payout account, from `bank_accounts` — not local state.
+   * The payout account, from `bank_accounts`   not local state.
    *
    * This used to be a `useState` seeded from props, so "Save Changes" updated
    * the screen and nothing else: reload the page and the old account was back,
@@ -355,8 +355,8 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
 
   const accountDetails = {
     bankName: defaultAccount?.bankName ?? 'No account added',
-    accountNumber: defaultAccount?.accountNumber ?? '—',
-    accountHolderName: defaultAccount?.accountName ?? '—',
+    accountNumber: defaultAccount?.accountNumber ?? ' ',
+    accountHolderName: defaultAccount?.accountName ?? ' ',
   };
 
   const handleWithdrawClick = () => setWithdrawOpen(true);
@@ -392,7 +392,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
               bankCode: updated.bankCode,
               bankName: updated.bankName,
               accountNumber: updated.accountNumber,
-              // Server-resolved, never typed — see ChangeAccountDialog.
+              // Server-resolved, never typed   see ChangeAccountDialog.
               accountName: updated.holderName,
               isDefault: true,
             },
@@ -489,7 +489,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
             </div>
             <div>
               <p className="font-display text-content text-sm font-semibold">
-                {accountDetails.bankName} — {accountDetails.accountNumber}
+                {accountDetails.bankName}   {accountDetails.accountNumber}
               </p>
               <p className="text-content-muted text-xs">
                 {accountDetails.accountHolderName} · Next payout: {data.nextPayoutDate}

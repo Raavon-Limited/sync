@@ -10,7 +10,7 @@
  * CANCELLING IS NOT A STATUS CHANGE
  *   It moves money. `updateOrderStatus` routes 'cancelled' through the
  *   `cancel_order` RPC, which cancels and refunds the student in one
- *   transaction — see 20260829100000. Writing the status directly would leave
+ *   transaction   see 20260829100000. Writing the status directly would leave
  *   the escrow hold sitting at 'held' and the hourly cron would pay the vendor
  *   in full for an order that never happened.
  *
@@ -28,8 +28,8 @@ import type { FoodOrder, OrderStatus } from '@/modules/food/types';
 /**
  * What the vendor can do next, by where the order is.
  *
- * `picked_up` and `on_the_way` are the rider's states — the vendor's part is
- * done — so they offer no forward action, only the ability to cancel while the
+ * `picked_up` and `on_the_way` are the rider's states   the vendor's part is
+ * done   so they offer no forward action, only the ability to cancel while the
  * food has not arrived.
  */
 const NEXT: Partial<Record<OrderStatus, { status: OrderStatus; label: string; icon: typeof Check }>> = {

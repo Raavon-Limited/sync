@@ -23,8 +23,8 @@
 --   manual        the vendor or their staff taps "Pause 10 minutes".
 --   auto_backlog  the store has more unfinished orders than it said it can
 --                 hold, so it pauses itself.
---   Both write the same column, so everything downstream — checkout, the
---   storefront page, the store switcher — asks one question and does not care
+--   Both write the same column, so everything downstream   checkout, the
+--   storefront page, the store switcher   asks one question and does not care
 --   which happened.
 --
 -- BACKLOG, NOT RATE
@@ -41,7 +41,7 @@
 --
 -- WHAT THIS DOES NOT DO
 --   A pause stops NEW orders. It does not touch orders already placed, it does
---   not empty carts, and it does not hide the store — students can still see
+--   not empty carts, and it does not hide the store   students can still see
 --   it, read the menu and message the vendor. Hiding it would lose the vendor
 --   the customer entirely for the sake of ten minutes.
 --
@@ -98,7 +98,7 @@ $$;
 grant execute on function public.store_accepting_orders(uuid) to anon, authenticated, service_role;
 
 comment on function public.store_accepting_orders(uuid) is
-  'Whether a store takes orders right now: switched on, not archived, and not inside a cooldown. The only definition — do not re-implement it in a query.';
+  'Whether a store takes orders right now: switched on, not archived, and not inside a cooldown. The only definition   do not re-implement it in a query.';
 
 -- ── Manual pause and resume ─────────────────────────────────────────────────
 -- Staff can pause. They are the ones being buried, and a manager who has to

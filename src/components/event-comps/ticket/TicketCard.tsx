@@ -34,7 +34,7 @@ export default function TicketCard({
 
             <div className="px-5 py-4 flex items-start justify-between gap-4">
 
-                {/* Left — ticket info */}
+                {/* Left   ticket info */}
                 <div className="flex items-start gap-3 min-w-0">
                     <div className={`mt-0.5 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                         selected ? "bg-lime text-ink" : "bg-content-muted/10 text-content-muted"
@@ -51,7 +51,7 @@ export default function TicketCard({
                     </div>
                 </div>
 
-                {/* Right — stepper */}
+                {/* Right   stepper */}
                 <div className="flex items-center gap-2 flex-shrink-0 border border-line/20 rounded-full px-2 py-1.5 bg-surface">
                     <button
                         type="button"

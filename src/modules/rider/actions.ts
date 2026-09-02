@@ -3,7 +3,7 @@
  *
  * WHY THESE ARE SERVER ACTIONS AND NOT DIRECT CLIENT WRITES
  *   Half of what is here goes through RPCs whose whole purpose is to check
- *   something the client cannot be trusted to check — that a delivery is
+ *   something the client cannot be trusted to check   that a delivery is
  *   actually yours, that you are verified before going on the board, that a
  *   status change is a legal move. Routing them through one module keeps the
  *   revalidation in step too: every one of these changes what /rider renders.
@@ -73,7 +73,7 @@ export async function setRiderCompany(riderId: string, companyId: string | null)
   const supabase = await createServerClient();
   const { error } = await supabase.rpc('set_rider_company', {
     p_rider: riderId,
-    // NULL IS A REAL ARGUMENT HERE — it is how a rider is released back to
+    // NULL IS A REAL ARGUMENT HERE   it is how a rider is released back to
     // independent, and set_rider_company branches on exactly that. The generated
     // types give every RPC argument a non-null type because PostgREST's schema
     // does not describe argument nullability, so this cast is the type system
@@ -114,7 +114,7 @@ function companySlug(name: string): string {
  *   1. claim the role, because everything after it is refused without one
  *   2. the rider row, because the company attaches TO it
  *   3. the company, then the employment link
- *   4. the documents, BEFORE submitting — a reviewer opening a submission whose
+ *   4. the documents, BEFORE submitting   a reviewer opening a submission whose
  *      folder is still landing sees an empty one, and the staff alert fires off
  *      the status change
  *   5. submit
@@ -233,7 +233,7 @@ export async function submitRiderOnboarding(
  *
  * TWO STEPS, AND BOTH GUARD SEPARATELY. findRiderByPhone proves the caller owns
  * a fleet before it looks anybody up; set_rider_company proves it again in the
- * database before it writes. That is not redundant — the first stops the lookup
+ * database before it writes. That is not redundant   the first stops the lookup
  * being used as a directory of who has an account, the second stops the write
  * regardless of how it was reached.
  */

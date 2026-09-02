@@ -2,7 +2,7 @@
  * Order KPI strip, derived from the live queue.
  *
  * Counts come from the same cached query the table uses, so the tiles and the
- * rows can never disagree — a second query for counts would drift between
+ * rows can never disagree   a second query for counts would drift between
  * refetches and show "3 pending" above a table with four.
  */
 'use client';

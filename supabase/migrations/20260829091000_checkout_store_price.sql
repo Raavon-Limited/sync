@@ -21,19 +21,19 @@
 -- with a customer.
 --
 -- WHAT CHANGES, EXACTLY
---   price   public.store_price(cart.storefront_id, listing) — the store
+--   price   public.store_price(cart.storefront_id, listing)   the store
 --           override if set, else the catalogue price.
 --   stock   checked and decremented on `storefront_listings` for the cart's
 --           store. `listings.sold` still increments: that is a lifetime
 --           catalogue counter, and it is the one number that is genuinely
 --           about the item rather than about a location.
---   lock    `for update of sl` — the per-store row is now the contended one.
+--   lock    `for update of sl`   the per-store row is now the contended one.
 --           Locking the catalogue row would serialise every store of a
 --           storefront against each other for no reason.
 --
 -- THE COOLDOWN IS ENFORCED HERE, NOT IN THE UI
---   A greyed-out button is a suggestion. Anything that can post a checkout —
---   a stale tab, a resumed session, a replayed request — has to be refused by
+--   A greyed-out button is a suggestion. Anything that can post a checkout  
+--   a stale tab, a resumed session, a replayed request   has to be refused by
 --   the thing that creates the order. `store_accepting_orders()` is the same
 --   function the storefront page calls, so the button and the till cannot
 --   disagree about whether a store is open.
@@ -137,7 +137,7 @@ begin
     if v_item.live is distinct from v_item.captured then
       v_repriced := true;
     end if;
-    -- Null stock is untracked — cooked to order, no count to run down. Only a
+    -- Null stock is untracked   cooked to order, no count to run down. Only a
     -- store that actually counts can be short.
     if v_item.stock is not null and v_item.stock < v_item.quantity then
       raise exception '% has only % left', v_item.name, v_item.stock using errcode = 'P0001';
@@ -203,7 +203,7 @@ begin
    where ci.cart_id = p_cart_id;
 
   -- Reserve stock at the store that has to fulfil it. Untracked items have no
-  -- count to decrement, and `null - 1` would silently leave them null anyway —
+  -- count to decrement, and `null - 1` would silently leave them null anyway  
   -- being explicit is cheaper than relying on that.
   update public.storefront_listings sl
      set stock = sl.stock - ci.quantity,

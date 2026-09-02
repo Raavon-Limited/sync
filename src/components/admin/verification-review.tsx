@@ -1,11 +1,11 @@
 /**
- * The verification review card — one business, its documents, and the decisions
+ * The verification review card   one business, its documents, and the decisions
  * staff actually make.
  *
  * WHY THIS IS A SHARED COMPONENT AND NOT PART OF THE QUEUE
  *   It used to live inside /admin/vendors' VerificationQueue, which made
  *   /admin/vendors the only place in the console where a business could be
- *   reviewed. That queue does list landlords — it filters on nothing — but the
+ *   reviewed. That queue does list landlords   it filters on nothing   but the
  *   nav calls it "Vendors", and an admin looking at a landlord marked PENDING
  *   on /admin/landlord had no reason to think the review lived under a
  *   different word.
@@ -25,7 +25,7 @@
  * THE TWO DECISIONS ARE NOT THE SAME DECISION
  *   Per document: Approve, or Bounce with a reason. Per business: Verify,
  *   Reject, or Reject as fraud. 20260817090000 was explicit that approving the
- *   last document must NOT auto-verify — a human decides a business is real —
+ *   last document must NOT auto-verify   a human decides a business is real  
  *   and the database enforces the other half of it: set_verification_status
  *   refuses 'verified' when nothing has been approved.
  */
@@ -131,7 +131,7 @@ function Preview({
         // instead and opening it frames the real thing.
         <span className="text-content-muted flex flex-col items-center gap-1 p-3 text-center">
           <FileText className="size-6" aria-hidden="true" />
-          <span className="text-[11px]">{url ? 'PDF — click to open' : 'Not available'}</span>
+          <span className="text-[11px]">{url ? 'PDF   click to open' : 'Not available'}</span>
         </span>
       )}
     </button>
@@ -141,8 +141,8 @@ function Preview({
 /**
  * WHICH TABLE THE THREE HEADER BUTTONS WRITE.
  *
- * The document half of this card is identical for everyone — verification_documents
- * is keyed on owner_id and knows nothing about what kind of account owns it — so
+ * The document half of this card is identical for everyone   verification_documents
+ * is keyed on owner_id and knows nothing about what kind of account owns it   so
  * only the per-account decision differs. That is one switch, not a second card:
  * a copy of this file for riders would be a copy of the comparison layout, the
  * signed-url handling and the modal, all of which would then drift.
@@ -382,7 +382,7 @@ export function VerificationReview({
           <p className="text-content-muted text-xs">
             {approved} of {vendor.docs.length} document{vendor.docs.length === 1 ? '' : 's'}{' '}
             approved
-            {vendor.docs.length === 0 && ' — nothing uploaded yet'}
+            {vendor.docs.length === 0 && '   nothing uploaded yet'}
           </p>
         </div>
 
@@ -400,7 +400,7 @@ export function VerificationReview({
           </Button>
 
           {/* An ORDINARY rejection. The business fixes what was wrong and
-              submits again — a blurry NIN photo is the common case and the cure
+              submits again   a blurry NIN photo is the common case and the cure
               is another photo, not a support ticket. */}
           <Button
             variant="outline"
@@ -422,7 +422,7 @@ export function VerificationReview({
             onClick={() => {
               const ok = window.confirm(
                 `Permanently block ${vendor.businessName} from verification?\n\n` +
-                  'Use this only for fraud — a forged document or a stolen identity. ' +
+                  'Use this only for fraud   a forged document or a stolen identity. ' +
                   `They will not be able to submit again. Deciding on this ${noun} ` +
                   'any other way afterwards lifts the block.',
               );
@@ -447,7 +447,7 @@ export function VerificationReview({
       ) : (
         <div className="flex flex-col gap-4">
           {/* THE COMPARISON. Side by side from `sm` up, because that is the
-              whole question — one face against the other — and stacked below
+              whole question   one face against the other   and stacked below
               that, where two half-width photos would be too small to judge
               anything from. */}
           {comparePair.length > 0 && (

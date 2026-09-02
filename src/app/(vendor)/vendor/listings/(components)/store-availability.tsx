@@ -10,7 +10,7 @@
  *
  * IT ALSO CLOSES A TRAP
  *   The listing editor still has a Stock field, and it writes `listings.stock`
- *   — a column no student-facing read consults any more. A vendor could set it
+ *     a column no student-facing read consults any more. A vendor could set it
  *   to 40 and watch nothing change. Stock that matters is per store, and this
  *   is where it is set.
  *
@@ -33,7 +33,7 @@ import { koboToNaira, nairaToKobo } from '@/lib/query/helpers';
  *
  * WHY A SEPARATE COMPONENT AND NOT THE ONE BELOW
  *   Every control below writes a `storefront_listings` row keyed on a listing
- *   id, and on the create screen there is no id yet — the row cannot exist
+ *   id, and on the create screen there is no id yet   the row cannot exist
  *   until the listing does. So this collects an intention and the caller
  *   applies it after the insert. Sharing one component would mean every write
  *   growing an "unless we are creating" branch.
@@ -91,7 +91,7 @@ export function StorePicker({
 
       {value.length === 0 && (
         <p className="text-xs text-amber-600">
-          Not sold anywhere yet — nobody will be able to order it. You can change this later.
+          Not sold anywhere yet   nobody will be able to order it. You can change this later.
         </p>
       )}
       <p className="text-content-muted text-xs">
@@ -126,7 +126,7 @@ export function StoreAvailability({
         </h4>
         {/* One tap for the common case. Adding an item to every branch by hand is
             four round trips a vendor should not have to make. `stock: null` is
-            untracked, not zero — see setSoldOut for why those differ. */}
+            untracked, not zero   see setSoldOut for why those differ. */}
         {stores.length > 1 && (
           <button
             type="button"

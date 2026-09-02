@@ -9,7 +9,7 @@
  *   already understand.
  *
  * EMPTY IS NOT A STATE. A manager with no sections is an account that can sign
- * in and do nothing, which reads as broken rather than as revoked — and the
+ * in and do nothing, which reads as broken rather than as revoked   and the
  * RPC refuses it too. Revoking is the way to take everything away.
  */
 'use client';

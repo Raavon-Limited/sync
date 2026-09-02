@@ -4,7 +4,7 @@
  * Withdraw funds.
  *
  * This was a modal that said "This feature is coming soon" over a disabled
- * button. There was no RPC, no table and no payout path anywhere — the ledger
+ * button. There was no RPC, no table and no payout path anywhere   the ledger
  * had permitted a `wallet_withdrawal` kind since August and nothing had ever
  * written one.
  *
@@ -15,7 +15,7 @@
  *   before the money arrives is alarming if unexplained.
  *
  * EVERY RULE IS CHECKED IN THE DATABASE
- *   Minimum, available balance, a verified destination, a frozen wallet — all
+ *   Minimum, available balance, a verified destination, a frozen wallet   all
  *   inside the RPC, under a row lock. The checks below only decide what to
  *   disable; two quick taps would walk straight past them, and the lock is
  *   what actually holds.
@@ -106,7 +106,7 @@ export function WithdrawDialog({ open, onClose, availableBalance }: WithdrawDial
         ) : !account ? (
           <p className="text-coral flex items-start gap-2 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            Add a payout account first — use “Change account” on the earnings page.
+            Add a payout account first   use “Change account” on the earnings page.
           </p>
         ) : !account.isVerified ? (
           <p className="text-coral flex items-start gap-2 text-sm">

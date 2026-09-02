@@ -3,18 +3,18 @@
 --
 -- WHAT WAS MISSING
 --   `events` holds a name, venue and start time. `tickets` holds what somebody
---   ALREADY BOUGHT — its `tier` and `price_kobo` are snapshots on an issued
+--   ALREADY BOUGHT   its `tier` and `price_kobo` are snapshots on an issued
 --   ticket. Nothing described what an event SELLS: no tier names, no prices, no
 --   capacity. So an event page could show when and where, and nothing about how
 --   to attend or what it costs.
 --
---   The UI already assumed this existed — src/lib/event.ts carries a
+--   The UI already assumed this existed   src/lib/event.ts carries a
 --   `tickets: Ticket[]` array of tiers with names and prices, entirely
 --   hardcoded, because there was nowhere to read it from.
 --
 -- WHAT THIS DELIBERATELY DOES NOT ADD
 --   A purchase RPC. Issuing a ticket means taking money, and payment
---   verification lives in the Paystack webhook — the same pattern bookings use,
+--   verification lives in the Paystack webhook   the same pattern bookings use,
 --   where `paid_at` is set by the webhook and never by a client. An RPC that
 --   inserted a ticket on request would hand out free tickets to anyone who
 --   could call it, so `tickets` keeps its read-only-to-clients posture and
@@ -24,7 +24,7 @@
 --   DISPLAY, and displaying a price is not selling one.
 --
 -- CAPACITY IS NULLABLE ON PURPOSE
---   `quantity is null` means uncapped — a free campus talk with no door limit
+--   `quantity is null` means uncapped   a free campus talk with no door limit
 --   is a real case, and forcing a number there would make somebody invent one.
 --
 -- ROLLBACK

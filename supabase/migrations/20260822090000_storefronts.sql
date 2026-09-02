@@ -1,7 +1,7 @@
 -- ============================================================================
 -- storefronts
 --
--- One business, many branches. `vendor_profiles` remains the BRAND — one row
+-- One business, many branches. `vendor_profiles` remains the BRAND   one row
 -- per vendor account, holding the name, logo, verification, rating, wallet and
 -- subscription. `storefronts` holds the physical locations that brand trades
 -- from, each with its own address, hours and open/closed switch.
@@ -241,7 +241,7 @@ alter table public.carts    alter column storefront_id set not null;
 -- distance degrades gracefully and needs no correct boundaries. Pass
 -- p_radius_m only when a genuine cutoff is wanted.
 --
--- Branches with no pin (geo is null) sort last rather than vanishing — a vendor
+-- Branches with no pin (geo is null) sort last rather than vanishing   a vendor
 -- who never dropped a pin should still be findable.
 create or replace function public.nearby_storefronts(
   p_lat      double precision,

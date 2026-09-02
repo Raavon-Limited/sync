@@ -80,7 +80,7 @@ export default function ListingsPage() {
   const { data: rows, isLoading, isError, error } = useMyListings(LIST_FILTERS);
 
   // Stock and availability are per store, so the grid shows the store the
-  // vendor is currently working in — the one in the switcher above.
+  // vendor is currently working in   the one in the switcher above.
   const { activeId, storefronts: managed } = useActiveStorefront();
   const { data: storeListings = [] } = useStoreListings(activeId ?? undefined);
   const storeTerms = useMemo(
@@ -97,7 +97,7 @@ export default function ListingsPage() {
   const remove = useDeleteListings();
   const archive = useArchiveListings(LIST_FILTERS);
 
-  // Every store the vendor owns — the add form ticks them all by default,
+  // Every store the vendor owns   the add form ticks them all by default,
   // because an item added to a three-branch business is almost always sold at
   // three branches. `useMyStorefronts` excludes archived ones, which is right:
   // you cannot stock a store that is closed.
@@ -188,8 +188,8 @@ export default function ListingsPage() {
    *
    * TWO STEPS BECAUSE `storefront_listings` NEEDS AN ID THAT DOES NOT EXIST YET.
    * The insert trigger `carry_listing_at_home_store` already stocks the home
-   * store, so the second pass writes every store — `is_listed: false` included
-   * — rather than only the ticked ones. Otherwise unticking the home store
+   * store, so the second pass writes every store   `is_listed: false` included
+   *   rather than only the ticked ones. Otherwise unticking the home store
    * would leave the trigger's row behind and the item on sale somewhere the
    * vendor just said it is not.
    *
@@ -198,7 +198,7 @@ export default function ListingsPage() {
    * not on sale everywhere yet, and the edit panel can finish the job.
    */
   const handleAdd = (listing: Listing, storeIds: string[]) => {
-    // Its home store — where it was created. Prefer the one being worked so
+    // Its home store   where it was created. Prefer the one being worked so
     // the grid shows it immediately; otherwise the first store that carries it.
     const home = activeId && storeIds.includes(activeId) ? activeId : storeIds[0];
 
@@ -225,7 +225,7 @@ export default function ListingsPage() {
                   listingId: created.id,
                   isListed: carried,
                   // Opening stock is per store. 0 means untracked ("cooked to
-                  // order"), not sold out — the same reading the trigger uses.
+                  // order"), not sold out   the same reading the trigger uses.
                   ...(carried ? { stock: listing.stock > 0 ? listing.stock : null } : {}),
                 });
               }),
@@ -305,7 +305,7 @@ export default function ListingsPage() {
   /**
    * Promote was the other no-op on this card. Promotions are created on their
    * own page against a vendor-wide code, so this hands over rather than
-   * pretending a listing-scoped campaign exists — `promotions` has no
+   * pretending a listing-scoped campaign exists   `promotions` has no
    * listing_id.
    */
   const handlePromote = (listing: Listing) => {

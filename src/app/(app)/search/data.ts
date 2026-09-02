@@ -5,7 +5,7 @@
  *
  * This used to be "Self-contain | Single | Shared | Bedsitter | Mini-flat",
  * of which only ONE value exists in the database. Filtering by any of the other
- * four returned nothing — silently, because "no matches" and "impossible
+ * four returned nothing   silently, because "no matches" and "impossible
  * filter" look identical in a results list.
  */
 export type RoomType = "Self-contain" | "Sharing" | "Female only" | "Male only";
@@ -23,7 +23,7 @@ export type VerifiedBy = "Sync team visit" | "Student reviewed";
 export type BadgeType = "Top rated" | "Verified" | "Female only" | "Best value" | "New";
 
 export interface Listing {
-  /** hostels.id — a uuid, not a counter. */
+  /** hostels.id   a uuid, not a counter. */
   id: string;
   /** Route target for the card. */
   slug: string;
@@ -88,7 +88,7 @@ export const EMPTY_FILTERS: SearchFilters = {
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
 /**
- * Hostels come from the database now — see the page's `useHostels()` call and
+ * Hostels come from the database now   see the page's `useHostels()` call and
  * `toListing()`. The hardcoded array that lived here described properties that
  * do not exist, which meant every search returned results nobody could book.
  */

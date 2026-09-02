@@ -21,7 +21,7 @@ export function ForgotPasswordForm({ initialEmail }: { initialEmail: string }) {
             <MailCheck className="size-6" />
           </span>
           {/* Deliberately conditional wording. The action cannot tell us
-              whether the account exists — and must not — so the copy has to be
+              whether the account exists   and must not   so the copy has to be
               true either way. "We sent you a link" would be a lie half the
               time and an account-existence oracle the other half. */}
           <p className="text-content font-medium">

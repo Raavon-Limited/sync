@@ -1,14 +1,14 @@
 /**
  * ROUTE: /admin/notifications
  * ACCESS: admin / super_admin (the proxy guards /admin/*).
- * PURPOSE: The staff inbox — verification requests and anything else routed to
+ * PURPOSE: The staff inbox   verification requests and anything else routed to
  *          this account.
  *
  * WHY THIS ROUTE HAD TO EXIST
  *   The bell in the dashboard header renders "View all notifications" pointing
  *   at `${basePath}/notifications`, and for staff the base is /admin. Only
  *   /me/notifications was ever built, so on every admin screen that link was a
- *   404 — the one place an admin would go to catch up on what they had missed.
+ *   404   the one place an admin would go to catch up on what they had missed.
  *
  * DELIBERATELY NOT A COPY OF /me/notifications
  *   That page carries a preferences tab whose toggles are not persisted (it

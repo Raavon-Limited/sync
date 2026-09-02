@@ -222,12 +222,12 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
 
   // `roles` is what lets the form offer a choice to a multi-role account. It
   // was being computed and then dropped on the floor here, so `res.roles` was
-  // always undefined and the chooser never appeared — a student-and-vendor
+  // always undefined and the chooser never appeared   a student-and-vendor
   // signed in wearing whichever hat was last active, which is a coin flip.
   return { ok: true, role, roles, handle: handleFor(data.user, role) };
 }
 
-/** Which input the login form should show for an email — and, now, whether
+/** Which input the login form should show for an email   and, now, whether
  *  there is an account to show one for at all.
  *
  *    'otp'      admins / super_admins, who have no password
@@ -238,13 +238,13 @@ export async function signIn(input: LoginInput): Promise<VerifyResult> {
  *  answer 'password' for an address we had never seen, so an unknown email got
  *  a password box, a rejected password, and no hint that the thing to do was
  *  sign up. Hiding the answer only worked against a visitor who never tried
- *  the password — anyone patient enough to type one learned the same fact from
+ *  the password   anyone patient enough to type one learned the same fact from
  *  `signIn`, more slowly. What it cost was every real person who mistyped
  *  their address or forgot which one they used.
  *
  *  So the trade is stated rather than hidden: this endpoint tells a caller
  *  whether an address has an account here. If that becomes a problem, the fix
- *  is a rate limit on this action (see lib/security/rate-limit — the `auth`
+ *  is a rate limit on this action (see lib/security/rate-limit   the `auth`
  *  limiter is written for exactly this), not going back to lying to the user.
  *
  *  BOTH FALLBACKS STAY 'password'. An unreachable backend must never send a
@@ -271,7 +271,7 @@ export async function getLoginMethod(
 }
 
 /** Send a passwordless sign-in code to an existing account (used by the OTP
- *  login flow — e.g. admins / super_admins who have no password). Won't create
+ *  login flow   e.g. admins / super_admins who have no password). Won't create
  *  a new user. */
 export async function sendLoginOtp(rawEmail: string): Promise<AuthResult> {
   const parsed = emailRule.safeParse(rawEmail);
@@ -317,7 +317,7 @@ export async function verifyLoginOtp(input: VerifyOtpInput): Promise<VerifyResul
     // PROMOTED the account. Staff is a row now, granted by set_account_role,
     // so signing in grants nothing it did not already have.
     //
-    // (The upsert could not have worked anyway — guard_profile_privileged_cols
+    // (The upsert could not have worked anyway   guard_profile_privileged_cols
     // reverts `role` for every PostgREST writer, service role included.)
     if (prof?.archived_at) {
       const days = (Date.now() - new Date(prof.archived_at).getTime()) / 86_400_000;
@@ -369,7 +369,7 @@ export async function switchRole(role: string): Promise<void> {
  * Add a second kind of account to the one you are already signed in to.
  *
  * WHY THIS EXISTS
- *   Signing up again with the same email cannot work — Supabase auth is keyed
+ *   Signing up again with the same email cannot work   Supabase auth is keyed
  *   on email, so a second signup is refused as "already registered" and the
  *   form sends you to /login. That is correct and also a dead end: there was
  *   no way, anywhere in the app, to become a vendor once you were a student.
@@ -378,7 +378,7 @@ export async function switchRole(role: string): Promise<void> {
  *   `claim_role` adds the hat, `switch_role` puts it on. Both are checked in
  *   the database: claim refuses staff roles and a second business profile,
  *   switch refuses anything you do not hold. If the switch half fails the
- *   claim still stands — you hold the role and are simply not wearing it,
+ *   claim still stands   you hold the role and are simply not wearing it,
  *   which the account switcher can fix. The reverse order could grant a role
  *   nobody asked for, so it is deliberately claim-first.
  *
@@ -405,7 +405,7 @@ export async function claimRole(role: string): Promise<void> {
  *
  * ALWAYS REPORTS SUCCESS, even for an address with no account. Answering
  * "no such user" here would turn this form into an account-enumeration oracle
- * — type addresses, watch which ones error — which is the same disclosure
+ *   type addresses, watch which ones error   which is the same disclosure
  * `getLoginMethod` already refuses to make. The person who owns the mailbox
  * finds out by receiving the email, or by not receiving one.
  *

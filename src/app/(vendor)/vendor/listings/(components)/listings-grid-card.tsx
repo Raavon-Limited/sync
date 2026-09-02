@@ -4,13 +4,13 @@
  * One product in the grid.
  *
  * THE ⋯ BUTTON USED TO DO NOTHING
- *   `onMore={() => {}}` — a literal no-op, so the only way to duplicate,
+ *   `onMore={() => {}}`   a literal no-op, so the only way to duplicate,
  *   archive or delete a product was to switch to the list view, which has had
  *   those actions all along. Promote was a second no-op beside it. Both are
  *   real now.
  *
  * STOCK IS PER STORE
- *   The card used to print `listings.stock` — the catalogue column that no
+ *   The card used to print `listings.stock`   the catalogue column that no
  *   student-facing read consults since the shared catalogue landed. A vendor
  *   could read "12 in stock" while the store they are standing in had none.
  *   It now shows the ACTIVE store's figure, and says which store that is.

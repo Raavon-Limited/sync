@@ -1,12 +1,12 @@
 /**
  * ROUTE: /admin/vendors
  * ACCESS: admin / super_admin only, enforced here AND in every server action.
- * PURPOSE: Vendor verification queue — review uploaded documents and decide
+ * PURPOSE: Vendor verification queue   review uploaded documents and decide
  *          whether a vendor is real.
  *
  * The route guard mirrors /admin/users: read the trusted role, redirect to /403
  * otherwise, then use the service-role client. Admin work is cross-tenant, so
- * it deliberately bypasses RLS — which is exactly why the guard is repeated in
+ * it deliberately bypasses RLS   which is exactly why the guard is repeated in
  * `modules/admin/actions` rather than trusted from here alone.
  */
 import type { Metadata } from 'next';
@@ -16,7 +16,7 @@ import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs, type AccountTabKey } from '@/components/admin/account-tabs';
 import { VerificationQueue, type AdminVendor } from './(components)/verification-queue';
 
-export const metadata: Metadata = { title: 'Vendors — Admin' };
+export const metadata: Metadata = { title: 'Vendors   Admin' };
 
 type Row = Record<string, unknown>;
 
@@ -26,7 +26,7 @@ type Row = Record<string, unknown>;
  * 'landlord' is deliberately absent: it is a vendor_profiles category like the
  * rest, but landlords are reviewed on their own screen where their properties
  * can be shown, and the query below excludes them outright. Anything not in
- * this list is ignored rather than passed to the database — a category comes
+ * this list is ignored rather than passed to the database   a category comes
  * from the URL, and an unrecognised one should show the full list, not an empty
  * one or a query error.
  */
@@ -99,7 +99,7 @@ export default async function Page({
     byOwner.set(d.owner_id as string, list);
   }
 
-  // The face for the card. One round trip for the whole page — see
+  // The face for the card. One round trip for the whole page   see
   // modules/admin/selfies for why the queue is scannable by sight at all.
   const selfieByOwner = await selfieUrlsFor(((vendors ?? []) as Row[]).map((v) => v.id as string));
 
@@ -107,7 +107,7 @@ export default async function Page({
     id: v.id as string,
     businessName: (v.business_name as string) ?? 'Unnamed business',
     slug: v.slug as string,
-    category: (v.category as string) ?? '—',
+    category: (v.category as string) ?? ' ',
     area: (v.area as string) ?? null,
     verificationStatus: (v.verification_status as string) ?? 'unverified',
     createdAt: v.created_at as string,

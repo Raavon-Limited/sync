@@ -10,13 +10,13 @@
  * WHY FLATE AND NOT JPEG
  *   Embedding a JPEG (DCTDecode) is three lines shorter and would be the
  *   obvious shortcut. It is also lossy, and the thing in the middle of this
- *   page is a QR code — JPEG ringing around hard black/white edges is exactly
+ *   page is a QR code   JPEG ringing around hard black/white edges is exactly
  *   the artefact that makes a marginal scan fail. A credential that stops
  *   scanning after someone prints it is worse than no credential, so the image
  *   goes in lossless: raw RGB through DEFLATE, which every PDF reader has
  *   supported since 1.2.
  *
- * `CompressionStream` does the deflating — it is in every current browser and
+ * `CompressionStream` does the deflating   it is in every current browser and
  * saves shipping a zlib implementation. There is no fallback: a browser
  * without it also cannot do most of the rest of this app.
  */
@@ -76,7 +76,7 @@ export async function canvasToPdf(
     chunks.push(bytes);
     length += bytes.length;
   };
-  /** Records where each object starts — the xref table is byte offsets. */
+  /** Records where each object starts   the xref table is byte offsets. */
   const startObject = (n: number) => {
     offsets[n] = length;
   };
@@ -105,7 +105,7 @@ export async function canvasToPdf(
   push('\nendstream\nendobj\n');
 
   // The content stream: scale the unit image up to the page and draw it.
-  // `cm` is a transform matrix — width and height in, origin at bottom-left.
+  // `cm` is a transform matrix   width and height in, origin at bottom-left.
   const content = `q\n${pageW} 0 0 ${pageH} 0 0 cm\n/Im0 Do\nQ\n`;
   startObject(5);
   push(`5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`);

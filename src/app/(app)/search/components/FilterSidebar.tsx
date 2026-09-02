@@ -15,7 +15,7 @@ interface FilterSidebarProps {
   onMobileClose?: () => void;
 }
 
-// ─── Slider constants —  ───────────────────────
+// ─── Slider constants    ───────────────────────
 const PRICE_MIN = 50;
 const PRICE_MAX = 450;
 const PRICE_RANGE = PRICE_MAX - PRICE_MIN;

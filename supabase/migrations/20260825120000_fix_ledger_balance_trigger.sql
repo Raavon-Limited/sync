@@ -14,7 +14,7 @@
 --       deferrable initially deferred
 --       for each row execute function private.assert_ledger_balanced();
 --
---   A deferred trigger fires at COMMIT — after post_transaction has returned,
+--   A deferred trigger fires at COMMIT   after post_transaction has returned,
 --   outside its definer context. And `assert_ledger_balanced` was declared
 --   plain `language plpgsql`, no SECURITY DEFINER, so at commit it runs with
 --   the CALLER's privileges. The caller is service_role over PostgREST, which

@@ -2,7 +2,7 @@
  * React Query hooks for the 'vendor' module.
  *
  * These replace the mock arrays the vendor screens currently render. Migrate a
- * screen at a time — `src/mock/listings.ts` and `src/mock/vendor.ts` can stay
+ * screen at a time   `src/mock/listings.ts` and `src/mock/vendor.ts` can stay
  * until the last consumer is gone.
  */
 'use client';
@@ -74,7 +74,7 @@ export function useUpsertListing() {
 }
 
 /**
- * Bulk archive — the listings page has multi-select, so this takes an array.
+ * Bulk archive   the listings page has multi-select, so this takes an array.
  *
  * Optimistic, because archiving is reversible (`useRestoreListings` puts them
  * back) and the grid should respond immediately to a bulk action. Contrast with
@@ -139,7 +139,7 @@ export function useVendorOrders(
     queryFn: () => api.fetchVendorOrders(db(), vendorId!, filters),
     enabled: !!vendorId,
     // Realtime (below) is the primary signal. This slow poll is a backstop for
-    // a dropped socket on a flaky campus connection — not the main mechanism,
+    // a dropped socket on a flaky campus connection   not the main mechanism,
     // which is why it is minutes rather than seconds.
     refetchInterval: 120_000,
   });
@@ -161,7 +161,7 @@ export function useUpdateOrderStatus() {
       qc.invalidateQueries({ queryKey: qk.orders.vendorInbox() });
       qc.invalidateQueries({ queryKey: qk.orders.events(order.id) });
       // Delivering an order releases escrow, so earnings change.
-      // Delivering releases escrow and cancelling refunds it — both move
+      // Delivering releases escrow and cancelling refunds it   both move
       // money, so both invalidate the wallet.
       if (order.status === 'delivered' || order.status === 'cancelled') {
         qc.invalidateQueries({ queryKey: qk.earnings.all });
@@ -213,14 +213,14 @@ export function useDeletePromotion() {
 // ── Realtime ───────────────────────────────────────────────────────────────
 
 /**
- * Live order inbox. A new order must appear the moment it is placed — a vendor
+ * Live order inbox. A new order must appear the moment it is placed   a vendor
  * refreshing a page to find out they have work is how orders go cold.
  *
  * Mount once on the vendor dashboard shell, not per widget: each mount is a
  * socket.
  */
 /**
- * `storefrontId` narrows the socket to one branch. A manager MUST pass it —
+ * `storefrontId` narrows the socket to one branch. A manager MUST pass it  
  * a `vendor_id=eq.` filter matches nothing for them, so without it their queue
  * would never update live even though the initial fetch worked.
  */
@@ -242,7 +242,7 @@ export function useVendorOrdersRealtime(storefrontId?: string) {
 
 /**
  * Live service requests for a vendor in the beauty/laundry/workmanship
- * verticals — the same problem as the food inbox, different table.
+ * verticals   the same problem as the food inbox, different table.
  */
 export function useVendorRequestsRealtime() {
   const { userId: vendorId } = useSession();
@@ -271,7 +271,7 @@ export function useUploadListingImage() {
 }
 
 /**
- * The same upload, for anything that is not a listing photo — a business logo,
+ * The same upload, for anything that is not a listing photo   a business logo,
  * a store front. Same bucket, same 5MB limit, same own-folder-only policy;
  * only the folder differs, and that is for humans browsing storage later.
  */

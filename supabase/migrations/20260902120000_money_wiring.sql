@@ -8,8 +8,8 @@
 --
 -- A BUG IN release_delivery_escrow IS FIXED HERE FIRST
 --   It inserted straight into private.ledger_transactions with an `entries`
---   column. That column does not exist — the table is (kind, reference,
---   narrative, order_id, …) and `narrative` is NOT NULL — and the entries
+--   column. That column does not exist   the table is (kind, reference,
+--   narrative, order_id, …) and `narrative` is NOT NULL   and the entries
 --   themselves live in a separate table written by private.post_transaction.
 --   plpgsql does not validate a function body at creation, so it was created
 --   happily and would have raised the first time a rider was paid.
@@ -19,7 +19,7 @@
 --
 -- WHY THE RIDER MAY RELEASE THE VENDOR'S MONEY
 --   "The vendor's fee stays in escrow until the order is delivered by a rider."
---   The rider is the one who marks it delivered, so the rider is the caller —
+--   The rider is the one who marks it delivered, so the rider is the caller  
 --   and release_order_escrow refused anybody but the payer or the cron.
 --
 --   It gains ONE branch: the assigned rider, and only once that delivery is
@@ -28,8 +28,8 @@
 --   other paths depend on.
 --
 -- RELEASING IS BEST-EFFORT, MARKING DELIVERED IS NOT
---   If a release fails — a vendor with no wallet, a ledger that will not
---   balance — the delivery is still delivered. The food arrived; refusing to
+--   If a release fails   a vendor with no wallet, a ledger that will not
+--   balance   the delivery is still delivered. The food arrived; refusing to
 --   record that because the money could not move would leave the rider unable
 --   to close the job and the student watching a stale screen. The hold stays
 --   'held' and the hourly sweep picks it up, which is exactly what that sweep
@@ -162,7 +162,7 @@ begin
   end if;
 
   -- THE NEW BRANCH. The rider who carried this order, once they have marked it
-  -- delivered, may release the vendor's money — because "held until delivered"
+  -- delivered, may release the vendor's money   because "held until delivered"
   -- means the person who delivers it is the one who ends the hold. Narrow on
   -- purpose: this rider, this delivery, and only in the 'delivered' state.
   if v_uid is not null then
@@ -362,7 +362,7 @@ begin
   -- THREE NUMBERS, AND THEY ARE NOT INTERCHANGEABLE.
   --   v_goods     the vendor's, escrowed to them
   --   v_delivery  the rider's, escrowed with no payee until somebody claims it
-  --   v_sync_fee  the student's service charge, on the GOODS only — charging a
+  --   v_sync_fee  the student's service charge, on the GOODS only   charging a
   --               percentage of the delivery too would bill the same trip
   --               twice, once through the rider's cut and once through this.
   v_goods := v_subtotal - v_discount;
@@ -633,7 +633,7 @@ comment on function public.advance_delivery is
 
 -- ── 6. The sweep has to reach delivery holds, or the backstop is a fiction ──
 -- release_matured_escrow selected `where order_id is not null`, which is every
--- hold EXCEPT a delivery one — a delivery hold carries delivery_id and a null
+-- hold EXCEPT a delivery one   a delivery hold carries delivery_id and a null
 -- order_id, by design (see 20260902090000). So a rider payout that failed in
 -- advance_delivery would never have been retried by anything, and the comment
 -- above would have been a lie.

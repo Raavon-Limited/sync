@@ -32,7 +32,7 @@ export interface StudentBooking {
 }
 
 const dayLabel = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : ' ';
 
 const daysBetween = (iso?: string | null) => {
   if (!iso) return 0;
@@ -63,7 +63,7 @@ function toCard(b: Booking): StudentBooking {
     id: b.id,
     property: b.hostelName ?? 'Hostel',
     room: b.roomLabel ?? 'Room not assigned',
-    area: b.hostelArea ?? '—',
+    area: b.hostelArea ?? ' ',
     status,
     moveIn: dayLabel(b.moveIn),
     endDate: dayLabel(b.endDate),

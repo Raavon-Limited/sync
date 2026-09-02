@@ -2,13 +2,13 @@
  * ROUTE: /food/orders
  *
  * WHAT CHANGED
- *   This read `getAllDemoOrders()` — a localStorage array written by a fake
+ *   This read `getAllDemoOrders()`   a localStorage array written by a fake
  *   checkout. It now reads the student's real orders, and subscribes to them:
  *   `orders` is in the realtime publication, so a vendor moving an order to
  *   "preparing" updates this screen without a refresh.
  *
  * STATUS COVERAGE
- *   The demo shim knew four states. The table allows six — `pending` (placed,
+ *   The demo shim knew four states. The table allows six   `pending` (placed,
  *   not yet accepted) and `cancelled` were unrepresentable, so an order sitting
  *   in either rendered as nothing at all. Both are handled here.
  */

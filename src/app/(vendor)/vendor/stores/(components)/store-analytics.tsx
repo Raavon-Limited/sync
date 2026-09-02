@@ -2,13 +2,13 @@
  * How each store is actually doing.
  *
  * WHY THIS IS NOT ON /vendor/earnings
- *   Earnings are per BUSINESS — the wallet, the payouts and the subscription
+ *   Earnings are per BUSINESS   the wallet, the payouts and the subscription
  *   all hang off `vendor_profiles`, so that screen shows one number no matter
  *   how many locations produced it. The question multi-store creates is
  *   "which location produced it?", and the answer is a `group by
  *   storefront_id`, not a second ledger. It belongs beside the stores.
  *
- * REVENUE HERE MEANS WHAT ARRIVED — released escrow, net of the platform's
+ * REVENUE HERE MEANS WHAT ARRIVED   released escrow, net of the platform's
  * commission. Booked money (paid, still in escrow) is shown beside it rather
  * than folded in: a vendor told they have earned money they cannot withdraw
  * yet will go looking for it in their wallet and not find it.
@@ -63,7 +63,7 @@ export function StoreAnalytics() {
   }
 
   // Nothing has been sold yet. Four zeroes and an empty chart is a worse
-  // answer than saying so — zeroes read as a broken query.
+  // answer than saying so   zeroes read as a broken query.
   if (!rows.length || totals.completed === 0) {
     return (
       <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
@@ -78,7 +78,7 @@ export function StoreAnalytics() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <CustomCard
           label="BEST STORE"
-          value={<span className="text-content">{totals.best?.storeName ?? '—'}</span>}
+          value={<span className="text-content">{totals.best?.storeName ?? ' '}</span>}
           subtext={
             totals.best ? `${naira(totals.best.revenueKobo)} from ${totals.best.ordersCompleted} orders` : undefined
           }

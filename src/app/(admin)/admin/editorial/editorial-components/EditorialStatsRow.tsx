@@ -50,7 +50,7 @@ export function EditorialStatsRow({ stats }: EditorialStatsProps) {
         </p>
       </div>
 
-      {/* Scheduled — published, but not yet */}
+      {/* Scheduled   published, but not yet */}
       <div className="bg-panel px-6 py-5 flex flex-col justify-between gap-3 group transition-colors hover:bg-surface-deep/30">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-wider font-bold text-content-muted/80">

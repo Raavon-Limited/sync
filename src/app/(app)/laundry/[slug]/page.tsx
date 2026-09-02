@@ -1,7 +1,7 @@
 /**
  * ROUTE: /laundry/[slug]
  * ACCESS: public to browse; signing in is required to request.
- * PURPOSE: A laundry pro — who they are and what they offer.
+ * PURPOSE: A laundry pro   who they are and what they offer.
  *
  * All three verticals share one detail component; see
  * components/services/service-vendor-detail.

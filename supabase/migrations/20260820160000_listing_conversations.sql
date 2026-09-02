@@ -2,7 +2,7 @@
 -- listing_conversations
 --
 -- Adds the pre-order messaging door. Until now the ONLY way to create a
--- conversation was open_order_conversation(), which hard-requires an order —
+-- conversation was open_order_conversation(), which hard-requires an order  
 -- so a student could not ask "is this still available?" before buying, which
 -- is the single most common question a marketplace has to carry.
 --
@@ -13,7 +13,7 @@
 --   forging created_by. We keep that closed and add a second audited door
 --   rather than opening the table.
 --
--- IDEMPOTENCY IS PER (LISTING, STUDENT) — NOT PER LISTING
+-- IDEMPOTENCY IS PER (LISTING, STUDENT)   NOT PER LISTING
 --   open_order_conversation can look up its thread by subject alone, because an
 --   order has exactly two parties. A listing has MANY interested students, so
 --   the same lookup here would hand student B the thread belonging to student A
@@ -68,7 +68,7 @@ begin
     raise exception 'cannot open a thread with yourself' using errcode = '42501';
   end if;
 
-  -- Scoped to the caller — see IDEMPOTENCY note in the header.
+  -- Scoped to the caller   see IDEMPOTENCY note in the header.
   select c.id into v_convo
     from public.conversations c
     join public.conversation_participants p

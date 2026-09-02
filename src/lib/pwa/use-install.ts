@@ -38,14 +38,14 @@ export function readStandalone(): boolean {
 }
 
 /**
- * Is this the APP, as a person would mean it — a phone — rather than a desktop
+ * Is this the APP, as a person would mean it   a phone   rather than a desktop
  * browser?
  *
  * WHY THIS IS NOT `readStandalone`
  *   Standalone means "launched from the home screen", which is a much narrower
  *   thing than "on a phone". Signing in from Safari on an iPhone is not
  *   standalone, so anything gated on that treated a phone as a desktop and sent
- *   people to a dashboard — the exact complaint this answers. Installing is a
+ *   people to a dashboard   the exact complaint this answers. Installing is a
  *   step most people never take, and the ones who have not are still on a phone.
  *
  *   Standalone still counts on its own: an installed app is the app whatever

@@ -6,7 +6,7 @@
 --
 --   auth.users.raw_user_meta_data->>'verification_status'
 --        written by submitVendorOnboarding. Read exactly once, by
---        handle_new_user, at signup — so writing it after signup reached
+--        handle_new_user, at signup   so writing it after signup reached
 --        nothing at all.
 --   profiles.verification_status
 --        seeded from that metadata at signup, then frozen for `authenticated`
@@ -22,7 +22,7 @@
 --   still says 'unverified', because nothing carries the decision across. The
 --   vendor signs in to a dashboard that is still locked, with a button asking
 --   them to verify an account that a human already approved. There is no
---   action they can take that fixes it — the column they need changed is one
+--   action they can take that fixes it   the column they need changed is one
 --   only staff can write, and staff already changed the other one.
 --
 --   The mirror image is just as bad: onboarding wrote 'pending' to metadata
@@ -46,7 +46,7 @@
 --   `rider_profiles.verification_status` has the same shape and is left alone
 --   on purpose. Since multi-role accounts (20260830090000) one person can hold
 --   both a business role and 'rider', which is two independent verifications
---   and one `profiles.verification_status` to mirror into — they would
+--   and one `profiles.verification_status` to mirror into   they would
 --   overwrite each other, and the loser would be silently wrong. Riders need
 --   their own gate reading `rider_profiles` directly, which is a separate
 --   change.
@@ -61,7 +61,7 @@
 -- ── 1. The mirror ───────────────────────────────────────────────────────────
 -- SECURITY DEFINER is load-bearing: guard_profile_privileged_cols freezes
 -- `verification_status` whenever `current_user` is 'authenticated', and an
--- admin approving through the service role is not the only caller — the RPC
+-- admin approving through the service role is not the only caller   the RPC
 -- below runs this as the vendor themselves. As a definer-rights function the
 -- trigger runs as the owner, the guard's role test does not match, and the
 -- write lands. That is the whole reason the mirror can exist at all.
@@ -105,7 +105,7 @@ update public.profiles p
 -- Nothing creates `vendor_profiles` for a new business account: the row came
 -- from the one-off backfill in 20260817090000, and `set_vendor_category` moves
 -- the role without creating one. A vendor who signed up after that backfill
--- therefore has no business row at all — so there is nothing to mirror, nothing
+-- therefore has no business row at all   so there is nothing to mirror, nothing
 -- for the review queue to list, and nothing for guard_storefront_insert to
 -- read.
 --
@@ -145,7 +145,7 @@ begin
   end if;
 
   -- Same derivation as the 20260817090000 backfill, with the uuid tail as the
-  -- collision breaker rather than a window function — there is one row here.
+  -- collision breaker rather than a window function   there is one row here.
   v_slug := regexp_replace(
               lower(coalesce(nullif(trim(v_prof.business_name), ''),
                              'vendor-' || left(v_uid::text, 8))),

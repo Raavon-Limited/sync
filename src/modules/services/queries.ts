@@ -221,7 +221,7 @@ export async function fetchRequest(db: Client, id: string): Promise<ServiceReque
 }
 
 /**
- * `code` is not supplied — the `service_requests_set_code` trigger assigns it.
+ * `code` is not supplied   the `service_requests_set_code` trigger assigns it.
  * Neither is `agreed_kobo`: the column guard reverts any client attempt to set
  * a price on their own request.
  */
@@ -244,8 +244,8 @@ export async function createRequest(
     await db
       .from('service_requests')
       .insert({
-        // `code` is NOT NULL, so Postgres — and therefore the generated Insert
-        // type — insists on it, even though `service_requests_set_code` fills
+        // `code` is NOT NULL, so Postgres   and therefore the generated Insert
+        // type   insists on it, even though `service_requests_set_code` fills
         // it in. The trigger replaces null OR empty string, so '' is the
         // correct way to say "you assign it".
         code: '',
@@ -285,7 +285,7 @@ export async function quoteRequest(
 
 /**
  * Advances the status. Every transition is appended to
- * `service_request_events` by trigger, so there is no separate log call — and
+ * `service_request_events` by trigger, so there is no separate log call   and
  * no way for a status change to happen without being recorded.
  */
 export async function updateRequestStatus(

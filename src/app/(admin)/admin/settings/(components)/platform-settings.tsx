@@ -153,7 +153,7 @@ export function PlatformSettings({
                    number and a string is how setting_int silently resets. */
                 <p className="text-content-muted flex items-center gap-1 text-xs">
                   <AlertTriangle className="size-3" />
-                  Value <code className="font-mono">{s.value}</code> — not editable here; this key
+                  Value <code className="font-mono">{s.value}</code>   not editable here; this key
                   has no declared type.
                 </p>
               )}

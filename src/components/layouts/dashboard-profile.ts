@@ -73,7 +73,7 @@ export interface DashboardProfile {
    * proxy uses, so sidebar links and the proxy rewrite always agree.
    */
   handle?: string;
-  /** The hat being worn, and every hat held — feeds the account switcher. */
+  /** The hat being worn, and every hat held   feeds the account switcher. */
   role?: string;
   roles?: string[];
 }
@@ -120,7 +120,7 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
    * into every branch below: computing it inside one of them is how the
    * switcher ends up appearing on the vendor dashboard and nowhere else.
    *
-   * The fallback covers the window before `profiles.roles` exists — the column
+   * The fallback covers the window before `profiles.roles` exists   the column
    * arrives in 20260830090000, and until then everyone holds exactly the role
    * they are wearing, which makes the switcher correctly render nothing.
    */

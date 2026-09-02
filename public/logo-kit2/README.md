@@ -25,7 +25,7 @@ stop, you have taken a wrong turn.
 
 ## Where each file goes
 
-### `logo/` — the master mark
+### `logo/`   the master mark
 
 | File | Where it goes |
 | --- | --- |
@@ -41,7 +41,7 @@ In the app, prefer the React component over the SVG file so the mark inherits
 theme colour: `<SyncLockup height={28} />` in the nav, `<SyncMark size={24} />`
 where space is tight.
 
-### `dashboard/` — role lockups
+### `dashboard/`   role lockups
 
 | File | Where it goes |
 | --- | --- |
@@ -54,7 +54,7 @@ These are the Sync logo, a lime hairline, and the role in JetBrains Mono. That i
 the entire difference between a landlord dashboard and a student one. In React use
 `<SyncLockup height={28} role="Landlord" />` rather than the file.
 
-### `pwa/` — app icons and favicons
+### `pwa/`   app icons and favicons
 
 Copy the whole folder contents into `public/`.
 
@@ -72,7 +72,7 @@ The maskable icons are **not** interchangeable with the plain ones. Plain icons
 already have rounded corners baked in. Maskable ones are a full square and will
 look wrong if used as a plain icon.
 
-### `icons/` — section icons
+### `icons/`   section icons
 
 Eleven icons, one family: same 100 unit grid, stroke 11, round caps and joins,
 and exactly one lime element each.
@@ -104,7 +104,7 @@ Use icons on: mobile tab bars, section headers, listing card badges, dashboard
 side nav, empty states. Do **not** use them in the desktop top nav, which stays
 text only.
 
-### `loaders/` — three loading states, no fourth
+### `loaders/`   three loading states, no fourth
 
 | Component | File | When |
 | --- | --- | --- |
@@ -128,7 +128,7 @@ Rules that matter:
 - All three slow down under `prefers-reduced-motion` rather than stopping, so a
   wait still reads as a wait.
 
-### `react/` — drop into `components/`
+### `react/`   drop into `components/`
 
 | File | Exports |
 | --- | --- |

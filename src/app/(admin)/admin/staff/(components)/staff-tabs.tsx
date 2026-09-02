@@ -4,7 +4,7 @@
  * WHY A CLIENT WRAPPER AROUND SERVER-RENDERED PANELS
  *   Switching tabs is a client concern; reading the roster is not. Both panels
  *   are rendered on the server and handed in as `children`, so this component
- *   holds the selected tab and nothing else — it never fetches, and the data in
+ *   holds the selected tab and nothing else   it never fetches, and the data in
  *   each panel is the same server render it would have been on one page.
  *
  *   It also means a server action's `revalidatePath('/admin/staff')` refreshes
@@ -15,7 +15,7 @@
  *
  * THE COUNTS ARE ON THE TABS ON PURPOSE. An outstanding invitation is the one
  * thing on this screen that somebody is waiting on, and tabs hide half the page
- * by design — so the number that means "act on me" has to be visible from the
+ * by design   so the number that means "act on me" has to be visible from the
  * tab you are not on.
  */
 'use client';
@@ -67,7 +67,7 @@ export function StaffTabs({
   );
 }
 
-/** A plain count beside a tab label — quieter than the pending-invite pill,
+/** A plain count beside a tab label   quieter than the pending-invite pill,
  *  which is the only number here that asks for anything. */
 function Count({ value, active }: { value: number; active: boolean }) {
   return (

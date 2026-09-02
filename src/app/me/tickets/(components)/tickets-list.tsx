@@ -4,7 +4,7 @@
  * THREE STATES, NOT TWO
  *   The old page filtered to 'valid' and 'used' only. The table also allows
  *   'refunded', and a refunded ticket that renders nowhere simply vanishes from
- *   the student's view — which is exactly when they want to see it. It is
+ *   the student's view   which is exactly when they want to see it. It is
  *   grouped with used under "no longer valid", labelled for what it is.
  */
 'use client';
@@ -14,7 +14,7 @@ import { TicketCard, type StudentTicket } from '../../(components)/EventsTickets
 import { useMyTickets } from '@/modules/events/hooks';
 
 const dayLabel = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : '—';
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : ' ';
 
 export function TicketsList() {
   const { data: tickets = [], isLoading } = useMyTickets({ pageSize: 100 });
@@ -25,7 +25,7 @@ export function TicketsList() {
       eventName: t.eventName ?? 'Event',
       reference: t.reference,
       date: dayLabel(t.eventStartsAt),
-      venue: t.eventVenue ?? '—',
+      venue: t.eventVenue ?? ' ',
       type: t.tier ?? 'General',
       price: t.priceKobo / 100,
       status: t.status,

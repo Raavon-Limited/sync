@@ -5,7 +5,7 @@
  * TWO DECISIONS, AND THEY ARE NOT THE SAME ONE
  *   Verification asks "are these documents real". Suspension asks "should this
  *   person be working right now". A rider with a genuine licence who keeps
- *   dropping orders is not unverified — rejecting them would assert their papers
+ *   dropping orders is not unverified   rejecting them would assert their papers
  *   are forged, which is both false and permanent-shaped. So the review card
  *   handles verification and the control above it handles suspension, and
  *   neither pretends to be the other.
@@ -73,7 +73,7 @@ export function RiderDetail({ rider }: { rider: AdminRider }) {
             <Stat label="Delivered" value={String(rider.delivered)} />
             <Stat label="In flight" value={String(rider.active)} />
             <Stat label="Fees earned" value={formatKobo(rider.earnedKobo)} />
-            <Stat label="Rating" value={rider.ratingAvg > 0 ? rider.ratingAvg.toFixed(1) : '—'} />
+            <Stat label="Rating" value={rider.ratingAvg > 0 ? rider.ratingAvg.toFixed(1) : ' '} />
             <Star className="text-content-muted size-4" aria-hidden="true" />
           </div>
         </div>
@@ -135,7 +135,7 @@ function SuspensionControl({ rider }: { rider: AdminRider }) {
       <div className="border-coral/30 bg-coral/5 flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2">
         <ShieldAlert className="text-coral size-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-coral text-sm font-medium">Suspended — cannot take deliveries</p>
+          <p className="text-coral text-sm font-medium">Suspended   cannot take deliveries</p>
           {rider.suspendedReason && (
             <p className="text-content-muted text-xs">{rider.suspendedReason}</p>
           )}

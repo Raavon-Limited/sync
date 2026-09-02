@@ -1,5 +1,5 @@
 /**
- * Food cart — same interface, real storage.
+ * Food cart   same interface, real storage.
  *
  * WHAT CHANGED
  *   This used to be `useState<CartItem[]>` and nothing else: the cart lived in
@@ -10,7 +10,7 @@
  *
  * WHY THE SHAPE IS UNCHANGED
  *   `VendorClient` is ~600 lines built against this exact context API. Swapping
- *   the storage underneath it — rather than rewriting the consumer — keeps the
+ *   the storage underneath it   rather than rewriting the consumer   keeps the
  *   change reviewable and means every existing call site keeps working.
  *
  * ONE TRANSLATION TO KNOW
@@ -39,7 +39,7 @@ export interface CartItem {
 }
 
 export interface CartVendor {
-  /** vendor_profiles.id — required to reach the cart this belongs to. */
+  /** vendor_profiles.id   required to reach the cart this belongs to. */
   id: string;
   slug: string;
   name: string;
@@ -99,7 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     async (v: CartVendor, item: Omit<CartItem, 'qty'>) => {
-      // A cart row is owned by a student — there is no anonymous cart to write
+      // A cart row is owned by a student   there is no anonymous cart to write
       // to, so send them to sign in rather than failing silently.
       if (!userId) {
         router.push('/login');

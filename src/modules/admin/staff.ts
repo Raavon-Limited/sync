@@ -2,14 +2,14 @@
  * Who runs Sync, and who may change that.
  *
  * SEPARATE FROM /admin/users ON PURPOSE
- *   That screen is the directory — every account on the platform, mostly
+ *   That screen is the directory   every account on the platform, mostly
  *   students. This one answers a different question, asked far less often and
  *   with far more weight: who can open the console at all. Mixing them means
  *   the four rows that matter live at the bottom of a list of thousands.
  *
  * THE RPCS DO THE AUTHORISING, NOT THIS MODULE
  *   `set_account_role` refuses anyone who is not a super admin, refuses to
- *   remove the last one, and refuses to remove your own access — inside the
+ *   remove the last one, and refuses to remove your own access   inside the
  *   database, where a request that skipped this module still hits it. Repeating
  *   those rules here would be a second copy to keep in step, so the page reads
  *   `isSuperAdmin` only to decide what to SHOW.
@@ -35,7 +35,7 @@ export async function getStaff(): Promise<StaffMember[]> {
   return ((data ?? []) as Row[]).map((s) => ({
     id: s.id,
     name: s.full_name ?? 'No name set',
-    email: s.email ?? '—',
+    email: s.email ?? ' ',
     role: s.role,
     createdAt: s.created_at,
   }));
@@ -45,7 +45,7 @@ export async function getStaff(): Promise<StaffMember[]> {
  * Resolve an email to an account id.
  *
  * Reads `auth.users` through the admin client, because that is where email
- * lives — `profiles` has never had the column. Staff-only by virtue of where it
+ * lives   `profiles` has never had the column. Staff-only by virtue of where it
  * is called from, and it returns an id and nothing else: not a lookup anybody
  * could learn anything from beyond "this address has an account", which the
  * caller already has to be staff to ask.

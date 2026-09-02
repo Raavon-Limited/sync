@@ -81,7 +81,7 @@ const featuredItems = [
     },
 ]
 
-// Curated "for you" row — reuses existing food images, no new assets needed
+// Curated "for you" row   reuses existing food images, no new assets needed
 const forYouItems = [
     { slug: 'mama-puta-tanke', image: JollofOne, label: 'Jollof Bargains' },
     { slug: 'burger-king', image: BurgerOne, label: 'Burger Deals' },
@@ -400,7 +400,7 @@ export default function FoodMain() {
                 What are you <span className="text-[#4A8500] dark:text-lime-deep"> <br className='lg:hidden' />Chopping</span> tonight?
             </h1>
 
-            {/* Real storefronts from vendor_profiles — the curated rows below
+            {/* Real storefronts from vendor_profiles   the curated rows below
                 are still hardcoded and their slugs do not resolve. */}
             <RealVendorsSection />
 

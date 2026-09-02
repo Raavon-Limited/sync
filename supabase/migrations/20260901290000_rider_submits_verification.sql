@@ -5,7 +5,7 @@
 --
 -- `submit_verification` (20260901260000) writes vendor_profiles and nothing
 -- else, and `guard_rider_profile_cols` freezes rider_profiles.verification_status
--- against anyone connecting as 'authenticated' — which is every PostgREST
+-- against anyone connecting as 'authenticated'   which is every PostgREST
 -- request. So a rider could upload a licence and a live photo and stay
 -- 'unverified' forever, with no row in any queue and nothing to tell them why.
 -- The admin screens built in the last two migrations would have listed nobody.
@@ -119,7 +119,7 @@ begin
     return 'verified';
   end if;
 
-  -- The company's folder is the OWNER's folder — verification_documents points
+  -- The company's folder is the OWNER's folder   verification_documents points
   -- at profiles, and a company is owned by a person. See 20260901270000.
   select count(*) into v_docs
     from public.verification_documents

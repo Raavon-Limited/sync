@@ -1,11 +1,11 @@
 /**
  * ROUTE: /rider
  * ACCESS: role=rider, enforced by the proxy.
- * PURPOSE: The shift — can I work, what am I carrying, and what have I earned.
+ * PURPOSE: The shift   can I work, what am I carrying, and what have I earned.
  *
  * A RIDER WITH NO PROFILE IS SENT TO SIGN UP, NOT SHOWN AN EMPTY DASHBOARD
  *   Someone can hold the rider role without ever having filled in a vehicle or
- *   uploaded a document — claim_role and rider_profiles are separate writes, and
+ *   uploaded a document   claim_role and rider_profiles are separate writes, and
  *   an interrupted signup leaves exactly that gap.
  */
 import type { Metadata } from 'next';
@@ -15,7 +15,7 @@ import { RiderStatus } from './(components)/rider-status';
 import { NeedsOnboarding } from './(components)/needs-onboarding';
 import { ActiveJobs } from './(components)/active-jobs';
 
-export const metadata: Metadata = { title: 'Your shift — Rider' };
+export const metadata: Metadata = { title: 'Your shift   Rider' };
 
 export default async function Page() {
   const rider = await getRiderProfile();
@@ -46,7 +46,7 @@ export default async function Page() {
         <Stat label="In your hands" value={String(active.length)} />
         <Stat label="Delivered" value={String(rider.deliveriesCount || delivered.length)} />
         <Stat label="Fees earned" value={formatKobo(earned)} />
-        <Stat label="Rating" value={rider.ratingAvg > 0 ? rider.ratingAvg.toFixed(1) : '—'} />
+        <Stat label="Rating" value={rider.ratingAvg > 0 ? rider.ratingAvg.toFixed(1) : ' '} />
       </div>
 
       <div>

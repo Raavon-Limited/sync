@@ -13,11 +13,11 @@
  * Accept: fires immediately, row shows a brief "Accepting…" state, then is
  * removed on success. On failure the row is restored with an inline error.
  * Decline: opens a reason popover anchored to that row's Decline button
- * (portaled to body — see DeclineReasonPopover) before the decline call
+ * (portaled to body   see DeclineReasonPopover) before the decline call
  * fires.
  *
  * Swap `onAccept`/`onDecline` defaults for real API calls once the backend
- * exists — see order-actions.ts for the exact shape to match.
+ * exists   see order-actions.ts for the exact shape to match.
  */
 import { useRef, useState } from 'react';
 import { Button, Card } from '@/components/ui';
@@ -60,7 +60,7 @@ function PendingRow({
   const [state, setState] = useState<RowState>('idle');
   const [error, setError] = useState('');
   const [declineOpen, setDeclineOpen] = useState(false);
-  // Plain span wrapper (not the Button itself) as the popover anchor — this
+  // Plain span wrapper (not the Button itself) as the popover anchor   this
   // works whether or not the Button component forwards refs.
   const declineAnchorRef = useRef<HTMLElement | null>(null);
 

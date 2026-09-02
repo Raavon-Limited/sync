@@ -9,8 +9,8 @@
  *   - THE PATH MUST START WITH THE UPLOADER'S ID. `vdocs_insert_own`
  *     (20260819180000) checks `(storage.foldername(name))[1] = auth.uid()`, so a
  *     flat filename is refused by RLS no matter which bucket it names.
- *   - THE BUCKET IS `verification-docs`. It read `vendor-verification` once — a
- *     name nothing ever created — so every upload failed, and because the
+ *   - THE BUCKET IS `verification-docs`. It read `vendor-verification` once   a
+ *     name nothing ever created   so every upload failed, and because the
  *     failure was swallowed the wizard submitted an empty document list. The
  *     review step said "4 files" while the reviewer got "0 of 0 documents".
  *   - `upsert: false`, because the bucket grants INSERT and DELETE but not
@@ -65,7 +65,7 @@ export async function uploadQueuedDocuments(
   if (!user) {
     return {
       ok: false,
-      error: 'Your session has expired. Sign in again and retry — nothing was submitted.',
+      error: 'Your session has expired. Sign in again and retry   nothing was submitted.',
     };
   }
 

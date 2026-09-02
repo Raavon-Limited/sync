@@ -1,9 +1,9 @@
 /**
- * Past orders — delivered and cancelled.
+ * Past orders   delivered and cancelled.
  *
  * A CANCELLED ORDER IS HISTORY TOO
  *   The mock listed only "Delivered". An order the vendor rejected, or the
- *   student cancelled, still happened and still may involve money — hiding it
+ *   student cancelled, still happened and still may involve money   hiding it
  *   means a student cannot find the one they need to ask about.
  */
 'use client';

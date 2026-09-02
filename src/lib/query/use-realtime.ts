@@ -5,19 +5,19 @@
  * Every feature that wants live data needs the same four things right: a stable
  * channel name, a server-side filter, cleanup on unmount, and a guard so it does
  * not subscribe before the id it filters on is known. Written per-feature, at
- * least one of those gets missed — usually cleanup, and the symptom is a
+ * least one of those gets missed   usually cleanup, and the symptom is a
  * websocket leaked per thread opened.
  *
  * WHAT IT DOES ON A CHANGE
  * Invalidates query keys. It deliberately does NOT write payloads into the
  * cache: a `postgres_changes` payload is a single flat row with none of its
  * joins, so splicing it into a cache entry built from a joined select produces
- * rows with missing relations — an attachment that vanishes, a vendor name that
+ * rows with missing relations   an attachment that vanishes, a vendor name that
  * turns null. Invalidate, refetch, stay correct.
  *
  * SECURITY
  * Realtime evaluates the subscriber's RLS before sending, so a filter is not a
- * security control — it is a bandwidth and correctness control. Never rely on a
+ * security control   it is a bandwidth and correctness control. Never rely on a
  * filter to keep data from someone; rely on the policy. The filter exists so a
  * vendor is not woken up for every order in the system that they could
  * technically read.
@@ -41,14 +41,14 @@ export interface UseRealtimeOptions {
   /**
    * Logical name for the subscription, e.g. `orders:vendor:<id>`.
    *
-   * It does NOT have to be globally unique — a per-instance suffix is appended
+   * It does NOT have to be globally unique   a per-instance suffix is appended
    * internally. See the note on topic collisions in the effect below.
    */
   channel: string;
   bindings: RealtimeBinding[];
   /** Invalidated on any matching change. */
   invalidate: QueryKey[];
-  /** Skip entirely — use while an id is still resolving. */
+  /** Skip entirely   use while an id is still resolving. */
   enabled?: boolean;
   /** Escape hatch for the rare case that needs the payload itself. */
   onChange?: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void;
@@ -63,8 +63,8 @@ export function useRealtime({
 }: UseRealtimeOptions) {
   const queryClient = useQueryClient();
 
-  // Held in refs so a caller passing inline arrays/closures — which every caller
-  // does — does not tear the socket down and rebuild it on every render. Only
+  // Held in refs so a caller passing inline arrays/closures   which every caller
+  // does   does not tear the socket down and rebuild it on every render. Only
   // `channel` and `enabled` drive resubscription.
   const invalidateRef = useRef(invalidate);
   invalidateRef.current = invalidate;

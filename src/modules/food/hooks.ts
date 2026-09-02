@@ -1,7 +1,7 @@
 /**
  * React Query hooks for the 'food' module.
  *
- * These are what components import. Nothing here touches column names — that
+ * These are what components import. Nothing here touches column names   that
  * stays in `./queries`. Rules followed throughout:
  *
  *  - Keys always come from `qk` so a mutation cannot invalidate a key that no
@@ -63,7 +63,7 @@ export function useVendorMenu(vendorId: string | undefined) {
 // ── Cart ───────────────────────────────────────────────────────────────────
 
 /**
- * `studentId` is required because `carts.student_id` is NOT NULL — RLS decides
+ * `studentId` is required because `carts.student_id` is NOT NULL   RLS decides
  * what you may write, it does not fill the column in for you. Pass the signed-in
  * user's id; the hook stays disabled until both are known.
  */
@@ -146,7 +146,7 @@ export function useAddToCart(vendorId: string) {
       if (context?.previous) qc.setQueryData(key, context.previous);
     },
 
-    // Reconcile with the server regardless of outcome — the optimistic line
+    // Reconcile with the server regardless of outcome   the optimistic line
     // carries a fake id that must not survive.
     onSettled() {
       qc.invalidateQueries({ queryKey: key });
@@ -212,7 +212,7 @@ export function useRemoveCartItem(vendorId: string) {
  * order that may not exist. Wait for the real result.
  *
  * `repriced` in the result means a live price differed from the cart's captured
- * one — surface that to the user rather than silently charging the difference.
+ * one   surface that to the user rather than silently charging the difference.
  */
 export function useCheckout(vendorId: string) {
   const qc = useQueryClient();
@@ -319,7 +319,7 @@ export function useMyOrdersRealtime() {
  *
  * This is what replaces the 10s poll in `useDeliveryTracking` for STATUS. The
  * poll stays for POSITION, because a rider's coordinates change continuously and
- * are written by an update loop — streaming every one of those to every viewer
+ * are written by an update loop   streaming every one of those to every viewer
  * is far more traffic than asking once every ten seconds, and the map only
  * needs to be approximately current.
  *

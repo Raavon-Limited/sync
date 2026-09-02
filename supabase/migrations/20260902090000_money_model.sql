@@ -31,7 +31,7 @@
 --   and resolve_dispute all do `select * into v_hold ... where order_id = X`,
 --   and a second row on the same order would have them pick one at random and
 --   move the wrong money. Adding a `kind` column would mean restating all three
---   — three rewrites of live money code, each with a silent wrong-row failure.
+--     three rewrites of live money code, each with a silent wrong-row failure.
 --
 --   `delivery_id` as a fourth subject avoids every bit of that. The subject IS
 --   the kind, and those functions keep working untouched because a delivery
@@ -61,7 +61,7 @@ insert into public.app_settings (key, value) values
   ('rider_charge_pct',        '5'::jsonb),
   ('rider_charge_cap_kobo',   '200000'::jsonb),   -- ₦2,000
   -- Rent is a much larger number and a much rarer event, so it is a smaller
-  -- share and is deliberately UNCAPPED — a cap here would make the charge on a
+  -- share and is deliberately UNCAPPED   a cap here would make the charge on a
   -- ₦400,000 room the same as on a ₦80,000 one.
   ('rent_charge_pct',         '2.5'::jsonb),
   ('delivery_base_kobo',      '30000'::jsonb),    -- ₦300 flag-fall
@@ -75,7 +75,7 @@ on conflict (key) do nothing;
 
 -- The old flat commission is gone. Written to 0 rather than deleted, because
 -- `private.setting_int('commission_pct', 10)` falls back to 10 when the key is
--- MISSING — deleting the row would restore the very charge this removes.
+-- MISSING   deleting the row would restore the very charge this removes.
 update public.app_settings set value = '0'::jsonb where key = 'commission_pct';
 
 -- ── 2. A percentage with a ceiling ──────────────────────────────────────────
@@ -179,7 +179,7 @@ as $fn$
 declare
   v_hours integer;
 begin
-  -- Frozen at creation, deducted at release. An explicit value survives — a
+  -- Frozen at creation, deducted at release. An explicit value survives   a
   -- negotiated rate or a correction must not be overwritten.
   if new.commission_kobo is null or new.commission_kobo = 0 then
     new.commission_kobo := case

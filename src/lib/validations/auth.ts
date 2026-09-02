@@ -32,8 +32,8 @@ export const signupSchema = z
     /**
      * `rider` is a first-class signup choice, not a role you upgrade into.
      *
-     * The database has accepted it since 20260901210000 — handle_new_user
-     * clamps the metadata role against a list that already includes it — and
+     * The database has accepted it since 20260901210000   handle_new_user
+     * clamps the metadata role against a list that already includes it   and
      * the proxy has gated /rider since before those screens existed. Only this
      * enum and the form above it were still saying student-or-vendor, which is
      * why the sole way to become a rider was to sign up as something else

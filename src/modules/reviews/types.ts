@@ -18,7 +18,7 @@ export interface Review {
 }
 
 /**
- * A completed transaction with no review yet. Derived, never stored — see the
+ * A completed transaction with no review yet. Derived, never stored   see the
  * note in queries.ts.
  */
 export interface PendingReview {

@@ -2,7 +2,7 @@
  * React Query hooks for the 'events' module.
  *
  * There is no `useBuyTicket`. Issuing a ticket is a money operation that must
- * happen in the same transaction as its payment — see the note at the top of
+ * happen in the same transaction as its payment   see the note at the top of
  * `./queries.ts`. It needs an RPC, and `tickets` has no client INSERT grant.
  */
 'use client';
@@ -48,7 +48,7 @@ export function useTicket(id: string | undefined) {
 
 /**
  * The tiers an event sells. Separate from `useEvent` because the detail page
- * needs both and they change at different rates — an event's name is static,
+ * needs both and they change at different rates   an event's name is static,
  * its availability is not.
  */
 export function useEventTiers(eventId: string | undefined) {

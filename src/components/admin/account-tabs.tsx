@@ -13,7 +13,7 @@
  *
  *   Which is why this is a SERVER component with no state at all. The active
  *   tab is passed in by the page that knows which one it is, rather than
- *   guessed from the pathname — /admin/vendors serves five different tabs and
+ *   guessed from the pathname   /admin/vendors serves five different tabs and
  *   the pathname cannot tell them apart.
  *
  * IT SHOWS ONLY WHAT THE VIEWER CAN OPEN
@@ -53,7 +53,7 @@ interface TabSpec {
 
 /**
  * The vendor categories come from lib/validations' VendorCategory, minus
- * 'landlord' — a landlord IS a vendor_profiles row with that category, but it
+ * 'landlord'   a landlord IS a vendor_profiles row with that category, but it
  * is reviewed on its own screen because it has properties to show and the
  * business queue has no column for them.
  */
@@ -72,7 +72,7 @@ const TABS: TabSpec[] = [
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },
   { key: 'students', label: 'Students', href: '/admin/students', area: 'students' },
   { key: 'events', label: 'Events', href: '/admin/events', area: 'events' },
-  // The account type does not exist yet — /signup lists it as "Not yet" for the
+  // The account type does not exist yet   /signup lists it as "Not yet" for the
   // same reason. Listed here so the shape of what is coming is visible, and so
   // nobody builds a second nav for it later.
   { key: 'creators', label: 'Content creators', soon: true },

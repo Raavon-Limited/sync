@@ -38,8 +38,8 @@ const GOOGLE_FONTS_STYLE = 'https://fonts.googleapis.com';
 const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';
 
 // Google Maps embed (event detail page's location preview iframe, using the
-// `output=embed` query format). Scoped to https://www.google.com only — not
-// a wildcard on *.google.com — since that's the single origin the embed
+// `output=embed` query format). Scoped to https://www.google.com only   not
+// a wildcard on *.google.com   since that's the single origin the embed
 // iframe actually loads from. Without this, frame-src silently blocked the
 // iframe before it ever requested anything, which is why the map rendered
 // as permanently blank with no console error and onLoad never fired.

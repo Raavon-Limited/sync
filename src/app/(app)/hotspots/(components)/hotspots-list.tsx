@@ -1,5 +1,5 @@
 /**
- * Hotspots — curated places around campus.
+ * Hotspots   curated places around campus.
  *
  * CURATED, NOT TRANSACTIONAL
  *   A hotspot is editorial content: somewhere to know about, not something to

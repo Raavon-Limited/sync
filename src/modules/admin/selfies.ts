@@ -5,7 +5,7 @@
  *   A verification queue exists to be scanned, and a name plus a badge is not
  *   how a reviewer recognises a submission they half-remember. The live photo is
  *   the one image every folder has, and it is the same image the review screen
- *   holds against the government ID — so the card carries it and the queue
+ *   holds against the government ID   so the card carries it and the queue
  *   becomes scannable by sight. The landlord list proved this out first; this
  *   module is that logic lifted out so the vendor and rider queues get it
  *   without a third copy drifting from the first two.
@@ -27,7 +27,7 @@ import type { Row } from '@/lib/supabase/row';
 /** Signed selfie URL per owner id. Owners with no usable photo are absent. */
 export async function selfieUrlsFor(ownerIds: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
-  // An empty `.in()` is not a no-op in PostgREST — it matches everything — so
+  // An empty `.in()` is not a no-op in PostgREST   it matches everything   so
   // the guard is load-bearing, not a micro-optimisation.
   if (ownerIds.length === 0) return out;
 

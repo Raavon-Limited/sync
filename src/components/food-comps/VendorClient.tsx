@@ -24,7 +24,7 @@ interface MenuItem {
 interface MenuSection { title: string; items: MenuItem[] }
 
 interface Props {
-    /** vendor_profiles.id — the cart is keyed by it, not by the display name. */
+    /** vendor_profiles.id   the cart is keyed by it, not by the display name. */
     vendorId: string
     vendorName: string
     tagline: string
@@ -152,7 +152,7 @@ export default function VendorClient({
         setItemSheetOpen(false)
     }
 
-    // ── Checkout — saves to sessionStorage, navigates to checkout page ────
+    // ── Checkout   saves to sessionStorage, navigates to checkout page ────
     function handleCheckout() {
         if (!open) { setClosedModalOpen(true); return }
         sessionStorage.setItem('sync_checkout', JSON.stringify({
@@ -698,7 +698,7 @@ export default function VendorClient({
                 </div>
             </div>
 
-            {/* ── Mobile floating cart bar — hidden when closed ── */}
+            {/* ── Mobile floating cart bar   hidden when closed ── */}
             {items.length > 0 && mobileView === "menu" && open && (
                 <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-panel/95 backdrop-blur-sm border-t border-content-muted/20 px-4 py-3">
                     <button

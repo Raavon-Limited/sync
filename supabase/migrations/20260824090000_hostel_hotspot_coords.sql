@@ -7,7 +7,7 @@
 -- THE BUG, RESTATED
 --   `geo extensions.geography(Point, 4326)` is the right storage type and the
 --   wrong API surface. Over PostgREST it reads back as WKB hex
---   ("0101000020E6100000…"), never GeoJSON — so every reader written as
+--   ("0101000020E6100000…"), never GeoJSON   so every reader written as
 --   `geo?.coordinates` silently resolves to null. It does not throw; the pin
 --   just never appears.
 --
@@ -21,7 +21,7 @@
 --
 -- WHY IT MATTERS NOW RATHER THAN LATER
 --   No row in either table currently carries a pin, so nothing is visibly
---   broken. That is exactly why it is worth fixing now — the first vendor to
+--   broken. That is exactly why it is worth fixing now   the first vendor to
 --   drop a pin would file a bug about a map that renders nothing, and the cause
 --   is three layers away from the symptom.
 --

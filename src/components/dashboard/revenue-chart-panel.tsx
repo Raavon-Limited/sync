@@ -38,7 +38,7 @@ export function RevenueChartPanel({
   const [data, setData] = useState<RevenueDatum[]>(initialData);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  // Retry needs a value that actually changes — re-setting `period` to itself
+  // Retry needs a value that actually changes   re-setting `period` to itself
   // is a no-op React bails out of, so the effect would never re-run.
   const [reloadKey, setReloadKey] = useState(0);
   const [open, setOpen] = useState(false);
@@ -61,7 +61,7 @@ export function RevenueChartPanel({
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
-  // Skip re-fetching on first mount — initialData already covers initialPeriod.
+  // Skip re-fetching on first mount   initialData already covers initialPeriod.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {

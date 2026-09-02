@@ -1,5 +1,5 @@
 /**
- * Data access for the 'around' module — the map at /around.
+ * Data access for the 'around' module   the map at /around.
  *
  * WHY THIS FANS OUT INSTEAD OF USING ONE QUERY
  * The map shows vendors, hostels and hotspots together. They live in three
@@ -8,7 +8,7 @@
  * normalised into one `NearbyPin` union here.
  *
  * If this becomes a bottleneck the fix is a database view or an RPC that unions
- * the three — NOT a client-side loop that fetches them one at a time.
+ * the three   NOT a client-side loop that fetches them one at a time.
  *
  * Replaces `NearbyPin` in src/mock/around.ts.
  */
@@ -49,13 +49,13 @@ export interface AroundFilters {
 
 /**
  * Everything on the map, unfiltered by distance. Rows with no coordinates are
- * dropped — a pin without them cannot be placed, and rendering it at 0,0 puts
+ * dropped   a pin without them cannot be placed, and rendering it at 0,0 puts
  * it in the Gulf of Guinea.
  *
  * COORDINATES COME FROM lat/lng, NOT geo.
  *   A geography column reads back over PostgREST as WKB hex, so the previous
  *   `toLatLng(r.geo)` resolved to null for every row and this map rendered ZERO
- *   pins — silently, because "no coordinates" and "unreadable coordinates" look
+ *   pins   silently, because "no coordinates" and "unreadable coordinates" look
  *   identical to the filter below.
  *
  * VENDOR PINS COME FROM STOREFRONTS.
@@ -155,7 +155,7 @@ export async function fetchNearbyPins(db: Client, filters: AroundFilters = {}): 
  *
  * One RPC rather than a fan-out like `fetchNearbyPins` above: the numbers are
  * aggregates over orders, and computing them here would mean reading order
- * rows into the client — which RLS would rightly refuse, and which would be
+ * rows into the client   which RLS would rightly refuse, and which would be
  * the wrong shape of question to ask even if it did not.
  */
 export async function fetchCampusPulse(db: Client): Promise<AreaPulse[]> {

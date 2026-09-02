@@ -4,8 +4,8 @@
  *
  * THIS IS THE LANDLORD LIST, GENERALISED
  *   /admin/landlord got cards with faces and a grid/list toggle; vendors and
- *   riders got stacked accordions. Three screens answering one question — who is
- *   waiting on me — in three shapes, which is both harder to use and three
+ *   riders got stacked accordions. Three screens answering one question   who is
+ *   waiting on me   in three shapes, which is both harder to use and three
  *   places to change. The design here is the landlord one, unchanged; the other
  *   two now render through it.
  *
@@ -17,8 +17,8 @@
  *
  * THE TOGGLE IS NOT DECORATION
  *   Cards suit a handful of pending accounts, which is the normal case and
- *   therefore the default. The list suits a long tail — twenty verified vendors
- *   you are scrolling for one name — where a grid of faces reads slower than a
+ *   therefore the default. The list suits a long tail   twenty verified vendors
+ *   you are scrolling for one name   where a grid of faces reads slower than a
  *   column of text. Neither is wrong, so the choice is the reviewer's and it is
  *   remembered per screen, in localStorage, which can throw (private windows,
  *   blocked site data). Every access is guarded and the default survives.
@@ -50,7 +50,7 @@ export interface BrowserRow {
   faceUrl?: string;
   /** One line under the name. Rendered in both grid and list. */
   meta: ReactNode;
-  /** Badges after the status one — fraud block, suspension. */
+  /** Badges after the status one   fraud block, suspension. */
   flags?: ReactNode;
   /** Matched against the search box, lowercased by the caller's own rules. */
   searchText: string;
@@ -71,7 +71,7 @@ function Face({ url, className }: { url?: string; className?: string }) {
       {url ? (
         <img src={url} alt="" className="size-full object-cover" />
       ) : (
-        // Not "no photo" as an error — somebody who has not submitted yet
+        // Not "no photo" as an error   somebody who has not submitted yet
         // legitimately has none.
         <UserRound className="text-content-muted size-6" aria-hidden="true" />
       )}
@@ -90,7 +90,7 @@ export function AccountBrowser({
   /** Per-screen, so a reviewer's choice on vendors does not move landlords. */
   storageKey: string;
   searchPlaceholder: string;
-  /** What to say when there is nobody at all — different from "nothing matches". */
+  /** What to say when there is nobody at all   different from "nothing matches". */
   emptyLabel: string;
   extraFilters?: readonly string[];
 }) {
@@ -107,7 +107,7 @@ export function AccountBrowser({
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(storageKey);
-      // The directive has to sit on the line immediately above the statement —
+      // The directive has to sit on the line immediately above the statement  
       // a disable-next-line followed by further comment lines silences the
       // comment, not the code.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -181,7 +181,7 @@ export function AccountBrowser({
         ))}
       </div>
 
-      {/* Filtered to nothing, which is different from having nobody — that case
+      {/* Filtered to nothing, which is different from having nobody   that case
           returned above with its own wording. */}
       {visible.length === 0 && (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">

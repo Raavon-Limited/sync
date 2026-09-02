@@ -3,7 +3,7 @@
  * ACCESS: public
  * PURPOSE: Upcoming events with their cheapest available ticket price.
  *
- * Replaces a hardcoded featured row and `@/lib/event`'s events array — both
+ * Replaces a hardcoded featured row and `@/lib/event`'s events array   both
  * described events that do not exist, with slugs that resolve to nothing.
  */
 import type { Metadata } from 'next';

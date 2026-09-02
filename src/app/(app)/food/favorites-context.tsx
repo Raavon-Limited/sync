@@ -1,19 +1,19 @@
 /**
- * Favourites — the heart on a card, and the Saved page.
+ * Favourites   the heart on a card, and the Saved page.
  *
  * WAS LOCALSTORAGE, NOW THE DATABASE
  *   Hearts persisted to `localStorage` under 'sync:food:favorites', so they
- *   vanished on another device and never reached `public.favorites` — which is
+ *   vanished on another device and never reached `public.favorites`   which is
  *   what /me/saved reads. Tapping a heart looked like it worked and saved
  *   nothing durable.
  *
  * ENTITY, NOT SLUG
  *   `favorites` stores (entity_type, entity_id). The old shape was keyed by
- *   `slug`, which is not an id and is not unique across types — a vendor and a
+ *   `slug`, which is not an id and is not unique across types   a vendor and a
  *   listing can share one. Cards now pass what they actually are.
  *
  * A KNOWN GAP, WRITTEN DOWN RATHER THAN WORKED AROUND
- *   `favorites.entity_type` allows 'vendor' but not 'storefront' — the table
+ *   `favorites.entity_type` allows 'vendor' but not 'storefront'   the table
  *   predates branches. Favouriting a branch therefore saves the BRAND, so a
  *   student who hearts the Tanke shop sees the business, not that location.
  *   Fixing it means widening the check constraint; it is not worked around here
@@ -29,7 +29,7 @@ import { useSession } from '@/providers/session-provider';
 export type FavoriteEntity = 'vendor' | 'listing' | 'event' | 'service' | 'hotspot';
 
 export interface FavoriteFood {
-  /** What this is, and its uuid. Required — the row cannot be written without them. */
+  /** What this is, and its uuid. Required   the row cannot be written without them. */
   entityType: FavoriteEntity;
   entityId: string;
   slug: string;
@@ -45,7 +45,7 @@ export interface FavoriteFood {
   deliveryTime?: string;
   discount?: string;
   /**
-   * Mirrors FoodCard's VendorStatus. 'paused' is a cooldown — open, but not
+   * Mirrors FoodCard's VendorStatus. 'paused' is a cooldown   open, but not
    * taking orders for a few minutes. A saved card holds a snapshot, so this
    * is only ever as fresh as the moment it was favourited.
    */

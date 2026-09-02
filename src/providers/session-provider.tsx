@@ -1,5 +1,5 @@
 /**
- * Session context — the single source of "who is signed in" on the client.
+ * Session context   the single source of "who is signed in" on the client.
  *
  * WHY THIS EXISTS
  * Every data hook needs the caller's id (a cart belongs to a student, a
@@ -10,7 +10,7 @@
  *
  * SECURITY: THE CACHE MUST BE CLEARED ON AUTH CHANGE
  * This is the part that matters. React Query caches by key, not by user. On a
- * shared device — which on a campus is most devices — signing out and signing
+ * shared device   which on a campus is most devices   signing out and signing
  * in as someone else would otherwise leave the previous user's orders, wallet
  * balance and chat threads sitting in the cache, and they would render for the
  * new user before any refetch resolved. `queryClient.clear()` on SIGNED_OUT and
@@ -21,7 +21,7 @@
  * `getSession()` reads the cookie and trusts it. `getUser()` verifies with the
  * Auth server. The cookie is attacker-controllable in a way the verification
  * response is not, so anything that gates UI on identity uses `getUser()`.
- * Note this still is not an authorization boundary — the proxy and RLS are.
+ * Note this still is not an authorization boundary   the proxy and RLS are.
  * This only decides what to render.
  */
 'use client';
@@ -186,7 +186,7 @@ export function useSession(): SessionState {
   };
 }
 
-/** Just the id — the common case for data hooks. */
+/** Just the id   the common case for data hooks. */
 export function useUserId(): string | null {
   return useSession().userId;
 }

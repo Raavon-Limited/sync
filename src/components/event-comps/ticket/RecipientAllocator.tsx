@@ -14,7 +14,7 @@ export interface Recipient {
 
 interface RecipientAllocatorProps {
     tickets: Ticket[]
-    /** Total purchased quantity per ticket id — the pool being divided up. */
+    /** Total purchased quantity per ticket id   the pool being divided up. */
     quantities: Record<string, number>
     purchaserName: string
     purchaserEmail: string
@@ -86,7 +86,7 @@ export default function RecipientAllocator({
                 <h2 className="font-bold text-content">Who are these tickets for?</h2>
                 <p className="text-sm text-content-muted mt-1">
                     Split your tickets across one or more people. You can keep them all for
-                    yourself, or send some to friends — mix and match any ticket type.
+                    yourself, or send some to friends   mix and match any ticket type.
                 </p>
             </div>
 

@@ -8,7 +8,7 @@
 --   anywhere updates a balance directly. `wallets.balance_kobo` is a CACHE,
 --   maintained by trigger from the ledger and re-derivable at any time by
 --   `private.recompute_wallet(uuid)`. If the cache and the ledger disagree, the
---   ledger is right — that is the entire point of keeping one.
+--   ledger is right   that is the entire point of keeping one.
 --
 -- WHY DOUBLE ENTRY
 --   Single-entry balance updates cannot answer "where did this ₦2,000 come
@@ -520,7 +520,7 @@ begin
        and t.tginitdeferred
   ) then
     raise exception
-      'ledger_entries_balanced is missing or not deferrable — the ledger is unguarded';
+      'ledger_entries_balanced is missing or not deferrable   the ledger is unguarded';
   end if;
 
   -- No client role can reach the ledger.

@@ -1,16 +1,16 @@
 /**
- * Dispute queue — read the case, then decide where the money goes.
+ * Dispute queue   read the case, then decide where the money goes.
  *
  * ALIGNED TO THE SCHEMA, NOT THE MOCK
  *   The previous UI had statuses (Open / In Progress / Escalated / Resolved), a
  *   priority field, and categories like "Missing Items". The table has five
- *   different statuses, six different categories, and no priority at all — so
+ *   different statuses, six different categories, and no priority at all   so
  *   filters and badges described states that could never occur.
  *
  * RESOLVING IS A MONEY DECISION
  *   Every resolution except no_action empties an escrow hold. The amounts are
  *   shown before the button, and a partial refund cannot be submitted without
- *   an amount — a "partial refund" of nothing is a full release wearing the
+ *   an amount   a "partial refund" of nothing is a full release wearing the
  *   wrong label.
  */
 'use client';
@@ -40,7 +40,7 @@ export interface AdminDispute {
   resolution: string | null;
   refundKobo: number | null;
   createdAt: string;
-  /** null when nothing is held — resolution then cannot move money. */
+  /** null when nothing is held   resolution then cannot move money. */
   holdKobo: number | null;
   holdStatus: string | null;
   messages: AdminDisputeMessage[];

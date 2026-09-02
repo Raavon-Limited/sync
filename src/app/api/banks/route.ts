@@ -4,7 +4,7 @@
  * Returns the Nigerian bank list for the payout account form.
  *
  * WHY THIS IS A SERVER ROUTE AND NOT A CONSTANT
- * A payout needs a `bank_code`, not a bank name — `bank_accounts.bank_code` is
+ * A payout needs a `bank_code`, not a bank name   `bank_accounts.bank_code` is
  * what Paystack's transfer-recipient API is keyed on. The previous UI collected
  * a NAME from a hardcoded list, which means it could never have produced a valid
  * payout destination.
@@ -14,8 +14,8 @@
  * freezing a copy that silently rots.
  *
  * It is a server route because the Paystack secret key must not reach the
- * browser. The response contains no secrets — it is the same list Paystack
- * serves publicly — so it is cached hard.
+ * browser. The response contains no secrets   it is the same list Paystack
+ * serves publicly   so it is cached hard.
  */
 import { paystackConfigured } from '@/lib/paystack/server';
 

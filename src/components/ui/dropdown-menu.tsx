@@ -31,7 +31,7 @@ export const DropdownMenuContent = React.forwardRef<
           // a tabindex, and Radix gives this container one so it can trap
           // keyboard focus. That focus is a mechanism, not something the user
           // chose, so the ring drew a green box around the whole popover.
-          // Re-asserting the popover's own shadow overrides it — the global
+          // Re-asserting the popover's own shadow overrides it   the global
           // rule uses :where(), which has no specificity, so a utility wins.
           'focus:outline-none focus-visible:shadow-pop',
           className,
@@ -53,7 +53,7 @@ export const DropdownMenuItem = React.forwardRef<
         'flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none',
         // Same ring, same reason. Keyboard users are not losing an affordance:
         // Radix sets data-highlighted while arrowing through, and that is the
-        // background below — one highlight, not a highlight plus a ring.
+        // background below   one highlight, not a highlight plus a ring.
         'focus-visible:shadow-none',
         'data-[highlighted]:bg-surface-deep data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,

@@ -1,5 +1,5 @@
 /**
- * A single hotspot. Editorial content — no booking, no cart.
+ * A single hotspot. Editorial content   no booking, no cart.
  *
  * The map link is an outbound Google Maps URL rather than an embedded map:
  * there is no map component in this app yet, and a coordinate pair a student
@@ -75,7 +75,7 @@ export function HotspotDetail({ slug }: { slug: string }) {
           )}
         </div>
 
-        {/* Only when a pin actually exists — see the note on coordinates. */}
+        {/* Only when a pin actually exists   see the note on coordinates. */}
         {h.position && (
           <Button asChild variant="outline" className="gap-2">
             <a

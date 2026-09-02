@@ -6,7 +6,7 @@
  *   A rider who cannot take work needs to know WHY and WHAT NEXT, in that
  *   order. "unverified" as a chip answers neither. Each state below says the
  *   thing that is true and the thing to do about it, and only the state that
- *   permits work shows the switch at all — an online toggle that silently does
+ *   permits work shows the switch at all   an online toggle that silently does
  *   nothing is worse than no toggle.
  *
  * SUSPENSION OUTRANKS VERIFICATION

@@ -15,13 +15,13 @@
  *   weekly  -> "May W1"      all                -> "2024"
  *   3m      -> "May W1"
  * The `unit` prop controls how the X-axis groups/labels ticks and what noun
- * the legend uses ("Past weeks", "Past days", …) — it does not change the
+ * the legend uses ("Past weeks", "Past days", …)   it does not change the
  * data shape, only how this component reads `week` as a label.
  */
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export interface RevenueDatum {
-  /** Bucket label. Shape depends on `unit` — see file header. */
+  /** Bucket label. Shape depends on `unit`   see file header. */
   week: string;
   revenue: number;
 }
@@ -89,8 +89,8 @@ function ChartTooltip({
  * the bucket unit:
  *  - week (and the "3m" weekly view): show the month prefix once per month,
  *    on its first week (legacy "W1" behaviour).
- *  - day: too many bars to label every one — show every ~5th tick's day.
- *  - month / year: every tick already has a unique, short label — show all.
+ *  - day: too many bars to label every one   show every ~5th tick's day.
+ *  - month / year: every tick already has a unique, short label   show all.
  */
 function shouldLabelTick(
   unit: RevenueUnit,

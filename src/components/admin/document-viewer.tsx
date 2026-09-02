@@ -1,10 +1,10 @@
 /**
- * DocumentViewer — a document opened in place, not in another tab.
+ * DocumentViewer   a document opened in place, not in another tab.
  *
  * WHY A MODAL AND NOT `window.open`
  *   Reviewing is a COMPARISON: is the face in the live photo the face on the
  *   NIN slip, and is the name on the CAC certificate the name on the bank
- *   statement. Opening each file in its own tab breaks exactly that — the
+ *   statement. Opening each file in its own tab breaks exactly that   the
  *   reviewer loses the page holding the other three, has to come back, and is
  *   comparing from memory. Every decision on that screen gets worse.
  *
@@ -62,7 +62,7 @@ export function DocumentViewer({
   const step = useCallback(
     (delta: number) => {
       if (index === null || docs.length === 0) return;
-      // Wraps, so the last document is one press from the first — reviewers
+      // Wraps, so the last document is one press from the first   reviewers
       // cycle a short folder rather than walking it once.
       onIndexChange((index + delta + docs.length) % docs.length);
     },

@@ -4,7 +4,7 @@
  * REALTIME AND REACT QUERY ARE NOT COMPETITORS
  * The pattern here is: React Query owns the cache, realtime only tells it when
  * something changed. `useConversationRealtime` does not put payloads into the
- * cache directly — it invalidates, and lets the normal query refetch. That is
+ * cache directly   it invalidates, and lets the normal query refetch. That is
  * slightly less efficient and considerably more correct, because a realtime
  * payload is a single row without its joins (a message arrives with no
  * attachments attached), and splicing a partial row into a fully-joined cache
@@ -70,7 +70,7 @@ export function useOpenListingConversation() {
 /**
  * The remaining conversation doors. Each mirrors `useOpenOrderConversation`:
  * one RPC, invalidate the conversation list, return the thread id so the caller
- * can open it. Written out rather than generated from a helper — the shared
+ * can open it. Written out rather than generated from a helper   the shared
  * version needed a type annotation that referenced the client factory
  * circularly, and four small functions are clearer than fighting that.
  */
@@ -86,7 +86,7 @@ export function useOpenBookingConversation() {
   });
 }
 
-/** Landlord, before booking — the hostel equivalent of the listing door. */
+/** Landlord, before booking   the hostel equivalent of the listing door. */
 export function useOpenHostelConversation() {
   const qc = useQueryClient();
   return useMutation({
@@ -134,7 +134,7 @@ export function useMessages(conversationId: string | undefined) {
 
 /**
  * Optimistic send. Chat is the one place where waiting for a round trip is
- * unacceptable — the message must appear the instant Enter is pressed.
+ * unacceptable   the message must appear the instant Enter is pressed.
  *
  * The temporary message carries a `pending-` id so the UI can render it dimmed,
  * and `onSettled` refetches to replace it with the real row (which is also how
@@ -153,7 +153,7 @@ export function useSendMessage(conversationId: string) {
      * orphaned object costs a few KB and is invisible to the user. Fail toward
      * the harmless side.
      *
-     * Uploads run in parallel — a voice note plus two photos should not take
+     * Uploads run in parallel   a voice note plus two photos should not take
      * three sequential round trips on a campus connection.
      */
     mutationFn: async (input: {
@@ -271,7 +271,7 @@ export function useConversationRealtime(conversationId: string | undefined) {
 }
 
 /**
- * Live notifications for the signed-in user — the bell badge. Mount once, high
+ * Live notifications for the signed-in user   the bell badge. Mount once, high
  * in the tree; mounting it per page would open a socket per navigation.
  */
 export function useNotificationsRealtime() {
@@ -287,7 +287,7 @@ export function useNotificationsRealtime() {
 /**
  * Live thread list. Fires when any conversation the user participates in gets a
  * new message, so the inbox reorders and the preview updates without a refetch
- * loop. Unfiltered because membership is not a column on `conversations` — RLS
+ * loop. Unfiltered because membership is not a column on `conversations`   RLS
  * already limits delivery to threads the caller belongs to.
  */
 export function useConversationsRealtime() {

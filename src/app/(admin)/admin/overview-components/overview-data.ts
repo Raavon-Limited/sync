@@ -5,7 +5,7 @@
  * PostgREST tops out at a page of 1000 and would freeze every card at 1000
  * once the platform got that big. `admin_overview` counts in SQL.
  *
- * The request-scoped client is used deliberately — the RPC calls `is_staff()`,
+ * The request-scoped client is used deliberately   the RPC calls `is_staff()`,
  * so the database is the thing enforcing access, not the page's redirect.
  */
 import 'server-only';
@@ -43,7 +43,7 @@ export interface Overview {
 
 /**
  * Percent change against the same measure 30 days ago. Growth from zero is
- * reported as 0 rather than infinity — the card has nowhere to put ∞, and the
+ * reported as 0 rather than infinity   the card has nowhere to put ∞, and the
  * first vendor is not an infinite improvement on none.
  */
 function change(now: number, before: number): number {

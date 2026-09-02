@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin
  * ACCESS: admin / super_admin only.
- * PURPOSE: The platform at a glance — counts, six months of revenue and
+ * PURPOSE: The platform at a glance   counts, six months of revenue and
  * signups, the vendor status split, and what has just happened.
  *
  * Was a client component over a seed file: every figure on the platform's
@@ -18,7 +18,7 @@ import { RecentActivities } from './overview-components/RecentActivities';
 import { VendorStatus } from './overview-components/VendorStatus';
 import { getOverview } from './overview-components/overview-data';
 
-export const metadata: Metadata = { title: 'Overview — Admin' };
+export const metadata: Metadata = { title: 'Overview   Admin' };
 
 // Queue sizes and the activity feed are stale the moment anything happens.
 export const dynamic = 'force-dynamic';

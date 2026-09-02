@@ -1,10 +1,10 @@
 /**
- * Data access for the 'payments' module — wallet, statement, payouts, banks,
+ * Data access for the 'payments' module   wallet, statement, payouts, banks,
  * plans. Backs /wallet, /vendor/earnings and /vendor/plan.
  *
  * WHAT THIS FILE CANNOT DO, ON PURPOSE
  * Nothing here moves money. `wallets.balance_kobo` is a ledger-derived cache
- * and `guard_wallet_cols` RAISES on any client attempt to write it — not
+ * and `guard_wallet_cols` RAISES on any client attempt to write it   not
  * silently reverts, raises, so a bug is loud. The only sanctioned way to move
  * money is `private.post_transaction`, which is service-role only and therefore
  * unreachable from the browser by design.
@@ -137,7 +137,7 @@ export async function fetchBankAccounts(db: Client): Promise<BankAccount[]> {
 }
 
 /**
- * `is_verified` and `recipient_code` are omitted deliberately —
+ * `is_verified` and `recipient_code` are omitted deliberately  
  * `guard_bank_account_cols` reverts them. Verification happens server-side
  * against Paystack's resolve endpoint; a client claiming an account is verified
  * would be claiming someone else's account is theirs.
@@ -172,7 +172,7 @@ export async function addBankAccount(
 
 /**
  * `bank_accounts_one_default_idx` is a partial unique index, so two defaults
- * cannot coexist — clear the old one first rather than letting the insert
+ * cannot coexist   clear the old one first rather than letting the insert
  * collide.
  */
 export async function setDefaultBankAccount(db: Client, id: string, ownerId: string) {
@@ -334,7 +334,7 @@ export async function fetchMySubscription(db: Client): Promise<Subscription | nu
  *
  * Idempotent by `ORDER_<id>`, so a retry after a dropped connection returns the
  * original transaction rather than charging again. Raises with a readable
- * reason when the balance is short — surface it, do not swallow it.
+ * reason when the balance is short   surface it, do not swallow it.
  */
 export async function payOrderFromWallet(db: Client, orderId: string): Promise<string> {
   const { data, error } = await db.rpc('pay_order_from_wallet', { p_order_id: orderId });
@@ -344,7 +344,7 @@ export async function payOrderFromWallet(db: Client, orderId: string): Promise<s
 
 /**
  * Releases a hold to the vendor. Callable by the PAYER (confirming delivery) or
- * the service role once the hold matures — never the vendor.
+ * the service role once the hold matures   never the vendor.
  */
 export async function releaseOrderEscrow(db: Client, orderId: string): Promise<string> {
   const { data, error } = await db.rpc('release_order_escrow', { p_order_id: orderId });
@@ -389,8 +389,8 @@ export async function fetchPayoutRequests(db: Client): Promise<PayoutRequest[]> 
 }
 
 /**
- * Ask for money out. Every rule — minimum, available balance, a verified
- * destination, a frozen wallet — is checked inside `request_withdrawal`, under
+ * Ask for money out. Every rule   minimum, available balance, a verified
+ * destination, a frozen wallet   is checked inside `request_withdrawal`, under
  * a row lock. Re-checking here would be a courtesy that two simultaneous taps
  * could still walk past.
  */

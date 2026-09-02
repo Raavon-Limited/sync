@@ -6,7 +6,7 @@
 --   <RevenueChartPanel initialData={chart} initialPeriod="weekly" />
 --
 -- RoleDashboard passes real weekly figures and no `fetchRevenue`, and the
--- panel defaults that prop to `fetchRevenueMock` — a file whose whole body is
+-- panel defaults that prop to `fetchRevenueMock`   a file whose whole body is
 -- `Math.random()`. So the chart loads honest and turns fictional the moment a
 -- vendor switches to Daily, Monthly or All Time. Real first, fabricated on
 -- interaction, no error anywhere. This is the query that replaces it.
@@ -24,7 +24,7 @@
 --
 -- NOT SECURITY DEFINER
 --   It does not need to be. `private.ledger_entries` is unreachable from
---   `authenticated`, so the function is owner-run to reach it — but it scopes
+--   `authenticated`, so the function is owner-run to reach it   but it scopes
 --   every read to `auth.uid()` itself and takes no owner parameter. There is
 --   no argument a caller could pass to see somebody else's money.
 --

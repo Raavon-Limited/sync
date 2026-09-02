@@ -85,13 +85,13 @@ export async function POST(req: Request) {
 
   // The hook fires for EVERY auth email Supabase sends, and they are not the
   // same message. A password reset arriving as "Your Sync code is 481920" tells
-  // somebody who asked to change their password nothing about how to do it —
+  // somebody who asked to change their password nothing about how to do it  
   // and reads like a phishing attempt, which is the one impression a security
   // email must not give. The action type is the only thing that distinguishes
   // them, so it is what the subject line branches on.
   const isRecovery = email_data.email_action_type === 'recovery';
   const subject = isRecovery
-    ? `Reset your Sync password — code ${code}`
+    ? `Reset your Sync password   code ${code}`
     : `Your Sync code is ${code}`;
 
   try {

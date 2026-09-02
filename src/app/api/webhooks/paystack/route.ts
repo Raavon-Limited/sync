@@ -84,7 +84,7 @@ async function handleChargeSuccess(data: unknown) {
     return;
   }
 
-  // Idempotent by reference inside the RPC — Paystack retries, and a second
+  // Idempotent by reference inside the RPC   Paystack retries, and a second
   // delivery must not credit twice. Service role: this runs outside any session.
   const admin = createAdminClient();
   const { error } = await admin.rpc('credit_wallet_topup', {
@@ -95,7 +95,7 @@ async function handleChargeSuccess(data: unknown) {
 
   if (error) {
     // Throwing here would return a non-2xx and make Paystack retry, which is
-    // what we want for a transient failure — the RPC is safe to replay.
+    // what we want for a transient failure   the RPC is safe to replay.
     console.error('paystack wallet_topup credit failed', { reference, error: error.message });
     throw new Error(`credit_wallet_topup failed: ${error.message}`);
   }

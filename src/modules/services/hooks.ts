@@ -19,7 +19,7 @@ const db = () => createClient();
 
 // ── Catalogue ──────────────────────────────────────────────────────────────
 
-/** Reference data — effectively static, so cache it for the session. */
+/** Reference data   effectively static, so cache it for the session. */
 export function useServiceCategories(vertical: Vertical) {
   return useQuery({
     queryKey: qk.services.categories(vertical),

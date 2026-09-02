@@ -2,8 +2,8 @@
  * The listing dialogs.
  *
  * TWO SHAPES, ON PURPOSE
- *   Add and Edit are SIDE PANELS. They are long forms — photo, name, category,
- *   price, and now which stores carry the item — and a centred box that tall
+ *   Add and Edit are SIDE PANELS. They are long forms   photo, name, category,
+ *   price, and now which stores carry the item   and a centred box that tall
  *   fights the viewport on a laptop and scrolls its own header off the screen.
  *   A panel gets full height for free and leaves the catalogue visible beside
  *   it, which matters when the vendor is copying details off a row.
@@ -14,8 +14,8 @@
  *
  * WHY THE HAND-ROLLED MODAL WENT
  *   The old shell was a bare `fixed inset-0` div: no focus trap, no restore on
- *   close, no labelled title, and its headings were `text-ink` — a fixed near
- *   black — so on the dark theme "Add new listing" was drawn in #0e0e12 on a
+ *   close, no labelled title, and its headings were `text-ink`   a fixed near
+ *   black   so on the dark theme "Add new listing" was drawn in #0e0e12 on a
  *   #0e0e12 panel and could not be read at all. Everything here is on the Radix
  *   primitives, which handle the first four, and on `text-content`, which is
  *   the token that follows the theme.
@@ -264,7 +264,7 @@ export function EditModal({ open, listing, onSave, onClose }: EditModalProps) {
       </Field>
 
       {/* The Stock field that used to sit here wrote `listings.stock`, which
-          no student-facing read consults since the shared catalogue landed —
+          no student-facing read consults since the shared catalogue landed  
           a vendor could set it to 40 and watch nothing change. Stock is per
           store, and this is where it lives. */}
       <div className="border-line/10 border-t pt-3">
@@ -296,7 +296,7 @@ interface AddListingModalProps {
    */
   onAdd: (listing: Listing, storeIds: string[]) => void;
   onClose: () => void;
-  /** Pre-ticked. Defaults to every store — see StorePicker for why. */
+  /** Pre-ticked. Defaults to every store   see StorePicker for why. */
   defaultStoreIds: string[];
 }
 
@@ -311,7 +311,7 @@ export function AddListingModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // The stores arrive asynchronously, so the default cannot be a useState
-  // initialiser — on the first render there is nothing to tick. Seeded during
+  // initialiser   on the first render there is nothing to tick. Seeded during
   // render rather than in an effect so the boxes are already ticked on the
   // first paint of the panel, not a frame later.
   const seedKey = open ? defaultStoreIds.join(',') : null;
@@ -401,7 +401,7 @@ export function AddListingModal({
         </Field>
 
         {/* Blank means "cooked to order", which is the common case and is why
-            the placeholder no longer says 0 — a literal 0 used to mean the
+            the placeholder no longer says 0   a literal 0 used to mean the
             listing was born sold out. */}
         <Field label="Opening stock" error={errors.stock}>
           <Input

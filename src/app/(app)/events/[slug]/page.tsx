@@ -1,7 +1,7 @@
 /**
  * ROUTE: /events/[slug]
  * ACCESS: public
- * PURPOSE: Event detail — poster, when, where, and its ticket tiers.
+ * PURPOSE: Event detail   poster, when, where, and its ticket tiers.
  */
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';

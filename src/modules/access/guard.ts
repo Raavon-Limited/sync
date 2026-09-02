@@ -5,7 +5,7 @@
  *   `access_level` resolves the union of every role held, handles the super
  *   admin bypass, and knows that a branch owner is not staff of their own
  *   branch. Recomputing any of that here would be a second implementation to
- *   keep in step — and the one that could be skipped, because a request that
+ *   keep in step   and the one that could be skipped, because a request that
  *   never renders a page never runs this file.
  *
  * A PAGE GUARD IS NOT ACCESS CONTROL
@@ -48,7 +48,7 @@ export async function accessLevel(area: string, storefrontId?: string): Promise<
  *
  * A super admin comes back as the single wildcard `*`, so the caller compares
  * against its own list rather than the database having to know what the full
- * set of areas is — that list lives in areas.ts.
+ * set of areas is   that list lives in areas.ts.
  */
 export async function accessMap(storefrontId?: string): Promise<Record<string, AccessLevel>> {
   const { data, error } = await rpc('my_access', {
@@ -63,7 +63,7 @@ export async function accessMap(storefrontId?: string): Promise<Record<string, A
   return map;
 }
 
-/** True when the map came from a super admin — everything, without enumerating it. */
+/** True when the map came from a super admin   everything, without enumerating it. */
 export function isWildcard(map: Record<string, AccessLevel>): boolean {
   return map['*'] === 'write';
 }
@@ -76,14 +76,14 @@ export function levelFrom(map: Record<string, AccessLevel>, area: string): Acces
 /**
  * The area keys the caller can at least open, or null for "no restriction".
  *
- * Null is not "no access" — it is the answer for a super admin (who bypasses
+ * Null is not "no access"   it is the answer for a super admin (who bypasses
  * grants entirely) and for every dashboard that is not the console, where what
  * you can see is decided by whose dashboard it is rather than by a grant. The
  * sidebar treats null as "show every row", so passing it is how a screen opts
  * out of filtering rather than accidentally hiding itself.
  *
  * An admin with no roles gets `[]`, and their console is correctly almost
- * empty. That is a real state — somebody appointed but not yet given a job —
+ * empty. That is a real state   somebody appointed but not yet given a job  
  * and it should look like one rather than like a broken page.
  */
 export async function visibleAreas(): Promise<string[] | null> {
@@ -109,7 +109,7 @@ export async function requireArea(
 }
 
 /**
- * Guard an action. Throws rather than redirects — an action has no page to send
+ * Guard an action. Throws rather than redirects   an action has no page to send
  * anybody to, and the message is shown by the form that called it.
  */
 export async function assertArea(

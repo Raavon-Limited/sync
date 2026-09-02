@@ -3,7 +3,7 @@
  *
  * THE OLD PAGE SIMULATED PROGRESS
  *   It read a localStorage order and ran a `setInterval` that advanced the
- *   status on a timer — so the tracker moved whether or not anything happened,
+ *   status on a timer   so the tracker moved whether or not anything happened,
  *   and told a student their food was on the way when nobody had touched it.
  *   Status now comes from the order row, and moves when the vendor moves it.
  *
@@ -29,7 +29,7 @@ import type { OrderStatus } from '@/modules/food/types';
 
 const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 
-/** The real lifecycle, in order. `cancelled` is not on it — it ends the line. */
+/** The real lifecycle, in order. `cancelled` is not on it   it ends the line. */
 const STAGES: { status: OrderStatus; label: string; icon: typeof ChefHat }[] = [
   { status: 'pending', label: 'Order placed', icon: Package },
   { status: 'preparing', label: 'Being prepared', icon: ChefHat },
@@ -256,7 +256,7 @@ export function TrackPanel({ orderId }: { orderId: string }) {
               <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                 <span className="text-content text-sm capitalize">
                   {e.toStatus.replace(/_/g, ' ')}
-                  {e.note ? ` — ${e.note}` : ''}
+                  {e.note ? `   ${e.note}` : ''}
                 </span>
                 <span className="text-content-muted font-mono text-xs">
                   {new Date(e.createdAt).toLocaleTimeString('en-NG', {

@@ -1,11 +1,11 @@
 /**
  * ROUTE: /vendor/team
  * ACCESS: authenticated vendor (owner). Managers get a statement of the
- *         boundary — every read and write behind this page is owner-scoped in
+ *         boundary   every read and write behind this page is owner-scoped in
  *         the database, so hiding it would only turn a clear "no" into an
  *         unexplained empty screen.
  * PURPOSE: Who can touch the business, what each of them can reach, and what
- *          they have done — across every store, not one at a time.
+ *          they have done   across every store, not one at a time.
  */
 import type { Metadata } from 'next';
 import { TeamContainer } from './(components)/team-container';

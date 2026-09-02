@@ -44,8 +44,8 @@ export default async function Page() {
   const blocked = await blockedReason();
   return (
     <section className="flex flex-col gap-8">
-      {/* The old line — "your name, contact details and address as students see
-          them on your storefront" — described a page that no longer exists.
+      {/* The old line   "your name, contact details and address as students see
+          them on your storefront"   described a page that no longer exists.
           The ID card is the first thing here now and is not something students
           see on a storefront at all; it is something you show a customer
           standing in front of you. A description that does not match the

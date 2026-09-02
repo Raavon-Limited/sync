@@ -70,7 +70,7 @@ export function EditArticleModal({ article, onClose, categories, onSave }: EditA
     }
   }
 
-  // ── Enter animation — fires after article + form are ready ───────────────
+  // ── Enter animation   fires after article + form are ready ───────────────
   useEffect(() => {
     if (article) {
       const id = requestAnimationFrame(() => setIsVisible(true));
@@ -104,7 +104,7 @@ export function EditArticleModal({ article, onClose, categories, onSave }: EditA
     setForm((prev) => prev ? { ...prev, [key]: value } : prev);
   }
 
-  // The save can be refused — a past scheduled time, a rejected upload — so
+  // The save can be refused   a past scheduled time, a rejected upload   so
   // the modal stays open until the server has actually accepted it.
   async function submit(values: EditArticleFormValues) {
     if (!article) return;

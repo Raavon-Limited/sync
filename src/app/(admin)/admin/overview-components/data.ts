@@ -1,6 +1,6 @@
 /**
- * Shapes for the /admin overview. The seed data that used to live here — 1248
- * vendors, six months of invented revenue, four fictional activity lines — is
+ * Shapes for the /admin overview. The seed data that used to live here   1248
+ * vendors, six months of invented revenue, four fictional activity lines   is
  * gone; everything now comes from `public.admin_overview` via `overview-data.ts`.
  *
  * The types stay in this file because the chart components are client

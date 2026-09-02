@@ -7,7 +7,7 @@
 -- The consequence is quiet and expensive: `escrow_holds.commission_kobo`
 -- defaults to 0 and no code path sets it, so every release pays the vendor the
 -- full order value and the platform earns nothing on orders. The dispute
--- resolver already honours commission correctly — there has simply never been
+-- resolver already honours commission correctly   there has simply never been
 -- any to honour.
 --
 -- WHY A TRIGGER RATHER THAN EDITING checkout_cart

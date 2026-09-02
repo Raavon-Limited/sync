@@ -2,7 +2,7 @@
  * ROUTE: /admin/verification
  * ACCESS: admin / super_admin only.
  * PURPOSE: Every account on the platform that has a verification state, in one
- *          list — vendors, landlords, riders and logistics companies.
+ *          list   vendors, landlords, riders and logistics companies.
  *
  * READ-ONLY ON PURPOSE
  *   This page answers "where does everyone stand", which is a different question
@@ -17,7 +17,7 @@
  *   are not among them:
  *     • fraud-blocked is `rejected` plus verification_blocked_at, deliberately
  *       kept out of the status enum (see 20260901260000's header).
- *     • suspended lives on profiles and is orthogonal to verification entirely —
+ *     • suspended lives on profiles and is orthogonal to verification entirely  
  *       a suspended vendor's papers are still real.
  *   Both are separate filters here for that reason, not extra status values.
  */
@@ -26,7 +26,7 @@ import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VerificationOversight, type OversightRow } from './(components)/verification-oversight';
 
-export const metadata: Metadata = { title: 'Verification — Admin' };
+export const metadata: Metadata = { title: 'Verification   Admin' };
 
 type Row = Record<string, unknown>;
 
@@ -75,7 +75,7 @@ export default async function Page() {
       id,
       kind: isLandlord ? 'landlord' : 'vendor',
       name: (b.business_name as string) ?? 'Unnamed business',
-      detail: (b.category as string) ?? '—',
+      detail: (b.category as string) ?? ' ',
       status: (b.verification_status as string) ?? 'unverified',
       blocked: b.verification_blocked_at != null,
       suspended: person.get(id)?.suspended ?? false,

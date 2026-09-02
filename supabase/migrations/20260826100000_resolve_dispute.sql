@@ -16,7 +16,7 @@
 --   so neither side decides it. is_staff() is the gate.
 --
 -- COMMISSION IS TAKEN ONLY ON WHAT THE VENDOR ACTUALLY KEEPS
---   A full refund earns the platform nothing — charging commission on an order
+--   A full refund earns the platform nothing   charging commission on an order
 --   that was never delivered would mean profiting from the failure. On a
 --   partial refund the commission is capped at the vendor's remaining share.
 --

@@ -1,5 +1,5 @@
 /**
- * VerifyNowSheet — "Verify Now" as a side panel over the dashboard, not a trip
+ * VerifyNowSheet   "Verify Now" as a side panel over the dashboard, not a trip
  * to /onboarding.
  *
  * WHY A PANEL AND NOT THE ROUTE
@@ -10,14 +10,14 @@
  *   standing in their own dashboard, usually because the banner or the badge
  *   told them the numbers behind it are locked. Navigating away replaces the
  *   thing they are trying to unlock with a page that looks like signup all
- *   over again — and if they change their mind there is no back out of it
+ *   over again   and if they change their mind there is no back out of it
  *   except the browser button. A panel keeps the dashboard behind the overlay,
  *   so the reason they are filling the form in stays visible, and Escape or
  *   the X puts them back exactly where they were.
  *
  * THE FORM IS THE SAME FORM. This renders <OnboardingWizard>, the same five
  * steps against the same schema and RPCs the route uses. It is a second HOST,
- * never a second copy — the last rebuild of this flow replaced a panel with a
+ * never a second copy   the last rebuild of this flow replaced a panel with a
  * route and deleted the panel's form, and the two drifted precisely because
  * there were two of them.
  *
@@ -44,7 +44,7 @@ import type { VendorOnboardingInput } from '@/lib/validations';
 export interface VerifyNowSheetProps {
   /** Prefill from the signed-in account, same source the route uses. */
   initial: Partial<VendorOnboardingInput>;
-  /** Whatever opens it — the badge, or the banner's "Verify Now". */
+  /** Whatever opens it   the badge, or the banner's "Verify Now". */
   children: ReactNode;
 }
 
@@ -76,7 +76,7 @@ export function VerifyNowSheet({ initial, children }: VerifyNowSheetProps) {
         <SheetHeader className="shrink-0">
           <SheetTitle>Verify your business</SheetTitle>
           <SheetDescription>
-            A few steps to get verified — then the rest of your dashboard unlocks.
+            A few steps to get verified   then the rest of your dashboard unlocks.
           </SheetDescription>
         </SheetHeader>
 

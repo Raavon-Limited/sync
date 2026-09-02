@@ -5,8 +5,8 @@ import { BadgeCheck, FilePenLine, Package, PackageX } from 'lucide-react';
 interface ListingStatsBarProps {
   listings: Listing[];
   /**
-   * Listing ids that the active store has run out of. Sold-out is per store —
-   * see the shared catalogue migration — so this cannot be derived from the
+   * Listing ids that the active store has run out of. Sold-out is per store  
+   * see the shared catalogue migration   so this cannot be derived from the
    * catalogue rows alone.
    */
   soldOutIds?: Set<string>;
@@ -17,7 +17,7 @@ export function ListingStatsBar({ listings, soldOutIds }: ListingStatsBarProps) 
   const active = listings.filter((l) => l.status === 'Active').length;
   const archived = listings.filter((l) => l.status === 'Archived').length;
   // Counted from the STORE's stock, not `listings.status`. The old line was
-  // `l.status === 'Out of Stock'` — a value the check constraint allows and
+  // `l.status === 'Out of Stock'`   a value the check constraint allows and
   // that nothing in the app or the database has ever written, so this tile
   // read 0 permanently no matter how much had actually run out.
   const outOfStock = soldOutIds

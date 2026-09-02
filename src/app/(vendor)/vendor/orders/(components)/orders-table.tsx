@@ -16,7 +16,7 @@ export function OrdersTable({ data, orders }: { data: Order[]; orders: FoodOrder
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // `Order` collapses six database states into four for the table, so it
-  // cannot tell 'pending' from 'preparing' — which is exactly what decides
+  // cannot tell 'pending' from 'preparing'   which is exactly what decides
   // the next action. The domain row is looked up rather than widening the
   // presentation type the DataTable is built against.
   const domain = selectedOrder ? (orders.find((o) => o.id === selectedOrder.id) ?? null) : null;

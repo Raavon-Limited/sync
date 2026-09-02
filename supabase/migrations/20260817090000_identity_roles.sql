@@ -13,15 +13,15 @@
 --   ONLY publicly-safe columns. Student PII never lives here.
 --
 -- THE ROLE MODEL, END TO END
---   student     — buys. Default for every signup.
---   vendor      — sells food/beauty/laundry/workmanship. Onboards + verifies.
---   landlord    — lists hostels. Onboards + verifies. Added by 0005.
---   rider       — delivers orders. NEW HERE. Was specified in BLUEPRINT §24 but
+--   student       buys. Default for every signup.
+--   vendor        sells food/beauty/laundry/workmanship. Onboards + verifies.
+--   landlord      lists hostels. Onboards + verifies. Added by 0005.
+--   rider         delivers orders. NEW HERE. Was specified in BLUEPRINT §24 but
 --                 existed in neither the database nor src/proxy.ts.
---   admin       — staff. Never self-assignable.
---   super_admin — staff, plus role management.
+--   admin         staff. Never self-assignable.
+--   super_admin   staff, plus role management.
 --
---   `src/proxy.ts` must be updated to match — see the note at the end of this
+--   `src/proxy.ts` must be updated to match   see the note at the end of this
 --   file. The database is the authority; the proxy is UX.
 --
 -- ROLLBACK
@@ -39,7 +39,7 @@ alter table public.profiles add constraint profiles_role_check
 
 -- ── 2. Signup may now resolve to rider ──────────────────────────────────────
 -- Still clamped to the three self-serve roles. `admin` and `super_admin` remain
--- unreachable from the client no matter what metadata is claimed — that clamp
+-- unreachable from the client no matter what metadata is claimed   that clamp
 -- is the whole reason this trigger exists.
 create or replace function public.handle_new_user()
 returns trigger
@@ -83,8 +83,8 @@ $$;
 
 -- ── 3. Role helpers that work TODAY ─────────────────────────────────────────
 -- The conventions migration defined auth_role()/is_admin() against an `app_role`
--- JWT claim. That claim does not exist yet — the custom access token hook is
--- still to be built — so those helpers return 'anon' for everyone.
+-- JWT claim. That claim does not exist yet   the custom access token hook is
+-- still to be built   so those helpers return 'anon' for everyone.
 --
 -- These read `profiles` instead. SECURITY DEFINER is REQUIRED and is not a
 -- shortcut: profiles' RLS is own-row-only, so a policy on another table that
@@ -157,7 +157,7 @@ insert into public.campuses (code, name, state)
 values ('KWASU', 'Kwara State University, Malete', 'Kwara')
 on conflict (code) do nothing;
 
--- ── 5. vendor_profiles — the public storefront ──────────────────────────────
+-- ── 5. vendor_profiles   the public storefront ──────────────────────────────
 -- One row per vendor/landlord. Anonymous visitors read THIS, never `profiles`.
 -- Deliberately excludes phone and any personal field.
 create table if not exists public.vendor_profiles (
@@ -345,7 +345,7 @@ drop policy if exists "vendor_profiles_staff" on public.vendor_profiles;
 create policy "vendor_profiles_staff" on public.vendor_profiles
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
--- Riders: a rider reads and writes their own row. Live location is NOT public —
+-- Riders: a rider reads and writes their own row. Live location is NOT public  
 -- students see a rider's position only through an active delivery, which the
 -- commerce migration exposes as a narrowly-scoped view.
 drop policy if exists "rider_profiles_own" on public.rider_profiles;
@@ -442,8 +442,8 @@ end $$;
 
 -- ============================================================================
 -- FOLLOW-UP REQUIRED IN APPLICATION CODE (not doable from SQL)
---   src/proxy.ts   — add 'rider' to the Role union and ALL[], and add a route
+--   src/proxy.ts     add 'rider' to the Role union and ALL[], and add a route
 --                    rule { prefix: '/rider', roles: ['rider'] }.
---   src/modules/auth/types.ts — add 'rider' to the Role union.
+--   src/modules/auth/types.ts   add 'rider' to the Role union.
 --   The /rider dashboard route group does not exist yet.
 -- ============================================================================

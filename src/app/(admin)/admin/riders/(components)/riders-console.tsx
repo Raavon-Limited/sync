@@ -3,7 +3,7 @@
  *
  * SAME BROWSER AS VENDORS AND LANDLORDS. Cards with the live photo, a grid/list
  * toggle, counting filter chips, and a click that opens the rider on their own
- * page. The decisions — verify, reject, suspend — live there, because they need
+ * page. The decisions   verify, reject, suspend   live there, because they need
  * the documents next to them.
  *
  * TWO FACTS ARE ON THE COLLAPSED CARD ON PURPOSE

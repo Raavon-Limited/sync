@@ -3,7 +3,7 @@
  *
  * NAMING, ONCE: the product says **storefront** for the business and **store**
  * for one of its locations. This module's table is called `storefronts` and
- * holds STORES — it was named before the vocabulary settled. The business is
+ * holds STORES   it was named before the vocabulary settled. The business is
  * `vendor_profiles`. See ./README.md; the `Storefront` type below is a STORE.
  */
 
@@ -11,14 +11,14 @@ export interface Storefront {
   id: string;
   /** The storefront (business) that owns this store. Equals the owner's `auth.uid()`. */
   vendorId: string;
-  /** Store name, e.g. "Tanke store" — not the business name. */
+  /** Store name, e.g. "Tanke store"   not the business name. */
   name: string;
   slug: string;
   area?: string | null;
   campusId?: string | null;
   /**
    * null when the vendor never dropped a pin; discovery falls back to `area`.
-   * Backed by the plain lat/lng columns — `geo` is derived and unreadable over
+   * Backed by the plain lat/lng columns   `geo` is derived and unreadable over
    * PostgREST (it returns WKB hex).
    */
   coords?: { lat: number; lng: number } | null;
@@ -31,20 +31,20 @@ export interface Storefront {
   isAcceptingOrders: boolean;
   /**
    * The cooldown deadline. A store inside one takes no new orders and then
-   * reopens by itself — nothing has to run for the pause to end, which is why
+   * reopens by itself   nothing has to run for the pause to end, which is why
    * this is a timestamp and not a second boolean.
    */
   pausedUntil?: string | null;
   pauseReason?: 'manual' | 'auto_backlog' | null;
   /**
    * Pause automatically once this many orders are accepted and unfinished.
-   * `0` = never. Every store starts at DEFAULT_AUTO_PAUSE_AFTER — this used to
+   * `0` = never. Every store starts at DEFAULT_AUTO_PAUSE_AFTER   this used to
    * be null-by-default, which meant the feature existed and protected nobody.
    */
   autoPauseAfter: number;
   /**
    * How long an automatic pause lasts *if nothing moves*. Normally the pause
-   * ends earlier, when the backlog drops back under the limit — see
+   * ends earlier, when the backlog drops back under the limit   see
    * `sync_store_backlog_pause` in 20260901090000. This is the floor that stops
    * an abandoned store staying shut forever, not the expected duration.
    */
@@ -59,7 +59,7 @@ export interface Storefront {
 
 /**
  * Whether a store takes orders right now. Mirrors `store_accepting_orders()`
- * exactly — if you change one, change the other, or the button and the till
+ * exactly   if you change one, change the other, or the button and the till
  * will disagree.
  */
 export function isStoreOpen(s: Pick<Storefront, 'isAcceptingOrders' | 'pausedUntil' | 'archivedAt'>): boolean {
@@ -110,7 +110,7 @@ export type StaffRole = 'manager' | 'staff';
  * What one person may reach at one store.
  *
  * MUST MATCH `private.storefront_scope_names()` and the CHECK constraints on
- * `storefront_staff` / `storefront_invites`. The database is the authority —
+ * `storefront_staff` / `storefront_invites`. The database is the authority  
  * an unknown name here is refused by the RPC rather than silently stored.
  *
  * MONEY IS NOT ON THIS LIST AND WILL NOT BE. Wallet, payouts, bank accounts and
@@ -134,7 +134,7 @@ export const STAFF_SCOPES: ReadonlyArray<{
   /**
    * True when the grant is NOT limited to the store it was given at.
    * `promotions.vendor_id` points at the business, so there is no such thing
-   * as a one-store discount — the picker has to say so before the owner ticks
+   * as a one-store discount   the picker has to say so before the owner ticks
    * it, not after they find out.
    */
   businessWide?: boolean;
@@ -154,7 +154,7 @@ export const STAFF_SCOPES: ReadonlyArray<{
   {
     value: 'inbox',
     label: 'Inbox',
-    description: 'Customer messages. Not yet routed per store — messages still reach you only.',
+    description: 'Customer messages. Not yet routed per store   messages still reach you only.',
     enforced: false,
   },
   {
@@ -167,7 +167,7 @@ export const STAFF_SCOPES: ReadonlyArray<{
     value: 'promotions',
     label: 'Promotions',
     description:
-      'Create and end discount campaigns. A campaign belongs to the business, so it applies at every store — not just this one.',
+      'Create and end discount campaigns. A campaign belongs to the business, so it applies at every store   not just this one.',
     enforced: true,
     businessWide: true,
   },
@@ -176,7 +176,7 @@ export const STAFF_SCOPES: ReadonlyArray<{
 /** Every scope, for the "all sections" shortcut. */
 export const ALL_STAFF_SCOPES: StaffScope[] = STAFF_SCOPES.map((s) => s.value);
 
-/** The set an invite starts with — the two an extra pair of hands actually needs. */
+/** The set an invite starts with   the two an extra pair of hands actually needs. */
 export const DEFAULT_STAFF_SCOPES: StaffScope[] = ['orders', 'listings'];
 
 /** Every store starts here. `0` means the vendor turned it off. */
@@ -186,7 +186,7 @@ export function scopeLabel(scope: string): string {
   return STAFF_SCOPES.find((s) => s.value === scope)?.label ?? scope;
 }
 
-/** A row from `storefront_roster()` — owner-scoped, so it carries the email. */
+/** A row from `storefront_roster()`   owner-scoped, so it carries the email. */
 export interface StorefrontStaffMember {
   staffId: string;
   storefrontId: string;
@@ -227,7 +227,7 @@ export interface CreatedInvite {
 export interface ActivityEvent {
   occurredAt: string;
   actorId: string | null;
-  /** full_name, else email, else "System" / "Removed account" — never blank. */
+  /** full_name, else email, else "System" / "Removed account"   never blank. */
   actorName: string;
   actorRole: 'owner' | 'staff' | 'system' | string;
   /** e.g. "listing.insert", "order.update.preparing". */
@@ -250,7 +250,7 @@ export interface ManagedStorefront extends Storefront {
   capacity: 'owner' | 'staff';
   /**
    * What this user may reach here. Every scope for an owner; whatever they
-   * were granted for staff. UX only — RLS is what actually refuses.
+   * were granted for staff. UX only   RLS is what actually refuses.
    */
   scopes: StaffScope[];
 }
@@ -267,7 +267,7 @@ export function hasScope(
 // -- Performance --------------------------------------------------------------
 
 /**
- * Per-store reporting. NOT a second ledger — see ./README.md. Money is per
+ * Per-store reporting. NOT a second ledger   see ./README.md. Money is per
  * business and lives on `vendor_profiles`; these are aggregates over the same
  * orders and escrow rows the earnings screen reads, grouped by store.
  */
@@ -278,7 +278,7 @@ export interface StorePerformance {
   isArchived: boolean;
   ordersTotal: number;
   ordersCompleted: number;
-  /** Accepted and not yet finished — pending through on_the_way. */
+  /** Accepted and not yet finished   pending through on_the_way. */
   ordersActive: number;
   ordersCancelled: number;
   ordersRefunded: number;
@@ -287,7 +287,7 @@ export interface StorePerformance {
   /** Paid for and not refunded, released or not. Revenue plus the pipeline. */
   bookedKobo: number;
   refundedKobo: number;
-  /** Averaged over delivered orders only — see the RPC for why. */
+  /** Averaged over delivered orders only   see the RPC for why. */
   avgOrderKobo: number;
   lastOrderAt: string | null;
 }
@@ -307,7 +307,7 @@ export interface StoreRevenuePoint {
  *
  * THESE ARE FILTERS, NOT A PARTITION. `cancel_order` refunds in the same
  * transaction, so a cancelled order is usually also a refunded one and shows
- * under both. Only `all` is the whole set — do not sum the tabs.
+ * under both. Only `all` is the whole set   do not sum the tabs.
  *
  * `refunded` is what the product calls "returned": there is no returns concept
  * in the schema, and money going back (`escrow_holds.status = 'refunded'`) is
@@ -331,7 +331,7 @@ export interface StoreTransaction {
   isRefunded: boolean;
   /** What the customer paid. */
   totalKobo: number;
-  /** What reached the vendor — released escrow less commission. 0 until release. */
+  /** What reached the vendor   released escrow less commission. 0 until release. */
   netKobo: number;
   itemCount: number;
   placedAt: string;

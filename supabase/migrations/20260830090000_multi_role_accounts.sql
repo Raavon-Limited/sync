@@ -10,8 +10,8 @@
 --   actively removes your vendor role when you become a landlord.
 --
 -- THE SHAPE OF THE FIX
---   `roles`  — every hat you HOLD.
---   `role`   — the hat you are WEARING right now.
+--   `roles`    every hat you HOLD.
+--   `role`     the hat you are WEARING right now.
 --
 --   Keeping `role` as the active hat is the whole trick. `current_app_role()`,
 --   `has_role()`, `is_staff()`, every RLS policy and the proxy all read `role`
@@ -34,7 +34,7 @@
 -- STUDENT + ONE BUSINESS
 --   Deliberately constrained. You may hold any number of roles but at most one
 --   BUSINESS role, because a business role owns a `vendor_profiles` row and
---   that table is keyed `id primary key references profiles(id)` — one
+--   that table is keyed `id primary key references profiles(id)`   one
 --   business per person. Allowing {vendor, landlord} here would let someone
 --   into a state the business table cannot represent.
 --
@@ -119,8 +119,8 @@ $fn$;
 -- ── Taking on a new hat ─────────────────────────────────────────────────────
 -- Self-service, because signing up as a vendor already is: onboarding creates
 -- the vendor_profiles row and the role that goes with it. Being a vendor grants
--- no access to anyone else's data — every vendor policy is `auth.uid() =
--- vendor_id` — so this widens nothing.
+-- no access to anyone else's data   every vendor policy is `auth.uid() =
+-- vendor_id`   so this widens nothing.
 --
 -- Staff roles are excluded outright. `create_admin` exists for those and is
 -- service-role only.

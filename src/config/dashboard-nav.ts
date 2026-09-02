@@ -60,11 +60,11 @@ export interface DashboardNavItem {
    * screens, eleven of which answer /403.
    *
    * A row with no `area` is shown to everybody who can see that dashboard at
-   * all — which is every row on every other dashboard, so they are unaffected.
+   * all   which is every row on every other dashboard, so they are unaffected.
    */
   area?: string;
   /**
-   * For one row that fronts several routes — Accounts is Vendors, Landlords
+   * For one row that fronts several routes   Accounts is Vendors, Landlords
    * and Riders, switched between by the tab bar on those pages.
    *
    * The row appears if ANY of these areas is held and points at the first one
@@ -186,7 +186,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
            *
            * Vendors, Landlords and Riders were three sidebar rows, and the
            * sidebar is where they competed with Analytics and Disputes for
-           * space while all three asked the same question — is this account
+           * space while all three asked the same question   is this account
            * real, and should it be trading. They are one row now, and the tab
            * bar on those pages switches between them, including per-trade
            * views of the business queue.
@@ -233,7 +233,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
           // Visible to every admin GRANTED IT, editable only by a super admin.
           // It used to be visible to every admin full stop, on the reasoning
           // that somebody who cannot see who else has access cannot tell a
-          // colleague from a problem. That still holds for an admin — and it
+          // colleague from a problem. That still holds for an admin   and it
           // is now a grant, because "who runs Sync" is not something a
           // part-time document reviewer needs on their screen.
           {

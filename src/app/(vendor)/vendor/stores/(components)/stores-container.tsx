@@ -1,18 +1,18 @@
 /**
- * Manage stores — the locations themselves.
+ * Manage stores   the locations themselves.
  *
  * WHAT MOVED OUT AND WHY
  *   The roster, the invitations and the activity feed used to live at the
  *   bottom of this page, scoped to whichever store card was highlighted. That
  *   made "who works for me" a per-store question, which is not how an owner
- *   thinks about it — they hire a person, then decide where and what. Those
+ *   thinks about it   they hire a person, then decide where and what. Those
  *   sections are /vendor/team now, across every store at once.
  *
  * TWO AUDIENCES, ONE ROUTE
  *   Every write here (create, promote, archive) is owner-scoped in the
  *   database, so a manager arriving would get controls that refuse. Rather
- *   than hide the route — which needs the shared nav config to become
- *   role-aware — this renders a manager view: the store they run, what they
+ *   than hide the route   which needs the shared nav config to become
+ *   role-aware   this renders a manager view: the store they run, what they
  *   were given, and a plain statement of where their authority ends.
  */
 'use client';
@@ -51,7 +51,7 @@ import { useMyStorefront } from '@/modules/vendor/hooks';
 
 /** The one line that says what a student would see right now. */
 function statusLine(s: Storefront) {
-  if (s.archivedAt) return 'Archived — hidden from students';
+  if (s.archivedAt) return 'Archived   hidden from students';
   if (!s.isAcceptingOrders) return 'Closed';
   // Three states, not two. "Paused" used to mean the manual switch was off; it
   // now means a cooldown, and a store closed indefinitely is a different thing
@@ -61,7 +61,7 @@ function statusLine(s: Storefront) {
 
 export function StoresContainer() {
   const { activeId, setActive, isOwner, storefronts: managed } = useActiveStorefront();
-  // Archived stores are the owner's own history and nobody else's — the public
+  // Archived stores are the owner's own history and nobody else's   the public
   // policy filters them out at the database, so this cannot leak one.
   const { data: stores = [], isLoading } = useMyStorefronts({ includeArchived: true });
   const { data: brand } = useMyStorefront();
@@ -95,8 +95,8 @@ export function StoresContainer() {
 
   // A MANAGER GETS A DIFFERENT PAGE, NOT AN EMPTY ONE.
   // Every write below is owner-scoped in the database, so a manager would see
-  // controls that refuse. Showing them the store they actually run — and the
-  // sections they were handed — is both honest and more useful than hiding the
+  // controls that refuse. Showing them the store they actually run   and the
+  // sections they were handed   is both honest and more useful than hiding the
   // route, and it states the permission boundary rather than leaving them to
   // discover it by hitting an error.
   if (!isOwner) {
@@ -114,7 +114,7 @@ export function StoresContainer() {
             ) : (
               <span className="flex items-center gap-1 text-xs text-amber-600">
                 <MapPinOff className="size-3 shrink-0" />
-                No area — students cannot find this store
+                No area   students cannot find this store
               </span>
             )}
             <span className="text-content-muted text-xs">{statusLine(s)}</span>
@@ -146,7 +146,7 @@ export function StoresContainer() {
             <Store className="size-4" /> Your stores
           </h2>
           {/* Both page-level actions in one place. The cooldown still applies
-              to ONE store — the one being worked — so the trigger names it
+              to ONE store   the one being worked   so the trigger names it
               rather than sitting here unlabelled: a control that silently
               closed whichever card was highlighted is the easiest possible way
               to shut the wrong shop. */}
@@ -260,7 +260,7 @@ export function StoresContainer() {
           if (!confirming) return;
           setArchived.mutate(
             { id: confirming.id, archived: true },
-            // Left open on failure on purpose — the refusals here are real
+            // Left open on failure on purpose   the refusals here are real
             // ("finish these orders first") and closing the dialog would throw
             // the reason away before it was read.
             { onSuccess: () => setConfirming(null) },
@@ -308,14 +308,14 @@ function StoreCard({
 
       {/* Not cosmetic. Discovery is location-first: a store with no area is
           left out of the campus board and cannot be ranked by distance, so
-          students simply never see it. Nothing errors — it is just absent,
+          students simply never see it. Nothing errors   it is just absent,
           which is the hardest kind of bug to notice from the vendor's side. */}
       {store.area ? (
         <span className="text-content-muted text-xs">{store.area}</span>
       ) : (
         <span className="flex items-center gap-1 text-xs text-amber-600">
           <MapPinOff className="size-3 shrink-0" />
-          No area — students cannot find this store
+          No area   students cannot find this store
         </span>
       )}
 

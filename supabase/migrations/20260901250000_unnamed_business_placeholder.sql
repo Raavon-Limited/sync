@@ -1,5 +1,5 @@
 -- ============================================================================
--- unnamed_business_placeholder — onboarding could not name a business.
+-- unnamed_business_placeholder   onboarding could not name a business.
 --
 -- WHAT A VENDOR SAW
 --
@@ -44,7 +44,7 @@
 --     Your business name is already set to "Unnamed business" and cannot be
 --     changed here. Contact support if it is wrong.
 --
---   That rule is right — a claimed name is frozen against the client — but a
+--   That rule is right   a claimed name is frozen against the client   but a
 --   placeholder the system invented one statement earlier is not a claim
 --   anybody made. So an account with no business name on its profile could not
 --   finish onboarding by either route: collide, or be told the name it never
@@ -54,7 +54,7 @@
 --   1. The placeholder becomes UNIQUE PER ACCOUNT, the way `slug` already is.
 --      Two businesses with no name yet are two rows, not a conflict.
 --   2. A placeholder is treated as NO NAME. claim_business_name will overwrite
---      one, and only one — a real claimed name stays frozen.
+--      one, and only one   a real claimed name stays frozen.
 --   3. The handler stops lying. It relabels a violation of the business-name
 --      index and RE-RAISES anything else, so the next unrelated constraint
 --      failure says what it was instead of blaming whatever was in the box.
@@ -195,7 +195,7 @@ begin
   -- THE FROZEN-NAME RULE, NOW WITH THE PLACEHOLDER EXEMPTED.
   -- SECURITY DEFINER runs as the owner, so the column guard's `current_user`
   -- test does not fire here and this function must refuse a rename on its own.
-  -- It still does — but 'Unnamed business …' is something ensure_vendor_profile
+  -- It still does   but 'Unnamed business …' is something ensure_vendor_profile
   -- wrote one statement ago, not a name this vendor chose, and treating it as
   -- final locked every unnamed account out of onboarding permanently.
   if not private.is_placeholder_business_name(v_old) then
@@ -223,7 +223,7 @@ begin
 exception
   -- ONLY THE BUSINESS-NAME INDEX GETS THIS MESSAGE.
   -- The handler used to catch every unique_violation raised anywhere in the
-  -- body — including one from ensure_vendor_profile's INSERT — and relabel it
+  -- body   including one from ensure_vendor_profile's INSERT   and relabel it
   -- with whatever the vendor had typed. That is how a placeholder collision
   -- came out as "Hizzy Internationals is already taken": a true-sounding
   -- sentence about a name that was never the problem, sending somebody off to

@@ -2,7 +2,7 @@
  * React Query hooks for the 'storefronts' module.
  *
  * The vendor-side hooks key off the signed-in user, because a brand's owner id
- * IS their `auth.uid()` — vendor_profiles.id references profiles.id, and the
+ * IS their `auth.uid()`   vendor_profiles.id references profiles.id, and the
  * storefronts migration deliberately preserved that.
  */
 'use client';
@@ -113,7 +113,7 @@ export function useSetPrimaryStorefront() {
 // -- Student side ------------------------------------------------------------
 
 /**
- * Branches near a point. Stays disabled until coordinates are known — firing
+ * Branches near a point. Stays disabled until coordinates are known   firing
  * with (0, 0) would rank everything against the Gulf of Guinea.
  */
 export function useNearbyStorefronts(opts: {
@@ -172,7 +172,7 @@ export function usePendingInvites(storefrontId?: string) {
 }
 
 /**
- * Returns the token exactly once. Surface it immediately — it is not readable
+ * Returns the token exactly once. Surface it immediately   it is not readable
  * again, and the caller is responsible for delivering it.
  */
 export function useCreateInvite() {

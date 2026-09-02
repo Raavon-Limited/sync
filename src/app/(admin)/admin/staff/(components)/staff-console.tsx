@@ -4,7 +4,7 @@
  *
  * WHAT THE UI ENFORCES AND WHAT IT ONLY REFLECTS
  *   `set_account_role` refuses a non-super-admin, refuses removing the last
- *   super admin, and refuses removing your own access — in the database, where
+ *   super admin, and refuses removing your own access   in the database, where
  *   a request that never touched this component still meets them.
  *   `create_staff_invite` refuses anyone but a super admin. Everything here is
  *   presentation: an admin sees the list without controls, and a super admin
@@ -17,10 +17,10 @@
  * ROLES ARE SET HERE, NOT ONLY IN THE ROLE EDITOR BELOW
  *   The editor answers "who can do this"; this answers "what can Musa do", and
  *   the second question is the one somebody has after a shift handover. Same
- *   rows, same action — a chip per role, on the person.
+ *   rows, same action   a chip per role, on the person.
  *
  * REMOVING ACCESS RETURNS SOMEBODY TO 'student', NOT TO NOTHING.
- *   There is no such thing as an account with no role —
+ *   There is no such thing as an account with no role  
  *   `profiles_active_role_is_held` requires the active role to be one they
  *   hold. Losing console access is a demotion to an ordinary account, and their
  *   vendor or rider profile, if they have one, is untouched.
@@ -78,7 +78,7 @@ export function StaffConsole({
   function run(fn: () => Promise<unknown>, onDone?: (v: unknown) => void) {
     setError(null);
     setMessage(null);
-    // A stale link from the last attempt must not survive into this one — it
+    // A stale link from the last attempt must not survive into this one   it
     // is a live credential for a different address.
     setFailure(null);
     setLink(null);
@@ -172,7 +172,7 @@ export function StaffConsole({
                     setLink(res.link);
                     setFailure(res.emailError ?? 'The email did not send.');
                     setMessage(
-                      `The invitation exists for ${res.email}, but it was not emailed. Send them this link instead — it still works for 10 minutes.`,
+                      `The invitation exists for ${res.email}, but it was not emailed. Send them this link instead   it still works for 10 minutes.`,
                     );
                   },
                 )
@@ -186,7 +186,7 @@ export function StaffConsole({
           <p className="text-content-muted text-xs">
             They do not need a Sync account. If the address has one, access is granted straight
             away; if it does not, they get a link that works for 10 minutes and set their own
-            password on the way in — no password is ever emailed. If it lapses before they open it,
+            password on the way in   no password is ever emailed. If it lapses before they open it,
             invite them again. Super admin is not offered here: it can appoint and remove everyone
             else, so it is granted deliberately from the database rather than from a form somebody
             could reach through a hijacked session.
@@ -241,7 +241,7 @@ export function StaffConsole({
                 <p className="text-content-muted text-xs">
                   Invited by {inv.invitedByName} ·{' '}
                   {inv.expired
-                    ? 'the link no longer works — invite again to send a new one'
+                    ? 'the link no longer works   invite again to send a new one'
                     : `expires ${new Date(inv.expiresAt).toLocaleTimeString('en-NG', {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -251,7 +251,7 @@ export function StaffConsole({
               {isSuperAdmin && (
                 /* Send again, because a 10-minute link lapses faster than
                    people read their email, and the token behind this row can
-                   never be shown again — `create_staff_invite` returns it once.
+                   never be shown again   `create_staff_invite` returns it once.
                    So "re-send" has to mean a NEW invitation: this revokes the
                    old token and emails a fresh one to the same address, with
                    the same role. */
@@ -305,7 +305,7 @@ export function StaffConsole({
 
       {staff.length === 0 ? (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
-          Nobody has console access. That should be impossible — you are reading this page.
+          Nobody has console access. That should be impossible   you are reading this page.
         </p>
       ) : (
         <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
@@ -342,7 +342,7 @@ export function StaffConsole({
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {s.role === 'super_admin' ? (
                         <span className="text-content-muted text-xs">
-                          Super admin — every area, roles do not apply.
+                          Super admin   every area, roles do not apply.
                         </span>
                       ) : (
                         roles.map((r) => {
@@ -392,7 +392,7 @@ export function StaffConsole({
                         A super admin can appoint and remove every other one, so
                         a hijacked super-admin session should not be able to mint
                         a second permanent way in with one click. Promotion is a
-                        database statement somebody has to mean — see
+                        database statement somebody has to mean   see
                         docs/ADMIN_ACCESS.md. Removing access stays here, because
                         taking access away in a hurry is the thing you want to be
                         easy. */}

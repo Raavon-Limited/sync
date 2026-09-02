@@ -1,7 +1,7 @@
 /**
  * ROUTE: /landlord
  * ACCESS: authenticated landlord.
- * PURPOSE: Landlord dashboard — KPIs, booking requests, revenue, hostels.
+ * PURPOSE: Landlord dashboard   KPIs, booking requests, revenue, hostels.
  *
  * Was entirely mock: `@/mock/StatsCard` for the KPIs and revenue chart, and
  * three hardcoded students with Unsplash avatars as "pending requests". All of
@@ -44,7 +44,7 @@ export default async function Page() {
       id: h.id,
       name: h.name,
       roomsTotal: total,
-      // "Booked" is total minus free — the card counts occupancy, the view
+      // "Booked" is total minus free   the card counts occupancy, the view
       // counts vacancy, and inverting it in the wrong place is how a full
       // hostel renders as empty.
       roomsBooked: Math.max(0, total - (a?.rooms_available ?? 0)),

@@ -5,7 +5,7 @@
 --
 -- `active_delivery_positions` projects `rider_profiles.current_geo` so a student
 -- can watch their delivery move. `fetchDeliveryTracking` reads it as
--- `toLatLng(row.current_geo)` — and a geography column comes back over
+-- `toLatLng(row.current_geo)`   and a geography column comes back over
 -- PostgREST as WKB hex, never GeoJSON, so `riderPosition` has always been null.
 -- The map would simply never show a rider.
 --
@@ -13,7 +13,7 @@
 -- truth, `geo` is derived by trigger and stays the indexed column.
 --
 -- WHY IT MATTERS MORE HERE THAN ELSEWHERE
---   Rider position is WRITTEN by a client — the rider's device posting its
+--   Rider position is WRITTEN by a client   the rider's device posting its
 --   location, repeatedly, while moving. Plain columns are the difference
 --   between a two-number PATCH and constructing WKT on a phone with patchy
 --   signal.

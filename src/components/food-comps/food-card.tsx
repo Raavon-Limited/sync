@@ -126,7 +126,7 @@ export default function FoodCards({
                         </div>
                     )}
 
-                    {/* Heart button — stops propagation so it doesn't trigger the card link */}
+                    {/* Heart button   stops propagation so it doesn't trigger the card link */}
                     <button
                         type="button"
                         onClick={toggleFavourite}

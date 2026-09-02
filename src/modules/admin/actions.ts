@@ -4,7 +4,7 @@
  * WHY SERVICE ROLE AND NOT RLS
  *   Admin work is cross-tenant by definition: approving a vendor means writing
  *   a row that belongs to someone else. Rather than add staff-bypass policies
- *   to every table, admin screens use the service-role client — which is why
+ *   to every table, admin screens use the service-role client   which is why
  *   every function here re-checks the caller's role FIRST. The guard is the
  *   only thing standing between a signed-in student and the whole database, so
  *   it is repeated per action rather than assumed from the route.
@@ -44,7 +44,7 @@ async function assertStaff(): Promise<string> {
 }
 
 /**
- * Staff, AND granted this area — the check every write below starts with.
+ * Staff, AND granted this area   the check every write below starts with.
  *
  * WHY IT IS NOT ENOUGH TO GUARD THE PAGE
  *   Everything in this file uses the service-role client, which is above RLS by
@@ -141,8 +141,8 @@ export async function setVendorVerification(input: {
   //
   // This used to update `vendor_profiles.verification_status` directly with the
   // service-role client, and it never worked: `guard_vendor_profile_cols`
-  // reverts that column whenever `current_user` is 'authenticated', which — as
-  // 20260830100000 documents — is every PostgREST request, service-role
+  // reverts that column whenever `current_user` is 'authenticated', which   as
+  // 20260830100000 documents   is every PostgREST request, service-role
   // included. The approval returned success and changed nothing, which is why
   // verified vendors stayed locked out of their own dashboards.
   //
@@ -150,7 +150,7 @@ export async function setVendorVerification(input: {
   // honours, re-checks `is_staff()` inside the database rather than trusting
   // that we checked out here, and writes an audit row naming the reviewer.
   //
-  // CALLED WITH THE USER'S SESSION, NOT THE SERVICE ROLE — the RPC's own
+  // CALLED WITH THE USER'S SESSION, NOT THE SERVICE ROLE   the RPC's own
   // is_staff() reads auth.uid(), and the service-role client has no user
   // session, so auth.uid() would be NULL and the call refused. Same reasoning
   // as resolveDispute below.
@@ -159,7 +159,7 @@ export async function setVendorVerification(input: {
   //
   // PostgREST resolves an RPC by the exact set of argument names it is given.
   // Before 20260901260000 landed, the function was still the two-argument form
-  // and naming a third made the call resolve to nothing — so sending
+  // and naming a third made the call resolve to nothing   so sending
   // `p_permanent: false` on every decision would have broken Verify and Reject
   // against an un-migrated database. That migration is applied now, but the
   // shape is worth keeping: it is what makes an ordinary decision independent
@@ -179,7 +179,7 @@ export async function setVendorVerification(input: {
  * A time-limited link to a document in the private bucket.
  *
  * `verification-docs` is private and holds ID documents. Nothing here returns a
- * permanent URL — the link expires so a leaked admin screenshot does not become
+ * permanent URL   the link expires so a leaked admin screenshot does not become
  * a leaked passport.
  */
 export async function getDocumentUrl(storagePath: string): Promise<string> {
@@ -196,14 +196,14 @@ export async function getDocumentUrl(storagePath: string): Promise<string> {
  * Signed links for a whole folder at once, keyed by storage path.
  *
  * ONE ROUND TRIP, BECAUSE THE REVIEW SCREEN NEEDS THEM ALL AT ONCE. The point
- * of that screen is comparing a live photo against an ID — you cannot compare
+ * of that screen is comparing a live photo against an ID   you cannot compare
  * two things you have to open one at a time, so every document is rendered
  * inline and every one needs a URL before first paint. Calling the single
  * version in a loop would be four server actions per business and a visible
  * cascade of images popping in.
  *
  * A MISSING FILE IS OMITTED, NOT THROWN. One unreadable object must not blank
- * the entire review — the reviewer still needs to see the other three, and a
+ * the entire review   the reviewer still needs to see the other three, and a
  * tile with no preview says "this one is missing" far more usefully than an
  * error page does.
  *
@@ -240,7 +240,7 @@ export async function getDocumentUrls(storagePaths: string[]): Promise<Record<st
  *   `resolve_dispute` is SECURITY DEFINER and gates on `is_staff()`, which
  *   reads `auth.uid()`. The service-role client has no user session, so
  *   auth.uid() is NULL, is_staff() is false, and every call would be refused.
- *   Using the request-scoped client means the RPC's own guard does its job —
+ *   Using the request-scoped client means the RPC's own guard does its job  
  *   defence in depth rather than a guard that can never fire.
  */
 export async function resolveDispute(input: {
@@ -267,7 +267,7 @@ export async function resolveDispute(input: {
  *
  * The visit row records what an ambassador saw; `hostels.verified` is what
  * students see. They are updated together because a verified visit that leaves
- * the hostel unverified is a decision nobody can act on — and an unverified
+ * the hostel unverified is a decision nobody can act on   and an unverified
  * hostel with a "Verified" visit reads as a bug to whoever looks next.
  */
 export async function decideHostelVisit(input: {
@@ -342,7 +342,7 @@ export async function scheduleHostelVisit(input: {
  *
  * `app_settings.value` is jsonb, so a number and a string are both valid and
  * indistinguishable at the column. The caller says which it is, because writing
- * `"10"` where `10` was expected silently breaks `private.setting_int` — it
+ * `"10"` where `10` was expected silently breaks `private.setting_int`   it
  * falls back to the default and nobody finds out until the money is wrong.
  */
 export async function updateSetting(input: {
@@ -405,7 +405,7 @@ export async function updateFeatureFlag(input: {
  * Decide a rider's verification.
  *
  * A separate action from setVendorVerification because it is a separate RPC
- * writing a separate table — see the header on 20260901270000 for why the
+ * writing a separate table   see the header on 20260901270000 for why the
  * database does not take an entity-type argument and switch on it.
  *
  * Called with the USER'S session for the same reason as every other RPC here:
@@ -463,7 +463,7 @@ export async function setCompanyVerification(input: {
 export async function setAccountSuspension(input: {
   userId: string;
   suspended: boolean;
-  /** Required when suspending — support reads it back to the person asking why. */
+  /** Required when suspending   support reads it back to the person asking why. */
   reason?: string;
 }) {
   await assertStaffArea('users');
@@ -497,7 +497,7 @@ export type AccountRole = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' 
  * reads auth.uid() to check the caller is a super admin, and the service-role
  * client has no user session, so auth.uid() would be NULL and the call refused.
  *
- * Every rule that matters — super admin only, not yourself, not the last one —
+ * Every rule that matters   super admin only, not yourself, not the last one  
  * lives in the function. This does not restate them; it would be a second copy
  * to keep in step, and the one that could be bypassed.
  */
@@ -522,7 +522,7 @@ export async function setAccountRole(input: { userId: string; role: AccountRole 
  * account on the platform would be thousands of students deep, and the person
  * you are looking for is one you can already name.
  *
- * The account has to exist. Sync does not create logins from this screen —
+ * The account has to exist. Sync does not create logins from this screen  
  * inviting somebody who has never signed up is a different feature with a
  * different failure mode, and quietly creating an account here would mean staff
  * access arriving before the person knew they had it.
@@ -544,7 +544,7 @@ export async function addStaffByEmail(input: { email: string; role: 'admin' | 's
 //
 // Authorisation for all four lives in the database: private.may_manage_roles
 // allows a super admin for platform roles and a branch owner for their own.
-// These do not restate it — a second copy would be one more thing to keep in
+// These do not restate it   a second copy would be one more thing to keep in
 // step, and the one that could be bypassed by a request that never came
 // through this module.
 //
@@ -576,7 +576,7 @@ export async function createAccessRole(input: { name: string; description?: stri
 
 /**
  * Set one area on one role. `level: null` removes the grant, which is how "no
- * access" is expressed — see 20260902130000 for why 'none' is not stored.
+ * access" is expressed   see 20260902130000 for why 'none' is not stored.
  */
 export async function setRoleGrant(input: {
   roleId: string;

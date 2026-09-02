@@ -6,14 +6,14 @@
  * runs, and "84 here now" at a lounge with no check-in system.
  *
  * WHAT IS NOT HERE, BECAUSE NOTHING BACKS IT
- *   - `etaMinutes` — no delivery-time model exists. `orders.eta_minutes` is
+ *   - `etaMinutes`   no delivery-time model exists. `orders.eta_minutes` is
  *     nullable and nothing computes it.
- *   - `hereCount` — live headcount needs check-ins, and no table records them.
+ *   - `hereCount`   live headcount needs check-ins, and no table records them.
  *   Both are replaced by facts the row actually carries.
  *
  * SERVICE ROLE, PUBLIC FIELDS ONLY
  *   Signed-out visitors see this page, so it cannot depend on a session. Only
- *   columns already readable by `anon` are selected — the service role is here
+ *   columns already readable by `anon` are selected   the service role is here
  *   to avoid needing cookies, not to reach anything private.
  */
 import 'server-only';
@@ -47,7 +47,7 @@ export interface Highlight {
 export interface LandingShowcase {
   /**
    * The hero pool. Built from real rows because the hardcoded one linked to
-   * /hostels/woss-hostel, /hostels/la-marida-malete and /hostels/amina-villa —
+   * /hostels/woss-hostel, /hostels/la-marida-malete and /hostels/amina-villa  
    * three slugs that do not exist. The largest card on the public homepage was
    * a 404.
    */
@@ -221,7 +221,7 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
         image: h.image,
         pricePerSession: naira(Number(h.price_per_session_kobo)),
         // No rating field at all. `hostels` carries no rating columns, and
-        // `reviews` is polymorphic — aggregating it per card would be a second
+        // `reviews` is polymorphic   aggregating it per card would be a second
         // query for a number that is better absent than zero. ListingCard's
         // `rating` prop is optional precisely so it can be omitted, and a
         // hostel showing zero stars reads as badly reviewed rather than new.

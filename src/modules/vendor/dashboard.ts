@@ -9,7 +9,7 @@
  *
  * WHY THE BUCKETING IS DONE HERE AND NOT IN SQL
  * Revenue-by-week is a group-by, and doing it in JavaScript over a vendor's
- * order list is the wrong shape at scale — it drags every row across the wire to
+ * order list is the wrong shape at scale   it drags every row across the wire to
  * produce eight numbers. It is the right shape TODAY, because a vendor has tens
  * of orders and the alternative is a materialised view that has to be refreshed
  * on a schedule for data nobody is looking at yet.
@@ -64,7 +64,7 @@ export function sumBetween(orders: FoodOrder[], from: Date, to: Date): number {
 }
 
 /**
- * Eight trailing weeks, oldest first — the shape `RevenueBarChart` expects.
+ * Eight trailing weeks, oldest first   the shape `RevenueBarChart` expects.
  * Empty weeks are kept as zero rather than dropped, so the x-axis stays evenly
  * spaced and a quiet week reads as quiet rather than disappearing.
  */
@@ -117,7 +117,7 @@ export async function fetchVendorDashboard(
   vendorId: string,
   now: Date = new Date(),
 ): Promise<VendorDashboardData> {
-  // One read, many derivations — the KPI tiles, the chart and the pending list
+  // One read, many derivations   the KPI tiles, the chart and the pending list
   // are all views of the same set, so they cannot disagree with each other.
   const orders = await fetchVendorOrders(db, vendorId, { pageSize: 200 });
 

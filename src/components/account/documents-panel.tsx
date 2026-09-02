@@ -1,15 +1,15 @@
 /**
- * Verification documents — what the vendor has uploaded and where each stands.
+ * Verification documents   what the vendor has uploaded and where each stands.
  *
  * REQUIRED TYPES ARE CONFIG; UPLOADS ARE DATA
  *   `verification_documents` holds what has been uploaded. It cannot say what
- *   SHOULD be uploaded — that is a product decision, so the required set lives
+ *   SHOULD be uploaded   that is a product decision, so the required set lives
  *   here as a constant and each row is matched to it by `doc_type`. A required
  *   type with no row is 'not_uploaded', which is exactly what the status enum
  *   already allows for.
  *
  * THE TIMELINE IS DERIVED, NOT SCRIPTED
- *   The mock listed events like "Bank Verification Pending — 28 May 2026" that
+ *   The mock listed events like "Bank Verification Pending   28 May 2026" that
  *   nothing produced. Real progress is just the required documents and their
  *   statuses, so the timeline is computed from them. An invented date on a
  *   verification screen is the kind of thing someone plans around.
@@ -17,7 +17,7 @@
  * THIS PANEL DOES NOT UPLOAD ANYTHING. IT REPORTS.
  *   It used to offer an Upload button per requirement, and that was a dead
  *   end dressed as an action. Uploading a file here wrote a
- *   `verification_documents` row and stopped — nothing re-submitted the
+ *   `verification_documents` row and stopped   nothing re-submitted the
  *   account for review, so the file sat in a queue entry nobody was told had
  *   changed. Worse, it was reachable while a review was already in flight,
  *   which is how a reviewer ends up looking at a folder that changed under
@@ -25,8 +25,8 @@
  *
  *   Verification is now collected in one place: the wizard behind "Verify
  *   Now", which asks for the whole set and submits it as one act. This screen
- *   answers the only question it is well placed to answer — where does each
- *   document stand — and hands off to that wizard when something is
+ *   answers the only question it is well placed to answer   where does each
+ *   document stand   and hands off to that wizard when something is
  *   outstanding.
  */
 'use client';
@@ -44,7 +44,7 @@ import { VERIFICATION_REQUIREMENTS } from '@/modules/verification/requirements';
 /**
  * What Sync asks every vendor for.
  *
- * Product config, not database state — and now shared with the public card
+ * Product config, not database state   and now shared with the public card
  * page, which lists the same checks to whoever scans a vendor's ID. Two copies
  * of this list would drift, and the drift would show up as a card claiming a
  * check the vendor was never asked to pass.
@@ -127,8 +127,8 @@ export function DocumentsPanel({
         </p>
 
         {/* The only action on this screen, and it is a handoff. Absent while a
-            reviewer already has the folder — a second submission is the only
-            thing it could produce — and absent when the door is closed. */}
+            reviewer already has the folder   a second submission is the only
+            thing it could produce   and absent when the door is closed. */}
         {!verified && !awaitingReview && !blockedReason && (
           <VerifyNowSheet
             initial={{
@@ -204,7 +204,7 @@ export function DocumentsPanel({
         })}
       </div>
 
-      {/* Derived from the documents above — no scripted dates. */}
+      {/* Derived from the documents above   no scripted dates. */}
       <div className="border-line/10 flex flex-col gap-2 rounded-xl border p-4">
         <p className="text-content-muted font-mono text-xs tracking-wide">PROGRESS</p>
         {items.map((item) => (
@@ -217,7 +217,7 @@ export function DocumentsPanel({
               <Circle className="text-content-muted size-4" />
             )}
             <span className={item.status === 'approved' ? 'text-content-muted' : 'text-content'}>
-              {item.title} — {STATUS_META[item.status].label.toLowerCase()}
+              {item.title}   {STATUS_META[item.status].label.toLowerCase()}
             </span>
           </div>
         ))}

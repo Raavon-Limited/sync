@@ -5,7 +5,7 @@
 --   Not one policy created by 0006_student_core.sql or 0007_areas.sql carries a
 --   `to <role>` clause. Postgres therefore attaches every one of them to PUBLIC,
 --   which includes `anon`. This is the identical bug class that made
---   public.profiles world-readable and that 20260814102248 has just closed —
+--   public.profiles world-readable and that 20260814102248 has just closed  
 --   only here it is replicated across 14 tables and ~25 policies.
 --
 --   Confirmed live on 16 Aug 2026 by probing every table with the publishable
@@ -19,7 +19,7 @@
 --   protection is therefore incidental, not designed: it depends on every
 --   present and future policy author remembering to reference auth.uid(). One
 --   policy shaped like `using (true)` on a private table turns the whole set
---   into a leak. events_select_all is already that shape — correctly so, since
+--   into a leak. events_select_all is already that shape   correctly so, since
 --   events are public, but it shows the shape is in active use.
 --
 --   This migration converts that accident into a guarantee.
@@ -27,7 +27,7 @@
 -- APPROACH
 --   `alter policy ... to <roles>` rewrites only the role list and leaves the
 --   USING / WITH CHECK expressions untouched. No predicate is retyped here, so
---   this cannot silently change who matches a row — only which database roles
+--   this cannot silently change who matches a row   only which database roles
 --   are allowed to be evaluated against it at all.
 --
 --   The loop reads pg_policies, so it is idempotent and cannot fail on a policy
@@ -39,7 +39,7 @@
 --     listings_select_active, events_select_all, areas_select_active
 --   All six are SELECT-only over storefront data. Reviewed column by column:
 --   public.hostels exposes name/address/landmark/area/price/amenities and a
---   bare landlord_id uuid — storefront fields, no PII. Landlord identity lives
+--   bare landlord_id uuid   storefront fields, no PII. Landlord identity lives
 --   in profiles, which anon can no longer read.
 --
 -- DELIBERATELY NOT DONE HERE
@@ -102,7 +102,7 @@ begin
       raise notice 'public browse: %.% -> anon, authenticated',
                    r.tablename, r.policyname;
     else
-      raise warning 'expected public-browse policy %.% not found — skipped',
+      raise warning 'expected public-browse policy %.% not found   skipped',
                     r.tablename, r.policyname;
     end if;
   end loop;

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const brands = await fetchFoodVendors(db, { pageSize: 100 });
   const brand = brands.find((b) => b.id === resolved.vendorId);
   return {
-    title: brand ? `${brand.businessName} — ${resolved.branchName}` : resolved.branchName,
+    title: brand ? `${brand.businessName}   ${resolved.branchName}` : resolved.branchName,
   };
 }
 

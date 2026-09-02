@@ -64,7 +64,7 @@ export function TicketsPicker({ slug }: { slug: string }) {
       <div className="mt-6 flex flex-col gap-3">
         {tiers.length === 0 && (
           <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
-            No tickets on sale for this event — pay at the door.
+            No tickets on sale for this event   pay at the door.
           </p>
         )}
 
@@ -128,7 +128,7 @@ export function TicketsPicker({ slug }: { slug: string }) {
           <span className="text-content text-lg font-semibold">{naira(total)}</span>
           <Button
             onClick={() => {
-              // Selection travels in the URL — the next step rebuilds the same
+              // Selection travels in the URL   the next step rebuilds the same
               // summary from it, so there is no cart to keep in sync.
               const sel = Object.entries(qty)
                 .filter(([, n]) => n > 0)

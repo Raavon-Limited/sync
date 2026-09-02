@@ -3,7 +3,7 @@
  *
  * THE SERVICE ROLE IS USED HERE, AND THE GUARD IS WHY IT IS SAFE
  *   rider_profiles' RLS is own-row plus staff. A fleet owner is neither, so a
- *   plain query returns their own row and nothing else — which is correct as a
+ *   plain query returns their own row and nothing else   which is correct as a
  *   default and useless for a page listing your riders. Every function below
  *   therefore re-reads `logistics_companies.owner_id` against auth.uid() FIRST
  *   and refuses anything else. Same pattern, and same reasoning, as
@@ -125,7 +125,7 @@ export async function getMyFleet(): Promise<Fleet | null> {
           delivered: s.delivered,
           active: s.active,
           // The owner rides for their own fleet and must not be able to release
-          // themselves from it by mistake — that would leave the company with
+          // themselves from it by mistake   that would leave the company with
           // no riders and the owner wondering where their jobs went.
           isOwner: id === user.id,
         };

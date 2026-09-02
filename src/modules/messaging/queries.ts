@@ -1,5 +1,5 @@
 /**
- * Data access for the 'messaging' module — conversations, messages,
+ * Data access for the 'messaging' module   conversations, messages,
  * attachments and notifications.
  *
  * Backs /vendor/inbox (chat-window, chat-component, voice-recorder) and the
@@ -25,7 +25,7 @@ const toConversation = (r: Row, selfId?: string, parties?: PartyLookup): Convers
   const others = (r.conversation_participants ?? []).filter((p: Row) => p.user_id !== selfId);
   // Names do NOT come from an embed. public.profiles is locked to the caller's
   // own row (20260814102248_fix_profile_exposure), so `profile:profiles(...)`
-  // returns null here rather than erroring — which is how every thread ended up
+  // returns null here rather than erroring   which is how every thread ended up
   // titled "Conversation". The RPC discloses just the display fields instead.
   const counterpart = others[0] ? parties?.get(others[0].user_id) : undefined;
 
@@ -47,7 +47,7 @@ const toConversation = (r: Row, selfId?: string, parties?: PartyLookup): Convers
     counterpartId: others[0]?.user_id ?? null,
     lastMessageAt: r.last_message_at,
     lastMessagePreview: r.last_message_preview,
-    // Derived, never stored — a stored counter drifts across devices.
+    // Derived, never stored   a stored counter drifts across devices.
     // A thread with no read watermark yet counts as unread.
     hasUnread: lastMessageAt > lastReadAt,
     unreadCount: 0,
@@ -93,7 +93,7 @@ const toNotification = (r: Row): Notification => ({
 
 /**
  * No profile joins: the counterparty's name is not reachable by embed (see
- * toConversation). Participants themselves are readable — the RLS policy on
+ * toConversation). Participants themselves are readable   the RLS policy on
  * conversation_participants is membership-based, not ownership-based.
  */
 const CONVERSATION_SELECT = `id, kind, subject_type, subject_id, last_message_at,
@@ -130,7 +130,7 @@ export async function fetchConversations(
         CONVERSATION_SELECT,
       )
       .is('archived_at', null)
-      // Ordering by the denormalised column is why it exists — sorting by a
+      // Ordering by the denormalised column is why it exists   sorting by a
       // joined aggregate is unusable once a vendor has a few hundred threads.
       .order('last_message_at', { ascending: false })
       .range(from, to),
@@ -160,7 +160,7 @@ export async function fetchConversation(
   return toConversation(row, selfId, parties);
 }
 
-/** Idempotent — the RPC returns the existing thread if there is one. */
+/** Idempotent   the RPC returns the existing thread if there is one. */
 export async function openOrderConversation(db: Client, orderId: string): Promise<string> {
   const { data, error } = await db.rpc('open_order_conversation', { p_order_id: orderId });
   if (error) throw error;
@@ -169,7 +169,7 @@ export async function openOrderConversation(db: Client, orderId: string): Promis
 
 /**
  * Pre-order door: opens (or returns) the caller's thread with the vendor about
- * a listing. Idempotent per (listing, caller) rather than per listing — a
+ * a listing. Idempotent per (listing, caller) rather than per listing   a
  * listing has many interested students, so scoping by subject alone would hand
  * the caller a stranger's thread.
  */
@@ -180,7 +180,7 @@ export async function openListingConversation(db: Client, listingId: string): Pr
 }
 
 /**
- * Landlord thread for an existing booking. Idempotent per booking — two
+ * Landlord thread for an existing booking. Idempotent per booking   two
  * parties, so the subject alone identifies the thread.
  */
 export async function openBookingConversation(db: Client, bookingId: string): Promise<string> {
@@ -190,7 +190,7 @@ export async function openBookingConversation(db: Client, bookingId: string): Pr
 }
 
 /**
- * Landlord thread BEFORE any booking exists — "is this room still available".
+ * Landlord thread BEFORE any booking exists   "is this room still available".
  * Idempotent per (hostel, caller), not per hostel: many students enquire about
  * the same property, and a subject-only lookup would hand the caller a
  * stranger's thread.
@@ -305,7 +305,7 @@ export async function markConversationRead(db: Client, conversationId: string, s
   if (error) throw error;
 }
 
-/** Soft delete — "this message was deleted" needs the row to survive. */
+/** Soft delete   "this message was deleted" needs the row to survive. */
 export async function deleteMessage(db: Client, messageId: string) {
   const { error } = await db
     .from('messages')
@@ -397,7 +397,7 @@ export async function uploadAttachment(
 /**
  * Signed URL for a private attachment.
  *
- * The bucket is private, so there is no public URL to construct — `getPublicUrl`
+ * The bucket is private, so there is no public URL to construct   `getPublicUrl`
  * would return a link that 400s. Signed URLs expire, which is the point: a link
  * copied out of the app stops working, rather than becoming a permanent
  * unauthenticated handle on someone's voice note.
@@ -414,7 +414,7 @@ export async function getAttachmentUrl(
   return data?.signedUrl ?? null;
 }
 
-/** Batch variant — one round trip for a whole thread's media. */
+/** Batch variant   one round trip for a whole thread's media. */
 export async function getAttachmentUrls(
   db: Client,
   paths: string[],

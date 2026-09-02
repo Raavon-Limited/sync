@@ -2,7 +2,7 @@
  * ROUTE: /hostels/[slug]
  * ACCESS: public to browse; signing in is required to book or message.
  * PURPOSE: Hostel detail + booking flow. Gallery, amenities, rooms, and the two
- *          actions that matter — request a room, or ask the landlord first.
+ *          actions that matter   request a room, or ask the landlord first.
  *
  * The shell stays a server component so metadata renders on the server; the
  * detail itself is a client island reading hostels + hostel_availability.
@@ -19,7 +19,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const hostel = await fetchHostelBySlug(await createClient(), slug);
-  return { title: hostel ? `${hostel.name} — ${hostel.area}` : 'Hostel' };
+  return { title: hostel ? `${hostel.name}   ${hostel.area}` : 'Hostel' };
 }
 
 export default async function Page({ params }: Props) {

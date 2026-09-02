@@ -208,12 +208,12 @@ function NotHereYet({ campuses, typed }: { campuses: Campus[]; typed?: string })
         {where ? (
           <>
             We&rsquo;re live at <strong className="text-content">{where}</strong> for now.
-            Create your account anyway — we&rsquo;ll let you know the moment we reach your
+            Create your account anyway   we&rsquo;ll let you know the moment we reach your
             campus, and signups like yours are how we choose where to open next.
           </>
         ) : (
           <>
-            Create your account anyway — we&rsquo;ll let you know the moment we reach your
+            Create your account anyway   we&rsquo;ll let you know the moment we reach your
             campus.
           </>
         )}

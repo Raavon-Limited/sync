@@ -60,7 +60,7 @@ import { CampusInput } from '@/components/forms/campus-input';
  *   Somebody arriving to sign up as a content creator should find out here,
  *   in one glance, rather than picking the nearest wrong thing and becoming a
  *   support ticket. Showing the shape of the platform is also how people learn
- *   it is coming — a role that only appears the day it ships is a role nobody
+ *   it is coming   a role that only appears the day it ships is a role nobody
  *   was waiting for.
  *
  *   `id` is null for those. It cannot be a real role id: SignupInput['role']
@@ -75,7 +75,7 @@ const ROLES: RoleCard[] = [
   { id: 'student', label: "I'm a student", desc: 'Find hostels, food & services' },
   { id: 'vendor', label: 'I sell or rent', desc: 'Rooms, food, services & more' },
   // A rider answers nothing else here. Vehicle, plate and documents belong to
-  // the onboarding they meet on their own dashboard — asking for a plate number
+  // the onboarding they meet on their own dashboard   asking for a plate number
   // beside a password field is how a signup form stops being a signup form.
   { id: 'rider', label: 'I deliver', desc: 'Take delivery jobs on your campus' },
   {
@@ -220,7 +220,7 @@ export function SignupForm({
       if (res.alreadyRegistered) {
         /*
          * Auth is keyed on email, so a second signup with the same address can
-         * never succeed — and the old message ("account exists, please log in")
+         * never succeed   and the old message ("account exists, please log in")
          * read as a refusal when the thing the person wants is genuinely
          * possible. You do not make a second account to sell; you add a
          * business account to the one you have, from the account menu.
@@ -254,14 +254,14 @@ export function SignupForm({
        * would drop a new rider straight onto a 403. They land on their own
        * dashboard, which asks for the rest when they get there.
        *
-       * A STUDENT ON A PHONE LANDS ON /around, the same as signing in — see
+       * A STUDENT ON A PHONE LANDS ON /around, the same as signing in   see
        * destFor in the login form. Home on a phone is the feed, and a brand new
        * account has nothing on its dashboard to look at yet, which makes it the
        * worst possible first screen.
        *
        * BUSINESS AND RIDER ROLES ARE NOT REROUTED, on any surface. Onboarding
        * and the rider's own setup are not preferences, they are the work that
-       * has to happen before the account can do anything — sending them to a
+       * has to happen before the account can do anything   sending them to a
        * feed first would be hiding the one screen they need.
        */
       const home =
@@ -299,7 +299,7 @@ export function SignupForm({
           Somebody who typed their address into the LOGIN form and ended up on
           a signup form has to be told what happened, or the redirect reads as
           the site losing their place. It names the address, because the usual
-          cause is a typo or the wrong one of two mailboxes — and offers the way
+          cause is a typo or the wrong one of two mailboxes   and offers the way
           back for exactly that case. */}
       {noAccount && (
         <div className="border-line/15 bg-surface-deep/60 flex flex-col gap-1 rounded-xl border p-4">
@@ -364,7 +364,7 @@ export function SignupForm({
                  * A role that is not built yet is rendered as a DISABLED
                  * button, not as a div styled to look inert. The button
                  * carries `disabled`, so the browser skips it in the tab order
-                 * and screen readers announce it as unavailable — neither of
+                 * and screen readers announce it as unavailable   neither of
                  * which a div would do, and both of which are the actual point
                  * of showing it.
                  */

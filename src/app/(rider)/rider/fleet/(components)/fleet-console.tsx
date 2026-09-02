@@ -159,7 +159,7 @@ export function FleetConsole({ fleet }: { fleet: Fleet }) {
                     const warning =
                       r.active > 0
                         ? `${r.name} is carrying ${r.active} delivery${r.active === 1 ? '' : 'ies'} right now. ` +
-                          'Releasing them does not cancel those — they finish the jobs they hold.\n\nRelease anyway?'
+                          'Releasing them does not cancel those   they finish the jobs they hold.\n\nRelease anyway?'
                         : `Release ${r.name} from ${fleet.name}? They become an independent rider and keep their history.`;
                     if (window.confirm(warning)) run(() => setRiderCompany(r.id, null));
                   }}

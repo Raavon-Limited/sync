@@ -8,12 +8,12 @@
  *   /onboarding                 the first run, straight after signup: a fresh
  *                               account with no dashboard worth showing yet.
  *   <VerifyNowSheet>            "Verify Now" from a dashboard someone is
- *                               already using — a side panel over their own
+ *                               already using   a side panel over their own
  *                               screen, so the context they came from stays
  *                               behind it.
  *
  *   Both are the same five steps against the same schema and the same RPCs.
- *   The alternative — a second, sheet-shaped copy of this form — is how the
+ *   The alternative   a second, sheet-shaped copy of this form   is how the
  *   two ended up disagreeing about what verification asks for the last time
  *   this flow was rebuilt.
  *
@@ -104,7 +104,7 @@ export interface OnboardingWizardProps {
    * the chosen category belongs to.
    *
    * Supplied by the sheet, which has to close ITSELF before anything
-   * navigates — a Radix dialog left open across a route change keeps the
+   * navigates   a Radix dialog left open across a route change keeps the
    * scroll lock and the aria-hidden on the page behind it, so the dashboard
    * they land on is inert and looks frozen. Omitted on the route, where the
    * wizard is the whole page and navigating away is the only exit.
@@ -114,7 +114,7 @@ export interface OnboardingWizardProps {
 
 export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: OnboardingWizardProps) {
   const router = useRouter();
-  // Empty when nothing has been claimed yet — a placeholder like
+  // Empty when nothing has been claimed yet   a placeholder like
   // "Unnamed business 21e446ce" is the system's own filler and must never be
   // shown as though the person typed it.
   const claimedName = claimedBusinessName(initial.businessName);
@@ -126,7 +126,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   const [step, setStep] = useState(0);
   // Every requirement for this kind of account, keyed by requirement. Seeded
   // from 'vendor' because vendor and landlord are asked for the same four
-  // things — `requirementsFor` is still what decides at validation and upload,
+  // things   `requirementsFor` is still what decides at validation and upload,
   // so a future divergence is picked up there rather than frozen in here.
   const [docState, setDocState] = useState<DocumentState>(() => emptyDocumentState('vendor'));
   const [docError, setDocError] = useState<string | null>(null);
@@ -184,8 +184,8 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   /**
    * What the documents step will accept before it lets you past.
    *
-   * Uploading is OPTIONAL — the copy says so and a business can add documents
-   * later — but a HALF-uploaded document is not the same as none. Picking
+   * Uploading is OPTIONAL   the copy says so and a business can add documents
+   * later   but a HALF-uploaded document is not the same as none. Picking
    * "Driver's licence" and attaching only the front produces a review that
    * cannot be completed and a vendor who thinks they are done.
    */
@@ -230,7 +230,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
       } = await supabase.auth.getUser();
       if (!user) {
         setUploadError(
-          'Your session has expired. Sign in again and retry — nothing was submitted.',
+          'Your session has expired. Sign in again and retry   nothing was submitted.',
         );
         setStep(3);
         return;
@@ -245,7 +245,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
         const path = `${user.id}/${item.docType}-${Date.now()}-${i}-${safe}`;
 
         // `verification-docs`, which is the bucket that EXISTS. This read
-        // `vendor-verification` — a name nothing ever created — so every upload
+        // `vendor-verification`   a name nothing ever created   so every upload
         // failed, and because the failure was swallowed the wizard went on to
         // submit with an empty document list. The review step said "4 file(s)"
         // while the reviewer got "0 of 0 documents", and once submit_verification
@@ -298,7 +298,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
   }
 
   const v = getValues();
-  const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? '—';
+  const categoryLabel = CATEGORY_OPTIONS.find((o) => o.value === category)?.label ?? ' ';
 
   // Which requirement set applies. Landlords and vendors are asked for the same
   // four today; this is read live so that stops being an assumption the moment
@@ -341,7 +341,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
         }}
       />
       {/* Step indicator. shrink-0 in a panel so it stays put while the fields
-          under it scroll — losing "which of five steps am I on" is the first
+          under it scroll   losing "which of five steps am I on" is the first
           thing a scrolling wizard costs you. */}
       <ol className={cn('mb-8 flex items-center', layout === 'panel' && 'shrink-0')}>
         {STEPS.map((label, i) => (
@@ -424,7 +424,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                   id="businessName"
                   placeholder="Mama Put Tanke"
                   readOnly={nameLocked}
-                  // Still registered and still submitted — the server expects
+                  // Still registered and still submitted   the server expects
                   // the field and re-claiming the same name is a no-op by
                   // design. `disabled` would drop it from the payload and turn
                   // a frozen name into a missing one.
@@ -571,7 +571,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
                 <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                   <dt className="text-content-muted">{k}</dt>
                   <dd className="text-content max-w-[60%] truncate text-right font-medium">
-                    {val || '—'}
+                    {val || ' '}
                   </dd>
                 </div>
               ))}
@@ -594,7 +594,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
               <Loader2 className="text-accent-fg size-4 shrink-0 animate-spin" aria-hidden="true" />
               <span className="text-content min-w-0 flex-1 truncate text-sm">
                 {progress.done < progress.total
-                  ? `Uploading ${progress.done + 1} of ${progress.total} — ${progress.label}`
+                  ? `Uploading ${progress.done + 1} of ${progress.total}   ${progress.label}`
                   : progress.label}
               </span>
             </div>
@@ -610,7 +610,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
         )}
 
         {/* A failed upload stops the submission outright, so this is the whole
-            explanation of why nothing happened — including which file. */}
+            explanation of why nothing happened   including which file. */}
         {uploadError && (
           <p className="border-coral/40 bg-coral/10 text-coral mt-2 rounded-xl border px-3 py-3 text-sm">
             {uploadError}
@@ -623,7 +623,7 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
             hide them.
 
             It sits OUTSIDE the scroll box but INSIDE the form, so the submit
-            button still belongs to the form it submits — hoisting it to the
+            button still belongs to the form it submits   hoisting it to the
             sheet would mean wiring it back with a `form=` attribute for no
             gain.
 

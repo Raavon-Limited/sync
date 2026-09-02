@@ -1,13 +1,13 @@
 /**
  * Editorial mutations. Staff only, service-role client, role re-checked per
- * action — the same shape as `src/modules/admin/actions.ts`.
+ * action   the same shape as `src/modules/admin/actions.ts`.
  *
  * WHAT MAPS ONTO WHAT
  *   publish   status 'published', published_at = now
  *   schedule  status 'published', published_at = a future time. There is no
  *             'scheduled' value in the table's check constraint; the future
  *             timestamp IS the schedule. Migration 20260828110000 taught the
- *             public read policy to respect it — before that, a scheduled
+ *             public read policy to respect it   before that, a scheduled
  *             article was readable the moment it was saved.
  *   draft     status 'draft', published_at cleared
  *   archive   status 'archived'
@@ -189,7 +189,7 @@ export async function purgeArticle(id: string) {
   const db = createAdminClient();
 
   // Refuses anything that has ever been published, whatever the caller asked
-  // for — the guard belongs next to the delete, not in the UI that calls it.
+  // for   the guard belongs next to the delete, not in the UI that calls it.
   const { data: row, error: readErr } = await db
     .from('articles')
     .select('published_at, status')

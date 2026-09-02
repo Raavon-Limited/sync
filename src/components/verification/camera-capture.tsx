@@ -10,7 +10,7 @@
  *   first thing that actually honours it.
  *
  * IT STILL RAISES THE BAR RATHER THAN CLOSING THE DOOR
- *   A browser cannot prove an image came from a live camera — a determined
+ *   A browser cannot prove an image came from a live camera   a determined
  *   person can post a saved file straight at the endpoint, or point the lens at
  *   a printed photo. What this stops is the ordinary case: quietly picking
  *   somebody else's picture out of a gallery. Real liveness (depth, motion,
@@ -20,7 +20,7 @@
  * THE STREAM IS STOPPED ON EVERY EXIT PATH
  *   Cancel, capture, unmount, and the error path. A MediaStream left running
  *   holds the camera open with the indicator light on, on somebody's laptop,
- *   after they have moved on — which is both alarming and a bug people report
+ *   after they have moved on   which is both alarming and a bug people report
  *   as spyware.
  *
  * NO CAMERA IS A FALLBACK, NOT A DEAD END
@@ -51,7 +51,7 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   // Held in a ref so `start` needs no dependency on it. Callers pass an inline
   // function, which as a dependency would re-request the camera on every render
-  // of the parent — a permission prompt that reappears while you are looking at
+  // of the parent   a permission prompt that reappears while you are looking at
   // it.
   const onUnavailableRef = useRef(onUnavailable);
   const [ready, setReady] = useState(false);
@@ -71,7 +71,7 @@ export function CameraCapture({
 
   /**
    * Open the camera and attach it to the <video>. Called on mount and again
-   * after "Take another" — the alternative, reloading the page to get a fresh
+   * after "Take another"   the alternative, reloading the page to get a fresh
    * stream, would throw away every other answer on the form.
    *
    * `cancelled` lets the caller abandon a request that is still sitting on the
@@ -106,7 +106,7 @@ export function CameraCapture({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {
-          // Autoplay refusal is not fatal — the stream is attached and the
+          // Autoplay refusal is not fatal   the stream is attached and the
           // frame still renders once the element is visible.
         });
       }
@@ -167,7 +167,7 @@ export function CameraCapture({
     setShot(null);
     setReady(false);
     // The stream was stopped when the shot was taken, so this opens a fresh
-    // one. Never `location.reload()` — the camera sits inside a half-filled
+    // one. Never `location.reload()`   the camera sits inside a half-filled
     // application form.
     void start(() => false);
   }

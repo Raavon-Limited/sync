@@ -1,14 +1,14 @@
 /**
  * What is happening across campus, area by area.
  *
- * Discovery elsewhere is location-first — students see the stores near them.
+ * Discovery elsewhere is location-first   students see the stores near them.
  * This is the other half: somewhere to look before walking to Tanke to find
  * everything shut, or to notice that the new place in Gaa Akanbi exists.
  *
  * EVERY FIGURE HERE IS AN AGGREGATE
  *   No student, order or amount appears, and none is available to appear:
  *   `campus_pulse` computes this on read and returns buckets. Busyness is
- *   "steady", never "17 orders" — an exact count is a vendor's takings.
+ *   "steady", never "17 orders"   an exact count is a vendor's takings.
  *
  * SUPPRESSION IS SHOWN, NOT HIDDEN
  *   An area with orders but too few distinct customers to publish a trend says

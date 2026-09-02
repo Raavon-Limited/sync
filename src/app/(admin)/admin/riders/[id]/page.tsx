@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/riders/[id]
  * ACCESS: admin / super_admin only, enforced here AND in every server action.
- * PURPOSE: One rider — their record, their documents, and the two decisions.
+ * PURPOSE: One rider   their record, their documents, and the two decisions.
  *
  * KEYED ON THE PROFILE ID, NOT A SLUG. rider_profiles has no slug: it is keyed
  * on profiles.id, because a rider is a person rather than a business with a
@@ -17,7 +17,7 @@ import type { Row } from '@/lib/supabase/row';
 import { RiderDetail } from '../(components)/rider-detail';
 import type { AdminRider } from '../(components)/riders-console';
 
-export const metadata: Metadata = { title: 'Rider — Admin' };
+export const metadata: Metadata = { title: 'Rider   Admin' };
 
 const ACTIVE = new Set(['assigned', 'picked_up', 'delivering']);
 

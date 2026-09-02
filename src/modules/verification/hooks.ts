@@ -57,7 +57,7 @@ export function useDeleteDocument() {
  * The caller's card code, for building their QR.
  *
  * Long `staleTime` because it only ever changes when the vendor deliberately
- * reissues — and short-polling a capability is a capability in more places.
+ * reissues   and short-polling a capability is a capability in more places.
  */
 export function useMyVerificationCode() {
   const { userId } = useSession();

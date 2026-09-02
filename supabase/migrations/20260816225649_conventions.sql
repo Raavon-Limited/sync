@@ -5,13 +5,13 @@
 -- schema, one shared updated_at trigger, the RLS helper functions, and the ops
 -- tables. Nothing here is a domain table.
 --
--- Everything after this migration depends on `private` existing — the ledger,
+-- Everything after this migration depends on `private` existing   the ledger,
 -- the messaging membership helper, the webhook log. It must stay first.
 --
 -- ORDER NOTE
 --   The blueprint says "decide these once, before any domain table exists".
 --   That ship sailed: 0006 created fourteen domain tables first. This migration
---   adapts rather than dictates — it attaches the shared trigger to tables that
+--   adapts rather than dictates   it attaches the shared trigger to tables that
 --   already exist, and does NOT convert their check constraints to enums.
 --
 -- ENUMS ARE DELIBERATELY NOT CREATED
@@ -41,8 +41,8 @@
 -- through the Data API at any privilege level.
 --
 -- Two separate settings control this and both must stay clear of `private`:
---   • supabase/config.toml → [api] schemas — local dev only.
---   • Dashboard → Project Settings → API → Exposed schemas — governs the live
+--   • supabase/config.toml → [api] schemas   local dev only.
+--   • Dashboard → Project Settings → API → Exposed schemas   governs the live
 --     project. config.toml does NOT push to it.
 -- The grants below mean that even if `private` were exposed by mistake, anon
 -- and authenticated would still hold nothing in it.
@@ -113,8 +113,8 @@ end $$;
 -- `set search_path = ''` is mandatory on anything a policy calls: without it a
 -- caller-controlled search_path can shadow the objects the function resolves.
 --
--- auth_role() reads the app_role JWT claim, which does not exist yet — the
--- custom access token hook is still to be built (§15) — so it returns 'anon'
+-- auth_role() reads the app_role JWT claim, which does not exist yet   the
+-- custom access token hook is still to be built (§15)   so it returns 'anon'
 -- for everyone today. That is the safe direction to fail. The identity_roles
 -- migration replaces is_admin() with a version that also consults profiles,
 -- which is what actually works before the hook ships.
@@ -159,7 +159,7 @@ create index if not exists webhook_events_unprocessed_idx
 
 -- ── 5. private.idempotency_keys ─────────────────────────────────────────────
 -- Same key + same request_hash replays the stored response; same key +
--- different hash is a 409. Guards client-initiated POSTs — checkout, top-up,
+-- different hash is a 409. Guards client-initiated POSTs   checkout, top-up,
 -- payout request.
 create table if not exists private.idempotency_keys (
   key           text        primary key,
@@ -205,7 +205,7 @@ revoke update, delete, truncate on private.audit_log
 -- Per-campus module launches, and the kill switch when a payment integration
 -- misbehaves. Readable by everyone: a flag gates public pages too, so an
 -- anonymous request must be able to resolve it. Flag KEYS are therefore not
--- secret — do not name one after an unannounced feature.
+-- secret   do not name one after an unannounced feature.
 create table if not exists public.feature_flags (
   key         text primary key,
   enabled     boolean     not null default false,
@@ -217,7 +217,7 @@ create table if not exists public.feature_flags (
 
 -- ── 8. public.app_settings ──────────────────────────────────────────────────
 -- Service fee, minimum payout, escrow windows, support email. Config ops can
--- change without a deploy. NOT publicly readable — some values are commercial
+-- change without a deploy. NOT publicly readable   some values are commercial
 -- terms. The server reads it with the service-role client.
 create table if not exists public.app_settings (
   key         text primary key,

@@ -1,7 +1,7 @@
 /**
  * ROUTE: /food/orders/[orderId]/track
  * ACCESS: authenticated student (RLS scopes the order to them)
- * PURPOSE: Live tracking for one order — status, rider, items and history.
+ * PURPOSE: Live tracking for one order   status, rider, items and history.
  */
 import type { Metadata } from 'next';
 import { TrackPanel } from './(components)/track-panel';

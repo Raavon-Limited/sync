@@ -16,7 +16,7 @@
  *   - **"28 min delivery."** No ETA model exists. `orders.eta_minutes` is
  *     nullable and nothing computes it.
  *
- * The two carousels are still hardcoded — they rotate bundled images rather
+ * The two carousels are still hardcoded   they rotate bundled images rather
  * than reading a table, so converting them is an asset decision, not a query.
  */
 import 'server-only';
@@ -124,7 +124,7 @@ export async function getAroundData(userId?: string): Promise<AroundData> {
   );
 
   // The laundry card needs the vendor's name, and `services.vendor_id` points
-  // at vendor_profiles — fetched separately rather than embedded, because
+  // at vendor_profiles   fetched separately rather than embedded, because
   // embeds on this schema have failed silently more than once.
   let laundryCard: AroundData['laundry'] = null;
   if (laundry) {

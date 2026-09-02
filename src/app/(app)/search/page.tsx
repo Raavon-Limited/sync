@@ -25,7 +25,7 @@ function toListing(h: Hostel): Listing {
     id: h.id,
     slug: h.slug,
     name: h.name,
-    distance: h.distanceMinutes ? `${h.distanceMinutes} min` : "—",
+    distance: h.distanceMinutes ? `${h.distanceMinutes} min` : " ",
     area: h.area,
     price: Math.round(h.pricePerSessionKobo / 100 / 1000),
     // No rating column on `hostels` and no reviews aggregate yet.
@@ -112,7 +112,7 @@ function SearchPageInner() {
       setFilters(prev => ({ ...prev, roomTypes: prev.roomTypes.filter(r => r !== chip) }));
       return;
     }
-    // Search bar chips — clear both submitted and typed query
+    // Search bar chips   clear both submitted and typed query
     if (chip === submitted.area) {
       setSubmitted(prev => ({ ...prev, area: "" }));
       setQuery(prev => ({ ...prev, area: "" }));
@@ -127,7 +127,7 @@ function SearchPageInner() {
     }
   }
 
-  // ── Clear everything — inputs + sidebar filters ───────────────────────────
+  // ── Clear everything   inputs + sidebar filters ───────────────────────────
   function handleClearAll() {
     setQuery(EMPTY_QUERY);
     setSubmitted(EMPTY_QUERY);
@@ -241,7 +241,7 @@ function SearchPageInner() {
                 ))}
               </div>
             ) : results.length === 0 ? (
-              /* Reached only after loading — otherwise "no results, reset your
+              /* Reached only after loading   otherwise "no results, reset your
                  filters" would appear while the first fetch is still in flight. */
               <EmptyState onReset={handleClearAll} />
             ) : view === "List" ? (

@@ -10,7 +10,7 @@
  *   bank.
  *
  * THIS IS A HINT, NOT A DETERMINATION
- *   Nothing here proves which bank an account belongs to, and it never can —
+ *   Nothing here proves which bank an account belongs to, and it never can  
  *   several providers can issue the same phone-derived number, and a legacy
  *   bank could coincidentally issue a NUBAN that looks like a phone number.
  *   The only authority is Paystack's resolve endpoint, which returns the
@@ -27,7 +27,7 @@ export interface BankOption {
 }
 
 /**
- * Nigerian mobile network prefixes, with the leading 0 dropped — which is the
+ * Nigerian mobile network prefixes, with the leading 0 dropped   which is the
  * form an account number takes.
  *
  * Kept as data rather than a regex range because the ranges are not
@@ -50,8 +50,8 @@ const MOBILE_PREFIXES = new Set([
  * Providers that issue the customer's phone number as their account number.
  *
  * Matched on slug fragments because Paystack's display names carry suffixes
- * that change — "Moniepoint MFB", "OPay Digital Services Limited (OPay)",
- * "PalmPay Limited" — and pinning the exact string would break the day one of
+ * that change   "Moniepoint MFB", "OPay Digital Services Limited (OPay)",
+ * "PalmPay Limited"   and pinning the exact string would break the day one of
  * them is renamed.
  */
 const PHONE_NUMBER_BANKS = ['opay', 'palmpay', 'moniepoint', 'paga', 'kuda'];
@@ -63,7 +63,7 @@ export interface Suggestion {
   reason: string | null;
 }
 
-/** Digits only — people paste numbers with spaces and dashes in them. */
+/** Digits only   people paste numbers with spaces and dashes in them. */
 export function normaliseAccountNumber(input: string): string {
   return input.replace(/\D/g, '').slice(0, 10);
 }

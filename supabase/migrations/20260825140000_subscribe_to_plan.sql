@@ -22,7 +22,7 @@
 --   product working. A renewal is a new period and therefore a new reference.
 --
 -- THE FREE PLAN IS NOT A PAYMENT
---   Downgrading to Starter must not post a zero-kobo transaction —
+--   Downgrading to Starter must not post a zero-kobo transaction  
 --   post_transaction requires balanced entries and a zero entry is noise in a
 --   statement. Free plans switch the subscription and write no ledger row.
 --

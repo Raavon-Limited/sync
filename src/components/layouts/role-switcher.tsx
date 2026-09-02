@@ -2,8 +2,8 @@
  * Switching between the hats one account holds.
  *
  * `profiles.roles` is what you HOLD; `profiles.role` is what you are WEARING.
- * This flips the second to one of the first, and the whole permission system —
- * the proxy gate, `current_app_role()`, every RLS policy — reads the same
+ * This flips the second to one of the first, and the whole permission system  
+ * the proxy gate, `current_app_role()`, every RLS policy   reads the same
  * column it always did.
  *
  * WHY IT NAVIGATES AFTERWARDS

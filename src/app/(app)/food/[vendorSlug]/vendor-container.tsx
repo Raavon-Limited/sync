@@ -2,7 +2,7 @@
  * Real-data container for the food storefront.
  *
  * WHAT CHANGED
- *   The page used to call `getVendorBySlug()` from `@/lib/vendor` — a hardcoded
+ *   The page used to call `getVendorBySlug()` from `@/lib/vendor`   a hardcoded
  *   array with invented ids. Nothing a student saw here existed in the
  *   database, which is also why the "Message vendor" button had nowhere to
  *   mount: there was no real listing id to talk about.
@@ -35,14 +35,14 @@ function toClockLabel(t?: string | null): string | null {
 const FALLBACK_HOURS = '7am – 10pm';
 
 export function VendorContainer({ slug }: { slug: string }) {
-  // The slug names a BRANCH. A brand slug still resolves — to its primary
-  // branch — so older links keep working, but the menu below is one location's,
+  // The slug names a BRANCH. A brand slug still resolves   to its primary
+  // branch   so older links keep working, but the menu below is one location's,
   // never the union of every branch the brand owns.
   const { data: resolved, isLoading: resolving, isError: resolveError } = useResolvedStorefront(slug);
   const { data: brand } = useFoodVendorById(resolved?.vendorId);
   const { data: listings = [], isLoading: menuLoading } = useStorefrontMenu(resolved?.storefrontId);
 
-  // Group by the listing's own category — the storefront's section headings are
+  // Group by the listing's own category   the storefront's section headings are
   // the vendor's taxonomy, not a fixed list we impose on them.
   const menu = useMemo(() => {
     const sections = new Map<string, FoodListing[]>();
@@ -121,17 +121,17 @@ export function VendorContainer({ slug }: { slug: string }) {
         // the brand's. Passing the brand would merge two branches' carts.
         vendorId={resolved.storefrontId}
         vendorName={
-          // "Jamaal's Kitchen — KWASU Gate". A student needs to know which
+          // "Jamaal's Kitchen   KWASU Gate". A student needs to know which
           // location they are ordering from.
           resolved.branchName && listings.length
-            ? `${vendor.businessName} — ${resolved.branchName}`
+            ? `${vendor.businessName}   ${resolved.branchName}`
             : vendor.businessName
         }
         tagline={vendor.tagline ?? ''}
         location={vendor.area ?? 'Location not set'}
         rating={vendor.ratingAvg}
         reviews={vendor.ratingCount}
-        // Not columns on vendor_profiles — shown as flat defaults rather than
+        // Not columns on vendor_profiles   shown as flat defaults rather than
         // invented per-vendor values.
         deliveryTime="20 - 30 min"
         deliveryFee="₦300"

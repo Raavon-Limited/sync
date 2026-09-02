@@ -7,7 +7,7 @@ export default cn;
 
 /**
  * The tag that marks an article featured. Kept here so the reader, the writer
- * and the category derivation all agree on the spelling — a typo in any one of
+ * and the category derivation all agree on the spelling   a typo in any one of
  * them makes "featured" silently stop working.
  */
 export const FEATURED_TAG = 'featured';

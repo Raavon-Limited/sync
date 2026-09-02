@@ -9,13 +9,13 @@
 --   participant", which is a join, and joins in RLS policies are where
 --   messaging performance goes to die: the participant lookup runs per message
 --   row. `conversation_participants` is therefore indexed on (user_id,
---   conversation_id) — the exact shape the policy predicate probes — and the
+--   conversation_id)   the exact shape the policy predicate probes   and the
 --   messages policy checks membership of the CONVERSATION, once, rather than
 --   re-deriving it per message.
 --
 -- RECURSION HAZARD
 --   The obvious policy on conversation_participants is "you may read rows for
---   conversations you participate in" — which queries conversation_participants
+--   conversations you participate in"   which queries conversation_participants
 --   from inside a policy on conversation_participants, and recurses forever.
 --   `private.is_conversation_member()` is SECURITY DEFINER precisely to break
 --   that cycle: it bypasses RLS on the membership table, so the policy can call
@@ -111,7 +111,7 @@ create table if not exists public.message_attachments (
 create index if not exists message_attachments_message_idx
   on public.message_attachments (message_id);
 
--- ── 4. Membership helper — breaks the RLS recursion ─────────────────────────
+-- ── 4. Membership helper   breaks the RLS recursion ─────────────────────────
 create or replace function private.is_conversation_member(p_conversation uuid, p_user uuid)
 returns boolean
 language sql
@@ -180,7 +180,7 @@ create trigger messages_guard
 
 -- ── 6. Notifications ────────────────────────────────────────────────────────
 -- Mirrors StudentNotification in src/mock/student.ts. `icon` is presentation
--- and is deliberately NOT stored — the client maps `kind` to a Lucide icon, so
+-- and is deliberately NOT stored   the client maps `kind` to a Lucide icon, so
 -- rebranding does not mean a data migration.
 create table if not exists public.notifications (
   id         uuid primary key default gen_random_uuid(),
@@ -243,7 +243,7 @@ create policy "conversation_participants_member" on public.conversation_particip
   for select to authenticated
   using (private.is_conversation_member(conversation_id, (select auth.uid())));
 
--- Only your own row — this is how "mark thread read" and "mute" work.
+-- Only your own row   this is how "mark thread read" and "mute" work.
 drop policy if exists "conversation_participants_update_self" on public.conversation_participants;
 create policy "conversation_participants_update_self" on public.conversation_participants
   for update to authenticated
@@ -350,7 +350,7 @@ begin
     end if;
     raise notice 'realtime enabled for messages, notifications, conversations';
   else
-    raise warning 'publication supabase_realtime not found — enable realtime in the dashboard';
+    raise warning 'publication supabase_realtime not found   enable realtime in the dashboard';
   end if;
 end $$;
 
@@ -362,7 +362,7 @@ begin
      where table_schema = 'public' and table_name = 'notifications'
        and grantee = 'authenticated' and privilege_type = 'INSERT'
   ) then
-    raise exception 'clients can insert notifications — they could forge payment alerts';
+    raise exception 'clients can insert notifications   they could forge payment alerts';
   end if;
 
   if not exists (

@@ -8,7 +8,7 @@
 --   `verification_status` is guarded on both tables by
 --   `current_user in ('authenticated','anon')`. That reads like "block the
 --   client", and it is not what it does. As 20260830100000 documents at
---   length, `current_user` is `authenticated` for EVERY PostgREST request —
+--   length, `current_user` is `authenticated` for EVERY PostgREST request  
 --   service-role calls and SECURITY DEFINER RPCs included. So the guard was
 --   blocking everybody:
 --
@@ -21,7 +21,7 @@
 --   was frozen against the world, including the people whose job it is.
 --
 -- THE FIX IS THE ONE 20260830100000 ALREADY ESTABLISHED
---   Stop asking WHO is calling — that question has no reliable answer here.
+--   Stop asking WHO is calling   that question has no reliable answer here.
 --   Ask WHAT IS BEING DONE. A transaction-local GUC is raised by the two
 --   functions allowed to move this column, and the guard honours only that.
 --
@@ -33,7 +33,7 @@
 -- TWO DOORS, DELIBERATELY DIFFERENT SIZES
 --   `submit_verification()`   the vendor. May only move
 --                             unverified|rejected -> pending. It is physically
---                             incapable of writing 'verified' — the value is
+--                             incapable of writing 'verified'   the value is
 --                             not a parameter, it is a literal in the body.
 --   `set_verification_status()` staff only, gated on is_staff(). The ONLY path
 --                             to 'verified', and every call is written to the
@@ -46,7 +46,7 @@
 -- verification is deliberately not automatic on the last document being
 -- approved, because a human decides a business is real. That stands. The one
 -- rail added here is that 'verified' is refused when NOTHING has been
--- approved — a reviewer may judge, but not on an empty folder.
+-- approved   a reviewer may judge, but not on an empty folder.
 --
 -- ROLLBACK
 --   drop function if exists public.set_verification_status(uuid, text);
@@ -83,7 +83,7 @@ create trigger vendor_profiles_guard
   for each row execute function public.guard_vendor_profile_cols();
 
 -- Same exception on `profiles`, so the mirror trigger can land. Everything
--- else here is 20260830100000 unchanged — the roles/role rules are load
+-- else here is 20260830100000 unchanged   the roles/role rules are load
 -- bearing and are restated rather than rewritten.
 create or replace function public.guard_profile_privileged_cols()
 returns trigger language plpgsql as $$
@@ -97,7 +97,7 @@ begin
     end if;
 
     -- `role` is which held privilege is active. Moving it is not a grant, so
-    -- it is allowed — but only within the set above, which by this point is
+    -- it is allowed   but only within the set above, which by this point is
     -- either the old set or a legitimately granted one.
     if not (new.role = any (coalesce(new.roles, '{}'))) then
       new.role := old.role;
@@ -173,7 +173,7 @@ revoke all on function public.submit_verification() from public, anon;
 grant execute on function public.submit_verification() to authenticated, service_role;
 
 comment on function public.submit_verification() is
-  'Put the caller''s business into the review queue. Takes no arguments and writes the literal ''pending'' — it cannot reach ''verified'' by any input.';
+  'Put the caller''s business into the review queue. Takes no arguments and writes the literal ''pending''   it cannot reach ''verified'' by any input.';
 
 -- ── 3. The staff door: the only way to 'verified' ───────────────────────────
 create or replace function public.set_verification_status(
@@ -195,7 +195,7 @@ begin
   end if;
 
   -- THE CHECK THAT MATTERS. is_staff() reads current_app_role(), which reads
-  -- the JWT claim or profiles.role — and profiles.role is itself guarded, so a
+  -- the JWT claim or profiles.role   and profiles.role is itself guarded, so a
   -- client cannot forge its way in here.
   if not public.is_staff() then
     raise exception 'Only Sync staff can decide a verification' using errcode = '42501';
@@ -215,7 +215,7 @@ begin
   end if;
 
   -- A reviewer may judge, but not on an empty folder. This does not decide FOR
-  -- them — 20260817090000 was explicit that a human makes the call and that
+  -- them   20260817090000 was explicit that a human makes the call and that
   -- approving the last document must not auto-verify. It only refuses the
   -- accident of verifying somebody who has submitted nothing at all.
   if p_status = 'verified' then

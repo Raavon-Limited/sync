@@ -39,9 +39,9 @@ export interface StudentTicket {
 }
 
 const dayLabel = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : '—';
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) : ' ';
 const timeLabel = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }) : '—';
+  iso ? new Date(iso).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }) : ' ';
 
 function naira(n: number) {
   return n === 0 ? 'Free' : `₦${n.toLocaleString('en-NG')}`;
@@ -114,7 +114,7 @@ export function EventsTicketsSummary({ basePath = '/me' }: { basePath?: string }
   const upcomingEvents: StudentEvent[] = events.slice(0, 3).map((e) => ({
     id: e.id,
     name: e.name,
-    venue: e.venue ?? '—',
+    venue: e.venue ?? ' ',
     date: dayLabel(e.startsAt),
     time: timeLabel(e.startsAt),
     status: 'upcoming',
@@ -125,7 +125,7 @@ export function EventsTicketsSummary({ basePath = '/me' }: { basePath?: string }
     eventName: t.eventName ?? 'Event',
     reference: t.reference,
     date: dayLabel(t.eventStartsAt),
-    venue: t.eventVenue ?? '—',
+    venue: t.eventVenue ?? ' ',
     type: t.tier ?? 'General',
     price: t.priceKobo / 100,
     status: t.status,

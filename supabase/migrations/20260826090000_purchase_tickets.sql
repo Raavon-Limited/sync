@@ -5,7 +5,7 @@
 -- policy and there was no purchase path. This adds one, paid from wallet like
 -- orders and subscriptions.
 --
--- MONEY GOES TO PLATFORM REVENUE, NOT THE ORGANISER — AND THAT IS A GAP
+-- MONEY GOES TO PLATFORM REVENUE, NOT THE ORGANISER   AND THAT IS A GAP
 --   `escrow_holds` can reference an order, a booking or a service request, and
 --   a check constraint requires exactly one of the three. There is no event
 --   column, so a ticket sale cannot be escrowed and released to an organiser
@@ -23,7 +23,7 @@
 --   so 'ticket_purchase' is added to the check constraint.
 --
 -- IDEMPOTENCY IS CALLER-SUPPLIED
---   Unlike a top-up, buying tickets twice is legitimate — a student may come
+--   Unlike a top-up, buying tickets twice is legitimate   a student may come
 --   back for a friend. So there is no natural key. The caller passes a
 --   reference (one uuid per attempt); replaying it returns the same tickets
 --   instead of buying more, which is what protects a double-tapped button.

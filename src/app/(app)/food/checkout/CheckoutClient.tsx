@@ -69,7 +69,7 @@ export default function CheckoutClient() {
         try {
             // checkout_cart is one transaction: it re-prices every line against
             // the live listing, creates the order, and consumes the cart. The
-            // fees shown above are display-only — the RPC returns the total
+            // fees shown above are display-only   the RPC returns the total
             // that was actually charged, which is the one that counts.
             const result = await checkout.mutateAsync({
                 cartId,
@@ -92,7 +92,7 @@ export default function CheckoutClient() {
                 await payOrder.mutateAsync(result.orderId)
             } catch (payErr) {
                 // The order exists and is unpaid. Send them to it rather than
-                // stranding them on a checkout page with an emptied cart —
+                // stranding them on a checkout page with an emptied cart  
                 // insufficient balance is the common case and is fixable.
                 const reason = payErr instanceof Error ? payErr.message : "Payment failed"
                 router.push(
@@ -121,12 +121,12 @@ export default function CheckoutClient() {
             )}
 
             {/* Orders are paid from wallet balance, so a shortfall is worth
-                showing BEFORE they tap pay — afterwards the cart is gone and
+                showing BEFORE they tap pay   afterwards the cart is gone and
                 the order is sitting unpaid. */}
             {wallet && total * 100 > wallet.balanceKobo && (
                 <p className="border-line/10 bg-panel mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
                     <span className="text-content-muted">
-                        Wallet balance ₦{(wallet.balanceKobo / 100).toLocaleString()} — you need{' '}
+                        Wallet balance ₦{(wallet.balanceKobo / 100).toLocaleString()}   you need{' '}
                         <span className="text-content font-medium">
                             ₦{(total - wallet.balanceKobo / 100).toLocaleString()}
                         </span>{' '}

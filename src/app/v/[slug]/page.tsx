@@ -1,6 +1,6 @@
 /**
  * ROUTE: /v/[code]
- * ACCESS: everyone, signed in or not — and in practice only whoever is holding
+ * ACCESS: everyone, signed in or not   and in practice only whoever is holding
  *         the card, because the code is 128 unguessable bits that appear
  *         nowhere else. See 20260901190000 for why that, rather than trying to
  *         detect a camera, is what "only reachable by scanning" means.
@@ -11,14 +11,14 @@
  *   A shop's card answers "is this business real", and the business is already
  *   public. An agent's card answers "should I open this door", it is checked
  *   by one person alone with another, and the PHOTOGRAPH is the part doing the
- *   work — a name and a tick could belong to anybody holding the card. So the
+ *   work   a name and a tick could belong to anybody holding the card. So the
  *   photo is the largest thing on the page and everything else supports it.
  *
  * THE ANSWER IS FETCHED, NEVER CACHED.
  *   `force-dynamic` and `revalidate = 0` are load-bearing. Suspending an
  *   account at 11:00 has to make the card read "suspended" at 11:00, on a URL
  *   printed on cards already in circulation. A cached page would keep vouching
- *   for somebody who has been removed — worse than no verification, because it
+ *   for somebody who has been removed   worse than no verification, because it
  *   looks like one.
  *
  * `noindex` for the same reason plus one more: this page has a person's face
@@ -165,7 +165,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             <>
               {/* What the platform actually checked. Named, so "verified" is a
                   claim with contents rather than a badge. Never the documents
-                  themselves — the answer is "we checked", not "here it is". */}
+                  themselves   the answer is "we checked", not "here it is". */}
               {result.requirements.length > 0 && (
                 <div className="border-line/10 mt-1 w-full rounded-xl border p-3 text-left">
                   <p className="text-content-muted mb-2 font-mono text-[10px] tracking-widest uppercase">
@@ -188,10 +188,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                             <span className={r.met ? 'text-content' : 'text-content-muted'}>
                               {spec?.label ?? r.label}
                               {!r.met && (
-                                <span className="text-content-muted"> — not provided</span>
+                                <span className="text-content-muted">   not provided</span>
                               )}
                             </span>
-                            {/* The documents by the names people use — NIN,
+                            {/* The documents by the names people use   NIN,
                                 CAC. It lists what SATISFIES the check rather
                                 than naming one, because a government ID can be
                                 a NIN slip, a licence or a passport and the
@@ -246,7 +246,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               is; it does not say what they were sent to do, and conflating the
               two is the failure mode this whole page exists to prevent. */}
           <p className="border-line/10 text-content-muted mt-1 border-t pt-4 text-xs">
-            A verified card confirms who this person is — not what they were sent to do. If you
+            A verified card confirms who this person is   not what they were sent to do. If you
             were not expecting a visit, check with whoever arranged it before letting anyone in.
           </p>
 

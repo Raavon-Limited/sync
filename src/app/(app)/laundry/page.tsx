@@ -3,7 +3,7 @@
  * ACCESS: public to browse; signing in is required to request.
  * PURPOSE: Browse laundry services and send a request to a vendor.
  *
- * All three service verticals share one browser — see
+ * All three service verticals share one browser   see
  * components/services/services-browser. The vertical is the only difference.
  */
 import type { Metadata } from 'next';

@@ -73,7 +73,7 @@ export function VerifyPrompt({ status, href, activity, className }: VerifyPrompt
         </p>
         <p className="text-content-muted max-w-sm text-sm">
           {awaitingReview
-            ? `We are checking your details. You will be able to start ${activity} as soon as it is approved — nothing more is needed from you.`
+            ? `We are checking your details. You will be able to start ${activity} as soon as it is approved   nothing more is needed from you.`
             : rejected
               ? 'Something in your submission did not check out. Send it again with corrected details and we will take another look.'
               : `Your account is set up. Verifying it unlocks ${activity} on Sync.`}

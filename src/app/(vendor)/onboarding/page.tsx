@@ -42,7 +42,7 @@ export default async function Page() {
           Set up your business
         </h1>
         <p className="text-content-muted mt-2 text-sm">
-          A few steps to get verified — then you can start taking orders on Sync.
+          A few steps to get verified   then you can start taking orders on Sync.
         </p>
       </div>
 

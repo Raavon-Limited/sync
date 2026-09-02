@@ -1,5 +1,5 @@
 /**
- * The store switcher — the sidebar control the whole multi-branch feature hangs
+ * The store switcher   the sidebar control the whole multi-branch feature hangs
  * off. Picks which branch the vendor is currently working; every branch-scoped
  * screen reads it from `useActiveStorefront()`.
  *

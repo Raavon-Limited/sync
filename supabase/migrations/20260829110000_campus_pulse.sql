@@ -5,7 +5,7 @@
 -- location (public.storefronts). See modules/storefronts/README.md.
 --
 -- "A log on the student page that lets them see what is happening in other
--- locations." Discovery is location-first — students see the stores near them —
+-- locations." Discovery is location-first   students see the stores near them  
 -- and this is the other half: what is going on everywhere else.
 --
 -- IT IS A READ, NOT A LOG
@@ -16,7 +16,7 @@
 --   is no row to expose because there is no row.
 --
 -- WHY NOT REUSE THE TWO LOGS THAT ALREADY EXIST
---   `public.activity_log` is a PERSONAL history keyed by user_id — it is "your"
+--   `public.activity_log` is a PERSONAL history keyed by user_id   it is "your"
 --   activity, and repurposing it as a public feed would publish exactly the
 --   thing it was scoped to hide. `private.audit_log` records actor identity and
 --   before/after images and is not readable even by the staff it describes.
@@ -26,7 +26,7 @@
 --   "1 order of pounded yam in Gaa Akanbi in the last hour" is not anonymous on
 --   a campus where you know who lives there. So:
 --     * trending is suppressed unless at least `pulse_min_cohort` DISTINCT
---       students ordered in that area in the window. Not distinct orders —
+--       students ordered in that area in the window. Not distinct orders  
 --       one student ordering five times is still one person.
 --     * busyness is published as a BUCKET, never a count. A vendor's takings
 --       are their business, and an exact number is a takings figure.

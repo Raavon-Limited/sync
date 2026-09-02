@@ -1,183 +1,167 @@
 /**
  * ROUTE: /admin/events
  * ACCESS: staff granted the `events` area.
- * PURPOSE: What is being listed on campus, and who is running it.
+ * PURPOSE: The people who run events - are they real, and what have they listed.
  *
- * EVENTS, NOT EVENT MANAGERS — FOR NOW
- *   The account type does not exist yet: `events.organizer_id` points at
- *   `profiles`, and there is no 'event manager' role for that profile to have,
- *   so an organiser today is whoever created the row. Listing the EVENTS is
- *   the honest version of this screen until the role ships; when it does, this
- *   is where the roster of organisers belongs, beside their events.
+ * IT IS AN ACCOUNTS SCREEN, NOT AN EVENTS FEED
+ *   This sits in the Accounts tab strip beside Landlords, Riders and Students,
+ *   and it answers the same question they do: is this account real and should
+ *   it be trading. The first cut listed EVENTS, which made the tab mean
+ *   something different from every tab next to it and buried the thing staff
+ *   actually decide.
  *
- * SPLIT BY WHEN, NOT BY STATUS
- *   Events have no verification status to filter on — they are content, not
- *   accounts. What staff actually need to separate is what is still to come
- *   from what has already happened, because only the first kind can still be
- *   fixed, pulled, or go wrong in public.
+ *   An organiser needs a verified profile before their events are worth
+ *   showing, which is the whole reason this is the account and not the content.
+ *   What they have listed hangs off the row as a count, because "verified, and
+ *   running four things" is the sentence a reviewer needs.
+ *
+ * THE ROLE IS NOT OPEN YET, AND THIS DOES NOT PRETEND OTHERWISE
+ *   'event_manager' shows on /signup as "Not yet", so no account holds it. The
+ *   screen is built and the empty state says exactly that rather than implying
+ *   nobody has applied. It also picks up anyone already sitting on
+ *   `events.organizer_id` - seeded rows, or anything created before the role
+ *   opens - so an organiser who exists by another route is never invisible.
  */
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { AccountTabs } from '@/components/admin/account-tabs';
+import { Badge } from '@/components/ui';
+import { STATUS_BADGE } from '@/components/admin/account-queue';
 import type { Row } from '@/lib/supabase/row';
 
-export const metadata: Metadata = { title: 'Events — Admin' };
+export const metadata: Metadata = { title: 'Event organisers - Admin' };
 
-interface AdminEvent {
+interface Organiser {
   id: string;
   name: string;
-  slug: string;
-  venue: string | null;
-  category: string | null;
-  startsAt: string;
-  organiserName: string | null;
-  upcoming: boolean;
-}
-
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString('en-NG', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  email: string;
+  verificationStatus: string;
+  /** How many they have listed, and how many of those are still to come. */
+  listed: number;
+  upcoming: number;
+  joinedAt: string;
 }
 
 /**
- * Fetching and shaping, deliberately OUTSIDE the component.
- *
- * "Is this event still to come" is a comparison against the clock, and reading
- * the clock during a render is impure — the React Compiler says so, and it is
- * right in principle even though a server component renders once per request.
- * Keeping the time-dependent work in a plain async function makes the page
- * itself a pure function of what it is handed, which is the shape every other
- * admin page here already has.
+ * Fetching and shaping, outside the component: "still to come" is a comparison
+ * against the clock, and reading the clock during a render is impure.
  */
-async function loadEvents(): Promise<AdminEvent[]> {
+async function loadOrganisers(): Promise<Organiser[]> {
   const admin = createAdminClient();
 
-  const { data: eventRows } = await admin
-    .from('events')
-    .select('id, name, slug, venue, category, starts_at, organizer_id')
-    .order('starts_at', { ascending: false });
+  const [{ data: eventRows }, { data: byRole }] = await Promise.all([
+    admin.from('events').select('organizer_id, starts_at'),
+    admin.from('profiles').select('id').eq('role', 'event_manager'),
+  ]);
 
   const events = (eventRows ?? []) as Row[];
-  if (events.length === 0) return [];
-
-  // One query for every organiser rather than one per event. `organizer_id` is
-  // nullable — a seeded event has none — so the nulls are stripped before the
-  // `.in()`, which PostgREST would otherwise answer with everything.
-  const organiserIds = [...new Set(events.map((e) => e.organizer_id).filter(Boolean))] as string[];
-  const organiserName = new Map<string, string>();
-  if (organiserIds.length) {
-    const { data: people } = await admin
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', organiserIds);
-    for (const p of (people ?? []) as Row[]) {
-      organiserName.set(p.id as string, (p.full_name as string) ?? 'No name set');
-    }
-  }
 
   const now = Date.now();
-  return events.map((e) => ({
-    id: e.id as string,
-    name: (e.name as string) ?? 'Untitled event',
-    slug: e.slug as string,
-    venue: (e.venue as string) ?? null,
-    category: (e.category as string) ?? null,
-    startsAt: e.starts_at as string,
-    organiserName: e.organizer_id ? (organiserName.get(e.organizer_id as string) ?? null) : null,
-    upcoming: new Date(e.starts_at as string).getTime() >= now,
-  }));
+  const listed = new Map<string, { total: number; upcoming: number }>();
+  for (const e of events) {
+    const id = e.organizer_id as string | null;
+    if (!id) continue;
+    const tally = listed.get(id) ?? { total: 0, upcoming: 0 };
+    tally.total++;
+    if (new Date(e.starts_at as string).getTime() >= now) tally.upcoming++;
+    listed.set(id, tally);
+  }
+
+  // The union: everyone holding the role, plus anyone who has listed an event
+  // without it. The second set is empty in a clean database, and is exactly the
+  // set that would otherwise go unreviewed.
+  const ids = [
+    ...new Set([...((byRole ?? []) as Row[]).map((p) => p.id as string), ...listed.keys()]),
+  ];
+  if (ids.length === 0) return [];
+
+  const { data: people } = await admin
+    .from('profiles')
+    .select('id, full_name, verification_status, created_at')
+    .in('id', ids);
+
+  const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? '-']));
+
+  return ((people ?? []) as Row[])
+    .map((p) => {
+      const tally = listed.get(p.id as string) ?? { total: 0, upcoming: 0 };
+      return {
+        id: p.id as string,
+        name: (p.full_name as string) ?? 'No name set',
+        email: emailById.get(p.id as string) ?? '-',
+        verificationStatus: (p.verification_status as string) ?? 'unverified',
+        listed: tally.total,
+        upcoming: tally.upcoming,
+        joinedAt: p.created_at as string,
+      };
+    })
+    .sort((a, b) => b.listed - a.listed);
 }
 
 export default async function Page() {
   await requireStaffArea('events');
 
-  const rows = await loadEvents();
-  const upcoming = rows.filter((r) => r.upcoming);
-  const past = rows.filter((r) => !r.upcoming);
+  const rows = await loadOrganisers();
+  const waiting = rows.filter((r) => r.verificationStatus === 'pending').length;
 
   return (
     <section className="flex flex-col gap-4">
       <div>
         <h1 className="text-content-muted font-mono text-sm tracking-wide">ADMIN / ACCOUNTS</h1>
         <h2 className="font-display text-content mt-2 text-3xl font-medium">
-          What&rsquo;s <span className="text-lime-deep">on.</span>
+          Who runs the <span className="text-lime-deep">events.</span>
         </h2>
         <p className="text-content-muted mt-2 text-sm">
           {rows.length === 0
-            ? 'No events have been listed yet.'
-            : `${upcoming.length} still to come, ${past.length} already past.`}
+            ? 'No event organiser accounts yet.'
+            : `${rows.length} ${rows.length === 1 ? 'organiser' : 'organisers'}${
+                waiting > 0 ? `, ${waiting} waiting on a decision` : ''
+              }.`}
         </p>
       </div>
 
       <AccountTabs active="events" />
 
       {rows.length === 0 ? (
-        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
-          Nothing here yet. Events appear as soon as somebody lists one — the public page at /events
-          reads the same table.
-        </p>
+        <div className="border-line/10 rounded-xl border border-dashed p-8 text-center">
+          <p className="text-content text-sm font-medium">Nobody can be an organiser yet</p>
+          <p className="text-content-muted mx-auto mt-2 max-w-prose text-sm">
+            &ldquo;I run events&rdquo; is listed on the signup form as <strong>Not yet</strong>, so
+            no account holds the role. When it opens, an organiser signs up here, submits their ID,
+            business registration and proof of address, and is reviewed on this screen before
+            anything they list goes public - a profile comes first, then events.
+          </p>
+        </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          <EventGroup
-            title="Still to come"
-            blurb="These can still be changed or pulled."
-            rows={upcoming}
-          />
-          <EventGroup title="Already past" blurb="Kept for the record." rows={past} />
+        <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
+          {rows.map((o) => (
+            <div key={o.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-content flex flex-wrap items-center gap-2 text-sm font-medium">
+                  {o.name}
+                  <Badge className={STATUS_BADGE[o.verificationStatus] ?? STATUS_BADGE.unverified}>
+                    {o.verificationStatus}
+                  </Badge>
+                </p>
+                <p className="text-content-muted text-xs">
+                  {o.email}
+                  {' · '}
+                  {o.listed === 0
+                    ? 'nothing listed'
+                    : `${o.listed} listed, ${o.upcoming} still to come`}
+                  {' · joined '}
+                  {new Date(o.joinedAt).toLocaleDateString('en-NG', {
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </section>
-  );
-}
-
-function EventGroup({ title, blurb, rows }: { title: string; blurb: string; rows: AdminEvent[] }) {
-  if (rows.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div>
-        <h3 className="text-content text-sm font-medium">
-          {title} <span className="text-content-muted font-normal">· {rows.length}</span>
-        </h3>
-        <p className="text-content-muted text-xs">{blurb}</p>
-      </div>
-
-      <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
-        {rows.map((e) => (
-          <div key={e.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-content text-sm font-medium">{e.name}</p>
-              <p className="text-content-muted text-xs">
-                {formatWhen(e.startsAt)}
-                {e.venue ? ` · ${e.venue}` : ''}
-                {e.category ? ` · ${e.category}` : ''}
-                {' · '}
-                {/* Named plainly when unknown rather than left blank: a seeded
-                    event with no organiser is a real state, and an empty gap
-                    reads as a bug. */}
-                {e.organiserName ?? 'no organiser on record'}
-              </p>
-            </div>
-            {/* Opens the public page — there is no admin detail screen for an
-                event yet, and the page the students see is the thing staff
-                actually need to check. */}
-            <a
-              href={`/events/${e.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-content-muted hover:text-content shrink-0 text-xs underline"
-            >
-              View
-            </a>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

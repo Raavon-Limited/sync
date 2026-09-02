@@ -4,8 +4,8 @@
  * TWO KINDS OF APPLICANT, ONE FORM
  *   An independent rider and a fleet operator answer the same questions plus
  *   three. Splitting them into two wizards would mean two copies of the document
- *   step — the part with the camera, the two-sided-ID rules and the RLS-shaped
- *   upload path — for the sake of three text boxes.
+ *   step   the part with the camera, the two-sided-ID rules and the RLS-shaped
+ *   upload path   for the sake of three text boxes.
  *
  * WHAT "COMPANY" ACTUALLY MEANS HERE
  *   The person filling this in is registering a fleet AND themselves as its
@@ -68,7 +68,7 @@ export function RiderSignup() {
 
   // The requirement set changes with the mode, so the held files are keyed off
   // the mode's role. Switching mode keeps what was already picked for the keys
-  // both modes share — nobody should have to re-take a live photo because they
+  // both modes share   nobody should have to re-take a live photo because they
   // changed their mind about registering a company.
   const role = mode === 'company' ? ('company' as const) : ('rider' as const);
   const [docState, setDocState] = useState<DocumentState>(() => emptyDocumentState('company'));
@@ -235,7 +235,7 @@ export function RiderSignup() {
 
       {progress && (
         <p className="text-content-muted text-sm">
-          Uploading {progress.done} of {progress.total} — {progress.label}
+          Uploading {progress.done} of {progress.total}   {progress.label}
         </p>
       )}
 

@@ -16,7 +16,7 @@
  * and the first leaks our schema to anyone who pokes at a form.
  *
  * WHAT THIS KEEPS AND WHAT IT REPLACES
- *   Not everything Supabase returns is jargon — "Invalid login credentials"
+ *   Not everything Supabase returns is jargon   "Invalid login credentials"
  *   and the messages our own RPCs `raise` are written for people, and blanket
  *   -replacing them would make every failure vaguer than it needs to be. So
  *   this rewrites the handful of messages it recognises, drops anything that
@@ -25,7 +25,7 @@
  *
  * WHY THE MESSAGE IS CONSULTED BEFORE THE CODE
  *   Our SECURITY DEFINER functions raise human sentences under generic
- *   SQLSTATEs — `raise exception 'Only Sync staff can decide a verification'
+ *   SQLSTATEs   `raise exception 'Only Sync staff can decide a verification'
  *   using errcode = '42501'`. Reading the code first would replace that with
  *   the generic 42501 text ("You do not have permission to do that"), throwing
  *   away the only sentence that said WHICH permission and why. The code mapping
@@ -48,7 +48,7 @@ export interface DbErrorLike {
  * Messages we can say better, matched on the text because the code behind them
  * is either absent or too generic to key off.
  *
- * Order matters — first match wins.
+ * Order matters   first match wins.
  */
 const BY_MESSAGE: [RegExp, string][] = [
   // ── Auth: signup ──────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ const BY_MESSAGE: [RegExp, string][] = [
   // something wrong.
   [
     /database error (saving|granting|querying|finding|creating|confirming|loading|deleting)/i,
-    'We could not finish setting up your account. This one is on us — please try again, and contact support@letsyncyou.com if it keeps happening.',
+    'We could not finish setting up your account. This one is on us   please try again, and contact support@letsyncyou.com if it keeps happening.',
   ],
   [
     /already registered|already been registered|user already exists|email address is already/i,
@@ -72,7 +72,7 @@ const BY_MESSAGE: [RegExp, string][] = [
   [/invalid login credentials/i, 'That email and password do not match. Check them and try again.'],
   [
     /email not confirmed/i,
-    'Confirm your email first — enter the code we sent you when you signed up.',
+    'Confirm your email first   enter the code we sent you when you signed up.',
   ],
   [
     /token has expired or is invalid|otp.*expired|invalid.*otp|email link is invalid/i,
@@ -114,7 +114,7 @@ const BY_MESSAGE: [RegExp, string][] = [
 const BY_CODE: Record<string, string> = {
   // Raised by our own SECURITY DEFINER functions.
   '28000': 'Your session has expired. Sign in again to pick up where you left off.',
-  // Only reached for a RAW permission failure — an RLS policy or a GRANT
+  // Only reached for a RAW permission failure   an RLS policy or a GRANT
   // refusing the write. Our own 42501 raises carry a human sentence that the
   // step above returns instead, so this must stay general: it used to say
   // "this account is not set up as a business yet", which was the right words
@@ -135,7 +135,7 @@ const BY_CODE: Record<string, string> = {
   user_already_exists: 'An account with this email already exists. Log in instead.',
   otp_expired: 'That code has expired. Ask for a new one and try again.',
   invalid_credentials: 'That email and password do not match. Check them and try again.',
-  email_not_confirmed: 'Confirm your email first — enter the code we sent you when you signed up.',
+  email_not_confirmed: 'Confirm your email first   enter the code we sent you when you signed up.',
   weak_password:
     'That password is too weak. Use at least 8 characters with a capital letter, a number and a symbol.',
   over_email_send_rate_limit:
@@ -183,8 +183,8 @@ function looksTechnical(message: string): boolean {
 /**
  * The message to show.
  *
- * `fallback` should say what failed in the user's terms — "We could not save
- * your business details" — because it is what they see when the real reason is
+ * `fallback` should say what failed in the user's terms   "We could not save
+ * your business details"   because it is what they see when the real reason is
  * unshowable. It is the only argument that has to be written per call site,
  * and it is worth writing well.
  */
@@ -199,7 +199,7 @@ export function userMessage(error: DbErrorLike, fallback: string): string {
     }
   }
 
-  // 2. A sentence somebody wrote for a person — our own RPC raises land here.
+  // 2. A sentence somebody wrote for a person   our own RPC raises land here.
   if (raw && !looksTechnical(raw)) return raw;
 
   // From here on the real reason is not showable, and this is its only copy.
@@ -213,7 +213,7 @@ export function userMessage(error: DbErrorLike, fallback: string): string {
 }
 
 /**
- * The same, for a thrown value of unknown shape — `catch (e)` blocks and
+ * The same, for a thrown value of unknown shape   `catch (e)` blocks and
  * anything that reaches a client component as an `Error`.
  */
 export function userMessageFrom(thrown: unknown, fallback: string): string {

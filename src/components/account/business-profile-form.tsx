@@ -3,7 +3,7 @@
  *
  * WHY A CARD AND NOT A PERMANENT FORM
  *   A settings page made entirely of open input boxes reads as unfinished
- *   work — every field looks like it is waiting for something, and there is no
+ *   work   every field looks like it is waiting for something, and there is no
  *   moment where a vendor can see what students actually see. Reading is the
  *   common case and editing is the rare one, so reading is the default state
  *   and editing is a thing you ask for.
@@ -13,7 +13,7 @@
  *   end up leaving a page believing a change stuck.
  *
  * IT OPENS FILLED IN. Everything here is seeded from what the vendor typed in
- * the onboarding wizard — `save_onboarding_business` moves those answers into
+ * the onboarding wizard   `save_onboarding_business` moves those answers into
  * `vendor_profiles` instead of leaving them in auth metadata, where nothing
  * read them and this form came up empty.
  *
@@ -25,7 +25,7 @@
  *
  *   business_name is SHOWN but never editable, for the same reason plus one
  *   more: it is unique across the platform and claimed once. See
- *   20260901140000 — it is an identity, not a preference.
+ *   20260901140000   it is an identity, not a preference.
  *
  * The trading-hours and accepting-orders fields are deliberately absent too:
  *   a hostel is not open between two times, and this form is shared with
@@ -129,7 +129,7 @@ export function BusinessProfileForm() {
       logoUrl: draft.logoUrl.trim() || null,
     });
     // Back to the card. The mutation has already written the cache, so this
-    // renders the saved values rather than the draft — which is the point:
+    // renders the saved values rather than the draft   which is the point:
     // what you see afterwards is what the server has.
     setEditing(false);
     setSaved(true);
@@ -139,15 +139,15 @@ export function BusinessProfileForm() {
   if (!editing || !draft) {
     return (
       <div className="flex max-w-xl flex-col gap-6">
-        {/* The card comes FIRST. It is the thing a vendor came here to get —
-            something to show a customer — and the fields below it are the
+        {/* The card comes FIRST. It is the thing a vendor came here to get  
+            something to show a customer   and the fields below it are the
             settings that produce it. */}
         <BusinessIdCard
           businessName={storefront.businessName}
           slug={storefront.slug}
           code={cardCode}
           // The PERSON, from `profiles`. On a landlord's or agent's card this
-          // is the headline — the thing being checked at a door is a human
+          // is the headline   the thing being checked at a door is a human
           // being, and a business name could belong to whoever is holding the
           // card.
           holderName={profile?.fullName}
@@ -196,7 +196,7 @@ export function BusinessProfileForm() {
             {/* Not cosmetic: discovery is location-first, and a business with
                 no area is left out of the campus board entirely. */}
             {storefront.area || (
-              <span className="text-amber-600">Not set — students cannot find you by area</span>
+              <span className="text-amber-600">Not set   students cannot find you by area</span>
             )}
           </Fact>
           <Fact icon={<Building2 className="size-3.5" />} label="Address" wide>
@@ -256,7 +256,7 @@ export function BusinessProfileForm() {
       {/* Claimed once, then held. See 20260901140000: the name is unique
           across the platform and `guard_vendor_profile_cols` freezes it for
           `authenticated`, so an editable box here would accept a change and
-          silently discard it on save — the worst of both. Read-only and
+          silently discard it on save   the worst of both. Read-only and
           explained is honest; staff can still correct a genuine mistake. */}
       <div className="flex flex-col gap-1.5">
         <span className="text-content-muted text-xs font-semibold tracking-widest uppercase">
@@ -269,7 +269,7 @@ export function BusinessProfileForm() {
           <span className="text-content min-w-0 truncate">{storefront.businessName}</span>
         </div>
         <span className="text-content-muted text-xs">
-          Your name is yours alone — no other business can take it, and it is what students
+          Your name is yours alone   no other business can take it, and it is what students
           recognise you by. {SITE.support.email} can change it if it is wrong.
         </span>
       </div>

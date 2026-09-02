@@ -11,7 +11,7 @@
 --
 --   Vendor: `storefront_staff.role` is 'manager' or 'staff', and 20260822130000
 --   says outright that "both are treated the same by the policies below for
---   now". Two names, identical access — so inviting a counter assistant hands
+--   now". Two names, identical access   so inviting a counter assistant hands
 --   over the branch, earnings included.
 --
 -- THE MODEL
@@ -20,7 +20,7 @@
 --   access_members   who holds it.
 --
 --   Access is the HIGHEST level across the roles you hold. Two roles, one
---   granting read and one write, means write — union, never intersection, so
+--   granting read and one write, means write   union, never intersection, so
 --   adding a role can only ever add access. The alternative surprises people:
 --   being given a second job would take the first one away.
 --
@@ -35,7 +35,7 @@
 --   screen should not need a migration. An unknown area simply grants nothing.
 --
 -- SUPER ADMIN IS NOT A ROLE HERE
---   It bypasses this system entirely — access_level returns 'write' for a
+--   It bypasses this system entirely   access_level returns 'write' for a
 --   super admin whatever the tables say. Somebody has to be able to fix a
 --   permission mistake, and that person cannot be locked out by the mistake.
 --
@@ -105,7 +105,7 @@ comment on table public.access_roles is
   'A named set of permissions, platform-wide or for one storefront. Access is the highest level across every role a person holds.';
 
 -- The vendor side hangs off the membership that already exists rather than a
--- parallel one. Null keeps today's behaviour — full access to the branch —
+-- parallel one. Null keeps today's behaviour   full access to the branch  
 -- so nothing changes for anyone until a vendor sets a role.
 alter table public.storefront_staff
   add column if not exists access_role_id uuid references public.access_roles (id) on delete set null;
@@ -193,7 +193,7 @@ grant execute on function public.access_level(text, uuid) to authenticated, serv
 comment on function public.access_level is
   'What the caller may do in one area: none, read or write. Super admin is always write. Highest level across every role held.';
 
--- Every area the caller can reach, in one call — a sidebar needs the whole map
+-- Every area the caller can reach, in one call   a sidebar needs the whole map
 -- and would otherwise ask once per item.
 create or replace function public.my_access(p_storefront uuid default null)
 returns table (area text, level text)
@@ -237,7 +237,7 @@ revoke all on function public.my_access(uuid) from public, anon;
 grant execute on function public.my_access(uuid) to authenticated, service_role;
 
 -- ── 3. Who may manage roles ─────────────────────────────────────────────────
--- Admin roles: super admin only, same reasoning as set_account_role — anyone
+-- Admin roles: super admin only, same reasoning as set_account_role   anyone
 -- who can edit permissions can grant themselves any permission.
 -- Storefront roles: the branch owner.
 create or replace function private.may_manage_roles(p_scope text, p_storefront uuid)
@@ -303,7 +303,7 @@ grant execute on function public.create_access_role(text, text, text, uuid)
   to authenticated, service_role;
 
 -- Set one area on one role. `p_level` of null removes the grant, which is how
--- 'none' is expressed — see the header on why it is not a stored value.
+-- 'none' is expressed   see the header on why it is not a stored value.
 create or replace function public.set_role_grant(p_role uuid, p_area text, p_level text)
 returns text
 language plpgsql

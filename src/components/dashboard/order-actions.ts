@@ -1,5 +1,5 @@
 /**
- * Accept/decline actions for a pending order. Mocked for now — swap the
+ * Accept/decline actions for a pending order. Mocked for now   swap the
  * body of each function for a real API call once the endpoint exists, e.g.:
  *
  *   export async function acceptOrder(id: string): Promise<void> {
@@ -16,7 +16,7 @@
  *     if (!res.ok) throw new Error('Failed to decline order');
  *   }
  *
- * Both throw on failure so the caller's optimistic-update rollback runs —
+ * Both throw on failure so the caller's optimistic-update rollback runs  
  * keep that contract when wiring in the real endpoints.
  */
 

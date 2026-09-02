@@ -1,14 +1,14 @@
 /**
  * ROUTE: /admin/students
  * ACCESS: staff granted the `students` area.
- * PURPOSE: The people the platform exists for — find one, see their state,
+ * PURPOSE: The people the platform exists for   find one, see their state,
  *          suspend or archive.
  *
  * IT REUSES THE USERS CONSOLE RATHER THAN GROWING A SECOND ONE
  *   Search, the status filter, the card/table toggle, the detail modal and the
  *   suspend and archive actions are all already built in UsersClient and all
  *   apply unchanged to a student. The only real difference is which rows are on
- *   screen, and that is a `where` clause — a second console would be a copy to
+ *   screen, and that is a `where` clause   a second console would be a copy to
  *   keep in step, and the copy would drift.
  *
  *   The role tab strip is hidden here for the same reason: with the rows
@@ -26,7 +26,7 @@ import { AccountTabs } from '@/components/admin/account-tabs';
 import { UsersClient } from '../users/user-componenets/UsersClient';
 import type { ProfileRow } from '../users/page';
 
-export const metadata: Metadata = { title: 'Students — Admin' };
+export const metadata: Metadata = { title: 'Students   Admin' };
 
 export default async function Page() {
   const role = await requireStaffArea('students');
@@ -39,15 +39,15 @@ export default async function Page() {
     .eq('role', 'student')
     .order('created_at', { ascending: false });
 
-  // listUsers is the only way to an email — the Auth admin API has no
-  // lookup-by-id in bulk — so it is paged once and joined in memory, exactly as
+  // listUsers is the only way to an email   the Auth admin API has no
+  // lookup-by-id in bulk   so it is paged once and joined in memory, exactly as
   // /admin/users does it.
   const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const emailById = new Map((list?.users ?? []).map((u) => [u.id, u.email ?? '—']));
+  const emailById = new Map((list?.users ?? []).map((u) => [u.id, u.email ?? ' ']));
 
   const rows = ((profiles ?? []) as ProfileRow[]).map((r) => ({
     ...r,
-    email: emailById.get(r.id) ?? '—',
+    email: emailById.get(r.id) ?? ' ',
   }));
 
   return (

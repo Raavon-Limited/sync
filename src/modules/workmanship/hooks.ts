@@ -11,7 +11,7 @@
  * leaves `requested`/`quoted`, so neither side can rewrite the deal afterwards.
  *
  * That is why the vendor detail page offers "Request" rather than a checkout:
- * there is no price to charge yet. There is no open job board — a request
+ * there is no price to charge yet. There is no open job board   a request
  * names its vendor (`service_requests.vendor_id` is NOT NULL), so students
  * hire a specific pro from /workmanship/[slug] rather than posting a job for
  * anyone to bid on.

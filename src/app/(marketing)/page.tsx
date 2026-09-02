@@ -200,7 +200,7 @@ export default async function LandingPage() {
             </Link>
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {/* Event. Hidden when nothing is scheduled — an empty slot is
+            {/* Event. Hidden when nothing is scheduled   an empty slot is
                 better than advertising a party that is not happening. */}
             {showcase.event && (
             <Link

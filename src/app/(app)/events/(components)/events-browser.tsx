@@ -2,7 +2,7 @@
  * Events listing, from the database.
  *
  * PRICE IS DERIVED FROM TIERS, NOT STORED ON THE EVENT
- *   An event has no single price — it has tiers. "From ₦2,000" is the cheapest
+ *   An event has no single price   it has tiers. "From ₦2,000" is the cheapest
  *   available one, computed here. An event with no tiers shows "Tickets at the
  *   door" rather than ₦0, which would read as free.
  *

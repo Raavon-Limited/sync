@@ -8,7 +8,7 @@
  *   forty businesses was loading forty sets of signed identity photos and
  *   reading the one they cared about in a column an eighth of the screen wide.
  *   The landlord side has had a page per account since it was built; this is the
- *   same shape, for the same reason — comparing a face to an ID needs room.
+ *   same shape, for the same reason   comparing a face to an ID needs room.
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -19,7 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
 
-export const metadata: Metadata = { title: 'Vendor — Admin' };
+export const metadata: Metadata = { title: 'Vendor   Admin' };
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -52,7 +52,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     id: v.id,
     businessName: v.business_name ?? 'Unnamed business',
     slug: v.slug,
-    category: v.category ?? '—',
+    category: v.category ?? ' ',
     area: v.area ?? null,
     verificationStatus: v.verification_status ?? 'unverified',
     createdAt: v.created_at,

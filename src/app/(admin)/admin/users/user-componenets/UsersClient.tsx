@@ -41,8 +41,8 @@ type Props = {
    *
    * /admin/students renders this same console with the rows already narrowed
    * to students, where a "Vendors" tab that can only ever be empty is a
-   * control that lies about what is on the screen. Everything else — search,
-   * status filter, the detail modal, suspend and archive — is identical, which
+   * control that lies about what is on the screen. Everything else   search,
+   * status filter, the detail modal, suspend and archive   is identical, which
    * is the reason that page reuses this rather than growing a second one.
    */
   hideRoleTabs?: boolean;
@@ -191,13 +191,13 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
           icon={UserCheck}
           label="Active"
           value={stats.active.toLocaleString()}
-          sub={stats.total ? `${Math.round((stats.active / stats.total) * 100)}% of total` : '—'}
+          sub={stats.total ? `${Math.round((stats.active / stats.total) * 100)}% of total` : ' '}
         />
         <StatCard
           icon={Store}
           label="Vendors & Landlords"
           value={stats.vendors.toLocaleString()}
-          sub={stats.total ? `${Math.round((stats.vendors / stats.total) * 100)}% of total` : '—'}
+          sub={stats.total ? `${Math.round((stats.vendors / stats.total) * 100)}% of total` : ' '}
           valueColour="purple"
         />
         <StatCard
@@ -211,7 +211,7 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
 
       {/* ── Filters ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {/* Search — full width on mobile, capped on desktop */}
+        {/* Search   full width on mobile, capped on desktop */}
         <div className="relative w-full sm:min-w-[180px] sm:flex-1">
           <Search className="text-content-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
@@ -225,7 +225,7 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
           />
         </div>
 
-        {/* Selects row — side-by-side on mobile, inline on desktop */}
+        {/* Selects row   side-by-side on mobile, inline on desktop */}
         <div className="flex gap-2 sm:contents">
           <Select
             value={statusFilter}
@@ -266,7 +266,7 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
           </Select>
         </div>
 
-        {/* View toggle — desktop only */}
+        {/* View toggle   desktop only */}
         <div className="hidden sm:ml-auto sm:flex sm:gap-1">
           <Button
             variant="ghost"

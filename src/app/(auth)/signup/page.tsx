@@ -16,8 +16,8 @@ export default async function SignupPage({
   searchParams: Promise<{ next?: string; email?: string; noaccount?: string }>;
 }) {
   // Both come from /login, which sends anybody whose address has no account
-  // straight here. `email` prefills the field — typing it again would be the
-  // same dead end with extra steps — and `noaccount` is what lets this page
+  // straight here. `email` prefills the field   typing it again would be the
+  // same dead end with extra steps   and `noaccount` is what lets this page
   // say why they arrived. A silent redirect onto a form nobody asked for is
   // the confusion this path exists to remove.
   const { next, email, noaccount } = await searchParams;

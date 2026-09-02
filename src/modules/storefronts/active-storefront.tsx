@@ -2,8 +2,8 @@
  * Which branch the vendor is currently working.
  *
  * WHY THIS IS CONTEXT AND NOT A URL PARAM
- *   The vendor dashboard is a set of sibling routes — orders, listings,
- *   earnings — and the branch selection has to survive moving between them.
+ *   The vendor dashboard is a set of sibling routes   orders, listings,
+ *   earnings   and the branch selection has to survive moving between them.
  *   Threading `?storefront=` through every link means one missed link silently
  *   drops the vendor back to a different branch mid-task, which is exactly the
  *   kind of bug that shows up as "it deleted the wrong item".
@@ -11,7 +11,7 @@
  * WHY IT PERSISTS
  *   A vendor working the Tanke queue who refreshes should still be on Tanke.
  *   The stored id is validated against what they can actually manage on every
- *   load — a revoked manager, or a branch that was archived, must not resume
+ *   load   a revoked manager, or a branch that was archived, must not resume
  *   into a branch they can no longer act on.
  */
 'use client';
@@ -31,7 +31,7 @@ interface ActiveStorefrontValue {
   isLoading: boolean;
   /** True when the user owns the active branch; false when they only staff it. */
   isOwner: boolean;
-  /** More than one to choose from — the switcher hides itself otherwise. */
+  /** More than one to choose from   the switcher hides itself otherwise. */
   hasChoice: boolean;
 }
 
@@ -47,7 +47,7 @@ export function ActiveStorefrontProvider({ children }: { children: ReactNode }) 
     try {
       setStoredId(window.localStorage.getItem(STORAGE_KEY));
     } catch {
-      // Private browsing / storage disabled — fall through to the default.
+      // Private browsing / storage disabled   fall through to the default.
     }
   }, []);
 

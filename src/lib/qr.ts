@@ -4,7 +4,7 @@
  * WHY A LIBRARY ENCODES AND WE ONLY DRAW
  *   The encoding is Reed–Solomon error correction over a spec'd bit layout.
  *   Hand-rolling it produces something that looks exactly like a QR code and
- *   does not scan, which is the worst possible failure here — the whole point
+ *   does not scan, which is the worst possible failure here   the whole point
  *   of this code is that a stranger holding a phone can check a claim. So
  *   `qrcode` produces the module matrix and everything below is presentation.
  *
@@ -12,7 +12,7 @@
  *   A decoder samples the CENTRE of each module and thresholds it. Rounding
  *   corners removes ink from the edges, where nothing is sampled. What must be
  *   preserved is the quiet zone, the three finder squares' proportions
- *   (7:5:3 rings) and the module grid pitch — all of which this keeps.
+ *   (7:5:3 rings) and the module grid pitch   all of which this keeps.
  *
  *   The one real risk is contrast, so `light` defaults to a true white rather
  *   than a tinted card colour: a dark-on-dark QR is a QR nobody can read.
@@ -28,7 +28,7 @@ export interface QrOptions {
   size?: number;
   /** Module colour. */
   dark?: string;
-  /** Background. Keep it light — decoders threshold on contrast. */
+  /** Background. Keep it light   decoders threshold on contrast. */
   light?: string;
   /**
    * Quiet zone, in modules. The spec says 4 and decoders genuinely rely on it;
@@ -50,7 +50,7 @@ export interface QrRender {
 /**
  * Encode `text` and return it as rounded-module SVG.
  *
- * Runs anywhere — it is pure string building over the matrix, so a server
+ * Runs anywhere   it is pure string building over the matrix, so a server
  * component can call it and ship the markup with the page rather than making
  * the browser encode on mount.
  */
@@ -99,7 +99,7 @@ export function renderQr(text: string, opts: QrOptions = {}): QrRender {
   }
 
   // Everything else, module by module. Runs of horizontally adjacent modules
-  // are merged into one rounded capsule — that is what gives the style its
+  // are merged into one rounded capsule   that is what gives the style its
   // stitched look, and it also cuts the path count by roughly half.
   for (let y = 0; y < count; y++) {
     let runStart = -1;

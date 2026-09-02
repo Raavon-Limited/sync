@@ -1,14 +1,14 @@
 /**
  * Every order a store has taken, filtered by what happened to it.
  *
- * THE TABS ARE FILTERS, NOT A PARTITION — do not add them up. `cancel_order`
+ * THE TABS ARE FILTERS, NOT A PARTITION   do not add them up. `cancel_order`
  * refunds in the same transaction, so a cancelled order is usually also a
  * refunded one and appears under both. Forcing them apart would mean hiding
  * cancellations from Cancelled or refunds from Refunded; an honest overlap
  * beats either.
  *
  * "REFUNDED" IS WHAT THE PRODUCT MEANS BY "RETURNED". There is no returns
- * concept in this schema — no goods come back, no restock happens. What exists
+ * concept in this schema   no goods come back, no restock happens. What exists
  * is money going back (`escrow_holds.status = 'refunded'`), so the tab is
  * named for the thing that is real.
  *
@@ -79,7 +79,7 @@ export function StoreTransactions({
   const lastPage = Math.max(0, Math.ceil(total / PAGE) - 1);
 
   // Changing the filter has to reset the page. Landing on page 4 of a tab with
-  // one page shows an empty table and a pager that says there is nothing —
+  // one page shows an empty table and a pager that says there is nothing  
   // indistinguishable from having no orders at all.
   const pick = (next: TransactionBucket) => {
     setBucket(next);
@@ -125,7 +125,7 @@ export function StoreTransactions({
       ) : (
         <div
           className={`border-line/10 bg-panel overflow-x-auto rounded-xl border transition-opacity ${
-            // Dimmed rather than replaced while the next page loads — see the
+            // Dimmed rather than replaced while the next page loads   see the
             // keepPreviousData note on the hook.
             isFetching ? 'opacity-60' : ''
           }`}
@@ -170,7 +170,7 @@ export function StoreTransactions({
                         // An em-dash, not ₦0: nothing has been released yet,
                         // which is not the same as the order being worth zero.
                         <span className="text-content-muted" title="Not released from escrow yet">
-                          —
+                           
                         </span>
                       )}
                     </td>

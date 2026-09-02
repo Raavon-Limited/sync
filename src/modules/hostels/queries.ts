@@ -6,7 +6,7 @@
  *
  * A note on availability: `hostel_availability` and `hostel_room_state` are
  * views defined in 0006 that already compute rooms_free / filling_up / full
- * from live holds. Never recompute that client-side — a hold expires on a
+ * from live holds. Never recompute that client-side   a hold expires on a
  * timestamp, so any count derived in JavaScript is wrong the moment it renders.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -42,7 +42,7 @@ const toHostel = (r: Row): Hostel => ({
   rooms: (r.hostel_rooms ?? []).map((rm: Row) => ({
     id: rm.id,
     label: rm.label,
-    // null on the row means "inherit the hostel price" — resolve it here so no
+    // null on the row means "inherit the hostel price"   resolve it here so no
     // component has to know that rule.
     priceKobo: Number(rm.price_per_session_kobo ?? r.price_per_session_kobo ?? 0),
     isListed: rm.is_listed,
@@ -186,7 +186,7 @@ export async function fetchHostelBySlug(db: Client, slug: string): Promise<Hoste
   if (!row) return null;
 
   // Was reading the view directly and passing its raw vocabulary through, so
-  // `availability` arrived as 'active' / 'ending_soon' — values the Availability
+  // `availability` arrived as 'active' / 'ending_soon'   values the Availability
   // type does not contain. Same helper as the list, same translation.
   const [withAvailability] = await attachAvailability(db, [row]);
   return toHostel(withAvailability);
@@ -247,7 +247,7 @@ export async function fetchBooking(db: Client, id: string): Promise<Booking | nu
 
 /**
  * Creating a booking starts a HOLD. `reserved_until` is set by the
- * `bookings_sync_hold` trigger from 0006, never by this call — and
+ * `bookings_sync_hold` trigger from 0006, never by this call   and
  * `bookings_one_hold_per_room_idx` means a second student cannot hold the same
  * room. A unique-violation here is that constraint doing its job; surface it as
  * "just taken", not as an error.
@@ -361,7 +361,7 @@ export async function fetchMyHostels(db: Client, landlordId: string): Promise<Ho
 }
 
 /**
- * `verified` is absent from the payload on purpose — `guard_hostel_privileged_cols`
+ * `verified` is absent from the payload on purpose   `guard_hostel_privileged_cols`
  * reverts any client attempt to set it. Only the ambassador verification flow
  * can flip that column.
  */

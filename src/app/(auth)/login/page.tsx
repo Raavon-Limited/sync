@@ -28,7 +28,7 @@ export default async function LoginPage({
         <p className="border-line/15 bg-surface-deep/40 text-content-muted mb-4 rounded-lg border p-3 text-sm">
           You already have an account with this email. Sign in, then choose{' '}
           <span className="text-content font-medium">Add a business account</span> from the menu
-          under your avatar — one login can hold both.
+          under your avatar   one login can hold both.
         </p>
       )}
       <LoginForm next={next} email={email} />

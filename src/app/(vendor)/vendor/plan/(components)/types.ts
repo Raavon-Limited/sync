@@ -1,7 +1,7 @@
 // ─── Plan ─────────────────────────────────────────────────────────────────────
 
 /**
- * `plans.code` — data, not a compile-time enum.
+ * `plans.code`   data, not a compile-time enum.
  *
  * This was 'starter' | 'growth' | 'professional' | 'enterprise'. The database
  * seeds 'free', 'growth', 'pro': two of the four never existed, and adding a
@@ -20,7 +20,7 @@ export interface Plan {
   tagline: string;
   price: number | null; // null = custom
   /**
-   * The money ONLY — "₦2,500", or "Free". The billing period is `pricePeriod`
+   * The money ONLY   "₦2,500", or "Free". The billing period is `pricePeriod`
    * and is rendered separately: baking it in here produced "₦2,500/monthly"
    * in a display-weight font with no space to wrap at, which overflowed the
    * card AND collided with the "/mo" suffix the card adds itself.

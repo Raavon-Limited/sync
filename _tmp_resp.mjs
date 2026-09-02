@@ -52,7 +52,7 @@ edit('src/components/verification/verification-submitted-modal.tsx', [
 ` * RESPONSIVE. The design is a fixed 
  * card; on a phone that has to inset from the screen edge rather than run to
  * it, and survive a short landscape viewport. Hence the width calc, the
- * scroll cap, and one step down on the tick and the gaps below 640px — all at
+ * scroll cap, and one step down on the tick and the gaps below 640px   all at
  * explicit sizes, never \`auto\`.
  *
  * TRANSLATED, NOT COPIED.`],

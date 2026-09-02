@@ -1,5 +1,5 @@
 /**
- * VerificationSubmittedModal — Figma node 902:17772 ("success-modal").
+ * VerificationSubmittedModal   Figma node 902:17772 ("success-modal").
  *
  * Shown the moment onboarding is submitted: filled tick, "Verification
  * Submitted", the 1–2 working days expectation, and a full-width Continue.
@@ -7,7 +7,7 @@
  * WHY IT IS NOT DISMISSIBLE BY THE USUAL MEANS. The design has no close X and
  * one button, and that is right: this modal is the only thing that tells you
  * what happens next. Escaping it to a dashboard that is entirely empty states
- * — which is exactly what an unverified account now renders — leaves someone
+ *   which is exactly what an unverified account now renders   leaves someone
  * looking at a blank product with no explanation. Continue is the way out.
  *
  * RESPONSIVE. The design is a fixed card; on a phone it has to inset from the
@@ -17,7 +17,7 @@
  *
  * TRANSLATED, NOT COPIED. Norocio's `--primary/4` is #650000 maroon; Sync's
  * primary is the lime `Button`, so the CTA is the project's own. The tick is
- * lucide's filled CheckCircle2 rather than the exported Vuesax bulk asset —
+ * lucide's filled CheckCircle2 rather than the exported Vuesax bulk asset  
  * the glyph is the same circle-and-tick, and every other icon in this app is
  * lucide. Sizes are kept from the design: 57px tick, 24px arrow, 32px/20px/
  * 12px stack gaps, 16px radius, 20px padding.

@@ -14,7 +14,7 @@
 --   2. AN AUTOMATIC PAUSE ENDS WHEN THE KITCHEN CATCHES UP, not when a timer
 --      says so. Clearing the backlog reopens the store immediately; still
 --      being buried when an order moves rolls the deadline forward. The
---      deadline survives as the one thing that cannot fail — see below.
+--      deadline survives as the one thing that cannot fail   see below.
 --
 --   3. ARCHIVING IS A SUPPORTED, REVERSIBLE STATE with the two guards it
 --      needs: you cannot archive a store that still owes somebody food, and
@@ -28,7 +28,7 @@
 --
 -- WHY THE PAUSE DEADLINE STAYS EVEN THOUGH DRAINING CLEARS IT
 --   "Pause until the orders are sent out" is right up until the orders are
---   never sent out — a vendor who closes their laptop with four tickets open
+--   never sent out   a vendor who closes their laptop with four tickets open
 --   would have a store that is shut forever and no way to notice. Postgres has
 --   no timer, so nothing would ever run to reopen it. The deadline is the
 --   floor under that: the store reopens on its own, and if the backlog is
@@ -205,7 +205,7 @@ create trigger orders_sync_backlog_pause
 --
 -- WHAT IS DELIBERATELY NOT A SCOPE: money. Wallet, payouts, bank accounts and
 -- the subscription live on vendor_profiles (the business), and nothing here
--- reaches that table. That boundary is structural and stays that way — see
+-- reaches that table. That boundary is structural and stays that way   see
 -- modules/storefronts/README.
 --
 -- 'inbox' IS A UI SCOPE TODAY, NOT AN ENFORCED ONE. Conversations resolve
@@ -214,7 +214,7 @@ create trigger orders_sync_backlog_pause
 -- is recorded now so the grant exists when messaging becomes store-routed;
 -- until then granting it opens nothing, and the UI says so.
 --
--- 'promotions' is added by 20260901120000, not here — this file was already
+-- 'promotions' is added by 20260901120000, not here   this file was already
 -- applied by the time it was asked for, and editing a migration that has run
 -- changes the repo without changing any database.
 create or replace function private.storefront_scope_names()
@@ -251,7 +251,7 @@ alter table public.storefront_invites
               and scopes <@ array['orders', 'listings', 'inbox', 'store']::text[]);
 
 --
--- "May you do THIS at this store?" — the scoped sibling of
+-- "May you do THIS at this store?"   the scoped sibling of
 -- private.can_manage_storefront().
 --
 -- The owner passes every scope; there is no way to grant yourself less than
@@ -315,7 +315,7 @@ create policy "orders_select_own" on public.orders
          or (select auth.uid()) = vendor_id
          or private.storefront_scope(storefront_id, (select auth.uid()), 'orders'));
 
--- Trading details — hours, area, the map pin, the capacity limit. The column
+-- Trading details   hours, area, the map pin, the capacity limit. The column
 -- guard already stops staff touching anything structural; this decides whether
 -- they may touch the rest at all.
 drop policy if exists "storefronts_update_staff" on public.storefronts;
@@ -464,7 +464,7 @@ grant execute on function public.create_storefront_invite(uuid, text, text, text
 
 --
 -- Change what an existing manager may reach, without making the owner revoke
--- and re-invite them — which loses the invite trail and their history.
+-- and re-invite them   which loses the invite trail and their history.
 create or replace function public.set_storefront_staff_scopes(
   p_staff_id uuid,
   p_scopes   text[]
@@ -706,7 +706,7 @@ grant execute on function public.accept_storefront_invite(text) to authenticated
 --
 -- Take a store out of circulation, or put it back.
 --
--- ARCHIVING IS ALREADY INVISIBLE TO STUDENTS — storefronts_select_public is
+-- ARCHIVING IS ALREADY INVISIBLE TO STUDENTS   storefronts_select_public is
 -- `using (archived_at is null)`, so an archived store drops out of discovery,
 -- out of nearby_storefronts and out of its own page with no extra filtering.
 -- The owner still sees it, because their own policy has no such clause. That
@@ -720,10 +720,10 @@ grant execute on function public.accept_storefront_invite(text) to authenticated
 --     from the vendor's app. Finish them first.
 --   - The last active store cannot go. A business with zero stores has nowhere
 --     to put a listing, nowhere for a cart to belong and no primary for a link
---     to resolve to — resolvePrimaryStorefrontId throws, and checkout with it.
+--     to resolve to   resolvePrimaryStorefrontId throws, and checkout with it.
 --
 -- IT MOVES THE PRIMARY FLAG RATHER THAN DROPPING IT. storefronts_one_primary_idx
--- allows zero primaries, so nothing would have complained — a link to the
+-- allows zero primaries, so nothing would have complained   a link to the
 -- business would just have stopped resolving.
 create or replace function public.set_storefront_archived(
   p_storefront_id uuid,
@@ -788,7 +788,7 @@ begin
     -- COSMETIC: storefronts_one_primary_idx is
     -- `unique (vendor_id) where is_primary and archived_at is null`, and it is
     -- not deferrable. Promoting the heir first means two rows briefly satisfy
-    -- that predicate, and the statement fails with a unique violation — so the
+    -- that predicate, and the statement fails with a unique violation   so the
     -- outgoing store has to leave the index before the new one enters it.
     if v_store.is_primary then
       select s.id into v_heir
@@ -860,7 +860,7 @@ comment on function public.set_storefront_archived(uuid, boolean) is
 -- ── 6. A second store requires a verified business ──────────────────────────
 --
 -- WHY THE FIRST ONE IS FREE
---   Every account gets a store the moment it becomes a vendor — the backfill
+--   Every account gets a store the moment it becomes a vendor   the backfill
 --   in 20260822090000 gave one to every existing business, and a new one needs
 --   somewhere to put its first listing before anybody has reviewed it.
 --   Blocking that would mean onboarding could not complete. What verification
@@ -877,7 +877,7 @@ comment on function public.set_storefront_archived(uuid, boolean) is
 -- SECURITY DEFINER trigger reports `current_user` as the function's OWNER, so
 -- the role test would never match 'authenticated' and the guard would silently
 -- pass everything. `guard_storefront_privileged_cols` is invoker-rights for
--- exactly the same reason. Both reads below are permitted to the caller —
+-- exactly the same reason. Both reads below are permitted to the caller  
 -- `storefronts` is publicly readable while not archived, and so is
 -- `vendor_profiles`.
 create or replace function public.guard_storefront_insert()

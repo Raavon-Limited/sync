@@ -1,7 +1,7 @@
 /**
  * ROUTE: /hotspots/[slug]
  * ACCESS: public
- * PURPOSE: One hotspot — photo, hours, address and directions.
+ * PURPOSE: One hotspot   photo, hours, address and directions.
  */
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';

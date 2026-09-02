@@ -3,7 +3,7 @@
  *
  * ON TYPES
  * These helpers are deliberately generic over the row shape. The project does
- * not yet check in generated database types — run
+ * not yet check in generated database types   run
  *
  *   npx supabase gen types typescript --linked --schema public > src/types/database.types.ts
  *
@@ -24,7 +24,7 @@ export interface PostgrestResult<T> {
 
 /**
  * An error that carries the HTTP status, so `retry` in query-client.ts can tell
- * a 403 (terminal — RLS said no) from a 503 (worth retrying).
+ * a 403 (terminal   RLS said no) from a 503 (worth retrying).
  *
  * ITS `message` IS SAFE TO SHOW. This is the error every `unwrap` throws, so it
  * is what reaches `onError: (e) => toast(e.message)` in a few dozen components.
@@ -36,7 +36,7 @@ export class DataError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly hint?: string;
-  /** PostgREST's own words. For logs — never for the screen. */
+  /** PostgREST's own words. For logs   never for the screen. */
   readonly raw: string;
 
   constructor(
@@ -80,7 +80,7 @@ export function unwrapList<T>(result: PostgrestResult<T[]>): T[] {
 
 // ── Money ──────────────────────────────────────────────────────────────────
 // The database stores kobo as bigint; the UI shows Naira. Convert at this
-// boundary and nowhere else — a component doing `/ 100` inline is how rounding
+// boundary and nowhere else   a component doing `/ 100` inline is how rounding
 // bugs get into totals.
 
 /** 500000 → 5000 (₦). */

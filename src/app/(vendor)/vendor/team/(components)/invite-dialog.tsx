@@ -5,7 +5,7 @@
  *   `create_storefront_invite` returns the token exactly once; there is no
  *   SELECT policy that can read it back, because the token IS the credential
  *   and anyone who could list invites could join any store. So the dialog does
- *   not close on success — it turns into the link, and the owner leaves when
+ *   not close on success   it turns into the link, and the owner leaves when
  *   they have copied it.
  *
  * IT IS NOT A SECRET WORTH LESS THAN IT LOOKS: the invite is tied to the email
@@ -42,7 +42,7 @@ export function InviteDialog({
   stores,
   defaultStoreId,
 }: {
-  /** Active stores only — you cannot staff one that is archived. */
+  /** Active stores only   you cannot staff one that is archived. */
   stores: Storefront[];
   defaultStoreId?: string | null;
 }) {
@@ -57,7 +57,7 @@ export function InviteDialog({
   const [mailError, setMailError] = useState<string | null>(null);
 
   // The configured origin, not `window.location.origin`. This link is COPIED
-  // and sent to another person on another device — one generated from a dev
+  // and sent to another person on another device   one generated from a dev
   // machine would be a localhost address that works for nobody. It also has to
   // match the link in the email, which the server builds the same way.
   const link = issued ? `${canonicalOrigin()}/vendor/join?token=${issued}` : '';
@@ -94,7 +94,7 @@ export function InviteDialog({
           <DialogDescription>
             {issued
               ? 'They can also use the link below. It is shown once and cannot be retrieved, expires in 7 days, and only works for the address you invited.'
-              : 'They get the sections you tick, at the store you choose — and nothing else. Your earnings, payouts and bank details are never included.'}
+              : 'They get the sections you tick, at the store you choose   and nothing else. Your earnings, payouts and bank details are never included.'}
           </DialogDescription>
         </DialogHeader>
 

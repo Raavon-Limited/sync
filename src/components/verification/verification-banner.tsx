@@ -1,11 +1,11 @@
 /**
- * VerificationBanner — Figma node 1498:51414 ("Verification Section").
+ * VerificationBanner   Figma node 1498:51414 ("Verification Section").
  *
  * The strip that sits above a dashboard while the account is not yet verified:
  * icon, one sentence, and an underlined "Verify Now" pushed to the far end.
  *
  * PALETTE IS TRANSLATED, NOT COPIED. The design is from Norocio and hardcodes
- * that product's error ramp — #fbe9e9 ground, #e55c5c border, #dc2626 text.
+ * that product's error ramp   #fbe9e9 ground, #e55c5c border, #dc2626 text.
  * Dropping those in literally would light a pink box on Sync's dark theme,
  * because they are a light-mode-only palette. Sync already has a semantic
  * warning colour (`--color-coral`, used by FormError), so the banner is built
@@ -80,7 +80,7 @@ export function VerificationBanner({ status, initial, className }: VerificationB
         </p>
       </div>
 
-      {/* Nothing to press while a reviewer has it — a second submission is the
+      {/* Nothing to press while a reviewer has it   a second submission is the
           only thing this control could produce. */}
       {!awaitingReview && (
         <VerifyNowSheet initial={initial}>

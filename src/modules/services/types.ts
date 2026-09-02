@@ -14,9 +14,9 @@
 export type Vertical = 'beauty' | 'laundry' | 'workmanship';
 
 /**
- * - `fixed`    — beauty: ₦3,500 for a haircut.
- * - `per_unit` — laundry: ₦300 per kg; the student supplies quantity.
- * - `quote`    — workmanship: no price until the tradesman responds.
+ * - `fixed`      beauty: ₦3,500 for a haircut.
+ * - `per_unit`   laundry: ₦300 per kg; the student supplies quantity.
+ * - `quote`      workmanship: no price until the tradesman responds.
  *
  * The database enforces the pairing (`services_price_matches_model`): a `quote`
  * may not carry a price, a `per_unit` must carry a unit label.

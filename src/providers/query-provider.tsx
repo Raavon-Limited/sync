@@ -11,7 +11,7 @@
  *
  * COEXISTING WITH RTK QUERY
  * This app already fetches through RTK Query (`src/store/api`). Both layers now
- * run side by side, which is fine mechanically but is not a resting place —
+ * run side by side, which is fine mechanically but is not a resting place  
  * two caches over the same tables invalidate independently and will disagree.
  * The intended direction is that new work uses these hooks and the existing
  * `profile-api` slice is migrated over, after which `base-api.ts` and this

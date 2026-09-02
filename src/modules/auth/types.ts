@@ -8,7 +8,7 @@
  *  to student); admin/super_admin are granted server-side and are unreachable
  *  from the client whatever metadata it claims. Drives routing + the proxy gate.
  *
- *  Must stay in step with `profiles_role_check` in the database — the constraint
+ *  Must stay in step with `profiles_role_check` in the database   the constraint
  *  is the authority, this union is the app's mirror of it. */
 export type Role = 'student' | 'vendor' | 'landlord' | 'rider' | 'admin' | 'super_admin';
 

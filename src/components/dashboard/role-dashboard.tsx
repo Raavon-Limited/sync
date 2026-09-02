@@ -40,7 +40,7 @@ export interface DashboardKpi {
 
 /**
  * Presentation-only lookup: maps a KPI's label to the icon + badge tint
- * shown in its CustomCard. Never sourced from the database — the backend
+ * shown in its CustomCard. Never sourced from the database   the backend
  * only ever needs to send { label, value, sub }. Add an entry here whenever
  * a new KPI label is introduced; unmatched labels simply render without a
  * badge (CustomCard already handles icon/iconBg being undefined).
@@ -50,18 +50,18 @@ export interface DashboardKpi {
  *
  * CustomCard puts this string on the wrapper around the icon, and the icon
  * itself is a bare lucide glyph drawn in `currentColor`. So with a background
- * alone the glyph inherited whatever the card's text colour was — cream in dark
- * mode — and a cream wallet on `bg-emerald-100` mint was invisible. Every other
+ * alone the glyph inherited whatever the card's text colour was   cream in dark
+ * mode   and a cream wallet on `bg-emerald-100` mint was invisible. Every other
  * card in the app that uses this component colours its own icon
  * (`text-blue-600` and so on); this map was the one place that did not.
  *
  * THE HUE IS IN THE GROUND; THE CONTRAST IS IN A TOKEN.
- *   ground  `bg-<hue>-500/15` — an ALPHA tint, not the fixed `-100` shade it
+ *   ground  `bg-<hue>-500/15`   an ALPHA tint, not the fixed `-100` shade it
  *           used to be. A translucent hue composites correctly over cream AND
  *           over ink, where a fixed pale shade is a light-mode decision baked
  *           into a theme-aware surface. This is the pattern the rest of the
  *           codebase already settled on.
- *   glyph   `text-content` — the same token the card's own text uses, so it is
+ *   glyph   `text-content`   the same token the card's own text uses, so it is
  *           ink on the cream theme and cream on the dark one. Legible in both
  *           by construction rather than by a colour someone eyeballed.
  *
@@ -71,7 +71,7 @@ export interface DashboardKpi {
  *   `@media (prefers-color-scheme: dark)` and no `@custom-variant dark` is
  *   declared in globals.css. So `dark:` tracks the OS, not the toggle: someone
  *   on a light OS who switches the app to dark gets the light-mode colour, and
- *   the auth layout — which forces `.dark` on its subtree — never gets the dark
+ *   the auth layout   which forces `.dark` on its subtree   never gets the dark
  *   one at all. A token has no such gap.
  *
  *   The four hues still tell the cards apart; at 40px the tile is what carries
@@ -117,7 +117,7 @@ export async function RoleDashboard({
   const profile = await getDashboardProfile(variant);
 
   // Prefill for the verification panel, read on the SERVER and passed down as
-  // plain data — the same user_metadata /onboarding reads, so both hosts of the
+  // plain data   the same user_metadata /onboarding reads, so both hosts of the
   // wizard open with the same fields already filled in.
   const user = await getCurrentUser();
   const meta = user?.user_metadata ?? {};
@@ -164,7 +164,7 @@ export async function RoleDashboard({
   // Locked KPIs keep their labels and lose their numbers. A row of zeroes
   // would be a claim about their business; an em-dash is an absence.
   const styledKpis = (
-    locked ? kpis.map((k) => ({ ...k, value: '—', sub: 'After verification' })) : kpis
+    locked ? kpis.map((k) => ({ ...k, value: ' ', sub: 'After verification' })) : kpis
   ).map(withKpiStyle);
 
   // Only the "go and do something" state is a link, so only it gets the

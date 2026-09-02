@@ -1,5 +1,5 @@
 /**
- * Server Actions for console invitations — creating them, delivering them, and
+ * Server Actions for console invitations   creating them, delivering them, and
  * redeeming them into an account.
  *
  * THE SHAPE IS DELIBERATELY THE SAME AS modules/storefronts/invite-actions.
@@ -38,7 +38,7 @@ import type { Row } from '@/lib/supabase/row';
 
 /**
  * staff_invites postdates the checked-in generated types. REGENERATE once
- * 20260903090000 is applied and this goes — the access-roles tables above it
+ * 20260903090000 is applied and this goes   the access-roles tables above it
  * needed the same thing and no longer do.
  */
 function db(): SupabaseClient {
@@ -60,7 +60,7 @@ async function rpc(name: string, args: Record<string, unknown> = {}) {
   return call(name, args);
 }
 
-/** Staff, or nothing happens. The database re-checks — and insists on a super
+/** Staff, or nothing happens. The database re-checks   and insists on a super
  *  admin, which this does not restate for the reason given in actions.ts. */
 async function assertStaff(): Promise<void> {
   const profile = await getProfile();
@@ -77,7 +77,7 @@ export type InviteStaffResult =
  * Bring somebody into the console.
  *
  * TWO PATHS, AND WHICH ONE YOU GET IS NOT A CHOICE THE SENDER MAKES.
- *   An address with an account is granted access directly — there is nothing
+ *   An address with an account is granted access directly   there is nothing
  *   to create, and mailing them a "set your password" link for a password they
  *   already have would be a phishing lesson we taught ourselves.
  *
@@ -110,7 +110,7 @@ export async function inviteStaff(input: {
     return { kind: 'granted', name: existing.name };
   }
 
-  // Returns the token exactly once. It is not readable again — see
+  // Returns the token exactly once. It is not readable again   see
   // modules/admin/invites for why.
   const { data, error } = await rpc('create_staff_invite', {
     p_email: email,
@@ -138,7 +138,7 @@ export async function inviteStaff(input: {
 }
 
 /**
- * Deliver it. Emailing the link IS the feature — the copyable link in the
+ * Deliver it. Emailing the link IS the feature   the copyable link in the
  * console is the fallback for when this fails, not the way it is meant to work.
  *
  * SPLIT FROM CREATION, and a failure here does not undo the invite. The
@@ -146,7 +146,7 @@ export async function inviteStaff(input: {
  * difference between "email is broken" and "you cannot hire anybody today".
  *
  * IT REPORTS WHAT ACTUALLY WENT WRONG, VERBATIM.
- *   The first cut returned the same sentence — "We could not send the email" —
+ *   The first cut returned the same sentence   "We could not send the email"  
  *   for a missing API key, a rejection from Resend and an exception in
  *   rendering. Three unrelated faults with three different fixes, wearing one
  *   message, and the real reason went only to the server log where the person
@@ -166,7 +166,7 @@ async function sendStaffInvite(input: {
   const from = process.env.EMAIL_FROM ?? `${SITE.name} <no-reply@letsyncyou.com>`;
 
   if (!apiKey) {
-    console.error('[staff-invite] RESEND_API_KEY missing — invite created but not emailed');
+    console.error('[staff-invite] RESEND_API_KEY missing   invite created but not emailed');
     return {
       ok: false,
       error:
@@ -218,12 +218,12 @@ async function sendStaffInvite(input: {
 
     if (error) {
       // The usual causes are an unverified sender domain, a key without send
-      // permission, or a `from` that is not on a domain this account owns —
+      // permission, or a `from` that is not on a domain this account owns  
       // and Resend names which. Passing that through is the difference between
       // a fixable report and "it did not work".
       console.error('[staff-invite] Resend rejected the send. from=%s error=%o', from, error);
       const detail = [error.name, error.message].filter(Boolean).join(': ');
-      return { ok: false, error: `Resend refused it (from ${from}) — ${detail}` };
+      return { ok: false, error: `Resend refused it (from ${from})   ${detail}` };
     }
   } catch (e) {
     console.error('[staff-invite] send threw while %s:', stage, e);
@@ -248,7 +248,7 @@ export interface StaffInvitePreview {
   reason?: string;
   email?: string;
   roleName?: string | null;
-  /** What the role opens — the shape of the job, before accepting it. */
+  /** What the role opens   the shape of the job, before accepting it. */
   areas?: string[];
   /** True when this address already has a Sync account: they sign in instead. */
   hasAccount?: boolean;
@@ -257,7 +257,7 @@ export interface StaffInvitePreview {
 /**
  * What is behind this token, for the accept screen.
  *
- * Safe to show whoever holds it — they were sent it. It returns the invited
+ * Safe to show whoever holds it   they were sent it. It returns the invited
  * address so the screen can say which one this is: people forward these, and
  * accepting as the wrong person is the mistake that prevents.
  */
@@ -329,7 +329,7 @@ export type RedeemStaffResult = { ok: true; redirect: string } | { ok: false; er
 
 /**
  * Create the account behind an invitation, set the chosen password, and accept
- * — in that order, because each step needs the one before it.
+ *   in that order, because each step needs the one before it.
  *
  * THE TOKEN IS REVALIDATED HERE rather than trusted from the preview. The
  * preview is a screen; this is the boundary, and a client that skipped
@@ -420,7 +420,7 @@ export async function redeemStaffInvite(input: {
  *
  * The other half of the flow: an address that already has an account gets no
  * password step, because they have one. All that is left is the accept, which
- * the database does entirely — including refusing a session whose confirmed
+ * the database does entirely   including refusing a session whose confirmed
  * email is not the invited one.
  */
 export async function acceptStaffInvite(token: string): Promise<RedeemStaffResult> {

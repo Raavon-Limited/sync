@@ -3,7 +3,7 @@
  * /events/[slug]/tickets.
  *
  * SCHEMA NOTE
- * `public.events` (0006) is deliberately minimal — id, organizer, name, slug,
+ * `public.events` (0006) is deliberately minimal   id, organizer, name, slug,
  * venue, geo, starts_at. It has no description, cover image, price tiers or
  * capacity. The /events screens will need those; add them in a follow-up
  * migration rather than stuffing them into `tickets.tier`, which is a per-ticket
@@ -12,7 +12,7 @@
  * Ticket issuance is NOT here. A ticket is money: it must be issued in the same
  * transaction as its payment, with a unique `reference`, which means an RPC
  * alongside `checkout_cart` rather than a client insert. `tickets` has no client
- * INSERT grant, so attempting it from here would fail — correctly.
+ * INSERT grant, so attempting it from here would fail   correctly.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
@@ -140,7 +140,7 @@ export async function fetchEventBySlug(db: Client, slug: string): Promise<SyncEv
   return r ? toEvent(r) : null;
 }
 
-/** What this event sells. Public — a listing without prices is not a listing. */
+/** What this event sells. Public   a listing without prices is not a listing. */
 export async function fetchEventTiers(db: Client, eventId: string): Promise<TicketTier[]> {
   return unwrapList<Row>(
     await db
@@ -152,7 +152,7 @@ export async function fetchEventTiers(db: Client, eventId: string): Promise<Tick
   ).map(toTier);
 }
 
-/** RLS scopes this to the caller — `tickets_select_own`. */
+/** RLS scopes this to the caller   `tickets_select_own`. */
 export async function fetchMyTickets(
   db: Client,
   opts: { status?: TicketStatus } & PageParams = {},

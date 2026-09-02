@@ -4,7 +4,7 @@
  * AN EMPTY STATE, NOT A REDIRECT
  *   Bouncing straight to the signup form was the wrong shape twice over: it
  *   made the dashboard unreachable until the form was finished, so somebody who
- *   wanted a look before committing had nowhere to look — and it meant a rider
+ *   wanted a look before committing had nowhere to look   and it meant a rider
  *   who closed the form halfway hit the same wall every time they came back,
  *   with no sense of what they were being asked into. The dashboard is theirs
  *   from the moment the account exists. It just has nothing in it yet, and says

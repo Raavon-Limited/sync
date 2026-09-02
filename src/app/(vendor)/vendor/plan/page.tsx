@@ -4,7 +4,7 @@
  * PURPOSE: Current plan, plan change, and billing history.
  *
  * Plans are charged to the vendor's Sync wallet via `subscribe_to_plan`, not to
- * a stored card — see ./(components)/plan-container for why the card UI is gone.
+ * a stored card   see ./(components)/plan-container for why the card UI is gone.
  */
 import type { Metadata } from 'next';
 import { PlanContainer } from './(components)/plan-container';

@@ -72,7 +72,7 @@ const toListing = (r: Row): FoodListing => ({
  * A catalogue row seen through one store: its price, its stock and whether
  * that store can sell it at all.
  *
- * The overlay is the point of the shared catalogue — the name, photo and
+ * The overlay is the point of the shared catalogue   the name, photo and
  * description are the business's and are edited once, while price and stock
  * belong to the location standing in front of the student.
  */
@@ -84,8 +84,8 @@ const toStoreListing = (r: Row, sl: Row | undefined): FoodListing => ({
 });
 
 /**
- * No vendor embed. `orders.vendor_id` is a FK to public.profiles — NOT to
- * vendor_profiles — so `vendor:vendor_profiles!orders_vendor_id_fkey(...)`
+ * No vendor embed. `orders.vendor_id` is a FK to public.profiles   NOT to
+ * vendor_profiles   so `vendor:vendor_profiles!orders_vendor_id_fkey(...)`
  * asked PostgREST for a relationship that does not exist and failed the whole
  * query with "Could not find a relationship". Routing it through profiles
  * instead would parse, then return null forever, because profiles is readable
@@ -134,7 +134,7 @@ const toOrder = (r: Row): FoodOrder => ({
  * but a geography column comes back over PostgREST as WKB hex. Its last caller
  * (delivery tracking) now reads the plain lat/lng columns, so it is gone rather
  * than left as a trap for the next person. Vendor location belongs to a BRANCH
- * now — see modules/storefronts.
+ * now   see modules/storefronts.
  */
 
 // ── Browse ─────────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export async function fetchVendorBySlug(db: Client, slug: string): Promise<FoodV
  * Resolve a storefront route slug to a BRANCH.
  *
  * `/food/[slug]` used to resolve a vendor_profiles row and then list every
- * listing that brand owned — which merged all of its branches into one menu the
+ * listing that brand owned   which merged all of its branches into one menu the
  * moment a vendor had more than one. Since listings are per branch, the page
  * has to resolve a branch.
  *
@@ -192,7 +192,7 @@ export async function resolveStorefrontBySlug(
     return { storefrontId: branch.id, vendorId: branch.vendor_id, branchName: branch.name };
   }
 
-  // Not a branch slug — try the brand, and use its primary branch.
+  // Not a branch slug   try the brand, and use its primary branch.
   const brand = unwrapMaybe<Row>(
     await db.from('vendor_profiles').select('id').eq('slug', slug).maybeSingle(),
   );
@@ -220,7 +220,7 @@ export async function resolveStorefrontBySlug(
  *
  * READS storefront_listings, NOT listings.storefront_id. Since the shared
  * catalogue (20260829090000) an item belongs to the BUSINESS and
- * `storefront_listings` says which stores carry it — so filtering on
+ * `storefront_listings` says which stores carry it   so filtering on
  * `listings.storefront_id` would show only the items that happened to be
  * created at this store and miss every one it was later opted into.
  *
@@ -266,7 +266,7 @@ export async function fetchFoodStorefronts(
 ): Promise<
   Array<{
     id: string;
-    /** The BRAND behind this branch — what `favorites` can currently store. */
+    /** The BRAND behind this branch   what `favorites` can currently store. */
     vendorId: string;
     slug: string;
     branchName: string;
@@ -292,7 +292,7 @@ export async function fetchFoodStorefronts(
   if (!branches.length) return [];
 
   // vendor_profiles is publicly readable, so this is a plain lookup rather than
-  // an embed — storefronts.vendor_id points at it, but PostgREST embeds on this
+  // an embed   storefronts.vendor_id points at it, but PostgREST embeds on this
   // schema have bitten us three times now.
   const ids = [...new Set(branches.map((b) => b.vendor_id))];
   const brands = unwrapList<Row>(
@@ -346,7 +346,7 @@ export async function fetchVendorMenu(db: Client, vendorId: string): Promise<Foo
 // ── Cart ───────────────────────────────────────────────────────────────────
 
 /**
- * One open cart per vendor — enforced by `carts_one_open_per_vendor_idx`, so
+ * One open cart per vendor   enforced by `carts_one_open_per_vendor_idx`, so
  * this is a get-or-create rather than a blind insert.
  */
 export async function fetchOrCreateCart(
@@ -356,7 +356,7 @@ export async function fetchOrCreateCart(
   /**
    * The BRANCH this cart belongs to. Optional so callers holding only a brand
    * still work; they get the primary branch, matching what a brand link
-   * resolves to. Pass it explicitly once the UI knows which branch is open —
+   * resolves to. Pass it explicitly once the UI knows which branch is open  
    * carts_one_open_per_storefront_idx is per branch, and two branches of one
    * brand are deliberately two carts.
    */
@@ -467,9 +467,9 @@ export async function removeCartItem(db: Client, itemId: string) {
 // ── Checkout ───────────────────────────────────────────────────────────────
 
 /**
- * Delegates to the `checkout_cart` RPC. Everything the RPC does — validating
+ * Delegates to the `checkout_cart` RPC. Everything the RPC does   validating
  * stock, re-reading live prices, applying the promotion, creating the order,
- * items, escrow hold, conversation and delivery — happens in one transaction.
+ * items, escrow hold, conversation and delivery   happens in one transaction.
  * Doing it here as six client calls would leave partial orders behind whenever
  * the network dropped between them.
  */
@@ -482,7 +482,7 @@ export async function checkoutCart(
     promotionCode?: string;
     /**
      * Where it is going. The server prices the ride from this against the
-     * store's pin — a COORDINATE rather than a distance, because a client that
+     * store's pin   a COORDINATE rather than a distance, because a client that
      * passes a distance is quoting its own delivery fee.
      *
      * Optional: an address typed by hand has no point attached, and the quote
@@ -495,7 +495,7 @@ export async function checkoutCart(
     await db.rpc('checkout_cart', {
       p_cart_id: input.cartId,
       p_delivery_address: input.deliveryAddress,
-      // `undefined`, not `null` — these have SQL defaults, and the generated
+      // `undefined`, not `null`   these have SQL defaults, and the generated
       // signature types an omitted argument as optional rather than nullable.
       p_note: input.note,
       p_promotion_code: input.promotionCode,
@@ -561,7 +561,7 @@ export async function fetchOrderEvents(db: Client, orderId: string): Promise<Ord
 /**
  * Reads `active_delivery_positions`, the view that exposes a rider's location
  * ONLY while a delivery is in flight. Never query `rider_profiles.current_geo`
- * from the client — that would be every rider's live position.
+ * from the client   that would be every rider's live position.
  */
 export async function fetchDeliveryTracking(
   db: Client,

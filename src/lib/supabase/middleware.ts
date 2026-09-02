@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
   // `adminRoleForEmail(email) ?? profile?.role` while every admin PAGE resolved
   // the opposite way round, so the same person could be staff to the router and
   // a student to the page they were routed to. There is one source now, and it
-  // is the row — see modules/admin/guard.
+  // is the row   see modules/admin/guard.
   let role: string | undefined;
   if (user) {
     const { data: profile } = await supabase

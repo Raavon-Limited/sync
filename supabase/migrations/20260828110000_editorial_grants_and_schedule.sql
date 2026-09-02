@@ -41,7 +41,7 @@
 --
 --   with no reference to `published_at`. There is no separate 'scheduled'
 --   status in the check constraint, so the only way to express "goes live on
---   Friday" is a published row with a future published_at — and that row was
+--   Friday" is a published row with a future published_at   and that row was
 --   world-readable the moment it was saved. The scheduling in /admin/editorial
 --   would have been a label on an article anyone could already read.
 --

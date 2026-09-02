@@ -6,7 +6,7 @@
  *             draft | published | archived. "Scheduled" is not a stored state:
  *             it is `published` with a `published_at` still in the future,
  *             which is also what the public read policy already honours.
- *             "Archived" was missing from the UI and is added here — an
+ *             "Archived" was missing from the UI and is added here   an
  *             article pulled from the site still exists and has to be findable.
  *   category  UI had a closed union of five. The table has `tags text[]`.
  *             Category is now the first non-marker tag, and is a plain string:

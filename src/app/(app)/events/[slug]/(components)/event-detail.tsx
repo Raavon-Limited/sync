@@ -2,7 +2,7 @@
  * One event: what it is, when, where, and what it costs.
  *
  * PURCHASE IS DISABLED, AND SAYS WHY
- *   `tickets` has no insert policy and there is no purchase RPC — issuing a
+ *   `tickets` has no insert policy and there is no purchase RPC   issuing a
  *   ticket means taking money, and payment verification belongs in the Paystack
  *   webhook (see 20260824100000_event_ticket_tiers). A button that looked
  *   buyable and silently did nothing would be worse than one that states the
@@ -83,7 +83,7 @@ export function EventDetail({ slug }: { slug: string }) {
 
         {!tiersLoading && tiers.length === 0 && (
           <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
-            No tickets listed for this event — pay at the door.
+            No tickets listed for this event   pay at the door.
           </p>
         )}
 

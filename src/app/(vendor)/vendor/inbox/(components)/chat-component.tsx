@@ -380,7 +380,7 @@ export default function ChatComponent() {
     setReported(selectedId, true);
     setReportOpen(false);
 
-    toast(`Report submitted: ${reason}${details ? ' — details included' : ''}`);
+    toast(`Report submitted: ${reason}${details ? '   details included' : ''}`);
   };
 
   /**

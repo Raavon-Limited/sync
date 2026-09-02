@@ -12,7 +12,7 @@ export interface Hostel {
   id: string;
   slug?: string;
   name: string;
-  /** Naira, not kobo — this component formats for display. */
+  /** Naira, not kobo   this component formats for display. */
   price: number;
   distanceMinutes: number;
   landmark: string;
@@ -100,7 +100,7 @@ export function HostelCardListLive({ limit = 3 }: { limit?: number }) {
     slug: h.slug,
     name: h.name,
     price: h.pricePerSessionKobo / 100,
-    // Not a column on `hostels`; 0 renders as "—" rather than a guess.
+    // Not a column on `hostels`; 0 renders as " " rather than a guess.
     distanceMinutes: h.distanceMinutes ?? 0,
     landmark: h.landmark ?? h.area,
     imageUrl: h.images[0]?.url,

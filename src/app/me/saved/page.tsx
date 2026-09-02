@@ -4,7 +4,7 @@
  * PURPOSE: Saved listings, vendors, events, services and hotspots.
  *
  * The list is a client island because a save points at one of five different
- * tables and has to be resolved against each — see ./(components)/saved-list.
+ * tables and has to be resolved against each   see ./(components)/saved-list.
  */
 import type { Metadata } from 'next';
 import { SavedList } from './(components)/saved-list';

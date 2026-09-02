@@ -1,19 +1,19 @@
 /**
- * VerificationDocuments — every document Sync asks this kind of account for,
+ * VerificationDocuments   every document Sync asks this kind of account for,
  * collected in one place, and none of them optional.
  *
  * WHY ALL OF THEM, AND WHY HERE
  *   The wizard used to ask for "your ID and any business documents" through a
- *   single drop zone, and called it "optional now — you can add them later".
+ *   single drop zone, and called it "optional now   you can add them later".
  *   That was never true. `set_verification_status` refuses to verify an
  *   account with nothing approved, so a submission with no documents reached a
  *   reviewer as:
  *
- *     0 of 0 documents approved — nothing uploaded yet
+ *     0 of 0 documents approved   nothing uploaded yet
  *
  *   with a Verify button that could not be pressed. The applicant believed
  *   they had applied; staff had an entry they could only reject. "Later" had
- *   no route back either — Settings offered uploads, but nothing re-submitted
+ *   no route back either   Settings offered uploads, but nothing re-submitted
  *   the account for review, so the files landed in a queue nobody was told
  *   about.
  *
@@ -28,7 +28,7 @@
  * THREE SHAPES, DRIVEN BY THE SPEC
  *   captureOnly   camera only, no file picker, no subtype (the live photo)
  *   options       pick WHICH document first, then upload it
- *   gov_id        the above, plus a back side — unless it is a passport,
+ *   gov_id        the above, plus a back side   unless it is a passport,
  *                 which does not have one
  */
 'use client';
@@ -65,7 +65,7 @@ export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
  *   passport  ONE page. There is no back. Asking for it yields a blank photo
  *             or an abandoned form.
  *   nin       Issued BOTH ways. The NIN slip is a single-sided paper printout
- *             — the overwhelming majority of what people actually hold — while
+ *               the overwhelming majority of what people actually hold   while
  *             the plastic NIN card has a back. So the slot is offered and
  *             never required: demanding a back from a slip holder is demanding
  *             a photograph of something that does not exist.
@@ -165,9 +165,9 @@ function Slot({
 }: {
   label: string;
   file: File | null;
-  /** Camera only — no file picker. See the spec's `captureOnly` note. */
+  /** Camera only   no file picker. See the spec's `captureOnly` note. */
   capture?: boolean;
-  /** Offered but not insisted on — see BACK_POLICY. */
+  /** Offered but not insisted on   see BACK_POLICY. */
   optional?: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
@@ -177,8 +177,8 @@ function Slot({
   //
   // `capture="user"` on the input below only ever asked a PHONE to open its
   // camera; every desktop browser ignores it and opens the file picker, so the
-  // live photo — the one document whose entire purpose is proving a person is
-  // present — was being satisfied by whatever was in somebody's downloads
+  // live photo   the one document whose entire purpose is proving a person is
+  // present   was being satisfied by whatever was in somebody's downloads
   // folder. <CameraCapture> is a real getUserMedia stream.
   const [camera, setCamera] = useState(false);
   // Set when the device has no usable camera or permission was refused. Falling
@@ -205,14 +205,14 @@ function Slot({
         type="file"
         accept={capture ? 'image/*' : ACCEPT}
         // `capture` makes a phone open the camera instead of the gallery. It
-        // raises the bar rather than closing the door — see the requirements
-        // spec — and desktop browsers ignore it entirely.
+        // raises the bar rather than closing the door   see the requirements
+        // spec   and desktop browsers ignore it entirely.
         {...(capture ? { capture: 'user' as const } : {})}
         className="hidden"
         onChange={(e) => {
           const picked = e.target.files?.[0];
           if (picked) onPick(picked);
-          // Reset so re-picking the SAME file still fires a change — otherwise
+          // Reset so re-picking the SAME file still fires a change   otherwise
           // "Replace" with an identical filename does nothing.
           e.target.value = '';
         }}
@@ -380,7 +380,7 @@ function Requirement({
               />
               {policy === 'optional' && (
                 <p className="text-content-muted -mt-1 text-xs">
-                  Only if you have the plastic NIN card. A NIN slip is printed on one side — skip
+                  Only if you have the plastic NIN card. A NIN slip is printed on one side   skip
                   this if that is what you have.
                 </p>
               )}
@@ -414,7 +414,7 @@ export function VerificationDocuments({
       <div>
         <h3 className="text-content text-base font-semibold">Verification documents</h3>
         <p className="text-content-muted text-sm">
-          All {specs.length} are required — a reviewer cannot approve a business without them.
+          All {specs.length} are required   a reviewer cannot approve a business without them.
         </p>
         <p className="text-content-muted mt-1 text-xs">
           {complete} of {specs.length} added

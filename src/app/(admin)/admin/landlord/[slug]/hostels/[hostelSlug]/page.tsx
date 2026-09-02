@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/landlord/[slug]/hostels/[hostelSlug]
  * ACCESS: admin / super_admin only.
- * PURPOSE: One hostel in full — rooms, bookings, and its verification visit.
+ * PURPOSE: One hostel in full   rooms, bookings, and its verification visit.
  *
  * This is the screen support opens when someone asks "what is actually going on
  * with this property", so it shows the three things that answer that: what is
@@ -35,7 +35,7 @@ export async function generateMetadata({
   params: Promise<{ hostelSlug: string }>;
 }): Promise<Metadata> {
   const { hostelSlug } = await params;
-  return { title: `${hostelSlug} — Hostel` };
+  return { title: `${hostelSlug}   Hostel` };
 }
 
 export default async function Page({
@@ -73,7 +73,7 @@ export default async function Page({
         .select('id, status, move_in, end_date, created_at, paid_at')
         .eq('hostel_id', h.id)
         .order('created_at', { ascending: false }),
-      // A hostel can be visited more than once — rejected, then revisited. Only
+      // A hostel can be visited more than once   rejected, then revisited. Only
       // the newest verdict is current, so this is a list-of-one, not a single.
       admin
         .from('hostel_verification_visits')
@@ -81,7 +81,7 @@ export default async function Page({
         .eq('hostel_id', h.id)
         .order('created_at', { ascending: false })
         .limit(1),
-      // One row per hostel always — the view groups by hostel and left-joins
+      // One row per hostel always   the view groups by hostel and left-joins
       // rooms, so a hostel with none still reports 0/0.
       admin.from('hostel_availability').select('*').eq('hostel_id', h.id).maybeSingle(),
     ]);

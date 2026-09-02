@@ -1,17 +1,17 @@
 /**
- * Student inbox — conversation list, thread, composer.
+ * Student inbox   conversation list, thread, composer.
  *
  * WHY IT DOES NOT REUSE THE FLOATING WIDGET
  *   `ChatWidget` is a draggable overlay with its own position and size state;
  *   its list and thread are internal to it. This is a route, and it should be
  *   a two-pane layout on desktop and a stack on mobile. The shared part is the
- *   messaging module underneath — both read the same hooks, so a message sent
+ *   messaging module underneath   both read the same hooks, so a message sent
  *   here appears there without either knowing about the other.
  *
  * REALTIME IS AN INVALIDATION SIGNAL, NOT A CACHE WRITE
  *   `useConversationRealtime` tells React Query something changed and lets the
  *   normal query refetch. A postgres_changes payload is a single flat row with
- *   none of its joins — splicing one into a fully-joined cache entry is how
+ *   none of its joins   splicing one into a fully-joined cache entry is how
  *   "the attachment disappeared" bugs happen.
  */
 'use client';
@@ -158,7 +158,7 @@ function Thread({
   const markRead = useMarkConversationRead();
   const endRef = useRef<HTMLDivElement | null>(null);
 
-  // Opening a thread is what marks it read — not merely having it selected.
+  // Opening a thread is what marks it read   not merely having it selected.
   useEffect(() => {
     markRead.mutate(conversationId);
     // markRead is a stable mutation object; re-running on it would loop.
@@ -194,7 +194,7 @@ function Thread({
 
         {!isLoading && messages.length === 0 && (
           <p className="text-content-muted py-8 text-center text-sm">
-            No messages yet — say hello.
+            No messages yet   say hello.
           </p>
         )}
 

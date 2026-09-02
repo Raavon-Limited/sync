@@ -12,7 +12,7 @@ import { requireStaffArea } from '@/modules/admin/guard';
 import { listArticles } from '@/modules/admin/editorial';
 import { AdminEditorialPage } from './editorial-components';
 
-export const metadata: Metadata = { title: 'Editorial — Admin' };
+export const metadata: Metadata = { title: 'Editorial   Admin' };
 
 // Scheduled articles change status with the clock, not with a write, so a
 // cached render would show yesterday's idea of what is live.

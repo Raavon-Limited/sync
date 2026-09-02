@@ -1,8 +1,8 @@
 /**
  * ROUTE: /me/messages
  * ACCESS: authenticated student
- * PURPOSE: Every thread the student is a party to — vendors, landlords, riders
- *          and service providers — with realtime delivery.
+ * PURPOSE: Every thread the student is a party to   vendors, landlords, riders
+ *          and service providers   with realtime delivery.
  *
  * The shell stays a server component for metadata; the panel is a client island
  * reading modules/messaging, the same hooks the floating widget uses.

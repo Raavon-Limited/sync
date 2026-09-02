@@ -52,5 +52,5 @@ dev-server.log
 # clobbers the dev server sharing .next. See next.config.ts.
 /.next-*
 
-# Staff bootstrap notes — kept out of the repo at the team's request.
+# Staff bootstrap notes   kept out of the repo at the team's request.
 docs/ADMIN_ACCESS.md

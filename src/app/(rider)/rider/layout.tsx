@@ -3,7 +3,7 @@
  * `rider` key.
  *
  * Authorization (role=rider) is enforced by the proxy, which has gated this
- * prefix since before any of these screens existed — see PROTECTED_PREFIXES.
+ * prefix since before any of these screens existed   see PROTECTED_PREFIXES.
  */
 import { DashboardShell } from '@/components/layouts/dashboard-shell';
 

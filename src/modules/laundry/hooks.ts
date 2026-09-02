@@ -4,7 +4,7 @@
  * Thin binding over `@/modules/services` with `vertical` fixed. Everything real
  * lives there.
  *
- * Typical pricing model: `per_unit` (₦300 per kg) — so laundry requests carry a
+ * Typical pricing model: `per_unit` (₦300 per kg)   so laundry requests carry a
  * `quantity` and the service carries a `unitLabel`. The database enforces that
  * pairing via `services_price_matches_model`.
  */

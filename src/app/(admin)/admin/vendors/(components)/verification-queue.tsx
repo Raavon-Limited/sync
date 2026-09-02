@@ -1,5 +1,5 @@
 /**
- * The vendor verification queue — which businesses, in what order, and how to
+ * The vendor verification queue   which businesses, in what order, and how to
  * find one.
  *
  * IT IS THE SAME BROWSER THE LANDLORD LIST USES. Cards with the live photo, a

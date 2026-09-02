@@ -37,9 +37,9 @@ interface BookingCard {
   stages: { id: string; label: string }[];
 }
 
-const naira = (kobo?: number | null) => (kobo == null ? '—' : `₦${(kobo / 100).toLocaleString()}`);
+const naira = (kobo?: number | null) => (kobo == null ? ' ' : `₦${(kobo / 100).toLocaleString()}`);
 const day = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+  iso ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' }) : ' ';
 
 // Each vertical's real lifecycle, in order. `currentIndex` is a position in
 // THIS list, so a rail can never imply a stage the source does not have.
@@ -69,7 +69,7 @@ function fromBooking(b: Booking): BookingCard {
     title: [b.hostelName ?? 'Hostel', b.roomLabel].filter(Boolean).join(' · '),
     provider: b.hostelArea ?? 'Hostel',
     date: day(b.moveIn ?? b.createdAt),
-    price: b.pricePerSessionKobo ? `${naira(b.pricePerSessionKobo)} / session` : '—',
+    price: b.pricePerSessionKobo ? `${naira(b.pricePerSessionKobo)} / session` : ' ',
     status: CLOSED_HOSTEL.includes(b.status) ? 'past' : 'active',
     stages,
     currentIndex,

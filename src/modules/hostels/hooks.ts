@@ -15,7 +15,7 @@ const db = () => createClient();
 
 // ── Reference data ─────────────────────────────────────────────────────────
 
-/** Areas change roughly never — cache hard rather than refetching per screen. */
+/** Areas change roughly never   cache hard rather than refetching per screen. */
 export function useAreas() {
   return useQuery({
     queryKey: qk.areas.all,
@@ -52,7 +52,7 @@ export function useHostel(slug: string | undefined) {
 
 /**
  * Proximity search. Disabled until coordinates exist, so the hook can be called
- * unconditionally while geolocation is still resolving — calling hooks
+ * unconditionally while geolocation is still resolving   calling hooks
  * conditionally is not an option, and `enabled` is the supported way out.
  */
 export function useHostelsNear(coords: { lat: number; lng: number } | null, radiusM = 2000) {
@@ -132,7 +132,7 @@ export function useScheduleInspection() {
   const { userId } = useSession();
   const qc = useQueryClient();
   return useMutation({
-    // fullName/phone/feeKobo are required by the table — the ambassador needs a
+    // fullName/phone/feeKobo are required by the table   the ambassador needs a
     // contact, and the fee is snapshotted so a later price change cannot
     // retroactively reprice a booked visit.
     mutationFn: (input: {

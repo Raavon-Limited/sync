@@ -6,7 +6,7 @@
  *
  * "PENDING" IS DERIVED, NOT STORED
  *   Nothing marks a transaction as awaiting review. A pending review is simply
- *   a completed transaction the caller was part of that has no review row yet —
+ *   a completed transaction the caller was part of that has no review row yet  
  *   which is exactly the rule `submit_review` enforces server-side. Deriving it
  *   here means the list can never offer something the RPC would then refuse.
  */
@@ -45,7 +45,7 @@ export async function fetchMyReviews(db: Client, authorId: string): Promise<Revi
 /**
  * Completed transactions with no review yet.
  *
- * Four sources, each with its own definition of "done" — and they are the ones
+ * Four sources, each with its own definition of "done"   and they are the ones
  * submit_review checks, deliberately kept in step with it:
  *   order            status = 'delivered'
  *   service_request  status = 'completed'
@@ -110,7 +110,7 @@ export async function fetchPendingReviews(
     out.push({
       sourceType: 'booking',
       sourceId: b.id,
-      // A booking is reviewed as the HOSTEL, not the landlord — students rate
+      // A booking is reviewed as the HOSTEL, not the landlord   students rate
       // the place they lived in.
       subjectType: 'hostel',
       subjectId: b.hostel_id,

@@ -1,11 +1,11 @@
 /**
- * LandlordsBrowser — the landlord list.
+ * LandlordsBrowser   the landlord list.
  *
  * THE DESIGN THAT STARTED HERE NOW LIVES IN components/admin/account-browser.
  *   Cards with the live photo, a grid/list toggle remembered per screen, and a
  *   click that opens the account on its own page. Vendors and riders were
  *   rendering three different shapes of the same question; they now render
- *   through the same component, and this file is what it was always doing —
+ *   through the same component, and this file is what it was always doing  
  *   deciding what a landlord row SAYS.
  */
 'use client';

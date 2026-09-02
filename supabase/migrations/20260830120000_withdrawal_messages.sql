@@ -8,7 +8,7 @@
 -- Both numbers are the same. `amount_kobo / 100` is integer division on two
 -- bigints, so the kobo are truncated away and any two amounts less than ₦1
 -- apart print identically. The refusal was correct; the sentence explaining it
--- was self-contradictory, which is worse than no sentence — it reads as broken
+-- was self-contradictory, which is worse than no sentence   it reads as broken
 -- software at the exact moment somebody is trying to take their money out.
 --
 -- Amounts are now formatted to two decimal places with thousands separators,

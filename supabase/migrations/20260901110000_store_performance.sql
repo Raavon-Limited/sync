@@ -1,7 +1,7 @@
 -- ============================================================================
 -- store_performance
 --
--- "Which of my stores is actually working?" — the question multi-store made
+-- "Which of my stores is actually working?"   the question multi-store made
 -- possible and nothing answered. Earnings are per BUSINESS (money lives on
 -- vendor_profiles), so the earnings screen shows one number no matter how many
 -- locations produced it. Per-store reporting is a `group by storefront_id`,
@@ -13,7 +13,7 @@
 --   store_revenue_monthly()  the same revenue, bucketed by month
 --   store_transactions()     the orders themselves, filtered by a named bucket
 --
--- REVENUE MEANS WHAT ARRIVED, not what was ordered — the same rule
+-- REVENUE MEANS WHAT ARRIVED, not what was ordered   the same rule
 -- my_revenue_series follows. A delivered order whose escrow has been released
 -- is money the vendor has; a pending order is a promise. Counting promises as
 -- revenue is how a dashboard tells someone they can afford something they
@@ -33,7 +33,7 @@
 --   bucket, and it is named for what it is.
 --
 -- THE BUCKETS ARE FILTERS, NOT A PARTITION. A cancelled order is usually also
--- a refunded one — cancel_order refunds in the same transaction — so it
+-- a refunded one   cancel_order refunds in the same transaction   so it
 -- appears under both. Forcing them apart would mean either hiding cancelled
 -- orders from the cancelled tab or hiding refunds from the refunds tab, and
 -- both are worse than an honest overlap. Only `all` is the whole set.
@@ -42,7 +42,7 @@
 --   `private.storefront_scope(..., 'orders')` is the same check the order
 --   queue's RLS makes, so a manager granted Orders at one store gets that
 --   store's figures here and nothing else. Anything money-shaped beyond a
---   store's own takings — the wallet, payouts, the subscription — is
+--   store's own takings   the wallet, payouts, the subscription   is
 --   untouched: those live on vendor_profiles and nothing here reads it.
 --
 -- ROLLBACK
@@ -157,7 +157,7 @@ revoke all on function public.store_performance() from public, anon;
 grant execute on function public.store_performance() to authenticated, service_role;
 
 comment on function public.store_performance() is
-  'Per-store order counts and takings for the caller. Revenue is released escrow net of commission — what arrived, not what was ordered. Includes archived stores: they still made money before they closed.';
+  'Per-store order counts and takings for the caller. Revenue is released escrow net of commission   what arrived, not what was ordered. Includes archived stores: they still made money before they closed.';
 
 -- ── 2. The monthly track ────────────────────────────────────────────────────
 -- Buckets are generated, not derived from the data, so a month with no orders
@@ -299,7 +299,7 @@ grant execute on function public.store_transactions(uuid, text, integer, integer
   to authenticated, service_role;
 
 comment on function public.store_transactions(uuid, text, integer, integer) is
-  'One store''s orders, or every store''s, filtered by bucket: all | completed | pending | cancelled | refunded. Buckets are filters and overlap — a cancelled order is usually also refunded.';
+  'One store''s orders, or every store''s, filtered by bucket: all | completed | pending | cancelled | refunded. Buckets are filters and overlap   a cancelled order is usually also refunded.';
 
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$

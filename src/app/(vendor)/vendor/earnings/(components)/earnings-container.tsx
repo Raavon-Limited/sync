@@ -97,8 +97,8 @@ export function EarningsContainer() {
       totalPayouts: summary?.totalPayouts ?? 0,
 
       bankName: defaultBank?.bankName ?? 'No account added',
-      accountNumber: defaultBank?.accountNumber ?? '—',
-      accountHolderName: defaultBank?.accountName ?? '—',
+      accountNumber: defaultBank?.accountNumber ?? ' ',
+      accountHolderName: defaultBank?.accountName ?? ' ',
 
       nextPayoutDate: nextRelease
         ? new Date(nextRelease).toLocaleDateString('en-NG', {

@@ -26,7 +26,7 @@ import type { BookingStatus } from '@/modules/hostels/types';
 
 const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 
-/** A booking still in play — neither finished nor called off. */
+/** A booking still in play   neither finished nor called off. */
 const CLOSED: BookingStatus[] = ['completed', 'cancelled', 'expired'];
 
 export function UsageSummary() {

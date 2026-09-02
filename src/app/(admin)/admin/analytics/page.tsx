@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/analytics
  * ACCESS: admin / super_admin only.
- * PURPOSE: What the platform actually did — revenue, orders, who and when.
+ * PURPOSE: What the platform actually did   revenue, orders, who and when.
  *
  * Was a client component over `data.ts`, which generated its own numbers. It is
  * now a server component: the window comes from `?range=`, the figures come
@@ -20,7 +20,7 @@ import { TimeRangeSelector } from './components/TimeRangeSelector';
 import { rangeFromParam } from './data';
 import { getAnalytics } from './analytics-data';
 
-export const metadata: Metadata = { title: 'Analytics — Admin' };
+export const metadata: Metadata = { title: 'Analytics   Admin' };
 
 // Money figures go stale the moment an order is paid, and an admin reading a
 // cached page would be reading yesterday.

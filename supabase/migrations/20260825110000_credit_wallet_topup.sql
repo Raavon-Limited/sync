@@ -2,7 +2,7 @@
 -- credit_wallet_topup
 --
 -- The Paystack webhook verifies a charge and then… logs it. Its own TODO says
--- "needs the wallet schema" — which has existed since 20260817090300. So a
+-- "needs the wallet schema"   which has existed since 20260817090300. So a
 -- student can complete a real payment and their balance never moves.
 --
 -- WHY THE WEBHOOK CANNOT DO THIS ITSELF
@@ -17,7 +17,7 @@
 --   one payment, and the second credit is indistinguishable from the first.
 --
 --   `private.ledger_transactions.reference` is UNIQUE, so the reference IS the
---   idempotency key — no separate table, no TTL, no cleanup. A replay finds the
+--   idempotency key   no separate table, no TTL, no cleanup. A replay finds the
 --   existing transaction and returns it unchanged.
 --
 -- DOUBLE ENTRY, NOT A BALANCE BUMP
@@ -104,4 +104,4 @@ revoke all on function public.credit_wallet_topup(uuid, bigint, text) from publi
 grant execute on function public.credit_wallet_topup(uuid, bigint, text) to service_role;
 
 comment on function public.credit_wallet_topup is
-  'Credits a verified Paystack top-up. Idempotent by reference. Service role only — never expose to clients.';
+  'Credits a verified Paystack top-up. Idempotent by reference. Service role only   never expose to clients.';

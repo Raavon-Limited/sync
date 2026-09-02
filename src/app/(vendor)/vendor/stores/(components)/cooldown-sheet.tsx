@@ -3,15 +3,15 @@
  *
  * WHAT IT IS FOR
  *   A kitchen with more tickets than hands needs to stop taking orders for ten
- *   minutes, not close for the day. `is_accepting_orders` — the switch next to
- *   this — has no expiry, so it either never gets turned off or never gets
+ *   minutes, not close for the day. `is_accepting_orders`   the switch next to
+ *   this   has no expiry, so it either never gets turned off or never gets
  *   turned back on. A cooldown is a deadline: it ends because the time passes.
  *
  * WHY A PANEL AND NOT A CARD ON THE PAGE
  *   Open by default, the cooldown sat between the store cards and everything
  *   below them, so the settings a vendor touches twice a year pushed the ones
  *   they touch daily off the screen. The state that has to be visible without
- *   opening anything is whether the store is taking orders — that is on the
+ *   opening anything is whether the store is taking orders   that is on the
  *   trigger itself, and it is the reason the trigger is not a plain button.
  *
  * WHY THE COUNTDOWN TICKS
@@ -206,7 +206,7 @@ export function CooldownSheet({ store, disabled }: { store: Storefront; disabled
             {DEFAULT_AUTO_PAUSE_AFTER}; leave it empty to never pause automatically.
           </p>
           <p className="text-content-muted text-xs">
-            An automatic pause lifts as soon as you get back under your limit — you do not have to
+            An automatic pause lifts as soon as you get back under your limit   you do not have to
             wait it out. If nothing moves at all it ends by itself after {store.autoPauseMinutes}{' '}
             minutes, so the shop can never stay shut because you forgot about it.
           </p>

@@ -3,7 +3,7 @@
  *
  * For search boxes whose value becomes a network request. Debouncing the VALUE
  * rather than the callback keeps the input itself fully controlled and
- * instant — the field never lags behind the keyboard, only the query does.
+ * instant   the field never lags behind the keyboard, only the query does.
  *
  *   const [term, setTerm] = useState('');
  *   const debounced = useDebounced(term, 250);

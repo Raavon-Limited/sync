@@ -1,7 +1,7 @@
 /**
  * ROUTE: /admin/landlord/[slug]
  * ACCESS: admin / super_admin only.
- * PURPOSE: One landlord — their details, their hostels, and the state of each.
+ * PURPOSE: One landlord   their details, their hostels, and the state of each.
  *
  * `slug` is `vendor_profiles.slug`. Landlords have no slug of their own because
  * they are not a separate table; see the note on /admin/landlord.
@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  return { title: `${slug} — Landlord` };
+  return { title: `${slug}   Landlord` };
 }
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
@@ -52,7 +52,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
       .is('archived_at', null)
       .order('created_at', { ascending: false }),
     // The person behind the business. `profiles` is own-row-only under RLS,
-    // so the service role is the only way to read it — and only here.
+    // so the service role is the only way to read it   and only here.
     admin
       .from('profiles')
       .select('full_name, role, phone')
@@ -123,7 +123,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
           </Badge>
         </h1>
         <p className="text-content-muted text-sm">
-          {(owner as Row)?.full_name ?? 'Name not set'} · role {(owner as Row)?.role ?? '—'}
+          {(owner as Row)?.full_name ?? 'Name not set'} · role {(owner as Row)?.role ?? ' '}
         </p>
         <p className="text-content-muted flex flex-wrap items-center gap-3 text-sm">
           <span className="flex items-center gap-1">

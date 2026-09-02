@@ -2,7 +2,7 @@
  * Everything the student has saved, across five different tables.
  *
  * WHY THIS NEEDS SIX QUERIES AND NOT ONE
- *   `favorites` stores only (entity_type, entity_id) — no denormalised title or
+ *   `favorites` stores only (entity_type, entity_id)   no denormalised title or
  *   image. That is the right call for a join table: a saved listing whose price
  *   changed should show the NEW price, and a copy would go stale the moment the
  *   vendor edited it. The cost is that rendering a save means resolving it

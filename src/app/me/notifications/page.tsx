@@ -4,7 +4,7 @@
  * PURPOSE: Notification inbox, live over Supabase channels.
  *
  * PREFERENCES ARE NOT PERSISTED, AND THE UI SAYS SO
- *   There is no notification-preferences table in this schema — only
+ *   There is no notification-preferences table in this schema   only
  *   `public.devices`, which holds push tokens. The toggles below are local
  *   state, and the tab states that plainly rather than pretending a switch was
  *   saved. Silently discarding a preference someone set is worse than telling
@@ -42,7 +42,7 @@ import type { NotificationKind } from '@/modules/messaging/types';
 /**
  * One icon per real notification kind. The previous four-way union (Hostel /
  * Laundry / Event / System) could not represent most of what the database
- * actually emits — an order or a payment alert had nowhere to land.
+ * actually emits   an order or a payment alert had nowhere to land.
  */
 const KIND_ICON: Record<NotificationKind, React.ReactNode> = {
   booking: <Home className="h-4 w-4 text-lime" />,
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
               <h3 className="font-display text-base font-medium text-content">Notification Routing</h3>
               <p className="font-body text-xs text-content-muted mt-0.5">Toggle where and how you receive real-time campus module updates.</p>
               <p className="font-body text-xs text-amber-600 mt-2">
-                These toggles are not saved yet — there is no preferences store behind them, so
+                These toggles are not saved yet   there is no preferences store behind them, so
                 they reset when you leave the page.
               </p>
             </div>

@@ -3,7 +3,7 @@
  * ACCESS: everyone.
  * PURPOSE: Start a password reset.
  *
- * It always says the same thing whether or not the address has an account —
+ * It always says the same thing whether or not the address has an account  
  * see `requestPasswordReset` for why. The success copy is therefore written to
  * be true in both cases: "if there is an account, we have sent a link", not
  * "we have sent you a link".

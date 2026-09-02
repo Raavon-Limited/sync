@@ -7,13 +7,13 @@
  *   split fall out of those.
  *
  * WHAT IS NOT, AND SO IS NOT SHOWN
- *   The mock's "SAVED VIA SYNC · ₦18,200 across deals" has nothing behind it —
+ *   The mock's "SAVED VIA SYNC · ₦18,200 across deals" has nothing behind it  
  *   promotions record a redemption count on the promotion, not a per-student
  *   saving. Same tile was removed from the dashboard for the same reason.
  *
  * WHAT COUNTS AS SPENT
  *   An order that was cancelled is not spend. A booking is only spend once it
- *   has been paid — `paid_at`, set by the payment webhook, not by reaching a
+ *   has been paid   `paid_at`, set by the payment webhook, not by reaching a
  *   status. A service request counts at its AGREED price, and only once
  *   completed: a quote is not money.
  */
@@ -73,7 +73,7 @@ export function InsightsPanel() {
 
   const totalKobo = spends.reduce((s, x) => s + x.kobo, 0);
 
-  // Last six calendar months, oldest first, including months with no spend —
+  // Last six calendar months, oldest first, including months with no spend  
   // gaps are information, and a chart that silently skips them misleads.
   const monthly = useMemo(() => {
     const now = new Date();
@@ -103,7 +103,7 @@ export function InsightsPanel() {
       .sort((a, b) => b.amount - a.amount);
   }, [spends, totalKobo]);
 
-  // Average over months that actually had activity, not over six — dividing a
+  // Average over months that actually had activity, not over six   dividing a
   // new student's first month by six understates what they spend.
   const activeMonths = monthly.filter((m) => m.amount > 0).length;
   const avgKobo = activeMonths ? totalKobo / activeMonths : 0;
@@ -112,7 +112,7 @@ export function InsightsPanel() {
   const stats: { label: string; value: string; sub: string; icon: LucideIcon }[] = [
     { label: 'TOTAL SPENT', value: naira(totalKobo), sub: `${spends.length} transaction${spends.length === 1 ? '' : 's'}`, icon: Wallet },
     { label: 'AVG / MONTH', value: naira(avgKobo), sub: activeMonths ? `over ${activeMonths} active month${activeMonths === 1 ? '' : 's'}` : 'no activity yet', icon: TrendingUp },
-    { label: 'TOP CATEGORY', value: top?.label ?? '—', sub: top ? `${top.pct}% of spend` : 'nothing spent yet', icon: BedDouble },
+    { label: 'TOP CATEGORY', value: top?.label ?? ' ', sub: top ? `${top.pct}% of spend` : 'nothing spent yet', icon: BedDouble },
     { label: 'TICKETS HELD', value: String(tickets.filter((t) => t.status === 'valid').length), sub: 'valid right now', icon: CalendarDays },
   ];
 

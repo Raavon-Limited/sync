@@ -2,7 +2,7 @@
  * Scheduled release of matured escrow holds.
  *
  * A student confirming delivery releases their own escrow immediately. When
- * they never confirm — which is most of the time — the money would otherwise
+ * they never confirm   which is most of the time   the money would otherwise
  * sit frozen forever, and the vendor is owed it. `escrow_holds.release_after`
  * exists precisely so this can settle it either way.
  *

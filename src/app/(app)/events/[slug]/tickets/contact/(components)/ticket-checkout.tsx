@@ -2,13 +2,13 @@
  * Step 2: confirm and buy.
  *
  * THE PAYMENT STEP IS GONE, ON PURPOSE
- *   This used to push to /events/[slug]/tickets/payment — a route that does not
+ *   This used to push to /events/[slug]/tickets/payment   a route that does not
  *   exist. Tickets are paid from wallet balance, so there is no card form to
  *   collect and nothing to redirect to. Confirming here IS the payment.
  *
  * ONE CALL PER TIER, AND IT IS NOT ATOMIC ACROSS THEM
  *   `purchase_tickets` takes one tier. A basket spanning two tiers is two
- *   calls, so the second can fail after the first succeeded — most likely on
+ *   calls, so the second can fail after the first succeeded   most likely on
  *   balance. Rather than pretend otherwise, tiers are bought in order and the
  *   result says exactly what was bought and what was not. Partial success is
  *   reported, never silently swallowed.
@@ -139,11 +139,11 @@ export function TicketCheckout({ slug }: { slug: string }) {
               <Wallet className="size-4" /> Paid from your Sync wallet
             </span>
             <span className="text-content font-semibold">
-              {wallet ? naira(wallet.balanceKobo) : '—'}
+              {wallet ? naira(wallet.balanceKobo) : ' '}
             </span>
           </div>
 
-          {/* Shown before they tap, not after — the shortfall is fixable. */}
+          {/* Shown before they tap, not after   the shortfall is fixable. */}
           {short > 0 && (
             <p className="border-line/10 bg-panel mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
               <span className="text-content-muted">

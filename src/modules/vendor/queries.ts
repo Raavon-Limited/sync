@@ -1,5 +1,5 @@
 /**
- * Data access for the 'vendor' module — storefront, listings, the order inbox
+ * Data access for the 'vendor' module   storefront, listings, the order inbox
  * and promotions. Backs /vendor/listings, /vendor/orders, /vendor/promotions
  * and /vendor/settings.
  *
@@ -33,7 +33,7 @@ export interface VendorStorefront {
   publicPhone: string | null;
   businessAddress: string | null;
   area: string | null;
-  /** Server-controlled — the column guard reverts client writes. */
+  /** Server-controlled   the column guard reverts client writes. */
   verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   ratingAvg: number;
   ratingCount: number;
@@ -176,7 +176,7 @@ export async function fetchMyStorefront(
 
 /**
  * `verification_status`, `verified_at`, `rating_avg` and `rating_count` are
- * omitted deliberately — `guard_vendor_profile_cols` reverts them. A vendor
+ * omitted deliberately   `guard_vendor_profile_cols` reverts them. A vendor
  * cannot self-verify or invent a rating.
  */
 export async function updateMyStorefront(
@@ -225,7 +225,7 @@ export async function fetchMyListings(
   return unwrapList<Row>(await q).map(toListing);
 }
 
-/** `sold` is omitted — it is maintained by checkout, not by the vendor. */
+/** `sold` is omitted   it is maintained by checkout, not by the vendor. */
 export async function upsertListing(
   db: Client,
   // `name`, `category` and `price_kobo` are NOT NULL in the schema.
@@ -251,7 +251,7 @@ export async function upsertListing(
 
   // storefront_id is NOT NULL: a listing is stocked AT a branch. The two paths
   // are built separately because the column is required on CREATE and merely
-  // optional on EDIT — one shared payload with `storefront_id` spread in
+  // optional on EDIT   one shared payload with `storefront_id` spread in
   // conditionally is optional in both, which typechecked only while the
   // generated types were stale and would have inserted a null branch.
   const row = input.id
@@ -316,7 +316,7 @@ export async function deleteListings(db: Client, ids: string[]) {
  *
  * SCOPE BY BRANCH WHEN ONE IS ACTIVE, BY BRAND OTHERWISE.
  *   Filtering on `vendor_id` alone returns EVERY branch's orders merged, which
- *   is wrong for a vendor working one location — and returns nothing at all for
+ *   is wrong for a vendor working one location   and returns nothing at all for
  *   an invited manager, whose uid is not the vendor's. Passing `storefrontId`
  *   fixes both: RLS (orders_select_own) already lets branch staff read their own
  *   branch's orders, so the same call works for owner and manager alike.
@@ -341,7 +341,7 @@ export async function fetchVendorOrders(
 }
 
 /**
- * Only the vendor advances fulfilment — that is `orders_update_vendor` in 0006.
+ * Only the vendor advances fulfilment   that is `orders_update_vendor` in 0006.
  * Money columns are frozen by `guard_order_privileged_cols`, so a vendor cannot
  * mark an order paid or change its total while updating the status.
  */
@@ -353,7 +353,7 @@ export async function updateOrderStatus(
 ): Promise<FoodOrder> {
   // Cancelling is NOT a status write. A plain update leaves the escrow hold
   // sitting at 'held', and the hourly release cron then pays the vendor in
-  // full for an order that never happened — see 20260829100000. Cancelling
+  // full for an order that never happened   see 20260829100000. Cancelling
   // and refunding have to be one transaction, which is what the RPC is.
   if (status === 'cancelled') return cancelOrder(db, orderId, reason);
 
@@ -404,7 +404,7 @@ export async function fetchMyPromotions(db: Client, vendorId: string): Promise<P
 }
 
 /**
- * `redemption_count` is omitted — `guard_promotion_cols` reverts it, because a
+ * `redemption_count` is omitted   `guard_promotion_cols` reverts it, because a
  * vendor who could edit it could reset a capped promotion forever.
  *
  * The `promotions_percent_sane` constraint rejects a percentage over 100 and
@@ -494,8 +494,8 @@ export async function uploadVendorImage(
 
   const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   const token = crypto.randomUUID().slice(0, 8);
-  // The folder is cosmetic — the POLICY authorizes on the first segment, the
-  // uploader's uuid — but it keeps a vendor's own storage browsable when
+  // The folder is cosmetic   the POLICY authorizes on the first segment, the
+  // uploader's uuid   but it keeps a vendor's own storage browsable when
   // somebody has to go looking for the photo behind a support ticket.
   const path = `${input.userId}/${input.folder ?? 'listings'}/${token}-${safeName}`;
 

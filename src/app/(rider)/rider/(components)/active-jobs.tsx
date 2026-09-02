@@ -3,8 +3,8 @@
  * button that moves it forward.
  *
  * ONE BUTTON, NOT A STATUS PICKER
- *   A delivery has exactly one legal next state at any moment — advance_delivery
- *   enforces that in the database — so offering a dropdown of every status would
+ *   A delivery has exactly one legal next state at any moment   advance_delivery
+ *   enforces that in the database   so offering a dropdown of every status would
  *   be offering four moves the server will refuse. The button says the next
  *   thing that can happen, and the only other exit is marking it failed.
  *

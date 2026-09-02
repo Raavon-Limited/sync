@@ -12,7 +12,7 @@
 --   whichever profile table the subject points at.
 --
 -- ONE REVIEW PER PERSON PER THING PER TRANSACTION
---   Not "per person per vendor" — a regular customer should be able to review
+--   Not "per person per vendor"   a regular customer should be able to review
 --   each order. Not "per person per subject" either, or you can never revise.
 --   The unique index is on (author, subject, source) where source is the order
 --   or booking being reviewed.
@@ -325,7 +325,7 @@ alter table public.articles         enable row level security;
 alter table public.banners          enable row level security;
 alter table public.analytics_events enable row level security;
 
--- Reviews are public — that is the point of them.
+-- Reviews are public   that is the point of them.
 drop policy if exists "reviews_select_public" on public.reviews;
 create policy "reviews_select_public" on public.reviews
   for select to anon, authenticated using (hidden_at is null);
@@ -400,7 +400,7 @@ create policy "dispute_messages_staff" on public.dispute_messages
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
 -- Reports: you see your own; staff see all. Deliberately no update for the
--- reporter — a report is a statement of record.
+-- reporter   a report is a statement of record.
 drop policy if exists "reports_own" on public.reports;
 create policy "reports_own" on public.reports
   for select to authenticated using ((select auth.uid()) = reporter_id);

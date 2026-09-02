@@ -33,7 +33,7 @@ const HOSTEL_IMAGES = [hostelImg, hostel1Img, hostelArielImg];
 /**
  * `hostels.room_type` is OCCUPANCY ('Self-contain', 'Sharing', 'Female only',
  * 'Male only'). This page filters by LAYOUT ('self contain', 'room and parlour',
- * 'two bedroom'). They are different taxonomies, and only one value overlaps —
+ * 'two bedroom'). They are different taxonomies, and only one value overlaps  
  * everything the schema cannot express as a layout falls to 'others' rather
  * than being guessed at. Reconciling them properly is a schema decision.
  */
@@ -57,7 +57,7 @@ function toCard(h: DomainHostel): Hostel {
     name: h.name,
     location: h.area,
     status: toStatus(h.availability, roomsLeft),
-    // No rating on `hostels`, and no reviews aggregate yet — 0 rather than an
+    // No rating on `hostels`, and no reviews aggregate yet   0 rather than an
     // invented number. See the note in the hostels module README.
     rating: 0,
     price: `₦${naira.toLocaleString()}`,
@@ -209,7 +209,7 @@ export default function Page() {
 
         return matchesQuery && matchesFilter;
       }),
-    // HOSTELS is fetched, not a module constant — without it here the list
+    // HOSTELS is fetched, not a module constant   without it here the list
     // stays empty after the data loads.
     [active, query, HOSTELS],
   );

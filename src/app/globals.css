@@ -32,7 +32,7 @@
   --color-surface-deep: var(--sf-2);
   /* hover / sunken panel */
   --color-panel: var(--sf-card);
-  /* card surface (was bg-white) — NOT "card": text-card is a font-size */
+  /* card surface (was bg-white)   NOT "card": text-card is a font-size */
   --color-content: var(--ct);
   /* primary text (was text-ink) */
   --color-content-muted: var(--ct-muted);
@@ -240,7 +240,7 @@ html {
  * scrollbar, and two bars that width next to each other read as a second
  * border rather than as controls. 0.2px is deliberately far below one CSS
  * pixel: the engine rounds it up to the thinnest line it can actually draw,
- * which is one device pixel — a hairline on any display.
+ * which is one device pixel   a hairline on any display.
  *
  * THE TRADE-OFF, STATED: at this width the thumb is not a drag target at all.
  * The rail is short and scrolls by wheel, trackpad and keyboard; the bar is

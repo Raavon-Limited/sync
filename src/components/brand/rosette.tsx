@@ -1,5 +1,5 @@
 /**
- * The guilloche rosette — the woven ring that marks a Sync credential.
+ * The guilloche rosette   the woven ring that marks a Sync credential.
  *
  * WHY IT IS DRAWN, NOT AN IMAGE FILE
  *   This ends up on a downloadable ID card, and the card is rasterised through
@@ -10,7 +10,7 @@
  *   any size, and it serialises with the rest of the document.
  *
  *   It is also the point of a guilloche. The pattern on a banknote is hard to
- *   reproduce by eye precisely because it is a curve family, not a drawing —
+ *   reproduce by eye precisely because it is a curve family, not a drawing  
  *   getting the parameters wrong is visible. A screenshot of this card
  *   re-rendered by hand will not line up.
  *
@@ -23,7 +23,7 @@
  *   quadratic curve pulled toward the centre, so the family sweeps into the
  *   hole in the middle instead of stopping at a flat edge.
  *
- * DECORATIVE ONLY — aria-hidden, no pointer events. Nothing here carries
+ * DECORATIVE ONLY   aria-hidden, no pointer events. Nothing here carries
  * information; the card is fully readable with the rosette removed.
  */
 import { memo } from 'react';
@@ -47,7 +47,7 @@ export interface RosetteProps {
  *
  * `-Math.PI / 2` rather than 0: SVG's y axis points down and angle 0 is 3
  * o'clock, so without the quarter-turn the pattern's seam lands on the right
- * edge — which is exactly where the eye goes first.
+ * edge   which is exactly where the eye goes first.
  */
 function ring(cx: number, cy: number, r: number, n: number) {
   const out: [number, number][] = [];
@@ -88,7 +88,7 @@ export const Rosette = memo(function Rosette({
   }
 
   // The rose: each chord bows toward the centre. The control point sits on the
-  // line from the midpoint to the middle, pulled `bow` of the way in — that is
+  // line from the midpoint to the middle, pulled `bow` of the way in   that is
   // the single number that decides whether this reads as a flower or a mesh.
   const bow = 0.55;
   const petals: string[] = [];
@@ -132,7 +132,7 @@ export const Rosette = memo(function Rosette({
 
 /**
  * The same art as a bare path string, for the places that build an SVG
- * document by hand — the card rasteriser cannot mount a React tree into a
+ * document by hand   the card rasteriser cannot mount a React tree into a
  * string, so it asks for the geometry instead. Keeping one implementation of
  * the maths is the whole reason this is exported rather than copied.
  */

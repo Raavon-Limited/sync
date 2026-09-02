@@ -1,7 +1,7 @@
 /**
  * Reading `public.articles` for /admin/editorial.
  *
- * Staff see every article, including drafts and archived ones — the public
+ * Staff see every article, including drafts and archived ones   the public
  * policy only exposes `status = 'published'`, so this goes through the
  * service-role client the way the rest of the admin surface does. The caller
  * is expected to have checked the role already; every mutation in
@@ -24,7 +24,7 @@ import type { Row } from '@/lib/supabase/row';
 
 /**
  * "Scheduled" is not a stored status. It is `published` with a publish time
- * that has not arrived — the same condition the public read policy uses — so
+ * that has not arrived   the same condition the public read policy uses   so
  * it is derived here rather than written anywhere.
  */
 export function statusOf(row: { status: string; published_at: string | null }): ArticleStatus {

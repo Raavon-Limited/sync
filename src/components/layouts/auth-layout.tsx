@@ -28,7 +28,7 @@ export function AuthLayout({
     // auth page should never scroll. That holds on a desktop, where the form
     // pane is its own scroller beside a fixed brand column. On a phone the two
     // panes are stacked in one column, so "never scroll" means the brand band
-    // and the form have to fit in a viewport together — and when they do not,
+    // and the form have to fit in a viewport together   and when they do not,
     // `overflow-hidden` does not compress them, it CUTS them. The signup form
     // grew (three role cards in a column) and the wordmark went off the top
     // with nothing a thumb could do about it.
@@ -65,7 +65,7 @@ export function AuthLayout({
 
       {/* p-4 on mobile, not p-6: the card below adds its own p-6, and two
           24px insets on a 375px screen left the inputs in a 279px column. */}
-      {/* No `items-center` — auto margins on the card instead.
+      {/* No `items-center`   auto margins on the card instead.
           Centring a flex item that is TALLER than its scroll container puts
           half the overflow above the scroll origin, where no amount of
           scrolling reaches it. `my-auto` centres the same way when there is

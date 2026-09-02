@@ -6,7 +6,7 @@
  *
  * Two deliberate differences from the mocks:
  *   - `moveIn` / `endDate` were human strings ("Sept 5", "Jul 30, 2027"). They
- *     are ISO dates here. Formatting belongs at render — a pre-formatted date
+ *     are ISO dates here. Formatting belongs at render   a pre-formatted date
  *     cannot be sorted, compared, or localised.
  *   - `daysLeft` is gone. It is derived from `endDate` and goes wrong the moment
  *     the page is left open past midnight. Compute it in the component.
@@ -72,7 +72,7 @@ export interface Hostel {
   availability?: Availability;
 }
 
-/** Result row of the `hostels_near` RPC — a lighter shape than a full hostel. */
+/** Result row of the `hostels_near` RPC   a lighter shape than a full hostel. */
 export interface NearbyHostel {
   id: string;
   name: string;

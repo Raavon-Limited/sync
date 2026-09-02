@@ -9,8 +9,8 @@
  *   A store is an address on the campus map. An unreviewed account opening a
  *   second one is the cheap version of a fake shopfront, and unlike a listing
  *   there is nothing about it a student can tell apart from the real thing.
- *   The FIRST store is never blocked — every vendor gets one on signup and
- *   needs it to complete onboarding — so this only ever stands between a
+ *   The FIRST store is never blocked   every vendor gets one on signup and
+ *   needs it to complete onboarding   so this only ever stands between a
  *   business and its second location. `guard_storefront_insert` enforces the
  *   same rule in the database; this is the part that explains it.
  */
@@ -39,7 +39,7 @@ interface StoreFormDialogProps {
   store?: Storefront;
   /** From `vendor_profiles.verification_status`. Only consulted on create. */
   verificationStatus?: string;
-  /** True when this vendor has no store yet — the one case verification cannot block. */
+  /** True when this vendor has no store yet   the one case verification cannot block. */
   isFirstStore?: boolean;
   /** Rendered as the trigger. Defaults to a button that matches the mode. */
   trigger?: React.ReactNode;
@@ -71,7 +71,7 @@ export function StoreFormDialog({
 
   // Seeded during render rather than in an effect. The same dialog instance
   // serves whichever store the vendor picked last, so the form has to re-seed
-  // when the identity behind it changes — and doing that in an effect means a
+  // when the identity behind it changes   and doing that in an effect means a
   // first paint showing the PREVIOUS store's name before it corrects itself.
   const seedKey = open ? (store?.id ?? 'new') : null;
   const [seeded, setSeeded] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export function StoreFormDialog({
     ev.preventDefault();
     if (!form.name.trim()) return;
 
-    // Empty strings are not blanks in the database — `area` drives discovery
+    // Empty strings are not blanks in the database   `area` drives discovery
     // and `opens_at` is a `time` that rejects "". Null is the absence.
     const payload = {
       name: form.name.trim(),
@@ -188,13 +188,13 @@ export function StoreFormDialog({
           <form className="flex flex-col gap-3" onSubmit={submit}>
             {/* The shopfront, not the logo. The brand mark is the same at
                 every location, which tells a student nothing about which door
-                to walk through — and discovery currently repeats one logo down
+                to walk through   and discovery currently repeats one logo down
                 the whole results list. */}
             <ImageField
               value={form.imageUrl}
               onChange={(url) => set('imageUrl', url)}
               label="Store photo"
-              hint="A picture of this location. Optional — your business logo is used if you skip it."
+              hint="A picture of this location. Optional   your business logo is used if you skip it."
               folder="stores"
             />
 

@@ -4,7 +4,7 @@
  * PURPOSE: PLATFORM settings and feature flags.
  *
  * This route previously rendered the same personal danger zone as /me/settings
- * — an admin deleting their own account, on a page named "admin settings".
+ *   an admin deleting their own account, on a page named "admin settings".
  * The admin's personal account controls stay where every other user's are; this
  * page is for the values that govern the platform, including the commission
  * rate that now moves real money.
@@ -18,7 +18,7 @@ import {
   type AdminFlag,
 } from './(components)/platform-settings';
 
-export const metadata: Metadata = { title: 'Settings — Admin' };
+export const metadata: Metadata = { title: 'Settings   Admin' };
 
 import type { Row } from '@/lib/supabase/row';
 

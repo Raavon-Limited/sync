@@ -92,7 +92,7 @@ export default function FoodLanding({ onExplore, userName = 'Abdulmuiz' }: Props
                             <span className="text-lime-deep dark:text-lime">delicacies</span>
                         </h1>
                         <p className="text-sm text-content-muted leading-relaxed">
-                            Campus food, ordered fast. From jollof to burgers —
+                            Campus food, ordered fast. From jollof to burgers  
                             everything you crave, delivered to your door.
                         </p>
                     </div>

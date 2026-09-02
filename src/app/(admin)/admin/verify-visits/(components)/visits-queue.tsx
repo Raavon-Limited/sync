@@ -2,7 +2,7 @@
  * Hostel verification visits.
  *
  * THE PREVIOUS SCREEN WAS ABOUT A DIFFERENT THING
- *   It modelled vendor store inspections — statuses Scheduled / In Progress /
+ *   It modelled vendor store inspections   statuses Scheduled / In Progress /
  *   Completed / Failed, an "inspector", a vendor category. The table this route
  *   is named after is `hostel_verification_visits`: an ambassador visits a
  *   HOSTEL, uploads photos, and staff decide whether it is real. Vendor store
@@ -11,7 +11,7 @@
  * EVIDENCE IS THE POINT
  *   A decision is only as good as what it is based on, so the photos, video and
  *   the ambassador's notes are shown inline rather than behind a modal. If a
- *   visit has no evidence, that is stated — approving an empty visit should
+ *   visit has no evidence, that is stated   approving an empty visit should
  *   feel like what it is.
  */
 'use client';
@@ -232,7 +232,7 @@ export function VisitsQueue({
         })}
       </div>
 
-      {/* Hostels nobody has been sent to yet — the queue behind the queue. */}
+      {/* Hostels nobody has been sent to yet   the queue behind the queue. */}
       {unvisited.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-content-muted font-mono text-sm tracking-wide">

@@ -1,12 +1,12 @@
 -- ============================================================================
--- verification_requires_documents — an empty submission is not a submission,
+-- verification_requires_documents   an empty submission is not a submission,
 -- and a rejection is not the end unless we say it is.
 --
 -- WHAT WENT WRONG
 --   A landlord reached the review queue having uploaded nothing. The reviewer's
 --   page read:
 --
---     0 of 0 documents approved — nothing uploaded yet
+--     0 of 0 documents approved   nothing uploaded yet
 --
 --   with a Verify button that could not be pressed, because
 --   set_verification_status already refuses to verify an account with no
@@ -14,7 +14,7 @@
 --   was made: the vendor believed they had applied, and staff had a queue entry
 --   they could only reject.
 --
---   The onboarding wizard called documents "optional now — you can add them
+--   The onboarding wizard called documents "optional now   you can add them
 --   later", which was never true. Verification cannot complete without them.
 --
 -- 1. THE FLOOR: NO DOCUMENTS, NO SUBMISSION
@@ -24,15 +24,15 @@
 --   something about it.
 --
 --   IT IS A FLOOR, NOT THE POLICY. Exactly WHICH documents are required is
---   product config (modules/verification/requirements.ts) and belongs there —
+--   product config (modules/verification/requirements.ts) and belongs there  
 --   a requirement nobody has uploaded still has to be listed as unmet, which a
 --   query over uploaded rows can never do. The wizard enforces the full set.
 --   This refuses the case no configuration could ever make acceptable, and
 --   which a client could otherwise reach by calling the RPC directly.
 --
 -- 2. REJECTED IS NOT A DEAD END
---   'rejected' has always been re-submittable — submit_verification moves
---   unverified|rejected -> pending — and that is right. A blurry NIN photo is
+--   'rejected' has always been re-submittable   submit_verification moves
+--   unverified|rejected -> pending   and that is right. A blurry NIN photo is
 --   the ordinary rejection, and the fix is another photo, not a support
 --   ticket.
 --
@@ -47,7 +47,7 @@
 --   value means touching every one of those, and every `status === 'rejected'`
 --   branch silently stops covering the worst case.
 --
---   A block is not a different status — it is 'rejected', permanently. So it
+--   A block is not a different status   it is 'rejected', permanently. So it
 --   is a separate fact: the status keeps saying what it says, and one column
 --   decides whether the door is still open.
 --
@@ -112,7 +112,7 @@ begin
   end if;
 
   -- THE FLOOR. A reviewer cannot judge an empty folder, and an account that
-  -- lands in the queue with nothing in it can only ever be rejected — which
+  -- lands in the queue with nothing in it can only ever be rejected   which
   -- reads to the applicant as though the upload failed silently.
   select count(*) into v_docs
     from public.verification_documents
@@ -148,7 +148,7 @@ revoke all on function public.submit_verification() from public, anon;
 grant execute on function public.submit_verification() to authenticated, service_role;
 
 comment on function public.submit_verification() is
-  'Put the caller''s business into the review queue. Refuses an empty folder and refuses a permanently blocked account. Takes no arguments and writes the literal ''pending'' — it cannot reach ''verified'' by any input.';
+  'Put the caller''s business into the review queue. Refuses an empty folder and refuses a permanently blocked account. Takes no arguments and writes the literal ''pending''   it cannot reach ''verified'' by any input.';
 
 -- ── 2. The staff door, which can now close permanently ──────────────────────
 -- The old two-argument version must GO, not merely be replaced: a default on
@@ -286,7 +286,7 @@ begin
 
   -- The two-argument form must be gone, or every existing call is ambiguous.
   if to_regprocedure('public.set_verification_status(uuid, text)') is not null then
-    raise exception 'the old two-argument set_verification_status still exists — calls will be ambiguous';
+    raise exception 'the old two-argument set_verification_status still exists   calls will be ambiguous';
   end if;
 
   if to_regprocedure('public.submit_verification()') is null then

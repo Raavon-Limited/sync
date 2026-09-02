@@ -2,7 +2,7 @@
  * Data access for the 'verification' module.
  *
  * WHAT THIS REPLACES
- * Verification state currently lives in `auth.users.user_metadata` —
+ * Verification state currently lives in `auth.users.user_metadata`  
  * `verification_status`, `business_name`, `documents[]`. A user can PATCH their
  * own `user_metadata` through the Auth API with nothing but their access token,
  * which means **a vendor can currently self-mark as verified**. That is the
@@ -31,7 +31,7 @@ export interface VerificationDocument {
   title: string;
   storagePath: string;
   status: DocStatus;
-  /** Set by staff when a document is rejected — shown to the uploader. */
+  /** Set by staff when a document is rejected   shown to the uploader. */
   actionMessage: string | null;
   reviewedAt: string | null;
   uploadedAt: string;
@@ -61,7 +61,7 @@ export async function fetchMyDocuments(db: Client): Promise<VerificationDocument
 }
 
 /**
- * `status` is omitted deliberately — it defaults to 'under_review' and
+ * `status` is omitted deliberately   it defaults to 'under_review' and
  * `guard_verification_document_cols` reverts any attempt to set it. An uploader
  * cannot mark their own document approved.
  */
@@ -112,7 +112,7 @@ export async function deleteDocument(db: Client, id: string) {
  * The caller's own card code.
  *
  * A CAPABILITY, not an identifier. Anyone holding it can open the card page,
- * which shows a photograph — so the column is revoked from `anon` and
+ * which shows a photograph   so the column is revoked from `anon` and
  * `authenticated` at the table and only reachable through this owner-scoped
  * function. Never put it in a list, a log, or a URL that is not the card.
  */

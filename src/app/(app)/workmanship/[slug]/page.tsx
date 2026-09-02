@@ -1,7 +1,7 @@
 /**
  * ROUTE: /workmanship/[slug]
  * ACCESS: public to browse; signing in is required to request.
- * PURPOSE: A workmanship pro — who they are and what they offer.
+ * PURPOSE: A workmanship pro   who they are and what they offer.
  *
  * All three verticals share one detail component; see
  * components/services/service-vendor-detail.

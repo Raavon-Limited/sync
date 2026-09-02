@@ -27,7 +27,7 @@ import { signOut } from '@/modules/auth/actions';
 
 interface DashboardSidebarProps {
   navKey: DashboardNavKey;
-  /** Optional block above the nav — the vendor store switcher. */
+  /** Optional block above the nav   the vendor store switcher. */
   topSlot?: React.ReactNode;
   /**
    * Rendered in the wordmark row, immediately after the mode toggle. The
@@ -36,7 +36,7 @@ interface DashboardSidebarProps {
    * It has to be passed IN rather than positioned over: the drawer used to
    * place its own X at `absolute top-3 right-3`, which is the exact spot this
    * row puts the mode toggle. On a phone the two controls sat on top of each
-   * other — the X drawn over the sun icon — and whichever one you meant, you
+   * other   the X drawn over the sun icon   and whichever one you meant, you
    * got the other. Sharing one flex row is what the marketing menu already
    * does, and it cannot overlap by construction.
    */
@@ -45,7 +45,7 @@ interface DashboardSidebarProps {
   /**
    * Area keys this person may open, or null for "everything on this config".
    *
-   * Resolved server-side by DashboardShell — a client component cannot ask the
+   * Resolved server-side by DashboardShell   a client component cannot ask the
    * database what it is allowed to render, and one that tried would be asking
    * the browser to be honest about it.
    */
@@ -70,11 +70,11 @@ export function DashboardSidebar({
    *
    * A row is kept when it claims no area (every row on every non-admin
    * dashboard) or when they hold something in that area. A section that ends
-   * up empty is dropped whole — an "INSIGHTS" heading with nothing under it
+   * up empty is dropped whole   an "INSIGHTS" heading with nothing under it
    * reads as a screen that failed to load rather than as a screen they were
    * never given.
    *
-   * A row with `targets` fronts several routes behind one label — Accounts is
+   * A row with `targets` fronts several routes behind one label   Accounts is
    * Vendors, Landlords and Riders. It survives if ANY of them is held, and it
    * points at the FIRST one that is: a reviewer granted only `riders` gets an
    * Accounts row that opens Riders, rather than one that opens Vendors and
@@ -105,7 +105,7 @@ export function DashboardSidebar({
   const toHref = (href: string) => (handle ? `/${handle}${href.slice(rootHref.length)}` : href);
 
   // Every path a row can be highlighted for. A row with `targets` answers for
-  // all of them, not only the one it happens to point at — otherwise Accounts
+  // all of them, not only the one it happens to point at   otherwise Accounts
   // would go dark the moment you switched to the Landlords tab, which is a
   // route it owns.
   const pathsOf = (item: (typeof sections)[number]['items'][number]) =>

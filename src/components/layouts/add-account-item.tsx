@@ -2,7 +2,7 @@
  * "Add a business account" / "Add a student account", in the account menu.
  *
  * THE GAP THIS FILLS
- *   Signing up again with the same email is refused — auth is keyed on email —
+ *   Signing up again with the same email is refused   auth is keyed on email  
  *   and the form correctly redirects to /login. But there was then no route,
  *   anywhere, from a student account to a vendor one. The database learned how
  *   in `claim_role`; this is the only place in the product that asks it.
@@ -11,7 +11,7 @@
  *   Claiming vendor grants the right to set a business up, not a business:
  *   there is no `vendor_profiles` row until onboarding writes one. Landing on
  *   an empty vendor dashboard instead would look like the account was made
- *   wrong. The student direction needs no equivalent — students have no
+ *   wrong. The student direction needs no equivalent   students have no
  *   profile row to create, so holding the role is the whole thing.
  *
  * CONFIRMED FIRST
@@ -42,7 +42,7 @@ export function AddAccountItem({ roles }: { roles: string[] }) {
   const hasStudent = roles.includes('student');
 
   // Nothing left to add. Staff accounts land here too and are deliberately
-  // offered nothing — claim_role refuses staff roles anyway.
+  // offered nothing   claim_role refuses staff roles anyway.
   const offer = !hasBusiness ? 'vendor' : !hasStudent ? 'student' : null;
   if (!offer) return null;
 

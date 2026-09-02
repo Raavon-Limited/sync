@@ -1,4 +1,4 @@
-// Promotions feature — public API
+// Promotions feature   public API
 export { PromotionsPage } from './PromotionsPage';
 export { PromotionStatsRow } from './PromotionStatsRow';
 export { PromotionTypesGrid } from './PromotionTypesGrid';

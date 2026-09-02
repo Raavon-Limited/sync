@@ -4,7 +4,7 @@
 -- Find one person's changes in the activity feed.
 --
 -- WHY THE SEARCH IS IN SQL AND NOT IN THE COMPONENT
---   The feed is paged — the team screen asks for 40 rows. Filtering those 40
+--   The feed is paged   the team screen asks for 40 rows. Filtering those 40
 --   in the browser searches the most recent 40 events and calls the result
 --   "everything Ada did", which is wrong in the exact case the search exists
 --   for: looking for something somebody did last week. The filter has to run
@@ -118,7 +118,7 @@ grant execute on function public.storefront_activity(uuid, integer, text, uuid)
   to authenticated, service_role;
 
 comment on function public.storefront_activity(uuid, integer, text, uuid) is
-  'The owner''s activity feed, optionally filtered to one store, one actor, or a search over actor name / email / subject. Filtering happens before the limit — searching a fetched page would only ever find recent events.';
+  'The owner''s activity feed, optionally filtered to one store, one actor, or a search over actor name / email / subject. Filtering happens before the limit   searching a fetched page would only ever find recent events.';
 
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
