@@ -30,7 +30,8 @@ import { emailFor } from '@/modules/admin/emails';
 import { mailCount } from '@/modules/admin/mail';
 import { Badge } from '@/components/ui';
 import { STATUS_BADGE } from '@/components/admin/account-queue';
-import { VerificationReview, type AdminVendor } from '@/components/admin/verification-review';
+import type { AdminVendor } from '@/components/admin/verification-review';
+import { RoleReviewTabs, type RoleReviewTab } from '@/components/admin/role-review-tabs';
 import type { Row } from '@/lib/supabase/row';
 
 export const metadata: Metadata = { title: 'Student - Admin' };
@@ -54,22 +55,32 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const p = profileRow as Row | null;
   if (!p) notFound();
 
-  const [{ data: docs }, identities, { data: campus }, email, asked] = await Promise.all([
-    admin
-      .from('verification_documents')
-      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
-      .eq('owner_id', id)
-      .order('uploaded_at', { ascending: false }),
-    getStudentIdentities([id]),
-    p.campus_id
-      ? admin.from('campuses').select('name').eq('id', p.campus_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    // The address a reviewer would actually write to. It lives in auth.users,
-    // not profiles   see modules/admin/emails.
-    emailFor(id),
-    // How many times somebody has already been asked for the missing half.
-    mailCount(id, 'verification_request'),
-  ]);
+  const [{ data: docs }, identities, { data: campus }, email, asked, { data: business }] =
+    await Promise.all([
+      admin
+        .from('verification_documents')
+        .select('id, role, doc_type, title, status, storage_path, action_message, uploaded_at')
+        .eq('owner_id', id)
+        .order('uploaded_at', { ascending: false }),
+      getStudentIdentities([id]),
+      p.campus_id
+        ? admin.from('campuses').select('name').eq('id', p.campus_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // The address a reviewer would actually write to. It lives in auth.users,
+      // not profiles   see modules/admin/emails.
+      emailFor(id),
+      // How many times somebody has already been asked for the missing half.
+      mailCount(id, 'verification_request'),
+      // The business half of the same person, when there is one. Its documents
+      // live in the same pile and its decision is a different column   see
+      // RoleReviewTabs for why they must not share a Verify button.
+      admin
+        .from('vendor_profiles')
+        .select('id, business_name, slug, category, area, verification_status, created_at')
+        .eq('id', id)
+        .is('archived_at', null)
+        .maybeSingle(),
+    ]);
 
   const identity = identities.get(id);
   const campusName = (campus as Row | null)?.name ?? (p.campus_other as string) ?? null;
@@ -86,6 +97,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     createdAt: p.created_at as string,
     docs: ((docs ?? []) as Row[]).map((d) => ({
       id: d.id as string,
+      role: (d.role as string | null) ?? null,
       docType: d.doc_type as string,
       title: d.title as string,
       status: d.status as string,
@@ -113,6 +125,54 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!identity?.level) missingIdentity.push('Your level (e.g. 200 level)');
 
   const blocksVerify = !identity?.matricNumber || !identity?.department;
+
+  /*
+   * ONE TAB PER ROLE THIS ACCOUNT HOLDS.
+   *
+   * The documents belong to the PERSON, so a student who also lets a room has
+   * one pile and both decisions were being made against all of it - "3 of 7
+   * approved" on a screen deciding the student half, four of which were the
+   * business's. Each tab is filtered to what that role was asked for and
+   * carries its own Verify button, writing its own column.
+   */
+  const biz = business as Row | null;
+
+  const tabs: RoleReviewTab[] = [
+    {
+      key: 'student',
+      label: 'Student',
+      role: 'student',
+      kind: 'student',
+      subject,
+      blockVerify: blocksVerify
+        ? 'This student has not given their matric number and department, so the school ID has nothing to be checked against. Ask for them first.'
+        : null,
+      extraMissing: missingIdentity,
+      notifyPath: '/user/settings',
+      mailsSent: asked.count,
+    },
+  ];
+
+  if (biz) {
+    const isLandlord = biz.category === 'landlord';
+    tabs.push({
+      key: 'business',
+      label: isLandlord ? 'Landlord' : 'Business',
+      role: isLandlord ? 'landlord' : 'vendor',
+      kind: 'vendor',
+      subject: {
+        ...subject,
+        businessName: (biz.business_name as string) ?? 'Unnamed business',
+        slug: (biz.slug as string) ?? id,
+        category: (biz.category as string) ?? ' ',
+        area: (biz.area as string) ?? null,
+        verificationStatus: (biz.verification_status as string) ?? 'unverified',
+        createdAt: biz.created_at as string,
+      },
+      notifyPath: isLandlord ? '/landlord/settings' : '/vendor/settings',
+      mailsSent: asked.count,
+    });
+  }
 
   // Every role this account holds. A student who also sells has a SECOND,
   // independent verification on the business screen, and a reviewer deciding
@@ -170,24 +230,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
         {alsoBusiness && (
           <p className="border-line/15 bg-surface-deep text-content-muted rounded-lg border px-3 py-2 text-xs">
-            This account also holds {roles.filter((r) => r !== 'student').join(', ')}. That
-            verification is decided on its own screen and is not affected by anything here.
+            This account also holds {roles.filter((r) => r !== 'student').join(', ')}. Each role is
+            a separate decision use the tabs below, and note that approving a live photo or a
+            government ID approves it for both, because it is one document.
           </p>
         )}
       </div>
 
-      <VerificationReview
-        vendor={subject}
-        kind="student"
-        blockVerify={
-          blocksVerify
-            ? 'This student has not given their matric number and department, so the school ID has nothing to be checked against. Ask for them first.'
-            : null
-        }
-        extraMissing={missingIdentity}
-        mailsSent={asked.count}
-        notifyPath="/user/settings"
-      />
+      <RoleReviewTabs tabs={tabs} />
     </section>
   );
 }

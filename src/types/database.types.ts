@@ -3709,6 +3709,7 @@ export type Database = {
       }
       verification_documents: {
         Row: {
+          role: string | null
           action_message: string | null
           created_at: string
           doc_subtype: string | null
@@ -3724,6 +3725,7 @@ export type Database = {
           uploaded_at: string
         }
         Insert: {
+          role?: string | null
           action_message?: string | null
           created_at?: string
           doc_subtype?: string | null
@@ -3739,6 +3741,7 @@ export type Database = {
           uploaded_at?: string
         }
         Update: {
+          role?: string | null
           action_message?: string | null
           created_at?: string
           doc_subtype?: string | null

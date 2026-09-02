@@ -47,7 +47,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const [{ data: docs }, email, asked] = await Promise.all([
     admin
       .from('verification_documents')
-      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+      .select('id, role, doc_type, title, status, storage_path, action_message, uploaded_at')
       .eq('owner_id', v.id)
       .order('uploaded_at', { ascending: false }),
     // vendor_profiles.id IS the owner profile id, so this is their address.
@@ -66,6 +66,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     email,
     docs: ((docs ?? []) as Row[]).map((d) => ({
       id: d.id,
+      role: (d.role as string) ?? null,
       docType: d.doc_type,
       title: d.title,
       status: d.status,

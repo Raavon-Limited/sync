@@ -53,7 +53,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         : Promise.resolve({ data: null }),
       db
         .from('verification_documents')
-        .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+        .select('id, role, doc_type, title, status, storage_path, action_message, uploaded_at')
         .eq('owner_id', id)
         .order('uploaded_at', { ascending: false }),
       db.from('deliveries').select('status, fee_kobo').eq('rider_id', id).limit(1000),
@@ -96,6 +96,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     createdAt: r.created_at,
     docs: ((docs ?? []) as Row[]).map((d) => ({
       id: d.id,
+      role: (d.role as string) ?? null,
       docType: d.doc_type,
       title: d.title,
       status: d.status,

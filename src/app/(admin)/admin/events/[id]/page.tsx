@@ -53,7 +53,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const [{ data: docs }, { data: events }, { data: authList }] = await Promise.all([
     admin
       .from('verification_documents')
-      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+      .select('id, role, doc_type, title, status, storage_path, action_message, uploaded_at')
       .eq('owner_id', id)
       .order('uploaded_at', { ascending: false }),
     admin
@@ -140,6 +140,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             createdAt: p.created_at as string,
             docs: ((docs ?? []) as Row[]).map((d) => ({
               id: d.id as string,
+              role: (d.role as string | null) ?? null,
               docType: d.doc_type as string,
               title: d.title as string,
               status: d.status as string,

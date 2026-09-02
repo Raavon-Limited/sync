@@ -162,7 +162,9 @@ export function VerifyForm({
       // writes the rows the reviewer and the submit RPC both count. Without it
       // the submission was refused for having no documents by somebody who had
       // just uploaded four.
-      const recorded = await recordVerificationDocuments(upload.uploaded);
+      // Stamped with the role this form is collecting for   a student's live
+      // photo is not a landlord's, even when it is the same face.
+      const recorded = await recordVerificationDocuments(upload.uploaded, role);
       if (!recorded.ok) {
         setError(recorded.error);
         return;

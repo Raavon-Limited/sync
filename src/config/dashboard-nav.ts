@@ -230,6 +230,9 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
               { area: 'riders', href: '/admin/riders' },
               { area: 'students', href: '/admin/students' },
               { area: 'events', href: '/admin/events' },
+              // Last, so it is the fallback: somebody granted only 'users' still
+              // gets the Accounts row, pointed at the one tab they can open.
+              { area: 'users', href: '/admin/accounts' },
             ],
           },
           {

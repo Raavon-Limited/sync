@@ -78,7 +78,20 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // practice this gate is what stops everybody else - which is exactly what it
   // would have to do on the day it opens anyway.
   { prefix: '/organiser', roles: ['event_manager'] },
-  // { prefix: '/admin', roles: ['admin', 'super_admin'] },
+  /**
+   * THE CONSOLE. Commented out for months, and everything downstream assumed it
+   * was not: `admin/layout.tsx` said in so many words that authorisation was
+   * "enforced by the proxy". It was not enforced anywhere but on the pages
+   * themselves, one `requireStaff()` at a time, and the day one page forgot
+   * /admin/notifications did   the console rendered for anyone signed in.
+   *
+   * The page guards STAY. This gate protects a navigation; `requireStaff` and
+   * `assertStaffArea` protect a request, and the admin actions run on the
+   * service-role client which is above RLS by construction. Neither is a
+   * substitute for the other, which is the whole reason the missing one was not
+   * noticed.
+   */
+  { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 
 const supabaseConfigured = Boolean(

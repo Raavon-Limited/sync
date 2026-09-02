@@ -65,7 +65,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     // points at profiles), and an embed that cannot resolve fails the page.
     admin
       .from('verification_documents')
-      .select('id, doc_type, title, status, storage_path, action_message, uploaded_at')
+      .select('id, role, doc_type, title, status, storage_path, action_message, uploaded_at')
       .eq('owner_id', (landlord as Row).id)
       .order('uploaded_at', { ascending: false }),
     // The address a reviewer would write to. auth.users, not profiles   see
@@ -98,6 +98,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
   const reviewDocs: AdminDoc[] = ((docs ?? []) as Row[]).map((d) => ({
     id: d.id,
+    role: (d.role as string) ?? null,
     docType: d.doc_type,
     title: d.title,
     status: d.status,

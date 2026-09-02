@@ -35,6 +35,7 @@ import { visibleAreas } from '@/modules/access/guard';
 import { cn } from '@/lib/utils';
 
 export type AccountTabKey =
+  | 'all'
   | 'vendors'
   | 'food'
   | 'landlords'
@@ -65,7 +66,14 @@ const TABS: TabSpec[] = [
   // 'All' is every account with a verification state, not every business
   // see modules/admin/accounts. The tabs after it are the same list narrowed,
   // which is why this one is first and why it is not called anything narrower.
-  { key: 'vendors', label: 'All', href: '/admin/vendors', area: 'vendors' },
+  // "All" means all   every role, with the role named and that role's own
+  // verification resolved from whichever table is the authority for it. It used
+  // to point at the vendor queue, which was the businesses list wearing the
+  // word: students outnumber every other role and were not in it.
+  { key: 'all', label: 'All', href: '/admin/accounts', area: 'users' },
+  // The business queue keeps its own entry. Dropping it would leave a vendor
+  // with no category unreachable, since the per-trade tabs are still to come.
+  { key: 'vendors', label: 'Businesses', href: '/admin/vendors', area: 'vendors' },
   { key: 'food', label: 'Food', href: '/admin/vendors?category=food', area: 'vendors' },
   { key: 'landlords', label: 'Landlords', href: '/admin/landlord', area: 'landlords' },
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },

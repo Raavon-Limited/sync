@@ -22,13 +22,25 @@
  */
 'use server';
 
+import type { VerificationRole } from '@/modules/verification/requirements';
 import { createClient } from '@/lib/supabase/server';
 import type { UploadedDocument } from '@/components/verification/upload-documents';
 
 export type RecordResult = { ok: true; count: number } | { ok: false; error: string };
 
+/**
+ * WHICH APPLICATION THESE BELONG TO IS NOT OPTIONAL.
+ *
+ * One person can hold three of these roles and each is asked for its own
+ * evidence. Before the role was stored, a live photo taken for a student
+ * application and one taken for a landlord application were the same row-shape
+ * about the same owner   so the newer read as having REPLACED the older, and a
+ * reviewer deciding one role was shown the other role's photograph. See
+ * 20260905210000.
+ */
 export async function recordVerificationDocuments(
   documents: UploadedDocument[],
+  role: VerificationRole,
 ): Promise<RecordResult> {
   if (documents.length === 0) return { ok: true, count: 0 };
 
@@ -41,6 +53,7 @@ export async function recordVerificationDocuments(
   const { error } = await supabase.from('verification_documents').insert(
     documents.map((d) => ({
       owner_id: user.id,
+      role,
       doc_type: d.docType,
       doc_subtype: d.subtype ?? null,
       title: d.title,

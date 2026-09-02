@@ -28,7 +28,7 @@ import { render } from '@react-email/render';
 import { Resend } from 'resend';
 import { Webhook } from 'standardwebhooks';
 import { OtpEmail } from '@/emails/otp-email';
-import { MAIL_FROM } from '@/config/site';
+import { MAIL_FROM, SITE } from '@/config/site';
 
 export const runtime = 'nodejs';
 
@@ -103,6 +103,11 @@ export async function POST(req: Request) {
       to: user.email,
       subject,
       html,
+      // A code with no reply path is one of the shapes a filter reads as
+      // phishing   and somebody who did not request it has nowhere to say so.
+      // Every other Sync email carries this; the one that lands in spam most
+      // is the one that did not.
+      replyTo: SITE.support.help,
     });
     if (error) {
       // The usual one is an unverified sender: `from` must be on a domain

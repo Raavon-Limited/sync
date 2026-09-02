@@ -92,6 +92,7 @@ export default async function Page() {
     const list = docsByOwner.get(d.owner_id as string) ?? [];
     list.push({
       id: d.id as string,
+      role: (d.role as string | null) ?? null,
       docType: d.doc_type as string,
       title: d.title as string,
       status: d.status as string,

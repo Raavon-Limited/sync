@@ -56,6 +56,12 @@ import { requirementsFor, type VerificationRole } from '@/modules/verification/r
 
 export interface AdminDoc {
   id: string;
+  /**
+   * The application this was uploaded for. Null on rows written before
+   * 20260905210000, which is read as "applies to any role"   see the
+   * migration for why guessing would be worse than showing it everywhere.
+   */
+  role?: string | null;
   docType: string;
   title: string;
   status: string;
@@ -228,6 +234,20 @@ export function VerificationReview({
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [loadingUrls, setLoadingUrls] = useState(vendor.docs.length > 0);
   const [viewing, setViewing] = useState<number | null>(null);
+  // What this role was asked for, and how much of it has actually passed. Both
+  // are read from requirementsFor rather than from the rows, so a re-upload
+  // cannot inflate either number.
+  const asked = useMemo(
+    () => requirementsFor(roleForReview(kind, vendor.category)),
+    [kind, vendor.category],
+  );
+  const requirementsMet = useMemo(
+    () =>
+      asked.filter((r) => vendor.docs.some((d) => d.docType === r.key && d.status === 'approved'))
+        .length,
+    [asked, vendor.docs],
+  );
+
   // Everything the person still owes, in one list: requirements with nothing
   // uploaded, documents a reviewer already bounced, and whatever the page
   // passed in that is not a document at all (a student's matric number). It
@@ -478,9 +498,11 @@ export function VerificationReview({
               </p>
             </>
           )}
+          {/* REQUIREMENTS MET, NOT ROWS APPROVED. Somebody who re-took a blurry
+              photo has two rows for one requirement, which is how a finished
+              folder came to read "3 of 5" against a three-document list. */}
           <p className="text-content-muted text-xs">
-            {approved} of {vendor.docs.length} document{vendor.docs.length === 1 ? '' : 's'}{' '}
-            approved
+            {requirementsMet} of {asked.length} requirement{asked.length === 1 ? '' : 's'} met
             {vendor.docs.length === 0 && '   nothing uploaded yet'}
           </p>
           {/* Said on the page, not only in a tooltip on a disabled button:
