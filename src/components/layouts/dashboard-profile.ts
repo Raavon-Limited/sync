@@ -234,6 +234,47 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
         initial,
         avatarUrl,
       };
+    /**
+     * AGENTS AND RIDERS FELL THROUGH TO THE STUDENT BRANCH.
+     *
+     * The switch had vendor, landlord, admin, organiser and student, and
+     * `default` IS the student case   so an agent's own dashboard introduced
+     * them as STUDENT in the sidebar, under their own name, on the one screen
+     * whose job is telling them which hat they are wearing.
+     *
+     * Separate cases rather than one shared branch, because the meta line
+     * differs: what an agent wants beside their name is what they are for, and
+     * a rider's is theirs. Neither of them has a university.
+     */
+    case 'agent':
+      return {
+        ...hats,
+        verificationStatus: status,
+        // Agent access is a GRANT that arrives only by invitation, not a
+        // document check   so the eyebrow does not promise a verification that
+        // was never performed on them.
+        eyebrow: 'Sync agent',
+        name,
+        email,
+        initial,
+        avatarUrl,
+        handle,
+        metaLabel: 'Role',
+        metaValue: 'Verifies listings on the ground',
+      };
+    case 'rider':
+      return {
+        ...hats,
+        verificationStatus: status,
+        eyebrow: verified ? 'Verified rider' : 'Rider',
+        name,
+        email,
+        initial,
+        avatarUrl,
+        handle,
+        metaLabel: 'Role',
+        metaValue: 'Delivers on campus',
+      };
     case 'student':
     default:
       return {

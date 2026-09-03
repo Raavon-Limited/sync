@@ -47,7 +47,7 @@ export interface Highlight {
 export interface LandingShowcase {
   /**
    * The hero pool. Built from real rows because the hardcoded one linked to
-   * /hostels/woss-hostel, /hostels/la-marida-malete and /hostels/amina-villa  
+   * /hostels/woss-hostel, /hostels/la-marida-malete and /hostels/amina-villa
    * three slugs that do not exist. The largest card on the public homepage was
    * a 404.
    */
@@ -100,8 +100,13 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
   const db = createAdminClient();
   const now = new Date().toISOString();
 
-  const [{ data: event }, { data: store }, { data: hotspot }, { data: hostels }, { count: verifiedHostels }] =
-    await Promise.all([
+  const [
+    { data: event },
+    { data: store },
+    { data: hotspot },
+    { data: hostels },
+    { count: verifiedHostels },
+  ] = await Promise.all([
     // The soonest event still ahead of us. An event in the past is not a
     // showcase, it is an apology.
     db
@@ -122,19 +127,38 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
       .maybeSingle(),
     db
       .from('hotspots')
-            .select('slug, name, area, category, image_url')
+      .select('slug, name, area, category, image_url')
       .eq('is_active', true)
       .order('is_featured', { ascending: false })
       .order('sort_order')
       .limit(1)
       .maybeSingle(),
-    // Verified first: the strip is the argument for the platform, and an
-    // unverified room is the thing it exists to protect students from.
+    /*
+     * VERIFIED ONLY. This used to say "verified first" and only ORDER by it,
+     * which is a different promise: with nothing verified yet, sorting put the
+     * unverified rooms at the top of the list instead of leaving the list
+     * empty. The front page of the platform was showing rooms no agent has
+     * been to.
+     *
+     * THIS PATH IS ABOVE RLS, WHICH IS WHY THE POLICY DID NOT SAVE US.
+     * `hostels_select_visible` (20260908150000) already hides an unverified
+     * hostel from everyone but its owner and staff, and it works   but this
+     * query runs on the service-role client so the database answers it in
+     * full. Anything public that reads through the admin client has to repeat
+     * the rule itself, because nothing underneath will.
+     *
+     * An empty strip is the correct output when nothing is verified. The
+     * promise the strip makes is the whole argument for the platform, and a
+     * room nobody has stood inside is exactly what it exists to protect
+     * students from.
+     */
     db
       .from('hostels')
-      .select('slug, name, area, landmark, price_per_session_kobo, ribbon, amenities, verified, hostel_images(url, position)')
+      .select(
+        'slug, name, area, landmark, price_per_session_kobo, ribbon, amenities, verified, hostel_images(url, position)',
+      )
+      .eq('verified', true)
       .is('archived_at', null)
-      .order('verified', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(3),
     db
@@ -167,10 +191,12 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
 
   const hostelCards = ((hostels ?? []) as Row[])
     .filter((h) => (h.hostel_images ?? []).length > 0)
-    .map((h): Row => ({
-      ...h,
-      image: [...(h.hostel_images as Row[])].sort((a, b) => a.position - b.position)[0].url,
-    }));
+    .map(
+      (h): Row => ({
+        ...h,
+        image: [...(h.hostel_images as Row[])].sort((a, b) => a.position - b.position)[0].url,
+      }),
+    );
 
   // Only rows that have BOTH a picture and a real destination. A hero card
   // without an image is a grey box; one without a live slug is a 404.
@@ -214,7 +240,8 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
     verifiedHostelCount: verifiedHostels ?? 0,
     // A card with no photo is worse than one fewer card on a page whose whole
     // job is to look trustworthy.
-    hostels: hostelCards.map((h): LandingHostel => ({
+    hostels: hostelCards.map(
+      (h): LandingHostel => ({
         slug: h.slug,
         name: h.name,
         location: h.landmark ?? h.area,
@@ -228,7 +255,8 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
         verified: !!h.verified,
         ribbon: h.ribbon,
         amenities: (h.amenities ?? []) as string[],
-      })),
+      }),
+    ),
     event: event
       ? {
           slug: (event as Row).slug,

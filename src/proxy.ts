@@ -41,7 +41,35 @@ type Role =
 // Shared marketplace modules: any signed-in user can browse and transact. The
 // only role difference is the dashboard (/user vs /vendor vs /landlord vs /rider
 // vs /admin).
-const ALL: Role[] = ['student', 'vendor', 'landlord', 'rider', 'admin', 'super_admin'];
+/**
+ * EVERY role, for the modules everybody may use.
+ *
+ * Hostels, events, food, beauty, laundry, workmanship, search, checkout and
+ * the wallet are not student features   they are the marketplace. A landlord
+ * rents a room for their child, an agent buys a ticket, a rider orders lunch.
+ * Having an account that lists property does not stop somebody being a person.
+ *
+ * This was a hand-written array and it had drifted: 'agent', 'event_manager'
+ * and 'creator' were missing, so those three were redirected to /login when
+ * they opened /hostels   while signed in.
+ *
+ * Built from a Record<Role, true> so the compiler refuses a role that is not
+ * listed. Excluding one now has to be deliberate and written somewhere else,
+ * not achieved by forgetting.
+ */
+const EVERY_ROLE: Record<Role, true> = {
+  student: true,
+  vendor: true,
+  landlord: true,
+  rider: true,
+  agent: true,
+  event_manager: true,
+  creator: true,
+  admin: true,
+  super_admin: true,
+};
+
+const ALL = Object.keys(EVERY_ROLE) as Role[];
 
 /**
  * Does this path sit UNDER the prefix, as a path segment?

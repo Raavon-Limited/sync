@@ -371,6 +371,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         items: [
           { href: '/agent', label: 'Your visits', heading: 'Where you are expected', icon: MapPin },
+          // An agent earns per visit, so the wallet is not an account setting
+          // it is the second thing they came here to look at. The row existed
+          // for every other paid role and not for the one that is paid per job.
+          { href: '/agent/wallet', label: 'Wallet', heading: 'Your earnings', icon: Wallet },
         ],
       },
       {
