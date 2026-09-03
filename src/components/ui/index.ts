@@ -38,3 +38,5 @@ export {
   TableCell,
   TableCaption,
 } from './table';
+export * from './sheet-layout';
+export * from './wizard-steps';

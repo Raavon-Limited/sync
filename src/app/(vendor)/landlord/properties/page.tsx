@@ -15,13 +15,11 @@
  * would disagree with it the first time a booking was cancelled.
  */
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui';
 import { getCurrentUser } from '@/modules/auth/queries';
 import { PageHeader } from '../(components)/shared/page-header';
 import { getLandlordProperties } from '../(components)/landlord-queries';
+import { PropertyFormSheet } from '../(components)/properties/property-form-sheet';
 import { PropertiesClient } from './properties-client';
 
 export const metadata: Metadata = { title: 'Properties' };
@@ -41,11 +39,7 @@ export default async function Page() {
         title="Properties"
         description="Your hostels and rooms, and how much of each is taken."
       >
-        <Button asChild>
-          <Link href="/landlord/properties/new">
-            <Plus className="size-4" /> Add a property
-          </Link>
-        </Button>
+        <PropertyFormSheet />
       </PageHeader>
 
       <PropertiesClient properties={properties} />

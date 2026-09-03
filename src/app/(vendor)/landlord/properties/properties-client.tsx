@@ -13,13 +13,13 @@
  */
 'use client';
 
-import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, LayoutGrid, List, Plus, Search } from 'lucide-react';
-import { Button, Input, toast } from '@/components/ui';
+import { Building2, LayoutGrid, List, Search } from 'lucide-react';
+import { Input, toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { archiveHostel } from '@/modules/hostels/actions';
+import { PropertyFormSheet } from '../(components)/properties/property-form-sheet';
 import { PropertyListCard } from '../(components)/properties/property-list-card';
 import type { Property } from '../(components)/landlord-types';
 
@@ -66,11 +66,7 @@ export function PropertiesClient({ properties }: { properties: Property[] }) {
             book.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/landlord/properties/new">
-            <Plus className="size-4" /> Add a property
-          </Link>
-        </Button>
+        <PropertyFormSheet />
       </div>
     );
   }

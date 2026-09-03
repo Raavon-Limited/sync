@@ -401,108 +401,6 @@ export function VerificationReview({
   const comparePair = ordered.filter((d) => COMPARE_ORDER.includes(d.docType));
   const rest = ordered.filter((d) => !COMPARE_ORDER.includes(d.docType));
 
-  function DocActions({ doc }: { doc: AdminDoc }) {
-    // AN APPROVED DOCUMENT IS A FINISHED DECISION, SO IT STOPS OFFERING ONE.
-    // The reason box and Bounce used to sit here greyed out afterwards, which
-    // reads as "you may still do this, just not yet" - the opposite of what is
-    // true. The button keeps its place in the row and states the outcome
-    // instead, so the row still scans as the same row.
-    if (doc.status === 'approved') {
-      return (
-        <Button
-          variant="outline"
-          disabled
-          // disabled:opacity-50 from the base variant would fade this to look
-          // like a control waiting to become available. It is a result.
-          className="border-emerald-500/30 text-emerald-600 disabled:opacity-100"
-        >
-          <CheckCircle2 aria-hidden="true" />
-          Approved
-        </Button>
-      );
-    }
-
-    const approving = busy && pendingDoc === doc.id;
-
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() =>
-            run(() => reviewDocument({ documentId: doc.id, decision: 'approved' }), doc.id)
-          }
-        >
-          {approving && <Loader2 className="animate-spin" aria-hidden="true" />}
-          {approving ? 'Approving…' : 'Approve'}
-        </Button>
-        {/* Bouncing requires a reason: "needs action" with no stated action is
-            how a queue stalls.
-
-            Hidden the moment an approval is in flight. The outcome is already
-            decided at that point, and a reason box still standing there invites
-            a reviewer to type into a control that is about to disappear. */}
-        {!approving && (
-          <>
-            <Input
-              value={messages[doc.id] ?? ''}
-              onChange={(e) => setMessages((m) => ({ ...m, [doc.id]: e.target.value }))}
-              placeholder="What needs fixing?"
-              className="min-w-0 flex-1"
-            />
-            <Button
-              variant="outline"
-              className="text-coral"
-              disabled={busy || !messages[doc.id]?.trim()}
-              onClick={() =>
-                run(
-                  () =>
-                    reviewDocument({
-                      documentId: doc.id,
-                      decision: 'needs_action',
-                      message: messages[doc.id],
-                    }),
-                  doc.id,
-                )
-              }
-            >
-              Bounce
-            </Button>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  function DocMeta({ doc }: { doc: AdminDoc }) {
-    const Icon = DOC_ICON[doc.status] ?? Circle;
-    const superseded = supersededIds.has(doc.id);
-    return (
-      <div className="min-w-0">
-        <p className="text-content flex flex-wrap items-center gap-2 truncate text-sm font-medium">
-          {doc.title}
-          {/* A replaced copy, kept deliberately. Marked rather than removed so
-              the new one can be held against it. */}
-          {superseded && (
-            <span className="border-line/20 text-content-muted rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
-              replaced
-            </span>
-          )}
-        </p>
-        <p
-          className={cn(
-            'flex items-center gap-1.5 text-xs',
-            DOC_STATUS_CLASS[doc.status] ?? 'text-content-muted',
-          )}
-        >
-          <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-          {doc.status.replace('_', ' ')} · {new Date(doc.uploadedAt).toLocaleDateString('en-NG')}
-        </p>
-        {doc.actionMessage && <p className="text-coral mt-0.5 text-xs">{doc.actionMessage}</p>}
-      </div>
-    );
-  }
-
   return (
     <div className="border-line/10 bg-panel flex flex-col gap-4 rounded-xl border p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -634,8 +532,15 @@ export function VerificationReview({
                     onOpen={() => setViewing(ordered.indexOf(doc))}
                     className="aspect-[4/3]"
                   />
-                  <DocMeta doc={doc} />
-                  <DocActions doc={doc} />
+                  <DocMeta doc={doc} supersededIds={supersededIds} />
+                  <DocActions
+                    doc={doc}
+                    busy={busy}
+                    messages={messages}
+                    setMessages={setMessages}
+                    pendingDoc={pendingDoc}
+                    run={run}
+                  />
                 </div>
               ))}
             </div>
@@ -656,9 +561,16 @@ export function VerificationReview({
                     className="size-20 shrink-0"
                   />
                   <div className="min-w-[10rem] flex-1">
-                    <DocMeta doc={doc} />
+                    <DocMeta doc={doc} supersededIds={supersededIds} />
                   </div>
-                  <DocActions doc={doc} />
+                  <DocActions
+                    doc={doc}
+                    busy={busy}
+                    messages={messages}
+                    setMessages={setMessages}
+                    pendingDoc={pendingDoc}
+                    run={run}
+                  />
                 </div>
               ))}
             </div>
@@ -832,6 +744,138 @@ function AskForMore({
       </div>
 
       {result && !result.ok && <p className="text-coral text-xs">{result.text}</p>}
+    </div>
+  );
+}
+
+/**
+ * The decide-or-bounce row for one document.
+ *
+ * MODULE SCOPE, NOT NESTED IN VerificationReview.
+ *
+ * It used to be declared inside the component, closing over `busy`, `messages`
+ * and the rest. A component declared inside another gets a new function
+ * identity on every render, so React treats it as a different component type
+ * and unmounts the whole row rather than updating it - which destroys the
+ * "What needs fixing?" input mid-keystroke. Typing one character lost focus,
+ * and inside a sheet the focus trap then parked focus on the panel.
+ *
+ * The props are named exactly as the variables it used to close over, so the
+ * body below is unchanged.
+ */
+function DocActions({
+  doc,
+  busy,
+  messages,
+  setMessages,
+  pendingDoc,
+  run,
+}: {
+  doc: AdminDoc;
+  busy: boolean;
+  messages: Record<string, string>;
+  setMessages: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  pendingDoc: string | null;
+  run: (fn: () => Promise<unknown>, docId?: string) => void;
+}) {
+  // AN APPROVED DOCUMENT IS A FINISHED DECISION, SO IT STOPS OFFERING ONE.
+  // The reason box and Bounce used to sit here greyed out afterwards, which
+  // reads as "you may still do this, just not yet" - the opposite of what is
+  // true. The button keeps its place in the row and states the outcome
+  // instead, so the row still scans as the same row.
+  if (doc.status === 'approved') {
+    return (
+      <Button
+        variant="outline"
+        disabled
+        // disabled:opacity-50 from the base variant would fade this to look
+        // like a control waiting to become available. It is a result.
+        className="border-emerald-500/30 text-emerald-600 disabled:opacity-100"
+      >
+        <CheckCircle2 aria-hidden="true" />
+        Approved
+      </Button>
+    );
+  }
+
+  const approving = busy && pendingDoc === doc.id;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        disabled={busy}
+        onClick={() =>
+          run(() => reviewDocument({ documentId: doc.id, decision: 'approved' }), doc.id)
+        }
+      >
+        {approving && <Loader2 className="animate-spin" aria-hidden="true" />}
+        {approving ? 'Approving…' : 'Approve'}
+      </Button>
+      {/* Bouncing requires a reason: "needs action" with no stated action is
+          how a queue stalls.
+
+          Hidden the moment an approval is in flight. The outcome is already
+          decided at that point, and a reason box still standing there invites
+          a reviewer to type into a control that is about to disappear. */}
+      {!approving && (
+        <>
+          <Input
+            value={messages[doc.id] ?? ''}
+            onChange={(e) => setMessages((m) => ({ ...m, [doc.id]: e.target.value }))}
+            placeholder="What needs fixing?"
+            className="min-w-0 flex-1"
+          />
+          <Button
+            variant="outline"
+            className="text-coral"
+            disabled={busy || !messages[doc.id]?.trim()}
+            onClick={() =>
+              run(
+                () =>
+                  reviewDocument({
+                    documentId: doc.id,
+                    decision: 'needs_action',
+                    message: messages[doc.id],
+                  }),
+                doc.id,
+              )
+            }
+          >
+            Bounce
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** One document's name, state and date. Module scope, for the reason above. */
+function DocMeta({ doc, supersededIds }: { doc: AdminDoc; supersededIds: Set<string> }) {
+  const Icon = DOC_ICON[doc.status] ?? Circle;
+  const superseded = supersededIds.has(doc.id);
+  return (
+    <div className="min-w-0">
+      <p className="text-content flex flex-wrap items-center gap-2 truncate text-sm font-medium">
+        {doc.title}
+        {/* A replaced copy, kept deliberately. Marked rather than removed so
+            the new one can be held against it. */}
+        {superseded && (
+          <span className="border-line/20 text-content-muted rounded-full border px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
+            replaced
+          </span>
+        )}
+      </p>
+      <p
+        className={cn(
+          'flex items-center gap-1.5 text-xs',
+          DOC_STATUS_CLASS[doc.status] ?? 'text-content-muted',
+        )}
+      >
+        <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+        {doc.status.replace('_', ' ')} · {new Date(doc.uploadedAt).toLocaleDateString('en-NG')}
+      </p>
+      {doc.actionMessage && <p className="text-coral mt-0.5 text-xs">{doc.actionMessage}</p>}
     </div>
   );
 }

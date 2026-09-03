@@ -28,6 +28,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WizardSteps } from '@/components/ui/wizard-steps';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -343,35 +344,11 @@ export function OnboardingWizard({ initial, layout = 'page', onSubmitted }: Onbo
       {/* Step indicator. shrink-0 in a panel so it stays put while the fields
           under it scroll   losing "which of five steps am I on" is the first
           thing a scrolling wizard costs you. */}
-      <ol className={cn('mb-8 flex items-center', layout === 'panel' && 'shrink-0')}>
-        {STEPS.map((label, i) => (
-          <li key={label} className={cn('flex items-center', i < STEPS.length - 1 && 'flex-1')}>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium',
-                  i < step
-                    ? 'bg-ink text-white'
-                    : i === step
-                      ? 'bg-lime text-ink'
-                      : 'bg-ink/10 text-content-muted',
-                )}
-              >
-                {i < step ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
-              </span>
-              <span
-                className={cn(
-                  'hidden text-xs sm:inline',
-                  i === step ? 'text-content font-medium' : 'text-content-muted',
-                )}
-              >
-                {label}
-              </span>
-            </div>
-            {i < STEPS.length - 1 && <span className="bg-line/15 mx-2 h-px flex-1" />}
-          </li>
-        ))}
-      </ol>
+      <WizardSteps
+        steps={STEPS}
+        current={step}
+        className={cn('mb-8', layout === 'panel' && 'shrink-0')}
+      />
 
       <form
         onSubmit={handleSubmit(onSubmit)}

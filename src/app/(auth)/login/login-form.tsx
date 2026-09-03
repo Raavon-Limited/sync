@@ -15,16 +15,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { readAppSurface } from '@/lib/pwa/use-install';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { FormField } from '@/components/forms';
 import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
+import { forgetEmail, rememberEmail, rememberedEmails } from '@/lib/remembered-emails';
 import { BrandLoader } from '@/components/ui/brand-loader';
 import { FullScreenOverlay } from '@/components/ui/full-screen-overlay';
 import {
@@ -238,6 +240,33 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     return () => clearTimeout(id);
   }, [cooldown]);
 
+  /*
+   * Remembered addresses, read AFTER mount.
+   *
+   * localStorage does not exist on the server, so seeding state from it during
+   * render would make the first client paint disagree with the HTML and React
+   * would throw a hydration mismatch. The list appearing a frame late costs
+   * nothing   nobody has focused the field yet.
+   */
+  const [known, setKnown] = useState<string[]>([]);
+  const [remember, setRemember] = useState(true);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKnown(rememberedEmails());
+  }, []);
+
+  /** Called on every successful sign-in, whichever way they got in. */
+  function keepEmail(value: string) {
+    if (remember) rememberEmail(value);
+    else forgetEmail(value);
+  }
+
+  function dropEmail(value: string) {
+    forgetEmail(value);
+    setKnown((list) => list.filter((e) => e !== value));
+  }
+
   async function continueFromEmail(e: React.FormEvent) {
     e.preventDefault();
     const value = email.trim();
@@ -298,6 +327,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       setChoices(res.roles as string[]);
       return;
     }
+    keepEmail(email.trim());
     setRedirecting('Signing you in…');
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
@@ -336,6 +366,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       return;
     }
     setRedirecting('Signing you in…');
+    keepEmail(email.trim());
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
   }
@@ -451,6 +482,54 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
                 onChange={setEmail}
               />
             </FormField>
+
+            {/* ONE TAP INSTEAD OF TWENTY-FIVE CHARACTERS.
+                Shown only when this device has signed somebody in before, and
+                each row can be removed on its own   a phone that gets handed
+                round should not accumulate a list nobody can clear. */}
+            {known.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-content-muted font-mono text-[11px] tracking-wide uppercase">
+                  Used on this device
+                </p>
+                {known.map((address) => (
+                  <div
+                    key={address}
+                    className="border-line/10 hover:border-lime-deep/40 flex items-center gap-2 rounded-lg border transition-colors"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setEmail(address)}
+                      className="text-content min-w-0 flex-1 truncate px-3 py-2 text-left text-sm"
+                    >
+                      {address}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropEmail(address)}
+                      aria-label={`Forget ${address}`}
+                      className="text-content-muted hover:text-coral shrink-0 px-3 py-2"
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ticked by default, because the common case is a personal phone.
+                Unticking FORGETS rather than merely stopping   somebody turning
+                this off on a shared machine means "not here", and leaving the
+                address behind would be the opposite of what they just asked
+                for. See lib/remembered-emails. */}
+            <label className="text-content-muted flex cursor-pointer items-center gap-2 text-sm">
+              <Checkbox
+                checked={remember}
+                onCheckedChange={(value) => setRemember(value === true)}
+              />
+              Remember my email on this device
+            </label>
+
             <Button type="submit" size="lg" disabled={busy} className="w-full">
               {busy ? 'Checking…' : 'Continue'}
             </Button>
