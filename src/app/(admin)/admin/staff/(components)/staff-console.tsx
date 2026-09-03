@@ -30,7 +30,7 @@
 import { useState, useTransition } from 'react';
 import { Check, Clock, Copy, Loader2, Mail, Send, ShieldCheck, UserMinus, X } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn, formatRelative } from '@/lib/utils';
 import { setAccountRole, setRoleMembership } from '@/modules/admin/actions';
 import { cancelStaffInvite, inviteStaff, resendStaffAccess } from '@/modules/admin/invite-actions';
 import type { StaffMember } from '@/modules/admin/staff';
@@ -325,6 +325,24 @@ export function StaffConsole({
                     <Badge className={ROLE_BADGE[s.role] ?? ROLE_BADGE.admin}>
                       {ROLE_LABEL[s.role] ?? s.role}
                     </Badge>
+                    {/* BOTH STATES ARE MARKED, and they are weighted apart.
+                        Signed in is the resting state, so it is lime and quiet;
+                        never signed in is the one that needs somebody to act,
+                        so it is coral. Marking only the exception would leave
+                        the common row saying nothing, and "no badge" is not a
+                        statement   it reads the same as a row that has not
+                        loaded. The exact date stays in the meta line below,
+                        because a badge that carried it would be a paragraph.
+
+                        Neither renders when lastSignInAt is undefined: that is
+                        "we do not know yet" (list_staff not upgraded), and a
+                        badge either way would be a claim we cannot support. */}
+                    {s.lastSignInAt === null && (
+                      <Badge className="bg-coral/15 text-warning-fg">Never signed in</Badge>
+                    )}
+                    {typeof s.lastSignInAt === 'string' && (
+                      <Badge className="bg-lime/15 text-accent-fg">Signed in</Badge>
+                    )}
                   </p>
                   <p className="text-content-muted text-xs">
                     {s.email} · since{' '}
@@ -332,6 +350,23 @@ export function StaffConsole({
                       month: 'short',
                       year: 'numeric',
                     })}
+                    {/* Relative, not a date: "3 days ago" answers "are they
+                        using this" at a glance, which is the question being
+                        asked. The exact timestamp is on hover for the rare case
+                        where it matters. */}
+                    {s.lastSignInAt ? (
+                      <>
+                        {' · last signed in '}
+                        <time
+                          dateTime={s.lastSignInAt}
+                          title={new Date(s.lastSignInAt).toLocaleString('en-NG')}
+                        >
+                          {formatRelative(s.lastSignInAt)}
+                        </time>
+                      </>
+                    ) : s.lastSignInAt === null ? (
+                      ' · has not opened the console yet'
+                    ) : null}
                   </p>
 
                   {/* The roles this person holds, as toggles.
@@ -407,7 +442,11 @@ export function StaffConsole({
                     <Button
                       variant="ghost"
                       disabled={busy}
-                      title={`Email ${s.name} to say they have console access`}
+                      title={
+                        s.lastSignInAt === null
+                          ? `${s.name} has never signed in   email them the console link`
+                          : `Email ${s.name} the console link again`
+                      }
                       onClick={() =>
                         run(
                           () => resendStaffAccess({ userId: s.id }),

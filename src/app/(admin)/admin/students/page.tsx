@@ -53,7 +53,7 @@ export default async function Page() {
         : Promise.resolve({ data: [] }),
       // Every document for these students in one query, counted per owner. One
       // request per student is what makes a queue feel slow.
-      admin.from('verification_documents').select('owner_id, status').in('owner_id', ids),
+      admin.from('verification_documents').select('owner_id, role, status').in('owner_id', ids),
       selfieUrlsFor(ids),
       admin.auth.admin.listUsers({ perPage: 1000 }),
       // The STUDENT status, from student_profiles. profiles.verification_status
@@ -67,8 +67,23 @@ export default async function Page() {
   );
   const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? '-']));
 
+  /*
+   * THE STUDENT'S OWN DOCUMENTS, NOT THE PERSON'S.
+   *
+   * verification_documents is keyed on the owner, so a student who also lets a
+   * room had their landlord's four counted here too   a card reading "7/7
+   * approved" against a three-document requirement list, on a queue whose
+   * entire job is to say how far along each student is. The detail screen was
+   * fixed for this; the card that leads to it was still counting the pile.
+   *
+   * Null is counted in, and only here: it means "applies to any application"
+   * for rows written before 20260905210000, and leaving them out would make an
+   * old, complete folder read as empty.
+   */
   const tally = new Map<string, { total: number; approved: number }>();
   for (const d of (docs ?? []) as Row[]) {
+    const role = (d.role as string | null) ?? null;
+    if (role !== null && role !== 'student') continue;
     const id = d.owner_id as string;
     const t = tally.get(id) ?? { total: 0, approved: 0 };
     t.total++;

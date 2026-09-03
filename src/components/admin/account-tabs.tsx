@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 
 export type AccountTabKey =
   | 'all'
-  | 'vendors'
   | 'food'
   | 'landlords'
   | 'riders'
@@ -70,10 +69,25 @@ const TABS: TabSpec[] = [
   // verification resolved from whichever table is the authority for it. It used
   // to point at the vendor queue, which was the businesses list wearing the
   // word: students outnumber every other role and were not in it.
-  { key: 'all', label: 'All', href: '/admin/accounts', area: 'users' },
-  // The business queue keeps its own entry. Dropping it would leave a vendor
-  // with no category unreachable, since the per-trade tabs are still to come.
-  { key: 'vendors', label: 'Businesses', href: '/admin/vendors', area: 'vendors' },
+  // NO AREA. It used to require 'users', which is why a reviewer granted only
+  // 'vendors' needed a tab of their own to land on. The page now opens for
+  // anyone who can review any kind of account and narrows the rows to the kinds
+  // they hold   so this tab is correct for all of them, and it is the only one
+  // that is always correct.
+  { key: 'all', label: 'All', href: '/admin/accounts' },
+  // THERE IS NO 'BUSINESSES' TAB, AND THERE SHOULD NOT BE ONE.
+  //
+  // It sat here on the argument that a vendor whose trade has no tab yet would
+  // otherwise be unreachable. The argument was sound and the tab did not do it:
+  // /admin/vendors never filtered to businesses at all, so the tab labelled
+  // Businesses listed students, riders, landlords and organisers   the same
+  // rows as All, from a second loader, in a second component. Two tabs, one
+  // meaning, and the label was the one that was wrong.
+  //
+  // All is where every account belongs, businesses included: that is what the
+  // word means and what the page now does. A vendor of any trade, categorised
+  // or not, is in it and searchable by name. The per-trade tabs stay as
+  // NARROWINGS of the same list rather than as the only way in.
   { key: 'food', label: 'Food', href: '/admin/vendors?category=food', area: 'vendors' },
   { key: 'landlords', label: 'Landlords', href: '/admin/landlord', area: 'landlords' },
   { key: 'riders', label: 'Riders', href: '/admin/riders', area: 'riders' },

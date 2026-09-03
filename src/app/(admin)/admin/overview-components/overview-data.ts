@@ -85,7 +85,7 @@ export async function getOverview(): Promise<Overview> {
         change: change(o.vendors, o.vendors_prev),
         iconBg: 'bg-blue-500',
         icon: 'vendors',
-        href: '/admin/vendors',
+        href: '/admin/accounts',
       },
       {
         key: 'users',

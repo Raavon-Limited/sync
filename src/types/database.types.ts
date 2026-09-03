@@ -4030,6 +4030,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          last_sign_in_at: string | null
           role: string
         }[]
       }

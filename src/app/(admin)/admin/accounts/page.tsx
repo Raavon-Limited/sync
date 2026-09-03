@@ -26,7 +26,9 @@
  * task that nobody can ever complete.
  */
 import type { Metadata } from 'next';
-import { requireStaffArea } from '@/modules/admin/guard';
+import { requireStaff } from '@/modules/admin/guard';
+import { visibleAreas } from '@/modules/access/guard';
+import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs } from '@/components/admin/account-tabs';
@@ -54,6 +56,35 @@ const ROLE_LABEL: Record<string, string> = {
 
 /** Staff do not trade, so they have nothing to verify. */
 const STAFF = new Set(['admin', 'super_admin']);
+
+/**
+ * Which grant lets somebody see a row, by the role that row is wearing.
+ *
+ * THIS PAGE USED TO NEED THE 'users' GRANT AND SHOW EVERYTHING, which was
+ * workable only while a second tab   "Businesses"   existed for reviewers who
+ * did not hold it. That tab was the same list under the wrong name, so it is
+ * gone, and this page absorbed its job: it opens for anyone who can review ANY
+ * kind of account and shows them exactly the kinds they can open.
+ *
+ * A reviewer granted `vendors` alone therefore sees the businesses and nothing
+ * else, which is the list the removed tab was supposed to be. 'users' is still
+ * meaningful   it is the only grant that shows every kind at once, staff
+ * included   but it is no longer the price of admission.
+ *
+ * Mirrors ACCOUNT_AREA in modules/admin/account-types, which does the same job
+ * for the flattened queue. Two maps because they are keyed differently: that
+ * one by AccountKind, this one by the role on the profile row.
+ */
+const ROLE_AREA: Record<string, string> = {
+  student: 'students',
+  vendor: 'vendors',
+  landlord: 'landlords',
+  rider: 'riders',
+  event_manager: 'events',
+  creator: 'events',
+  admin: 'users',
+  super_admin: 'users',
+};
 
 async function loadAccounts(): Promise<AccountRow[]> {
   const admin = createAdminClient();
@@ -119,6 +150,38 @@ async function loadAccounts(): Promise<AccountRow[]> {
       href = `/admin/events/${id}`;
     }
 
+    /*
+     * EVERY ROLE THIS ACCOUNT HOLDS, EACH WITH ITS OWN DECISION.
+     *
+     * The card used to show ONE status   the worn role's   and name the others
+     * as "+LANDLORD", a hat with no state attached. So a verified student who
+     * is a pending landlord read as VERIFIED +LANDLORD, which is the one thing
+     * that is not true about them: nobody has decided the landlord half.
+     *
+     * The status is resolved per role from the table that is the authority FOR
+     * THAT ROLE   the same rule the header of this file sets out, applied once
+     * per hat instead of once per person.
+     */
+    const statusFor = (r: string): string => {
+      if (STAFF.has(r)) return 'n/a';
+      if (r === 'vendor' || r === 'landlord')
+        return (vendor?.verification_status as string) ?? 'unverified';
+      if (r === 'rider') return (rider?.verification_status as string) ?? 'unverified';
+      if (r === 'student') return (student?.verification_status as string) ?? 'unverified';
+      // event_manager and creator hold no table of their own: profiles IS the
+      // authority for them, because neither can hold a business row.
+      return (p.verification_status as string) ?? 'unverified';
+    };
+
+    const heldRoles = [role, ...((p.roles as string[]) ?? [])].filter(
+      (r, i, a) => r && ROLE_LABEL[r] && a.indexOf(r) === i,
+    );
+    const credentials = heldRoles.map((r) => ({
+      role: r,
+      label: ROLE_LABEL[r] ?? r,
+      status: statusFor(r),
+    }));
+
     const held = ((p.roles as string[]) ?? []).filter((r) => r !== role && ROLE_LABEL[r]);
 
     return {
@@ -129,6 +192,7 @@ async function loadAccounts(): Promise<AccountRow[]> {
       roleLabel: ROLE_LABEL[role] ?? role,
       alsoRoles: held.map((r) => ROLE_LABEL[r] ?? r),
       verificationStatus: status,
+      credentials,
       href,
       suspended: Boolean(p.suspended_at),
       selfieUrl: selfieByOwner.get(id),
@@ -137,9 +201,17 @@ async function loadAccounts(): Promise<AccountRow[]> {
 }
 
 export default async function Page() {
-  await requireStaffArea('users');
+  await requireStaff();
 
-  const rows = await loadAccounts();
+  // null is a super admin: every kind. Otherwise the list is cut to the kinds
+  // this reviewer is allowed to open, and somebody holding none of them is not
+  // shown an empty page   they are refused, because "no accounts" and "not your
+  // screen" are different answers.
+  const areas = await visibleAreas();
+  if (areas && !Object.values(ROLE_AREA).some((a) => areas.includes(a))) redirect('/403');
+
+  const all = await loadAccounts();
+  const rows = areas ? all.filter((r) => areas.includes(ROLE_AREA[r.role] ?? 'users')) : all;
   const waiting = rows.filter((r) => r.verificationStatus === 'pending').length;
 
   return (

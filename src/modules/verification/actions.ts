@@ -177,10 +177,25 @@ export async function submitVendorOnboarding(
   // failure here must not strand somebody whose files uploaded and whose
   // details saved   the submission still goes through and the gap is visible
   // to staff as a missing document rather than as a lost account.
+  //
+  // AND THEY CARRY THE APPLICATION THEY BELONG TO.
+  //
+  // This insert was the last write path still leaving `role` null, and null
+  // means "applies to every role" (20260905210000). So a landlord finishing
+  // this wizard filed their live photo and their NIN against the PERSON, and
+  // they surfaced in the student folder of the same account: newer than the
+  // student's own approved copies, which the review screen then marked
+  // REPLACED   one application's evidence superseding another's.
+  //
+  // The category chosen in this very wizard is the answer, so there is nothing
+  // to infer. 'landlord' is its own application; every other category is a
+  // business one.
   if (documents.length) {
+    const documentRole = vendorCategory === 'landlord' ? 'landlord' : 'vendor';
     const { error: docsError } = await supabase.from('verification_documents').insert(
       documents.map((d) => ({
         owner_id: user.id,
+        role: documentRole,
         doc_type: d.docType,
         doc_subtype: d.subtype ?? null,
         title: d.title,

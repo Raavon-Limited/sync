@@ -25,6 +25,25 @@ export interface StaffMember {
   email: string;
   role: 'admin' | 'super_admin';
   createdAt: string;
+  /**
+   * THREE STATES, AND THE THIRD ONE IS WHY THIS IS NOT JUST `string | null`.
+   *
+   *   a date   they have signed in, and when.
+   *   null     they never have. This is the point of the field: being granted
+   *            access and using it are two events, and the roster only ever
+   *            showed the first, so an admin who has never once opened the
+   *            console looked identical to one who opens it daily. Deliberately
+   *            not defaulted to the join date   "since Sept 2026" and "has
+   *            never been here" are exactly the two facts that must not read as
+   *            one.
+   *   undefined  we do not know, because list_staff has not been upgraded yet
+   *            (20260906120000). Collapsing this into null would put "Never
+   *            signed in" against every row on any install that has not run
+   *            the migration   including the person reading the page, who is
+   *            demonstrably signed in. A false statement is worse than a
+   *            missing one, so the console says nothing at all in this case.
+   */
+  lastSignInAt: string | null | undefined;
 }
 
 /** Everyone with console access, super admins first. */
@@ -38,6 +57,14 @@ export async function getStaff(): Promise<StaffMember[]> {
     email: s.email ?? ' ',
     role: s.role,
     createdAt: s.created_at,
+    // Maintained by GoTrue on every sign-in; list_staff reads it straight off
+    // auth.users (20260906120000) rather than us keeping a second copy.
+    //
+    // Tested for the KEY, not for a value: a row from the old function has no
+    // such column, and `?? null` on a missing key is indistinguishable from a
+    // genuine "never". See the three states on StaffMember.
+    lastSignInAt:
+      'last_sign_in_at' in s ? ((s.last_sign_in_at as string | null) ?? null) : undefined,
   }));
 }
 

@@ -2,7 +2,7 @@
  * Data access for the 'verification' module.
  *
  * WHAT THIS REPLACES
- * Verification state currently lives in `auth.users.user_metadata`  
+ * Verification state currently lives in `auth.users.user_metadata`
  * `verification_status`, `business_name`, `documents[]`. A user can PATCH their
  * own `user_metadata` through the Auth API with nothing but their access token,
  * which means **a vendor can currently self-mark as verified**. That is the
@@ -27,6 +27,12 @@ export type DocStatus = 'approved' | 'under_review' | 'needs_action' | 'not_uplo
 export interface VerificationDocument {
   id: string;
   ownerId: string;
+  /**
+   * Which application this was uploaded for, null for rows written before
+   * 20260905210000. Read through documentAppliesTo   never compared directly,
+   * because null means "any" rather than "none".
+   */
+  role: string | null;
   docType: string;
   title: string;
   storagePath: string;
@@ -40,6 +46,7 @@ export interface VerificationDocument {
 const toDoc = (r: Row): VerificationDocument => ({
   id: r.id,
   ownerId: r.owner_id,
+  role: r.role ?? null,
   docType: r.doc_type,
   title: r.title,
   storagePath: r.storage_path,
@@ -52,10 +59,7 @@ const toDoc = (r: Row): VerificationDocument => ({
 /** RLS scopes this to the caller's own documents. */
 export async function fetchMyDocuments(db: Client): Promise<VerificationDocument[]> {
   const rows = unwrapList<Row>(
-    await db
-      .from('verification_documents')
-      .select('*')
-      .order('uploaded_at', { ascending: false }),
+    await db.from('verification_documents').select('*').order('uploaded_at', { ascending: false }),
   );
   return rows.map(toDoc);
 }

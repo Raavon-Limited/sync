@@ -65,7 +65,15 @@ export async function DashboardShell({
     <div className="bg-surface text-content min-h-screen">
       <div className={`mx-auto flex ${maxWidth}`}>
         <aside className="border-line/10 bg-panel sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r p-4 md:block">
-          <DashboardSidebar navKey={navKey} profile={profile} topSlot={sidebarSlot} areas={areas} />
+          {/* The store switcher is suppressed for the same reason the nav is:
+              "No store assigned yet" over a sidebar that is already saying the
+              business is unfinished is the same sentence twice. */}
+          <DashboardSidebar
+            navKey={navKey}
+            profile={profile}
+            topSlot={profile.businessReady === false ? undefined : sidebarSlot}
+            areas={areas}
+          />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <DashboardHeader navKey={navKey} profile={profile} areas={areas} />

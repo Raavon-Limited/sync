@@ -127,13 +127,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const blocksVerify = !identity?.matricNumber || !identity?.department;
 
   /*
-   * ONE TAB PER ROLE THIS ACCOUNT HOLDS.
+   * THIS SCREEN DECIDES THE STUDENT, AND ONLY THE STUDENT.
    *
-   * The documents belong to the PERSON, so a student who also lets a room has
-   * one pile and both decisions were being made against all of it - "3 of 7
-   * approved" on a screen deciding the student half, four of which were the
-   * business's. Each tab is filtered to what that role was asked for and
-   * carries its own Verify button, writing its own column.
+   * It briefly carried a second tab for the business half of a dual-role
+   * account, on the reasoning that the documents are one pile and a reviewer
+   * should see both halves in one place. In practice that tab was the worst of
+   * both: it duplicated a screen that already exists and works
+   * (/admin/landlord/<slug>, which also shows the properties this one has no
+   * column for), and it put two Verify buttons writing two different tables on
+   * one page.
+   *
+   * The other half is a link now, not a tab. One screen, one decision, one
+   * table   and the note below says where the other one lives.
    */
   const biz = business as Row | null;
 
@@ -152,27 +157,6 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       mailsSent: asked.count,
     },
   ];
-
-  if (biz) {
-    const isLandlord = biz.category === 'landlord';
-    tabs.push({
-      key: 'business',
-      label: isLandlord ? 'Landlord' : 'Business',
-      role: isLandlord ? 'landlord' : 'vendor',
-      kind: 'vendor',
-      subject: {
-        ...subject,
-        businessName: (biz.business_name as string) ?? 'Unnamed business',
-        slug: (biz.slug as string) ?? id,
-        category: (biz.category as string) ?? ' ',
-        area: (biz.area as string) ?? null,
-        verificationStatus: (biz.verification_status as string) ?? 'unverified',
-        createdAt: biz.created_at as string,
-      },
-      notifyPath: isLandlord ? '/landlord/settings' : '/vendor/settings',
-      mailsSent: asked.count,
-    });
-  }
 
   // Every role this account holds. A student who also sells has a SECOND,
   // independent verification on the business screen, and a reviewer deciding
@@ -229,10 +213,20 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         )}
 
         {alsoBusiness && (
-          <p className="border-line/15 bg-surface-deep text-content-muted rounded-lg border px-3 py-2 text-xs">
-            This account also holds {roles.filter((r) => r !== 'student').join(', ')}. Each role is
-            a separate decision use the tabs below, and note that approving a live photo or a
-            government ID approves it for both, because it is one document.
+          <p className="border-line/15 bg-surface-deep text-content-muted flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border px-3 py-2 text-xs">
+            <span>
+              This account also holds {roles.filter((r) => r !== 'student').join(', ')}. That is a
+              separate decision, made on its own screen against its own documents nothing you do
+              here changes it.
+            </span>
+            {biz?.slug != null && (
+              <Link
+                href={`/admin/${biz.category === 'landlord' ? 'landlord' : 'vendors'}/${biz.slug as string}`}
+                className="text-accent-fg font-medium hover:underline"
+              >
+                Open {(biz.business_name as string) ?? 'the business'}
+              </Link>
+            )}
           </p>
         )}
       </div>

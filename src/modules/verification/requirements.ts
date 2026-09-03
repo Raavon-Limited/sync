@@ -220,6 +220,30 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
 ];
 
 /** What this kind of account has to provide. The only correct way to read the list. */
+/**
+ * Does this document belong to the application being looked at?
+ *
+ * ONE PERSON, SEVERAL APPLICATIONS. A student who also lets a room made two
+ * submissions and they are judged separately   20260905210000 added
+ * `verification_documents.role` to say which is which, and 20260905230000
+ * attributed the rows that predate it. This is the reader for both, and it is
+ * one function because every surface has to agree: the holder's own folder, the
+ * reviewer's, the requirement counters, and the public card. They disagreed
+ * before, which is how a landlord folder came to show a school ID and how a
+ * business read as half-verified on evidence nobody had checked it against.
+ *
+ * NULL IS "APPLIES TO ANYTHING", deliberately   see the migration. Those rows
+ * predate the column and nothing recorded which submission they came from, so
+ * hiding them would lose evidence a reviewer can see today. Better in two
+ * folders than in none.
+ */
+export function documentAppliesTo(
+  documentRole: string | null | undefined,
+  role: VerificationRole,
+): boolean {
+  return documentRole == null || documentRole === role;
+}
+
 export function requirementsFor(role: VerificationRole): VerificationRequirementSpec[] {
   return VERIFICATION_REQUIREMENTS.filter((r) => r.roles.includes(role));
 }

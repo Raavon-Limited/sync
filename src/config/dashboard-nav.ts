@@ -220,12 +220,12 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
            * filters, and stays linkable.
            */
           {
-            href: '/admin/vendors',
+            href: '/admin/accounts',
             label: 'Accounts',
             heading: 'Accounts & verification',
             icon: ShieldCheck,
             targets: [
-              { area: 'vendors', href: '/admin/vendors' },
+              { area: 'vendors', href: '/admin/accounts' },
               { area: 'landlords', href: '/admin/landlord' },
               { area: 'riders', href: '/admin/riders' },
               { area: 'students', href: '/admin/students' },

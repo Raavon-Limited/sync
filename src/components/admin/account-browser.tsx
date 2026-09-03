@@ -38,7 +38,13 @@ import Link from 'next/link';
 import { ChevronRight, LayoutGrid, List, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { QueueFilterBar, STATUS_BADGE, useQueueFilter, useStatusCounts } from './account-queue';
+import {
+  QueueFilterBar,
+  STATUS_BADGE,
+  statusesOf,
+  useQueueFilter,
+  useStatusCounts,
+} from './account-queue';
 
 export interface BrowserRow {
   id: string;
@@ -69,6 +75,12 @@ export interface BrowserRow {
   searchText: string;
   /** Counts towards the `suspended` chip when the caller asks for one. */
   suspended?: boolean;
+  /**
+   * Every decision this row carries, when it carries more than one   a student
+   * who is also a landlord is verified AND pending. Filtering and the chip
+   * counts read this when it is present. See statusesOf.
+   */
+  statuses?: string[];
 }
 
 type View = 'grid' | 'list';
@@ -146,7 +158,7 @@ export function AccountBrowser({
   const visible = rows.filter((r) => {
     if (filter === 'suspended') {
       if (!r.suspended) return false;
-    } else if (filter !== 'all' && r.verificationStatus !== filter) {
+    } else if (filter !== 'all' && !statusesOf(r).includes(filter)) {
       return false;
     }
     if (search && !r.searchText.toLowerCase().includes(search.toLowerCase())) return false;

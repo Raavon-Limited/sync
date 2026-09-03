@@ -62,9 +62,63 @@ const RESEND_COOLDOWN = 60;
  * Admins are exempt: /admin is their only surface, so there is no second
  * destination to choose between.
  */
+/**
+ * The dashboards that belong to exactly one hat.
+ *
+ * Mirrors PROTECTED_PREFIXES in proxy.ts   the same list, read for the opposite
+ * purpose: the proxy uses it to refuse, this uses it to avoid sending somebody
+ * somewhere they will be refused.
+ */
+const ROLE_ROOT: Record<string, string> = {
+  student: '/user',
+  vendor: '/vendor',
+  landlord: '/landlord',
+  rider: '/rider',
+  event_manager: '/organiser',
+  creator: '/organiser',
+  admin: '/admin',
+  super_admin: '/admin',
+};
+
+/**
+ * Paths that are inside one dashboard's tree but admitted to several roles.
+ * /user/verify is the role-driven verification screen and the proxy lets a
+ * student, a creator and an event manager all reach it, so it must not be
+ * discarded as "somebody else's dashboard".
+ */
+const SHARED_PATHS = ['/user/verify'];
+
+/**
+ * The ?next= they arrived with   IF the hat they just chose can open it.
+ *
+ * "An explicit ?next= always wins" was true right up until the account had two
+ * hats. Somebody hits /vendor signed out, gets bounced to /login?next=/vendor,
+ * and picks LANDLORD at the chooser: the next= is a leftover from before that
+ * choice, and honouring it lands them on a 403 at the end of a successful
+ * login. Choosing a hat is a statement about which account is being opened, and
+ * it is newer information than the URL they started with.
+ *
+ * Anything that is not a role-owned dashboard   /food, /hostels, a listing   is
+ * returned untouched: those belong to every signed-in account, and dropping
+ * them would break the ordinary "sign in to carry on where you were" case that
+ * next= exists for.
+ */
+function nextFor(role: string | undefined, next?: string): string | undefined {
+  if (!next) return undefined;
+  if (SHARED_PATHS.some((p) => next === p || next.startsWith(p + '/'))) return next;
+
+  const owner = Object.values(ROLE_ROOT).find(
+    (root) => next === root || next.startsWith(root + '/'),
+  );
+  if (!owner) return next;
+
+  return ROLE_ROOT[role ?? ''] === owner ? next : undefined;
+}
+
 function destFor(role: string | undefined, handle?: string, next?: string) {
-  // An explicit ?next= always wins - it is the page they actually asked for.
-  if (next) return next;
+  // An explicit ?next= wins, but only when this hat can actually open it.
+  const asked = nextFor(role, next);
+  if (asked) return asked;
   if (role === 'admin' || role === 'super_admin') return '/admin';
 
   // The personalised handle root (/<name>). The proxy rewrites it to the right
@@ -306,7 +360,11 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     }
     // The role root, not the handle: the handle is derived and the switch has
     // only just changed the role it derives from.
-    router.replace(next ?? ROLE_HOME[role].href);
+    //
+    // And nextFor, not next: this is the branch where somebody explicitly
+    // picked a hat, so a ?next= pointing into a different hat's dashboard is
+    // exactly the case that ends in a 403 after a successful sign-in.
+    router.replace(nextFor(role, next) ?? ROLE_HOME[role].href);
   }
 
   function changeEmail() {

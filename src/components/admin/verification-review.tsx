@@ -52,7 +52,11 @@ import {
 } from '@/modules/admin/actions';
 import { DocumentViewer, isImagePath, type ViewerDoc } from './document-viewer';
 import { requestVerificationInfo } from '@/modules/admin/actions';
-import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
+import {
+  documentAppliesTo,
+  requirementsFor,
+  type VerificationRole,
+} from '@/modules/verification/requirements';
 
 export interface AdminDoc {
   id: string;
@@ -231,21 +235,48 @@ export function VerificationReview({
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, string>>({});
+  // WHICH APPLICATION IS BEING REVIEWED. Derived once: it decides both the
+  // requirement list and which uploads count towards it, and those two answers
+  // drifting apart is the whole of the bug below.
+  const reviewRole = useMemo(() => roleForReview(kind, vendor.category), [kind, vendor.category]);
+
+  /**
+   * THIS APPLICATION'S EVIDENCE, NOT THIS PERSON'S.
+   *
+   * The page hands over every document the owner has ever uploaded, because
+   * they are all keyed on owner_id. For somebody who is a student AND a
+   * landlord that is two submissions in one folder, and undifferentiated it
+   * produced exactly what 20260905210000 was written to stop: a landlord screen
+   * showing a school ID, and "3 of 5 approved" counted off documents approved
+   * for the other half of the account.
+   *
+   * The column landed; nothing read it. This is the read.
+   *
+   * Filtered HERE rather than in the four pages that load it: this component
+   * already knows which role it is reviewing, and four call sites passing a
+   * role string is four chances to pass the wrong one.
+   */
+  const docs = useMemo(
+    () => vendor.docs.filter((d) => documentAppliesTo(d.role, reviewRole)),
+    [vendor.docs, reviewRole],
+  );
+
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const [loadingUrls, setLoadingUrls] = useState(vendor.docs.length > 0);
+  // FROM THE FILTERED LIST, not from every document the owner has. An account
+  // whose uploads all belong to its OTHER application has an empty folder here,
+  // and seeding this from vendor.docs left it spinning forever   the effect
+  // below returns early on an empty list precisely because this initialiser is
+  // supposed to have got it right.
+  const [loadingUrls, setLoadingUrls] = useState(docs.length > 0);
   const [viewing, setViewing] = useState<number | null>(null);
   // What this role was asked for, and how much of it has actually passed. Both
   // are read from requirementsFor rather than from the rows, so a re-upload
   // cannot inflate either number.
-  const asked = useMemo(
-    () => requirementsFor(roleForReview(kind, vendor.category)),
-    [kind, vendor.category],
-  );
+  const asked = useMemo(() => requirementsFor(reviewRole), [reviewRole]);
   const requirementsMet = useMemo(
     () =>
-      asked.filter((r) => vendor.docs.some((d) => d.docType === r.key && d.status === 'approved'))
-        .length,
-    [asked, vendor.docs],
+      asked.filter((r) => docs.some((d) => d.docType === r.key && d.status === 'approved')).length,
+    [asked, docs],
   );
 
   // Everything the person still owes, in one list: requirements with nothing
@@ -254,8 +285,8 @@ export function VerificationReview({
   // seeds the email below   the reviewer edits it before it goes.
   const outstanding = useMemo(() => {
     const out: string[] = [...extraMissing];
-    for (const req of requirementsFor(roleForReview(kind, vendor.category))) {
-      const doc = vendor.docs.find((d) => d.docType === req.key);
+    for (const req of asked) {
+      const doc = docs.find((d) => d.docType === req.key);
       if (!doc) {
         out.push(`${req.label}   nothing uploaded (${req.accepts})`);
       } else if (doc.status === 'needs_action') {
@@ -263,7 +294,7 @@ export function VerificationReview({
       }
     }
     return out;
-  }, [extraMissing, kind, vendor.category, vendor.docs]);
+  }, [extraMissing, asked, docs]);
 
   // WHICH document is mid-decision, not merely THAT one is. `busy` is one flag
   // for the whole card, so on its own it cannot put a spinner on the button
@@ -278,11 +309,11 @@ export function VerificationReview({
       const i = COMPARE_ORDER.indexOf(d.docType);
       return i === -1 ? COMPARE_ORDER.length : i;
     };
-    return [...vendor.docs].sort(
+    return [...docs].sort(
       (a, b) =>
         rank(a) - rank(b) || new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
     );
-  }, [vendor.docs]);
+  }, [docs]);
 
   /*
    * WHICH UPLOADS HAVE BEEN SUPERSEDED.
@@ -299,16 +330,14 @@ export function VerificationReview({
    */
   const supersededIds = useMemo(() => {
     const newest = new Map<string, string>();
-    for (const d of vendor.docs) {
+    for (const d of docs) {
       const held = newest.get(d.docType);
-      const heldAt = held
-        ? new Date(vendor.docs.find((x) => x.id === held)!.uploadedAt).getTime()
-        : -1;
+      const heldAt = held ? new Date(docs.find((x) => x.id === held)!.uploadedAt).getTime() : -1;
       if (new Date(d.uploadedAt).getTime() > heldAt) newest.set(d.docType, d.id);
     }
     const live = new Set(newest.values());
-    return new Set(vendor.docs.filter((d) => !live.has(d.id)).map((d) => d.id));
-  }, [vendor.docs]);
+    return new Set(docs.filter((d) => !live.has(d.id)).map((d) => d.id));
+  }, [docs]);
 
   // Joined into a string so the effect below depends on the CONTENTS rather
   // than on a fresh array identity every render.
@@ -317,7 +346,7 @@ export function VerificationReview({
   useEffect(() => {
     const list = pathKey ? pathKey.split('|') : [];
     // No synchronous setState on this branch: `loadingUrls` was already
-    // initialised to `vendor.docs.length > 0`, so an empty folder starts false
+    // initialised to `docs.length > 0`, so an empty folder starts false
     // and setting it again here would only trigger a cascading render.
     if (list.length === 0) return;
     let live = true;
@@ -368,7 +397,7 @@ export function VerificationReview({
     });
   }
 
-  const approved = vendor.docs.filter((d) => d.status === 'approved').length;
+  const approved = docs.filter((d) => d.status === 'approved').length;
   const comparePair = ordered.filter((d) => COMPARE_ORDER.includes(d.docType));
   const rest = ordered.filter((d) => !COMPARE_ORDER.includes(d.docType));
 
@@ -503,7 +532,7 @@ export function VerificationReview({
               folder came to read "3 of 5" against a three-document list. */}
           <p className="text-content-muted text-xs">
             {requirementsMet} of {asked.length} requirement{asked.length === 1 ? '' : 's'} met
-            {vendor.docs.length === 0 && '   nothing uploaded yet'}
+            {docs.length === 0 && '   nothing uploaded yet'}
           </p>
           {/* Said on the page, not only in a tooltip on a disabled button:
               somebody has to go and ask the student for this, and a title
@@ -581,7 +610,7 @@ export function VerificationReview({
         </p>
       )}
 
-      {vendor.docs.length === 0 ? (
+      {docs.length === 0 ? (
         <p className="text-content-muted border-line/10 rounded-lg border border-dashed px-3 py-4 text-sm">
           No documents uploaded. There is nothing to review until this business submits.
         </p>

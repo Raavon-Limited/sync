@@ -19,6 +19,7 @@
 import { ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { AccountBrowser } from '@/components/admin/account-browser';
+import { STATUS_BADGE } from '@/components/admin/account-queue';
 
 export interface AccountRow {
   id: string;
@@ -30,6 +31,8 @@ export interface AccountRow {
   roleLabel: string;
   /** Every hat held, when that is more than one. */
   alsoRoles: string[];
+  /** One entry per role held, each carrying that role's own decision. */
+  credentials: { role: string; label: string; status: string }[];
   verificationStatus: string;
   href: string;
   suspended: boolean;
@@ -47,14 +50,36 @@ export function AccountsBrowser({ rows }: { rows: AccountRow[] }) {
         href: row.href,
         name: row.name,
         verificationStatus: row.verificationStatus,
+        // Both decisions, so the Pending chip finds a pending landlord even
+        // when the same person is a verified student.
+        statuses: row.credentials.map((c) => c.status),
         faceUrl: row.selfieUrl,
         suspended: row.suspended,
         searchText: `${row.name} ${row.email} ${row.role} ${row.roleLabel}`,
-        // A second hat is worth a badge: it is the case where one decision on
-        // this screen says nothing about the other one.
+        /*
+         * ONE BADGE PER ROLE, EACH SAYING ITS OWN STATE.
+         *
+         * This was a single status badge plus "+LANDLORD"   a hat with no state
+         * attached   so a verified student who is a pending landlord read as
+         * VERIFIED +LANDLORD. The one thing that is not true about them is that
+         * they are verified full stop.
+         *
+         * Rendered only when there is more than one: a single-role account is
+         * already answered by the status badge beside the name, and repeating
+         * it would put two badges saying the same word on every row.
+         */
         flags:
-          row.alsoRoles.length > 0 ? (
-            <Badge className="bg-ink/5 text-content-muted">+{row.alsoRoles.join(', +')}</Badge>
+          row.credentials.length > 1 ? (
+            <>
+              {row.credentials.map((c) => (
+                <Badge
+                  key={c.role}
+                  className={STATUS_BADGE[c.status] ?? 'bg-ink/5 text-content-muted'}
+                >
+                  {c.label} · {c.status === 'n/a' ? 'staff' : c.status}
+                </Badge>
+              ))}
+            </>
           ) : undefined,
         meta: (
           <p className="text-content-muted flex flex-wrap items-center gap-3 text-xs">

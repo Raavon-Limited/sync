@@ -82,12 +82,33 @@ export function DashboardSidebar({
    */
   const holds = (area?: string) => !areas || !area || areas.includes(area);
 
+  /*
+   * A HALF-BUILT BUSINESS GETS ONE ROW.
+   *
+   * Someone who claimed the vendor role and abandoned the wizard has no
+   * vendor_profiles row, so Stores, Listings, Orders, Team, Earnings and
+   * Promotions all read from something that is not there. A sidebar of eleven
+   * rows that can only say "nothing yet" reads as a broken product rather than
+   * as an unfinished signup   and it buries the one thing they actually have
+   * to do.
+   *
+   * The overview is kept because that is where the "Verify Now" banner lives,
+   * and that banner opens the wizard IN A SHEET on the same page   so one row
+   * really is enough to finish. The rest come back the moment the business
+   * exists, which is what makes this a state and not a permission.
+   */
+  const rootOnly = profile.businessReady === false;
+
   const sections = allSections
     .map((section) => ({
       ...section,
       items: section.items
         .filter((item) =>
-          item.targets ? item.targets.some((t) => holds(t.area)) : holds(item.area),
+          rootOnly
+            ? item.href === rootHref
+            : item.targets
+              ? item.targets.some((t) => holds(t.area))
+              : holds(item.area),
         )
         .map((item) => ({
           ...item,

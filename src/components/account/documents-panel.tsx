@@ -40,7 +40,11 @@ import { useMyDocuments } from '@/modules/verification/hooks';
 import { useSession } from '@/providers/session-provider';
 import { VerifyNowSheet } from '@/components/verification/verify-now-sheet';
 import type { DocStatus, DocumentItem } from '@/modules/vendor/types';
-import { requirementsFor, type VerificationRole } from '@/modules/verification/requirements';
+import {
+  documentAppliesTo,
+  requirementsFor,
+  type VerificationRole,
+} from '@/modules/verification/requirements';
 
 /**
  * What Sync asks THIS kind of account for.
@@ -143,7 +147,13 @@ export function DocumentsPanel({
         // fetchMyDocuments orders uploaded_at descending, so the first match
         // is the NEWEST upload of that type   which is the one that counts
         // after somebody replaces a document.
-        const found = docs.find((d) => d.docType === req.docType);
+        // ROLE FIRST, THEN TYPE. Matching on type alone showed a student
+        // their landlord application’s government ID as though it satisfied
+        // the student one   two separate submissions, only one of them
+        // judged. See documentAppliesTo.
+        const found = docs.find(
+          (d) => documentAppliesTo(d.role, shownRole) && d.docType === req.docType,
+        );
         return {
           id: req.docType,
           title: req.title,
@@ -159,7 +169,7 @@ export function DocumentsPanel({
           actionMessage: found?.actionMessage ?? undefined,
         };
       }),
-    [docs, required],
+    [docs, required, shownRole],
   );
 
   const approved = items.filter((i) => i.status === 'approved').length;

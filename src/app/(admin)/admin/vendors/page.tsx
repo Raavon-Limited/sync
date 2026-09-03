@@ -4,17 +4,15 @@
  * PURPOSE: The account queue   review what somebody uploaded and decide whether
  *          they are real.
  *
- * "ALL" MEANS ALL
- *   This page used to list vendor_profiles minus landlords, under a tab reading
- *   "All businesses". On a platform whose only registered business was a
- *   landlord that tab said "No vendors registered yet" while the overview card
- *   two clicks away counted one   and a reviewer had no single screen showing
- *   who exists and where each of them stands.
+ * IT ONLY EVER SERVES A TRADE NOW
+ *   This page used to have two jobs: `?category=food` narrowed the list to one
+ *   trade, and no category at all listed EVERYTHING   which is what
+ *   /admin/accounts is for. That second job is why the tab bar carried a
+ *   "Businesses" tab whose contents were students and riders.
  *
- *   The unfiltered tab is now every account with a verification state, from
- *   modules/admin/accounts: businesses, landlords, riders, fleets, students and
- *   organisers, each with its role and its status on the card. `?category=`
- *   narrows the same list to one trade.
+ *   Without a category it redirects there. `?category=` still narrows the same
+ *   flattened list to one trade, which is the only thing this route was ever
+ *   uniquely good at.
  *
  * IT LISTS EVERYONE, IT DOES NOT DECIDE FOR EVERYONE
  *   A row opens the review screen belonging to its own kind   a landlord on
@@ -28,12 +26,13 @@
  * `modules/admin/actions` rather than trusted from here alone.
  */
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { visibleAreas } from '@/modules/access/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { listAccounts } from '@/modules/admin/accounts';
-import { ACCOUNT_AREA } from '@/modules/admin/account-types';
+import { ACCOUNT_AREA, type AccountKind } from '@/modules/admin/account-types';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs, type AccountTabKey } from '@/components/admin/account-tabs';
 import { VerificationQueue, type QueueEntry } from './(components)/verification-queue';
@@ -51,6 +50,24 @@ export const metadata: Metadata = { title: 'Accounts   Admin' };
  * category comes from the URL, and an unrecognised one should show the full
  * list, not an empty one or a query error.
  */
+/**
+ * The requirement-list role each kind of account is asked under   the same
+ * vocabulary verification_documents.role uses. It lives here because this is
+ * the only screen that has to translate between "kind of card" and "which
+ * application its documents belong to".
+ */
+const ROLE_OF_KIND: Record<AccountKind, string> = {
+  vendor: 'vendor',
+  landlord: 'landlord',
+  rider: 'rider',
+  company: 'company',
+  student: 'student',
+  organiser: 'event_manager',
+};
+
+/** All of them, for spreading an unattributed document across every card. */
+const ACCOUNT_ROLES = Object.values(ROLE_OF_KIND);
+
 const CATEGORIES = {
   food: 'Food',
   beauty: 'Beauty',
@@ -72,6 +89,15 @@ export default async function Page({
   await requireStaffArea('vendors');
 
   const category = parseCategory((await searchParams).category);
+
+  // NO CATEGORY, NO PAGE. Unfiltered, this route rendered every kind of account
+  // under the heading "Account verification"   which is /admin/accounts, built
+  // for exactly that and reached by the All tab. Two routes answering one
+  // question is how the Businesses tab came to be the All tab wearing the wrong
+  // label. This one now serves a trade or sends you to the list that serves
+  // everybody, and old links keep working either way.
+  if (!category) redirect('/admin/accounts');
+
   const admin = createAdminClient();
 
   const [accounts, areas, { data: docs }] = await Promise.all([
@@ -82,7 +108,7 @@ export default async function Page({
     // Documents are fetched separately rather than embedded: verification_documents
     // has no FK to vendor_profiles (it points at profiles), and this codebase has
     // been bitten repeatedly by embeds that cannot resolve.
-    admin.from('verification_documents').select('owner_id, status'),
+    admin.from('verification_documents').select('owner_id, role, status'),
   ]);
 
   // Narrowed AFTER the read, not in the query: the tabs cut one flattened list
@@ -93,25 +119,51 @@ export default async function Page({
     (a) => (!areas || areas.includes(ACCOUNT_AREA[a.kind])) && (!category || a.detail === category),
   );
 
+  /*
+   * COUNTED PER OWNER *AND* PER ROLE.
+   *
+   * This list holds six kinds of account and the documents are keyed on the
+   * person, so a landlord who is also a student was credited with the student's
+   * approved school ID   and vice versa. Keying the tally on "owner + the role
+   * this row is about" is what makes the number on a card mean the same thing
+   * as the folder it opens.
+   *
+   * A null role still counts for whichever card asks: it predates the column
+   * and belongs to no single application.
+   */
+  const key = (owner: string, role: string) => owner + ':' + role;
   const docCount = new Map<string, { total: number; approved: number }>();
   for (const d of (docs ?? []) as Row[]) {
     const owner = d.owner_id as string;
-    const c = docCount.get(owner) ?? { total: 0, approved: 0 };
-    c.total += 1;
-    if (d.status === 'approved') c.approved += 1;
-    docCount.set(owner, c);
+    const role = (d.role as string | null) ?? null;
+    // A null-role row is counted under every kind; a stamped one under its own.
+    const roles = role === null ? ACCOUNT_ROLES : [role];
+    for (const r of roles) {
+      const c = docCount.get(key(owner, r)) ?? { total: 0, approved: 0 };
+      c.total += 1;
+      if (d.status === 'approved') c.approved += 1;
+      docCount.set(key(owner, r), c);
+    }
   }
 
   // The face for the card. One round trip for the whole page   see
   // modules/admin/selfies for why the queue is scannable by sight at all.
   const selfieByOwner = await selfieUrlsFor([...new Set(rows.map((r) => r.personId))]);
 
-  const entries: QueueEntry[] = rows.map((r) => ({
-    ...r,
-    selfieUrl: selfieByOwner.get(r.personId),
-    docsTotal: docCount.get(r.personId)?.total ?? 0,
-    docsApproved: docCount.get(r.personId)?.approved ?? 0,
-  }));
+  const entries: QueueEntry[] = rows.map((r) => {
+    // The row's kind IS the application its documents belong to. 'company' is
+    // a fleet, asked for the rider set under its own role name.
+    const counted = docCount.get(key(r.personId, ROLE_OF_KIND[r.kind])) ?? {
+      total: 0,
+      approved: 0,
+    };
+    return {
+      ...r,
+      selfieUrl: selfieByOwner.get(r.personId),
+      docsTotal: counted.total,
+      docsApproved: counted.approved,
+    };
+  });
 
   return (
     <section className="flex flex-col gap-4">
@@ -125,7 +177,7 @@ export default async function Page({
 
       {/* The active tab is named, not inferred: this one route serves five of
           them and the pathname is identical for all five. */}
-      <AccountTabs active={(category ?? 'vendors') as AccountTabKey} />
+      <AccountTabs active={category as AccountTabKey} />
 
       <VerificationQueue rows={entries} />
     </section>

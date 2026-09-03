@@ -51,6 +51,36 @@ async function campusLine(
   }
 }
 
+/**
+ * Does this account actually have a business yet?
+ *
+ * CLAIMING THE ROLE AND SETTING THE BUSINESS UP ARE TWO STEPS, and somebody can
+ * stop between them: `claim_role('vendor')` runs when they pick "add a
+ * business account", and `vendor_profiles` is written at the END of onboarding.
+ * Abandon the wizard halfway and you are a vendor with no business   which used
+ * to be handed the full vendor sidebar: Stores, Team, Listings, Orders,
+ * Earnings, Promotions, all of them pointing at screens that can only say
+ * "nothing yet" because the row they read from does not exist.
+ *
+ * FALSE ONLY WHEN WE KNOW. An error here returns true and the sidebar stays
+ * whole: hiding a working vendor's entire dashboard because one query timed out
+ * is a far worse failure than showing an unfinished one too many rows.
+ */
+async function hasBusinessProfile(userId: string): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('vendor_profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return true;
+    return data != null;
+  } catch {
+    return true;
+  }
+}
+
 export interface DashboardProfile {
   /** Status/role line above the name, e.g. "Verified vendor". */
   eyebrow: string;
@@ -75,6 +105,12 @@ export interface DashboardProfile {
    * proxy uses, so sidebar links and the proxy rewrite always agree.
    */
   handle?: string;
+  /**
+   * False when this is a business dashboard whose business was never finished.
+   * The sidebar collapses to the overview until it is   see hasBusinessProfile.
+   * Undefined on every other dashboard, which has nothing to be missing.
+   */
+  businessReady?: boolean;
   /** The hat being worn, and every hat held   feeds the account switcher. */
   role?: string;
   roles?: string[];
@@ -134,7 +170,17 @@ export async function getDashboardProfile(navKey: DashboardNavKey): Promise<Dash
   // up on the vendor dashboard and nowhere else.
   const avatarUrl = profile?.avatar_url ?? undefined;
 
+  // Only the two business dashboards can be half-built. A student, rider,
+  // organiser or admin has nothing equivalent to abandon.
+  const businessReady =
+    navKey === 'vendor' || navKey === 'landlord'
+      ? user
+        ? await hasBusinessProfile(user.id)
+        : true
+      : undefined;
+
   const hats = {
+    businessReady,
     role: profile?.role,
     roles: profile?.roles ?? (profile?.role ? [profile.role] : []),
   };

@@ -40,7 +40,10 @@ export const STATUS_BADGE: Record<string, string> = {
   unverified: 'bg-ink/5 text-content-muted',
 };
 
-/** The four verification states, then any extra flags, then everything. */
+/**
+ * The four verification states. 'all' is not in the list: it is prepended by
+ * QueueFilterBar, because it is not a state   it is the absence of a filter.
+ */
 export const STATUS_FILTERS = ['pending', 'unverified', 'verified', 'rejected'] as const;
 
 export function chipClass(active: boolean) {
@@ -56,10 +59,33 @@ export function chipClass(active: boolean) {
  * Counts per status, plus `all`. Extra flags (suspended, blocked) are counted by
  * the caller, because only the caller knows what its rows carry.
  */
-export function useStatusCounts<T extends { verificationStatus: string }>(rows: T[]) {
+/**
+ * ONE ROW CAN BE IN TWO STATES AT ONCE.
+ *
+ * A person who is a verified student and a pending landlord holds two separate
+ * decisions, and a queue that files them under one of the two is wrong about
+ * the other: filter by Pending and the landlord waiting on you does not appear,
+ * because the row was filed as verified.
+ *
+ * `statuses` is that person's set. Rows without it   every other queue, which
+ * lists one kind of account and therefore one decision   fall back to the
+ * single status and count exactly as before. Deduplicated, so somebody verified
+ * twice counts once towards Verified rather than twice.
+ */
+export function statusesOf<T extends { verificationStatus: string; statuses?: string[] }>(
+  row: T,
+): string[] {
+  return row.statuses && row.statuses.length > 0
+    ? [...new Set(row.statuses)]
+    : [row.verificationStatus];
+}
+
+export function useStatusCounts<T extends { verificationStatus: string; statuses?: string[] }>(
+  rows: T[],
+) {
   return useMemo(() => {
     const c: Record<string, number> = { all: rows.length };
-    for (const r of rows) c[r.verificationStatus] = (c[r.verificationStatus] ?? 0) + 1;
+    for (const r of rows) for (const s of statusesOf(r)) c[s] = (c[s] ?? 0) + 1;
     return c;
   }, [rows]);
 }
@@ -101,7 +127,14 @@ export function QueueFilterBar({
         placeholder={placeholder}
         className="max-w-xs"
       />
-      {[...STATUS_FILTERS, ...extra, 'all'].map((f) => (
+      {/* 'ALL' FIRST. It used to trail the row, which put the way BACK from a
+          filter at the end of a line that grows every time a state is added  
+          and on a narrow window it was the chip that wrapped. Reading order is
+          now the same as the mental one: everything, then the narrowings of it.
+
+          It is still not the default: useQueueFilter opens on 'pending' when
+          anything is pending, because a queue exists to be worked through. */}
+      {['all', ...STATUS_FILTERS, ...extra].map((f) => (
         <button
           key={f}
           type="button"

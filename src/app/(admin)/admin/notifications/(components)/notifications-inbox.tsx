@@ -137,7 +137,7 @@ export function NotificationsInbox() {
 
       <p className="text-content-muted text-xs">
         Reviewing a business?{' '}
-        <Link href="/admin/vendors" className="text-accent-fg hover:underline">
+        <Link href="/admin/accounts" className="text-accent-fg hover:underline">
           The verification queue
         </Link>{' '}
         lists every vendor and landlord awaiting a decision.
