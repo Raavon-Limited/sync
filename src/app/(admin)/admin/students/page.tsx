@@ -33,7 +33,18 @@ export default async function Page() {
   const { data: profiles } = await admin
     .from('profiles')
     .select('id, full_name, campus_id, campus_other, suspended_at, created_at')
-    .eq('role', 'student')
+    // A STUDENT IS ANYONE HOLDING THE ROLE, not only anyone currently wearing
+    // it. `profiles.role` is the ACTIVE role   the hat somebody has on right
+    // now   and `roles` is every role they hold.
+    //
+    // Filtering on the active one hid every student who also lists a hostel or
+    // rides: their active role is landlord or rider, so a verified student was
+    // absent from this list entirely, and the count above it undercounted to
+    // match. The same account showed up under Landlords, because that tab reads
+    // vendor_profiles rather than the active role.
+    //
+    // Same rule the agents console already states, for the same reason.
+    .or('role.eq.student,roles.cs.{student}')
     .is('archived_at', null)
     .order('created_at', { ascending: false });
 

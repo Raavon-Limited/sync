@@ -80,10 +80,21 @@ export function AgentInviteForm({
       </p>
 
       {preview.hasAccount ? (
-        <p className="text-content-muted text-sm">
-          That address already has a Sync account. Sign in with it first, then press the button
-          below.
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-content-muted text-sm">
+            That address already has a Sync account. Sign in with it first, then press the button
+            below.
+          </p>
+          {/* A LINK, not just an instruction. Pressing Accept while signed out
+              raises "Sign in first" from the RPC, so a page that says to sign in
+              and offers no way to do it is a dead end with a button on it. The
+              token is carried through so they land back here. */}
+          <Button asChild variant="outline" size="sm" className="self-start">
+            <Link href={`/login?next=${encodeURIComponent(`/agent-invite?token=${token}`)}`}>
+              Sign in as {preview.email}
+            </Link>
+          </Button>
+        </div>
       ) : (
         <FormField label="Choose a password" htmlFor="agent-password" required>
           <PasswordInput

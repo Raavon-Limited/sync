@@ -43,6 +43,24 @@ type Role =
 // vs /admin).
 const ALL: Role[] = ['student', 'vendor', 'landlord', 'rider', 'admin', 'super_admin'];
 
+/**
+ * Does this path sit UNDER the prefix, as a path segment?
+ *
+ * A bare `pathname.startsWith(prefix)` matches on characters, not segments, so
+ * '/agent' guarded '/agent-invite' as well   the public, token-guarded page
+ * where an invited agent sets their password. A signed-out invitee was sent to
+ * /login, which found no account for the address and forwarded them to /signup,
+ * so the one link that exists to CREATE the account instead asked them to make
+ * one from scratch. The invite could never be accepted by anybody new.
+ *
+ * The same trap is set for any future sibling: '/user-guide' under '/user',
+ * '/admin-help' under '/admin'. Matching on the boundary closes all of them at
+ * once rather than one route name at a time.
+ */
+function underPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // /around is the public "home of the full Sync app" per the wireframe -
   // signed-out users land here, so it's deliberately not in the gate list.
@@ -109,7 +127,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const segments = pathname.split('/').filter(Boolean);
   const firstSeg = segments[0];
-  const guarded = PROTECTED_PREFIXES.find(({ prefix }) => pathname.startsWith(prefix));
+  const guarded = PROTECTED_PREFIXES.find(({ prefix }) => underPrefix(pathname, prefix));
 
   // Supabase not configured yet → no session can exist → everyone is
   // logged-out. Gate protected routes, let public ones through.
