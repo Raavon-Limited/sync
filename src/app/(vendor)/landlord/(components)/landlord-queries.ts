@@ -52,7 +52,7 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
   const { data: hostels } = await db
     .from('hostels')
     .select(
-      'id, slug, name, area, address, room_type, amenities, price_per_session_kobo, verified, created_at',
+      'id, slug, name, area, address, lat, lng, room_type, amenities, house_rules, description, price_per_session_kobo, verified, created_at, hostel_images(url, position, kind)',
     )
     .eq('landlord_id', landlordId)
     .is('archived_at', null)
@@ -72,13 +72,33 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
     const id = a.hostel_id as string;
     const prev = freeByHostel.get(id) ?? { free: 0, total: 0 };
     freeByHostel.set(id, {
-      free: prev.free + Number(a.rooms_free ?? a.free ?? 0),
+      // `rooms_available`, which is what the view actually calls it. This read
+      // `a.rooms_free ?? a.free`   neither exists, so free was ALWAYS 0 and
+      // booked came out as total. Every hostel with rooms reported itself fully
+      // occupied from the moment it was created, before anybody had booked
+      // anything, and the card said so in two places at once.
+      free: prev.free + Number(a.rooms_available ?? 0),
       total: prev.total + Number(a.rooms_total ?? a.total ?? 0),
     });
   }
 
   return rows.map((h): Property => {
     const counts = freeByHostel.get(h.id as string) ?? { free: 0, total: 0 };
+    const media = (
+      (h.hostel_images as { url: string; position: number; kind?: string }[] | null) ?? []
+    )
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((i) => ({
+        url: i.url,
+        // `kind` is pending until 20260908120000; a row without it predates
+        // video and is a photo.
+        kind: (i.kind === 'video' ? 'video' : 'image') as 'image' | 'video',
+      }));
+
+    // The card shows a tile, so its primary must be a PHOTO   a video has no
+    // thumbnail here and would render as a black rectangle.
+    const images = media.filter((m) => m.kind === 'image').map((m) => m.url);
     const booked = Math.max(0, counts.total - counts.free);
 
     return {
@@ -87,11 +107,28 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
       name: (h.name as string) ?? 'Unnamed hostel',
       roomsTotal: counts.total,
       roomsBooked: booked,
-      // A hostel a reviewer has not been to yet is not "Inactive"   it is
-      // listed and unverified, which the verified flag says on its own.
-      status: 'Active',
+      // WAS HARDCODED 'Active' FOR EVERY LISTING.
+      //
+      // Which meant the badge said the same word whatever the state of the
+      // hostel   including one nobody has visited yet, which is exactly the
+      // case a landlord most wants told apart. "Active" also reads as "live to
+      // students", and an unverified listing is not supposed to be.
+      //
+      // The verified flag is the fact worth showing here, so it is the one the
+      // badge shows.
+      status: h.verified === true ? 'Active' : 'Inactive',
       address: (h.address as string) ?? undefined,
       area: (h.area as string) ?? null,
+      lat: (h.lat as number) ?? null,
+      lng: (h.lng as number) ?? null,
+      houseRules: (h.house_rules as string[]) ?? [],
+      description: (h.description as string) ?? undefined,
+      // Ordered by `position`, so [0] is the primary image. Sorted here rather
+      // than relied on from the join: PostgREST does not promise an order on an
+      // embedded resource unless one is asked for.
+      imageUrls: images,
+      imageUrl: images[0],
+      media,
       price: naira(h.price_per_session_kobo as number),
       term: 'per session',
       roomType: (h.room_type as string) ?? undefined,

@@ -29,15 +29,23 @@ import {
   SheetTrigger,
 } from '@/components/ui';
 import { PropertyForm } from './property-form';
+import type { Area } from '@/lib/constants/areas';
+import type { RoomTypeOption } from '@/modules/room-types/queries';
 import type { Property } from '../landlord-types';
 
 export function PropertyFormSheet({
   property,
   /** The button that opens it. Defaults to the standard "Add a property". */
   trigger,
+  /** Fetched on the server: the form is a client component and cannot read
+   *  `areas` itself. */
+  areas,
+  roomTypes,
 }: {
   property?: Property;
   trigger?: React.ReactNode;
+  areas: Area[];
+  roomTypes: RoomTypeOption[];
 }) {
   const [open, setOpen] = useState(false);
   const isEdit = Boolean(property);
@@ -74,7 +82,13 @@ export function PropertyFormSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <PropertyForm property={property} embedded onDone={() => setOpen(false)} />
+        <PropertyForm
+          property={property}
+          areas={areas}
+          roomTypes={roomTypes}
+          embedded
+          onDone={() => setOpen(false)}
+        />
       </SheetContent>
     </Sheet>
   );

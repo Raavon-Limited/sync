@@ -21,11 +21,21 @@ import { cn } from '@/lib/utils';
 import { archiveHostel } from '@/modules/hostels/actions';
 import { PropertyFormSheet } from '../(components)/properties/property-form-sheet';
 import { PropertyListCard } from '../(components)/properties/property-list-card';
+import type { Area } from '@/lib/constants/areas';
+import type { RoomTypeOption } from '@/modules/room-types/queries';
 import type { Property } from '../(components)/landlord-types';
 
 type Filter = 'all' | 'Active' | 'Inactive';
 
-export function PropertiesClient({ properties }: { properties: Property[] }) {
+export function PropertiesClient({
+  properties,
+  areas,
+  roomTypes,
+}: {
+  properties: Property[];
+  areas: Area[];
+  roomTypes: RoomTypeOption[];
+}) {
   const router = useRouter();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filter, setFilter] = useState<Filter>('all');
@@ -47,10 +57,10 @@ export function PropertiesClient({ properties }: { properties: Property[] }) {
     startRemoving(async () => {
       const res = await archiveHostel(id);
       if (res.ok) {
-        toast('Listing removed.');
+        toast('Listing archived. Contact support to delete it permanently.');
         router.refresh();
       } else {
-        toast(res.error ?? 'We could not remove that listing.');
+        toast(res.error ?? 'We could not archive that listing.');
       }
     });
   }
@@ -66,7 +76,7 @@ export function PropertiesClient({ properties }: { properties: Property[] }) {
             book.
           </p>
         </div>
-        <PropertyFormSheet />
+        <PropertyFormSheet areas={areas} roomTypes={roomTypes} />
       </div>
     );
   }
@@ -137,7 +147,14 @@ export function PropertiesClient({ properties }: { properties: Property[] }) {
           }
         >
           {visible.map((p) => (
-            <PropertyListCard key={p.id} property={p} view={view} onDelete={() => remove(p.id)} />
+            <PropertyListCard
+              key={p.id}
+              property={p}
+              view={view}
+              areas={areas}
+              roomTypes={roomTypes}
+              onArchive={() => remove(p.id)}
+            />
           ))}
         </div>
       )}

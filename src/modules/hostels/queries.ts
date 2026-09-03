@@ -166,6 +166,9 @@ export async function fetchHostels(
 
   if (opts.area) q = q.eq('area', opts.area);
   if (opts.roomType) q = q.eq('room_type', opts.roomType);
+  // RLS already hides unverified listings from everyone but the owner and
+  // staff (20260908150000). This stays as an explicit narrowing for the
+  // screens that want ONLY verified even when the caller is one of those two.
   if (opts.verifiedOnly) q = q.eq('verified', true);
   if (opts.minPriceKobo != null) q = q.gte('price_per_session_kobo', opts.minPriceKobo);
   if (opts.maxPriceKobo != null) q = q.lte('price_per_session_kobo', opts.maxPriceKobo);
@@ -199,9 +202,7 @@ export async function fetchHostelsNear(
   lng: number,
   radiusM = 2000,
 ): Promise<NearbyHostel[]> {
-  const rows = unwrapList<Row>(
-    await db.rpc('hostels_near', { lat, lng, radius_m: radiusM }),
-  );
+  const rows = unwrapList<Row>(await db.rpc('hostels_near', { lat, lng, radius_m: radiusM }));
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -254,7 +255,13 @@ export async function fetchBooking(db: Client, id: string): Promise<Booking | nu
  */
 export async function createBooking(
   db: Client,
-  input: { hostelId: string; roomId?: string; moveIn?: string; endDate?: string; studentId: string },
+  input: {
+    hostelId: string;
+    roomId?: string;
+    moveIn?: string;
+    endDate?: string;
+    studentId: string;
+  },
 ): Promise<Booking> {
   const row = unwrap<Row>(
     await db
@@ -276,7 +283,12 @@ export async function createBooking(
 
 export async function cancelBooking(db: Client, id: string): Promise<Booking> {
   const row = unwrap<Row>(
-    await db.from('bookings').update({ status: 'cancelled' }).eq('id', id).select(BOOKING_SELECT).single(),
+    await db
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .select(BOOKING_SELECT)
+      .single(),
   );
   return toBooking(row);
 }
@@ -394,7 +406,9 @@ export async function upsertHostel(
   };
 
   const row = input.id
-    ? unwrap<Row>(await db.from('hostels').update(payload).eq('id', input.id).select(HOSTEL_SELECT).single())
+    ? unwrap<Row>(
+        await db.from('hostels').update(payload).eq('id', input.id).select(HOSTEL_SELECT).single(),
+      )
     : unwrap<Row>(await db.from('hostels').insert(payload).select(HOSTEL_SELECT).single());
 
   return toHostel(row);

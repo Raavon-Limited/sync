@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -175,6 +200,67 @@ export type Database = {
           },
         ]
       }
+      agent_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          campus_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          campus_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          campus_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_invites_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           campus_id: string | null
@@ -251,6 +337,7 @@ export type Database = {
       }
       areas: {
         Row: {
+          campus_id: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -262,6 +349,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campus_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -273,6 +361,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campus_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -283,7 +372,15 @@ export type Database = {
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "areas_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       articles: {
         Row: {
@@ -986,6 +1083,7 @@ export type Database = {
           category: string
           code: string
           created_at: string
+          event_id: string | null
           id: string
           internal_notes: string | null
           order_id: string | null
@@ -1006,6 +1104,7 @@ export type Database = {
           category: string
           code: string
           created_at?: string
+          event_id?: string | null
           id?: string
           internal_notes?: string | null
           order_id?: string | null
@@ -1026,6 +1125,7 @@ export type Database = {
           category?: string
           code?: string
           created_at?: string
+          event_id?: string | null
           id?: string
           internal_notes?: string | null
           order_id?: string | null
@@ -1062,6 +1162,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "disputes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "disputes_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1091,6 +1198,54 @@ export type Database = {
           },
         ]
       }
+      email_log: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          email: string
+          id: string
+          kind: string
+          recipient_id: string | null
+          sent_by: string | null
+          subject: string
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          kind: string
+          recipient_id?: string | null
+          sent_by?: string | null
+          subject: string
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          kind?: string
+          recipient_id?: string | null
+          sent_by?: string | null
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escrow_holds: {
         Row: {
           amount_kobo: number
@@ -1098,7 +1253,9 @@ export type Database = {
           commission_kobo: number
           created_at: string
           delivery_id: string | null
+          event_id: string | null
           id: string
+          inspection_id: string | null
           order_id: string | null
           payee_id: string | null
           payer_id: string
@@ -1115,7 +1272,9 @@ export type Database = {
           commission_kobo?: number
           created_at?: string
           delivery_id?: string | null
+          event_id?: string | null
           id?: string
+          inspection_id?: string | null
           order_id?: string | null
           payee_id?: string | null
           payer_id: string
@@ -1132,7 +1291,9 @@ export type Database = {
           commission_kobo?: number
           created_at?: string
           delivery_id?: string | null
+          event_id?: string | null
           id?: string
+          inspection_id?: string | null
           order_id?: string | null
           payee_id?: string | null
           payer_id?: string
@@ -1163,6 +1324,20 @@ export type Database = {
             columns: ["delivery_id"]
             isOneToOne: false
             referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_holds_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_holds_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "hostel_inspections"
             referencedColumns: ["id"]
           },
           {
@@ -1251,6 +1426,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           description: string | null
+          fee_mode: string
           geo: unknown
           id: string
           name: string
@@ -1264,6 +1440,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          fee_mode?: string
           geo?: unknown
           id?: string
           name: string
@@ -1277,6 +1454,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           description?: string | null
+          fee_mode?: string
           geo?: unknown
           id?: string
           name?: string
@@ -1367,6 +1545,7 @@ export type Database = {
           created_at: string
           hostel_id: string
           id: string
+          kind: string
           position: number
           url: string
         }
@@ -1374,6 +1553,7 @@ export type Database = {
           created_at?: string
           hostel_id: string
           id?: string
+          kind?: string
           position?: number
           url: string
         }
@@ -1381,6 +1561,7 @@ export type Database = {
           created_at?: string
           hostel_id?: string
           id?: string
+          kind?: string
           position?: number
           url?: string
         }
@@ -1414,6 +1595,9 @@ export type Database = {
           paid_at: string | null
           payment_reference: string | null
           phone: string
+          report_filed_at: string | null
+          report_notes: string | null
+          reschedule_count: number
           scheduled_for: string
           status: string
           student_id: string
@@ -1431,6 +1615,9 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           phone: string
+          report_filed_at?: string | null
+          report_notes?: string | null
+          reschedule_count?: number
           scheduled_for: string
           status?: string
           student_id: string
@@ -1448,6 +1635,9 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           phone?: string
+          report_filed_at?: string | null
+          report_notes?: string | null
+          reschedule_count?: number
           scheduled_for?: string
           status?: string
           student_id?: string
@@ -1533,83 +1723,6 @@ export type Database = {
           },
         ]
       }
-      verification_visits: {
-        Row: {
-          ambassador_id: string | null
-          created_at: string
-          decided_at: string | null
-          decided_by: string | null
-          hostel_id: string
-          id: string
-          notes: string | null
-          photos: string[]
-          scheduled_for: string | null
-          status: string
-          submitted_at: string | null
-          updated_at: string
-          video_url: string | null
-        }
-        Insert: {
-          ambassador_id?: string | null
-          created_at?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          hostel_id: string
-          id?: string
-          notes?: string | null
-          photos?: string[]
-          scheduled_for?: string | null
-          status?: string
-          submitted_at?: string | null
-          updated_at?: string
-          video_url?: string | null
-        }
-        Update: {
-          ambassador_id?: string | null
-          created_at?: string
-          decided_at?: string | null
-          decided_by?: string | null
-          hostel_id?: string
-          id?: string
-          notes?: string | null
-          photos?: string[]
-          scheduled_for?: string | null
-          status?: string
-          submitted_at?: string | null
-          updated_at?: string
-          video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "verification_visits_ambassador_id_fkey"
-            columns: ["ambassador_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "verification_visits_decided_by_fkey"
-            columns: ["decided_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "verification_visits_hostel_id_fkey"
-            columns: ["hostel_id"]
-            isOneToOne: false
-            referencedRelation: "hostel_availability"
-            referencedColumns: ["hostel_id"]
-          },
-          {
-            foreignKeyName: "verification_visits_hostel_id_fkey"
-            columns: ["hostel_id"]
-            isOneToOne: false
-            referencedRelation: "hostels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       hostels: {
         Row: {
           address: string | null
@@ -1618,8 +1731,10 @@ export type Database = {
           area: string
           campus: string
           created_at: string
+          description: string | null
           distance_minutes: number | null
           geo: unknown
+          house_rules: string[]
           id: string
           inspection_fee_kobo: number
           landlord_id: string
@@ -1641,8 +1756,10 @@ export type Database = {
           area: string
           campus?: string
           created_at?: string
+          description?: string | null
           distance_minutes?: number | null
           geo?: unknown
+          house_rules?: string[]
           id?: string
           inspection_fee_kobo?: number
           landlord_id: string
@@ -1664,8 +1781,10 @@ export type Database = {
           area?: string
           campus?: string
           created_at?: string
+          description?: string | null
           distance_minutes?: number | null
           geo?: unknown
+          house_rules?: string[]
           id?: string
           inspection_fee_kobo?: number
           landlord_id?: string
@@ -1694,6 +1813,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hostels_room_type_fkey"
+            columns: ["room_type"]
+            isOneToOne: false
+            referencedRelation: "room_types"
+            referencedColumns: ["name"]
           },
         ]
       }
@@ -2473,8 +2599,8 @@ export type Database = {
       profiles: {
         Row: {
           archived_at: string | null
-          avatar_url: string | null
           archived_reason: string | null
+          avatar_url: string | null
           business_address: string | null
           business_name: string | null
           campus_id: string | null
@@ -2496,8 +2622,8 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
-          avatar_url?: string | null
           archived_reason?: string | null
+          avatar_url?: string | null
           business_address?: string | null
           business_name?: string | null
           campus_id?: string | null
@@ -2519,8 +2645,8 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
-          avatar_url?: string | null
           archived_reason?: string | null
+          avatar_url?: string | null
           business_address?: string | null
           business_name?: string | null
           campus_id?: string | null
@@ -2846,6 +2972,36 @@ export type Database = {
           },
         ]
       }
+      room_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_hostels: {
         Row: {
           created_at: string
@@ -3127,6 +3283,67 @@ export type Database = {
           },
         ]
       }
+      staff_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role_id: string | null
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          role_id?: string | null
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role_id?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invites_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "access_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       storefront_invites: {
         Row: {
           accepted_at: string | null
@@ -3399,6 +3616,44 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_profiles: {
+        Row: {
+          created_at: string
+          department: string | null
+          id: string
+          level: string | null
+          matric_number: string | null
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          id: string
+          level?: string | null
+          matric_number?: string | null
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          level?: string | null
+          matric_number?: string | null
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3709,15 +3964,16 @@ export type Database = {
       }
       verification_documents: {
         Row: {
-          role: string | null
           action_message: string | null
           created_at: string
           doc_subtype: string | null
           doc_type: string
+          file_purged_at: string | null
           id: string
           owner_id: string
           reviewed_at: string | null
           reviewed_by: string | null
+          role: string | null
           status: string
           storage_path: string
           title: string
@@ -3725,15 +3981,16 @@ export type Database = {
           uploaded_at: string
         }
         Insert: {
-          role?: string | null
           action_message?: string | null
           created_at?: string
           doc_subtype?: string | null
           doc_type: string
+          file_purged_at?: string | null
           id?: string
           owner_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          role?: string | null
           status?: string
           storage_path: string
           title: string
@@ -3741,15 +3998,16 @@ export type Database = {
           uploaded_at?: string
         }
         Update: {
-          role?: string | null
           action_message?: string | null
           created_at?: string
           doc_subtype?: string | null
           doc_type?: string
+          file_purged_at?: string | null
           id?: string
           owner_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          role?: string | null
           status?: string
           storage_path?: string
           title?: string
@@ -3769,6 +4027,119 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_visits: {
+        Row: {
+          ambassador_id: string | null
+          assigned_at: string | null
+          assigned_by: string | null
+          brief: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          hostel_id: string | null
+          id: string
+          meet_user_id: string | null
+          notes: string | null
+          photos: string[]
+          scheduled_for: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          vendor_id: string | null
+          video_url: string | null
+        }
+        Insert: {
+          ambassador_id?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
+          brief?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          hostel_id?: string | null
+          id?: string
+          meet_user_id?: string | null
+          notes?: string | null
+          photos?: string[]
+          scheduled_for?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          ambassador_id?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
+          brief?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          hostel_id?: string | null
+          id?: string
+          meet_user_id?: string | null
+          notes?: string | null
+          photos?: string[]
+          scheduled_for?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hostel_verification_visits_ambassador_id_fkey"
+            columns: ["ambassador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hostel_verification_visits_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hostel_verification_visits_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostel_availability"
+            referencedColumns: ["hostel_id"]
+          },
+          {
+            foreignKeyName: "hostel_verification_visits_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_visits_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_visits_meet_user_id_fkey"
+            columns: ["meet_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_visits_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3904,6 +4275,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_agent_invite: { Args: { p_token: string }; Returns: string }
       accept_delivery_offer: {
         Args: { p_offer_id: string }
         Returns: {
@@ -3912,6 +4284,7 @@ export type Database = {
           reason: string
         }[]
       }
+      accept_staff_invite: { Args: { p_token: string }; Returns: string }
       accept_storefront_invite: { Args: { p_token: string }; Returns: string }
       access_level: {
         Args: { p_area: string; p_storefront?: string }
@@ -3919,6 +4292,7 @@ export type Database = {
       }
       admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_overview: { Args: never; Returns: Json }
+      admin_revenue: { Args: { p_from?: string; p_to?: string }; Returns: Json }
       advance_delivery: {
         Args: { p_delivery_id: string; p_status: string }
         Returns: string
@@ -3926,6 +4300,21 @@ export type Database = {
       assign_access_role: {
         Args: { p_role: string; p_user: string }
         Returns: undefined
+      }
+      assign_inspection_agent: {
+        Args: { p_agent?: string; p_inspection: string }
+        Returns: string
+      }
+      assign_verification_visit: {
+        Args: {
+          p_agent: string
+          p_brief?: string
+          p_hostel?: string
+          p_meet?: string
+          p_vendor?: string
+          p_when?: string
+        }
+        Returns: string
       }
       auth_role: { Args: never; Returns: string }
       business_role_count: { Args: { p_roles: string[] }; Returns: number }
@@ -3953,6 +4342,14 @@ export type Database = {
       claim_business_name: { Args: { p_name: string }; Returns: string }
       claim_delivery: { Args: { p_delivery_id: string }; Returns: string }
       claim_role: { Args: { p_role: string }; Returns: string[] }
+      confirm_inspection_payment: {
+        Args: {
+          p_amount_kobo: number
+          p_inspection: string
+          p_reference: string
+        }
+        Returns: string
+      }
       conversation_counterparties: {
         Args: { p_conversation_ids?: string[] }
         Returns: {
@@ -3976,6 +4373,20 @@ export type Database = {
         Args: { p_email: string; p_role: string }
         Returns: string
       }
+      create_agent_invite: {
+        Args: { p_campus?: string; p_email: string }
+        Returns: {
+          invite_id: string
+          invite_token: string
+        }[]
+      }
+      create_staff_invite: {
+        Args: { p_email: string; p_role?: string }
+        Returns: {
+          invite_id: string
+          invite_token: string
+        }[]
+      }
       create_storefront_invite: {
         Args: {
           p_email: string
@@ -3994,9 +4405,25 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
+      document_retention_days: { Args: { p_doc_type: string }; Returns: number }
+      documents_due_for_purge: {
+        Args: never
+        Returns: {
+          doc_type: string
+          id: string
+          owner_id: string
+          reviewed_at: string
+          storage_path: string
+        }[]
+      }
       email_has_account: { Args: { p_email: string }; Returns: boolean }
+      ensure_student_profile: { Args: never; Returns: string }
       ensure_vendor_profile: { Args: never; Returns: string }
       expire_stale_holds: { Args: never; Returns: number }
+      file_inspection_report: {
+        Args: { p_inspection: string; p_notes?: string }
+        Returns: string
+      }
       get_unread_counts: {
         Args: never
         Returns: {
@@ -4030,7 +4457,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
-          last_sign_in_at: string | null
+          last_sign_in_at: string
           role: string
         }[]
       }
@@ -4061,6 +4488,7 @@ export type Database = {
           vendor_phone: string
         }[]
       }
+      my_card_code: { Args: never; Returns: string }
       my_plan_usage: {
         Args: never
         Returns: {
@@ -4164,10 +4592,24 @@ export type Database = {
           fee_kobo: number
         }[]
       }
+      quote_tickets: {
+        Args: { p_quantity?: number; p_tier_id: string }
+        Returns: {
+          fee_kobo: number
+          fee_mode: string
+          gross_kobo: number
+          total_kobo: number
+        }[]
+      }
+      reassign_verification_visit: {
+        Args: { p_agent?: string; p_visit: string }
+        Returns: string
+      }
       release_delivery_escrow: {
         Args: { p_delivery_id: string }
         Returns: string
       }
+      release_event_escrow: { Args: { p_event: string }; Returns: number }
       release_matured_escrow: {
         Args: { p_limit?: number }
         Returns: {
@@ -4179,6 +4621,10 @@ export type Database = {
       request_withdrawal: {
         Args: { p_amount_kobo: number; p_bank_account_id: string }
         Returns: string
+      }
+      reschedule_inspection: {
+        Args: { p_inspection: string; p_new_time: string }
+        Returns: number
       }
       resolve_dispute: {
         Args: {
@@ -4194,6 +4640,8 @@ export type Database = {
         Args: { p_role: string; p_user: string }
         Returns: undefined
       }
+      revoke_agent_invite: { Args: { p_id: string }; Returns: undefined }
+      revoke_staff_invite: { Args: { p_id: string }; Returns: undefined }
       revoke_storefront_invite: {
         Args: { p_invite_id: string }
         Returns: undefined
@@ -4202,6 +4650,7 @@ export type Database = {
         Args: { p_staff_id: string }
         Returns: undefined
       }
+      rotate_card_code: { Args: never; Returns: string }
       rotate_verification_code: { Args: never; Returns: string }
       save_onboarding_business: {
         Args: {
@@ -4211,6 +4660,10 @@ export type Database = {
           p_business_name: string
           p_phone?: string
         }
+        Returns: undefined
+      }
+      save_student_identity: {
+        Args: { p_department: string; p_level?: string; p_matric: string }
         Returns: undefined
       }
       set_account_role: {
@@ -4223,6 +4676,14 @@ export type Database = {
       }
       set_company_verification: {
         Args: { p_company: string; p_permanent?: boolean; p_status: string }
+        Returns: string
+      }
+      set_event_fee_mode: {
+        Args: { p_event: string; p_mode: string }
+        Returns: string
+      }
+      set_personal_verification: {
+        Args: { p_status: string; p_user: string }
         Returns: string
       }
       set_primary_storefront: {
@@ -4280,12 +4741,20 @@ export type Database = {
         Args: { p_scopes: string[]; p_staff_id: string }
         Returns: undefined
       }
+      set_student_verification: {
+        Args: { p_status: string; p_user: string }
+        Returns: string
+      }
       set_vendor_category: {
         Args: { p_category: string; p_trade?: string }
         Returns: string
       }
       set_verification_status: {
         Args: { p_permanent?: boolean; p_status: string; p_vendor: string }
+        Returns: string
+      }
+      settle_inspection: {
+        Args: { p_inspection: string; p_outcome: string }
         Returns: string
       }
       settle_payout: {
@@ -4408,6 +4877,7 @@ export type Database = {
         Args: { p_company: string }
         Returns: string
       }
+      submit_personal_verification: { Args: never; Returns: string }
       submit_review: {
         Args: {
           p_body?: string
@@ -4421,8 +4891,19 @@ export type Database = {
         Returns: string
       }
       submit_rider_verification: { Args: never; Returns: string }
+      submit_student_verification: { Args: never; Returns: string }
       submit_verification: { Args: never; Returns: string }
+      submit_verification_visit: {
+        Args: {
+          p_notes?: string
+          p_photos?: string[]
+          p_video?: string
+          p_visit: string
+        }
+        Returns: string
+      }
       subscribe_to_plan: { Args: { p_plan_id: string }; Returns: string }
+      sweep_event_escrow: { Args: never; Returns: number }
       switch_role: { Args: { p_role: string }; Returns: string }
       toggle_favorite: {
         Args: { p_entity_id: string; p_entity_type: string }
@@ -4444,8 +4925,10 @@ export type Database = {
         Returns: {
           area: string
           business_name: string
+          card_kind: string
           category: string
           checked_at: string
+          credentials: Json
           found: boolean
           holder_name: string
           member_since: string
@@ -4476,12 +4959,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4505,11 +4988,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4530,11 +5013,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4555,11 +5038,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4572,11 +5055,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4586,6 +5069,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

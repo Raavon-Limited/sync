@@ -313,6 +313,29 @@ export async function resolveDispute(input: {
  * the hostel unverified is a decision nobody can act on   and an unverified
  * hostel with a "Verified" visit reads as a bug to whoever looks next.
  */
+/**
+ * EVIDENCE BEFORE A DECISION.
+ *
+ * A verified badge is the one claim on this platform that has to mean somebody
+ * stood in the building. This action would previously flip
+ * `hostels.verified` on a visit with no photograph, no notes and no agent
+ * it was reachable the moment a visit row existed, which is the moment it was
+ * SCHEDULED.
+ *
+ * `submit_verification_visit` already refuses a submission with no photo, so
+ * "the agent has submitted" is a reliable proxy for "there is evidence". That
+ * makes the gate one status check rather than a second evidence rule that could
+ * drift from the first.
+ *
+ * CHECKED HERE AND NOT ONLY IN THE UI. This runs on the service-role client,
+ * which is above RLS by construction, so a disabled button is the whole of the
+ * client-side story and none of the enforcement.
+ *
+ * REJECTION IS GATED TOO, and that is deliberate rather than an oversight:
+ * rejecting an unvisited listing tells a landlord their property failed a check
+ * nobody performed. A visit that should not have been scheduled is cancelled or
+ * reassigned, not rejected.
+ */
 export async function decideHostelVisit(input: {
   visitId: string;
   hostelId: string;
@@ -322,6 +345,29 @@ export async function decideHostelVisit(input: {
   const reviewerId = await assertStaffArea('verify_visits');
   const admin = createAdminClient();
   const now = new Date().toISOString();
+
+  const { data: visit, error: readErr } = await admin
+    .from('verification_visits')
+    .select('status, photos, video_url')
+    .eq('id', input.visitId)
+    .maybeSingle();
+  if (readErr) throw new Error(userMessage(readErr, 'We could not read that visit.'));
+  if (!visit) throw new Error('That visit no longer exists.');
+
+  if (visit.status !== 'Under Review') {
+    throw new Error(
+      visit.status === 'Verified' || visit.status === 'Rejected'
+        ? 'That visit has already been decided.'
+        : 'The agent has not filed their report yet, so there is nothing to decide on.',
+    );
+  }
+
+  // Belt and braces: the submit RPC guarantees a photo, so this only fires if a
+  // row reached Under Review some other way (a hand-run UPDATE, most likely).
+  const photos = (visit.photos as string[] | null) ?? [];
+  if (photos.length === 0 && !visit.video_url) {
+    throw new Error('That visit has no photo or video on it. It cannot be decided.');
+  }
 
   const { error: visitErr } = await admin
     .from('verification_visits')

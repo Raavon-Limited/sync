@@ -8,10 +8,11 @@
  * listed, who has booked, and whether anyone has been to look.
  */
 import type { Metadata } from 'next';
+import { HostelFacts, hostelFactsFromRow } from '@/components/shared/hostel-facts';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ShieldCheck, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -38,6 +39,23 @@ export async function generateMetadata({
   return { title: `${hostelSlug}   Hostel` };
 }
 
+/** How many rooms show before the disclosure. */
+const ROOMS_SHOWN = 10;
+
+function RoomTile({ room }: { room: Row }) {
+  return (
+    <div className="border-line/10 flex flex-col gap-1 rounded-lg border px-3 py-2">
+      <span className="text-content flex items-center gap-2 text-sm">
+        {room.label as string}
+        <Badge className={ROOM_STATE[room.state as string] ?? ROOM_STATE.unlisted}>
+          {room.state as string}
+        </Badge>
+      </span>
+      <span className="text-content-muted text-xs">{naira(room.price_kobo ?? 0)}</span>
+    </div>
+  );
+}
+
 export default async function Page({
   params,
 }: {
@@ -51,7 +69,7 @@ export default async function Page({
   const { data: hostel } = await admin
     .from('hostels')
     .select(
-      'id, slug, name, area, address, landmark, room_type, price_per_session_kobo, inspection_fee_kobo, amenities, verified, lat, lng, hostel_images(url, position)',
+      'id, slug, name, area, address, landmark, room_type, price_per_session_kobo, inspection_fee_kobo, amenities, house_rules, description, verified, lat, lng, hostel_images(url, position, kind)',
     )
     .eq('slug', hostelSlug)
     .maybeSingle();
@@ -99,66 +117,28 @@ export default async function Page({
       </Link>
 
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-content flex flex-wrap items-center gap-2 text-3xl">
-          {h.name}
-          {h.verified ? (
-            <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
-              <ShieldCheck className="size-3" /> verified
-            </Badge>
-          ) : (
-            <Badge className="bg-ink/5 text-content-muted">unverified</Badge>
-          )}
-        </h1>
-        <p className="text-content-muted flex flex-wrap items-center gap-3 text-sm">
-          <span className="flex items-center gap-1">
-            <MapPin className="size-4" />
-            {h.address ?? h.area}
-            {h.landmark ? ` · ${h.landmark}` : ''}
-          </span>
-          <span>{h.room_type}</span>
-          <span>{naira(h.price_per_session_kobo)} / session</span>
-          <span>inspection {naira(h.inspection_fee_kobo)}</span>
-          {h.lat && h.lng && (
-            <a
-              className="text-lime-deep underline underline-offset-2"
-              href={`https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              map
-            </a>
-          )}
-        </p>
-        {(h.amenities ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {(h.amenities as string[]).map((am) => (
-              <Badge key={am} className="bg-ink/5 text-content-muted">
-                {am}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {/* THE SAME COMPONENT the verification side modal renders.
+            This block used to be hand-rolled here and a thinner version lived
+            on the visits screen, so a reviewer saw different facts depending on
+            which door they came in through   including no house rules and no
+            description at all. One component, one set of facts. */}
+        <HostelFacts
+          hostel={hostelFactsFromRow(h)}
+          headingClassName="font-display text-content flex flex-wrap items-center gap-2 text-3xl"
+        />
       </div>
 
-      {(h.hostel_images ?? []).length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {(h.hostel_images as Row[]).map((img, i) => (
-            <div
-              key={i}
-              className="border-line/10 relative size-28 overflow-hidden rounded-lg border"
-            >
-              <Image
-                src={img.url}
-                alt={`${h.name} ${i + 1}`}
-                fill
-                sizes="112px"
-                className="object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* The gallery that stood here is gone. HostelFacts above renders the
+          photos AND the walkthrough, so this drew every image a second time
+          and it used <Image> for every row, so a video came out as a broken
+          thumbnail showing its alt text. One renderer, which is the whole
+          reason that component exists. */}
 
+      {/* COLLAPSED BY DEFAULT once there are more than a handful.
+          A hundred-room hostel rendered a hundred tiles between the listing and
+          its bookings, and nobody scrolls that to reach the thing underneath.
+          <details> rather than state: this is a server component, and the
+          browser has done disclosure since before React existed. */}
       <section className="flex flex-col gap-2">
         <h2 className="text-content-muted font-mono text-sm tracking-wide">
           ROOMS · {a ? `${a.rooms_available}/${a.rooms_total} free` : (rooms?.length ?? 0)}
@@ -168,20 +148,30 @@ export default async function Page({
             No rooms listed. A hostel with no rooms cannot be booked.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {((rooms ?? []) as Row[]).map((r) => (
-              <div
-                key={r.room_id}
-                className="border-line/10 flex flex-col gap-1 rounded-lg border px-3 py-2"
-              >
-                <span className="text-content flex items-center gap-2 text-sm">
-                  {r.label}
-                  <Badge className={ROOM_STATE[r.state] ?? ROOM_STATE.unlisted}>{r.state}</Badge>
-                </span>
-                <span className="text-content-muted text-xs">{naira(r.price_kobo ?? 0)}</span>
-              </div>
-            ))}
-          </div>
+          <>
+            {/* TEN, THEN THE REST ON REQUEST.
+                Collapsing all of them put "is anything free" one click away;
+                showing a hundred pushed the bookings below two screens of
+                tiles. Ten is enough to see the pattern. */}
+            <div className="flex flex-wrap gap-2">
+              {((rooms ?? []) as Row[]).slice(0, ROOMS_SHOWN).map((r) => (
+                <RoomTile key={r.room_id as string} room={r} />
+              ))}
+            </div>
+
+            {(rooms?.length ?? 0) > ROOMS_SHOWN && (
+              <details className="mt-2">
+                <summary className="text-lime-deep cursor-pointer text-sm underline-offset-4 hover:underline">
+                  Show the other {(rooms?.length ?? 0) - ROOMS_SHOWN}
+                </summary>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {((rooms ?? []) as Row[]).slice(ROOMS_SHOWN).map((r) => (
+                    <RoomTile key={r.room_id as string} room={r} />
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
         )}
       </section>
 

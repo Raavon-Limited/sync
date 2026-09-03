@@ -22,7 +22,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { VisitList, type AgentVisit } from './(components)/visit-list';
+import { VisitList, type AgentVisit, type AgentInspection } from './(components)/visit-list';
 
 export const metadata: Metadata = { title: 'Your visits' };
 
@@ -53,6 +53,16 @@ export default async function Page() {
   // exactly that set and to nothing else.
   const admin = createAdminClient();
 
+  // The two errands an agent runs. Fetched together because the screen shows
+  // them together   an agent's afternoon does not distinguish them.
+  const { data: inspectionRows } = await loose(admin)
+    .from('hostel_inspections')
+    .select(
+      'id, hostel_id, student_id, scheduled_for, status, fee_kobo, report_filed_at, reschedule_count',
+    )
+    .eq('ambassador_id', user.id)
+    .order('scheduled_for', { ascending: true, nullsFirst: false });
+
   const { data: visits } = await loose(admin)
     .from('verification_visits')
     .select(
@@ -62,10 +72,18 @@ export default async function Page() {
     .order('scheduled_for', { ascending: true, nullsFirst: false });
 
   const rows = (visits ?? []) as Row[];
+  const inspectRows = (inspectionRows ?? []) as Row[];
 
-  const hostelIds = rows.map((v) => v.hostel_id).filter(Boolean) as string[];
+  const hostelIds = [
+    ...rows.map((v) => v.hostel_id),
+    ...inspectRows.map((i) => i.hostel_id),
+  ].filter(Boolean) as string[];
   const vendorIds = rows.map((v) => v.vendor_id).filter(Boolean) as string[];
-  const meetIds = rows.map((v) => v.meet_user_id).filter(Boolean) as string[];
+  // Students an agent is meeting, from either kind of errand.
+  const meetIds = [
+    ...rows.map((v) => v.meet_user_id),
+    ...inspectRows.map((i) => i.student_id),
+  ].filter(Boolean) as string[];
 
   const [{ data: hostels }, { data: vendors }, { data: people }] = await Promise.all([
     hostelIds.length
@@ -113,6 +131,25 @@ export default async function Page() {
     };
   });
 
+  const inspections: AgentInspection[] = inspectRows.map((i) => {
+    const h = hostelById.get(i.hostel_id as string);
+    const student = personById.get(i.student_id as string);
+    return {
+      id: i.id as string,
+      hostelName: (h?.name as string) ?? 'Unnamed hostel',
+      address: (h?.address as string) ?? (h?.area as string) ?? 'No address on the listing',
+      status: (i.status as string) ?? 'pending_payment',
+      scheduledFor: (i.scheduled_for as string) ?? null,
+      studentName: (student?.full_name as string) ?? null,
+      // Same reason the verification card carries one: an agent at a locked
+      // gate needs to ring somebody, not open a support ticket.
+      studentPhone: (student?.phone as string) ?? null,
+      feeKobo: Number(i.fee_kobo ?? 0),
+      reportFiledAt: (i.report_filed_at as string) ?? null,
+      rescheduleCount: Number(i.reschedule_count ?? 0),
+    };
+  });
+
   // Undecided first, then by date. Decided visits keep their place at the
   // bottom rather than vanishing   "was that one accepted?" is a real question.
   list.sort((a, b) => {
@@ -131,11 +168,12 @@ export default async function Page() {
         </h1>
         <p className="text-content-muted mt-2 text-sm">
           The owner has been told you are coming. Take the photos, file what you found, and a
-          reviewer decides you never decide your own visit.
+          reviewer decides you never decide your own visit. Paid viewings are in the same list:
+          filing your report is what releases your fee.
         </p>
       </div>
 
-      <VisitList visits={list} />
+      <VisitList visits={list} inspections={inspections} />
     </section>
   );
 }

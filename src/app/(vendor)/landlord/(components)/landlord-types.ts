@@ -33,7 +33,10 @@ export interface Property {
   roomsBooked: number;
   status: 'Active' | 'Inactive';
   imageUrl?: string;
+  /** Images only, in order   the cards render tiles, not players. */
   imageUrls?: string[];
+  /** Everything on the listing, photos and video, in display order. */
+  media?: { url: string; kind: 'image' | 'video' }[];
   address?: string;
   /** Naira, per `term`. */
   price?: number;
@@ -42,6 +45,13 @@ export interface Property {
   /** A reviewer has been and confirmed it exists. */
   verified: boolean;
   area?: string | null;
+  /** The landlord's own words about the place. */
+  description?: string;
+  /** One rule per entry, with no bullet character   the list adds those. */
+  houseRules?: string[];
+  /** The map pin, when the address resolved. Both or neither, never one. */
+  lat?: number | null;
+  lng?: number | null;
   /**
    * Fields the hostels table genuinely holds. Optional because a listing may
    * legitimately not have filled them in, never because the data is imaginary.
@@ -51,17 +61,21 @@ export interface Property {
   /**
    * NOT ON `hostels`, and deliberately left undefined rather than invented.
    *
-   * The branch's mock supplied a bed count, a bath count, a rating and house
-   * rules for every property, and the cards render them when present. There is
-   * no column behind any of them yet, so they arrive undefined and the cards
-   * omit that row   which is the honest outcome. Add the columns and populate
-   * them here; do not fill them with plausible numbers.
+   * The branch's mock supplied a bed count, a bath count and a rating for
+   * every property, and the cards render them when present. There is no column
+   * behind any of them, so they arrive undefined and the cards omit that row
+   * which is the honest outcome. Add the columns and populate them here; do not
+   * fill them with plausible numbers.
+   *
+   * `houseRules` and `description` used to be in this list and have graduated
+   * out of it   see 20260907150000_house_rules and
+   * 20260908090000_hostel_description, which is what this comment asks for. The
+   * bed and bath counts went the other way and were dropped from the cards:
+   * the building type already says the bedrooms.
    */
   beds?: number;
   baths?: number;
   rating?: number;
-  description?: string;
-  houseRules?: string[];
 }
 
 export type PaymentStatus = 'paid' | 'due' | 'overdue';

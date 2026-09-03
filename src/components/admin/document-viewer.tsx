@@ -15,6 +15,12 @@
  * whole folder, not one file, so the reviewer can step between the ID and the
  * selfie without closing anything. Left/Right keys do the same thing.
  *
+ * ZOOM, BECAUSE THE DETAIL IS THE POINT. A NIN slip fitted to the modal is
+ * legible as a shape and not as a number, and the decision being made is
+ * whether the number matches. Scroll or the +/- controls zoom; dragging pans;
+ * double-click toggles between fit and 2x. Switching document resets it, since
+ * a zoom into the corner of one file means nothing on the next.
+ *
  * PDFS ARE FRAMED, NOT DOWNLOADED. A bank statement is usually a PDF; an
  * <iframe> renders it with the browser's own viewer inside the modal. There is
  * still an "Open in a new tab" escape for anything the browser cannot draw.
@@ -24,8 +30,8 @@
    must not be proxied or cached by next/image. */
 'use client';
 
-import { useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ExternalLink, Maximize2, Minus, Plus, X } from 'lucide-react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Dialog, DialogTitle } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -58,6 +64,32 @@ export function DocumentViewer({
 }) {
   const open = index !== null;
   const doc = open ? docs[index] : undefined;
+
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  /** Where the pointer went down, and what the offset was then. */
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  const reset = useCallback(() => {
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+  }, []);
+
+  // A zoom into the top-left of a live photo tells you nothing about the next
+  // document, so moving between files starts fresh.
+  useEffect(() => {
+    reset();
+  }, [index, reset]);
+
+  const zoomBy = useCallback((factor: number) => {
+    setZoom((z) => {
+      const next = Math.min(6, Math.max(1, z * factor));
+      // Back at fit, the pan has no meaning   drop it rather than leaving the
+      // image parked off-centre.
+      if (next === 1) setOffset({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
 
   const step = useCallback(
     (delta: number) => {
@@ -97,6 +129,41 @@ export function DocumentViewer({
               </p>
             </div>
 
+            {doc.url && isImagePath(doc.storagePath) && (
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="Zoom out"
+                  onClick={() => zoomBy(1 / 1.4)}
+                  disabled={zoom <= 1}
+                  className="text-content hover:bg-ink/20 inline-flex size-8 cursor-pointer items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="text-content-muted w-10 text-center font-mono text-xs">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  aria-label="Zoom in"
+                  onClick={() => zoomBy(1.4)}
+                  disabled={zoom >= 6}
+                  className="text-content hover:bg-ink/20 inline-flex size-8 cursor-pointer items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Fit to screen"
+                  onClick={reset}
+                  disabled={zoom === 1}
+                  className="text-content hover:bg-ink/20 inline-flex size-8 cursor-pointer items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Maximize2 className="size-4" />
+                </button>
+              </div>
+            )}
+
             {doc.url && (
               <a
                 href={doc.url}
@@ -125,7 +192,45 @@ export function DocumentViewer({
                 This file could not be opened. It may have been removed from storage.
               </p>
             ) : isImagePath(doc.storagePath) ? (
-              <img src={doc.url} alt={doc.title} className="max-h-full max-w-full object-contain" />
+              <div
+                className="flex size-full items-center justify-center overflow-hidden"
+                onWheel={(e) => {
+                  e.preventDefault();
+                  zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+                }}
+                onDoubleClick={() => (zoom === 1 ? zoomBy(2) : reset())}
+                onPointerDown={(e) => {
+                  if (zoom === 1) return;
+                  drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  const d = drag.current;
+                  if (!d) return;
+                  setOffset({ x: d.ox + (e.clientX - d.x), y: d.oy + (e.clientY - d.y) });
+                }}
+                onPointerUp={() => {
+                  drag.current = null;
+                }}
+                onPointerCancel={() => {
+                  drag.current = null;
+                }}
+              >
+                <img
+                  src={doc.url}
+                  alt={doc.title}
+                  draggable={false}
+                  // No transition: a drag has to track the pointer, and easing
+                  // every pointermove turns panning into a rubber band.
+                  className={cn(
+                    'max-h-full max-w-full object-contain select-none',
+                    zoom > 1 ? 'cursor-grab' : 'cursor-zoom-in',
+                  )}
+                  style={{
+                    transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                  }}
+                />
+              </div>
             ) : (
               <iframe
                 src={doc.url}

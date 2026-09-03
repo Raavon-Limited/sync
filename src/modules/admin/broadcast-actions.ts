@@ -29,7 +29,7 @@ import { createElement } from 'react';
 import { render } from '@react-email/render';
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { SITE } from '@/config/site';
+import { canonicalOrigin } from '@/config/site';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { assertArea } from '@/modules/access/guard';
@@ -196,7 +196,7 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
           heading: subject,
           paragraphs,
           ctaLabel: input.ctaLabel?.trim() || null,
-          ctaUrl: input.ctaPath?.trim() ? `${SITE.url}${input.ctaPath.trim()}` : null,
+          ctaUrl: input.ctaPath?.trim() ? `${canonicalOrigin()}${input.ctaPath.trim()}` : null,
         }),
       );
     }

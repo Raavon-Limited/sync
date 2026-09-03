@@ -22,6 +22,18 @@ import {
   Textarea,
   toast,
 } from '@/components/ui';
+import { AddressAutocomplete } from '@/components/forms/address-autocomplete';
+import { PinDrop } from '@/components/forms/pin-drop';
+import { nearestArea, type Area } from '@/lib/constants/areas';
+import type { RoomTypeOption } from '@/modules/room-types/queries';
+import { createClient } from '@/lib/supabase/client';
+import { useSession } from '@/providers/session-provider';
+import {
+  uploadListingMedia,
+  rejectReason,
+  LISTING_ACCEPTED_TYPES,
+  type ListingMedia,
+} from '@/modules/hostels/media';
 import { saveHostel } from '@/modules/hostels/actions';
 import type { Property } from '../landlord-types';
 import { cn } from '@/lib/utils';
@@ -34,7 +46,26 @@ const amenityOptions = ['Wi-Fi', '24/7 Power', 'Water', 'Security', 'Kitchen', '
  */
 const STEPS = ['Details', 'Photos', 'Amenities', 'Pricing'] as const;
 
-const roomTypeOptions = ['Self-contained', 'Single room', 'Shared room', 'Studio'];
+/**
+ * Rules landlords reach for most, offered as one tap.
+ *
+ * 'Female only' and 'Male only' LEAD THIS LIST because they used to be room
+ * types   which meant a listing could say who could live there or what the
+ * building was, never both. They are restrictions on the tenant, so they are
+ * rules. See 20260907180000_room_types.
+ *
+ * A suggestion, never a taxonomy: `house_rules` is free text, and a landlord's
+ * own wording is more use to a student than ours.
+ */
+const ruleSuggestions = [
+  'Female only',
+  'Male only',
+  'Gate closes at 10pm',
+  'No overnight guests',
+  'No loud music after 10pm',
+  'No smoking indoors',
+  'No pets',
+];
 
 /**
  * The scrolling middle, but only in a sheet. On a page the document scrolls and
@@ -104,22 +135,64 @@ export function PropertyForm({
    * which is the whole reason it is a sheet.
    */
   onDone,
+  /**
+   * The service areas, from the database. Passed in rather than imported: this
+   * is a client component, and `FALLBACK_AREAS` (which it used to render) is a
+   * last-resort copy for when Supabase is unreachable   not the list. Offering
+   * five hardcoded names meant an area an admin added was unusable here, and
+   * `hostels.area` has an FK onto `areas.name`, so a name that is not a row
+   * cannot be saved at all.
+   */
+  areas,
+  /**
+   * What a building can be, from `room_types`. Passed in for the same reason
+   * `areas` is: this is a client component, and the column has an FK onto
+   * `room_types.name`, so a value that is not a row cannot be saved.
+   */
+  roomTypes,
 }: {
   property?: Property;
   embedded?: boolean;
   onDone?: () => void;
+  areas: Area[];
+  roomTypes: RoomTypeOption[];
 }) {
   const router = useRouter();
   const isEdit = Boolean(property);
   const [amenities, setAmenities] = useState<string[]>(property?.amenities ?? []);
   const [description, setDescription] = useState(property?.description ?? '');
+  const [rules, setRules] = useState<string[]>(property?.houseRules ?? []);
+  const [ruleDraft, setRuleDraft] = useState('');
+  const [amenityDraft, setAmenityDraft] = useState('');
+  const { userId } = useSession();
+  /** How many files are still going up, so Save can wait for them. */
+  const [uploading, setUploading] = useState(0);
+  const [address, setAddress] = useState(property?.address ?? '');
+  const [area, setArea] = useState(property?.area ?? '');
+  /** Opened on demand: most landlords pick a suggestion and never need it. */
+  const [showPin, setShowPin] = useState(false);
+  /** The pin, or null when the address was typed rather than picked. */
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    property?.lat != null && property?.lng != null
+      ? { lat: property.lat, lng: property.lng }
+      : null,
+  );
   const [saving, setSaving] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>(
-    property?.imageUrls?.length
-      ? property.imageUrls
-      : property?.imageUrl
-        ? [property.imageUrl]
-        : [],
+  /**
+   * Photos AND the walkthrough video, in display order.
+   *
+   * `media` is preferred over `imageUrls` when present: the latter is the
+   * photo-only view the cards render, and rebuilding state from it would drop
+   * a landlord's video every time they opened the edit sheet.
+   */
+  const [media, setMedia] = useState<ListingMedia[]>(
+    property?.media?.length
+      ? property.media
+      : property?.imageUrls?.length
+        ? property.imageUrls.map((url) => ({ url, kind: 'image' as const }))
+        : property?.imageUrl
+          ? [{ url: property.imageUrl, kind: 'image' as const }]
+          : [],
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,6 +246,37 @@ export function PropertyForm({
     goTo(Math.min(step + 1, STEPS.length - 1));
   }
 
+  /** The six presets, plus anything this landlord added, in a stable order. */
+  const shownAmenities = [
+    ...amenityOptions,
+    ...amenities.filter((a) => !amenityOptions.includes(a)),
+  ];
+
+  function addAmenity() {
+    const next = amenityDraft.trim();
+    if (!next) return;
+    // Case-insensitive: ticking "Wi-Fi" and typing "wi-fi" is one amenity, and
+    // a listing showing both reads as carelessness. The server dedupes too.
+    if (!amenities.some((a) => a.toLowerCase() === next.toLowerCase())) {
+      setAmenities((current) => [...current, next]);
+    }
+    setAmenityDraft('');
+  }
+
+  function addRule() {
+    // The bullet a landlord types is stripped here as well as on the server:
+    // the marker belongs to the list, and showing "- - Gate closes" back to
+    // them while they are still typing is its own small bug.
+    const next = ruleDraft.replace(/^\s*[-*\u2022]+\s*/, '').trim();
+    if (!next) return;
+    setRules((current) => [...current, next]);
+    setRuleDraft('');
+  }
+
+  function removeRule(index: number) {
+    setRules((current) => current.filter((_, i) => i !== index));
+  }
+
   function toggleAmenity(amenity: string) {
     setAmenities((current) =>
       current.includes(amenity)
@@ -181,30 +285,78 @@ export function PropertyForm({
     );
   }
 
-  function selectImages(files: FileList | File[]) {
+  /**
+   * UPLOADED ON SELECTION, NOT ON SAVE.
+   *
+   * This used to read each file with a FileReader and push the data: URL into
+   * state, which made a convincing preview of a photo that was then THROWN
+   * AWAY   `saveHostel` had no column to send it to and did not try. A landlord
+   * saw three photos on their listing and a student saw none.
+   *
+   * Uploading here means `imageUrls` holds real objects in our bucket, which is
+   * also what makes EDITING work: an existing listing's photos are already
+   * URLs, so the same array serves both.
+   *
+   * The cost is an orphaned object if somebody abandons the form after adding a
+   * photo. That is storage, not correctness, and is the right trade against a
+   * save that silently loses work.
+   */
+  async function selectImages(files: FileList | File[]) {
     const nextFiles = Array.from(files);
     if (!nextFiles.length) return;
-    const acceptedFiles = nextFiles.filter((file) => {
-      if (!file.type.startsWith('image/')) {
-        toast.error(`${file.name} is not a supported image`);
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} is larger than 10 MB`);
-        return false;
-      }
-      return true;
-    });
 
-    acceptedFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => setImageUrls((current) => [...current, String(reader.result)]);
-      reader.readAsDataURL(file);
+    if (!userId) {
+      toast.error('Sign in again before adding photos.');
+      return;
+    }
+
+    // The SAME limits the bucket enforces. The old check here allowed 10MB
+    // against a 5MB bucket ceiling and an uploader that rejects over 5MB, so a
+    // 7MB photo passed the form and failed later with nothing pointing at it.
+    // One rule for both kinds, from the module that also knows the bucket's
+    // ceilings   5MB for a photo, 40MB for a video.
+    const acceptedFiles = nextFiles.filter((file) => {
+      const reason = rejectReason(file);
+      if (reason) toast.error(reason);
+      return !reason;
+    });
+    if (!acceptedFiles.length) return;
+
+    const db = createClient();
+    setUploading((n) => n + acceptedFiles.length);
+
+    // Sequential, so the order they land in is the order they were chosen
+    // which is what makes "the first one is the primary" predictable.
+    for (const file of acceptedFiles) {
+      try {
+        const uploaded = await uploadListingMedia(db, { userId, file });
+        setMedia((current) => [...current, uploaded]);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : `${file.name} did not upload`);
+      } finally {
+        setUploading((n) => Math.max(0, n - 1));
+      }
+    }
+  }
+
+  /**
+   * Promote a photo to primary by moving it to the front.
+   *
+   * A VIDEO CANNOT BE PRIMARY. Position 0 is what every card and listing tile
+   * renders, and a video there is a black rectangle with no poster frame.
+   */
+  function makePrimary(index: number) {
+    setMedia((current) => {
+      if (index <= 0 || index >= current.length) return current;
+      if (current[index].kind !== 'image') return current;
+      const next = [...current];
+      const [picked] = next.splice(index, 1);
+      return [picked, ...next];
     });
   }
 
-  function removeImage(index: number) {
-    setImageUrls((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  function removeMedia(index: number) {
+    setMedia((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -225,8 +377,18 @@ export function PropertyForm({
     const formData = new FormData(event.currentTarget);
     const roomsTotal = Number(formData.get('roomsTotal'));
 
-    if (!imageUrls.length) {
-      toast.error('Add a property photo before submitting');
+    if (uploading > 0) {
+      toast.error('Wait for the photos to finish uploading');
+      return;
+    }
+    // A photo specifically: position 0 is the tile every card renders, and a
+    // listing that is only a video has nothing to show in a grid.
+    if (!media.some((m) => m.kind === 'image')) {
+      toast.error('Add at least one photo before submitting');
+      return;
+    }
+    if (media[0]?.kind !== 'image') {
+      toast.error('Your first item is a video   make a photo primary first');
       return;
     }
     if (!Number.isInteger(roomsTotal) || roomsTotal < 1) {
@@ -243,10 +405,22 @@ export function PropertyForm({
     const res = await saveHostel({
       id: property?.id,
       name: String(formData.get('name')).trim(),
-      address: String(formData.get('address')).trim(),
+      address: address.trim(),
+      // Without these two the listing is unfindable: `area` drives the filter
+      // chips and the pin drives the "near me" RPC, which skips any hostel
+      // whose geo is null.
+      area: area || undefined,
+      lat: coords?.lat,
+      lng: coords?.lng,
       price: Number(formData.get('price')),
       roomType: String(formData.get('roomType')),
       amenities,
+      houseRules: rules,
+      // In order. The first is the primary image   see `replaceImages`.
+      imageUrls: media,
+      // Was validated here and then dropped, so every listing had zero rooms
+      // and could not be booked.
+      roomsTotal,
       description: description.trim(),
     });
 
@@ -268,6 +442,23 @@ export function PropertyForm({
   return (
     <form
       onSubmit={handleSubmit}
+      // ENTER MUST NOT SAVE.
+      //
+      // A single-input form submits on Enter and that is usually right. This
+      // one is four steps deep with an autocomplete in it   AddressAutocomplete
+      // deliberately lets Enter through when no suggestion is highlighted, so
+      // typing an address and pressing Enter fired Save from step one. It read
+      // as the button clicking itself.
+      //
+      // Textareas keep Enter, because a newline in a description is a newline.
+      // Buttons keep it, because Enter on a focused button IS a click.
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter') return;
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'TEXTAREA') return;
+        if (target instanceof HTMLButtonElement) return;
+        event.preventDefault();
+      }}
       // noValidate ONLY when stepped: a required field inside a hidden step is
       // not focusable, and the browser answers that by refusing to submit with
       // no visible message at all. stepIsValid does the reporting instead, on
@@ -364,13 +555,85 @@ export function PropertyForm({
                       <label htmlFor="address" className="text-sm font-medium">
                         Address
                       </label>
-                      <Input
+                      {/* Google Places when it is available, an ordinary text
+                          field when it is not   the component degrades on its
+                          own, so a Maps outage cannot block a listing. */}
+                      <AddressAutocomplete
                         id="address"
                         name="address"
-                        placeholder="Street, area, city"
-                        defaultValue={property?.address}
-                        required
+                        placeholder="Start typing the address"
+                        value={address}
+                        onChange={(next) => {
+                          setAddress(next);
+                          // TYPING AFTER PICKING INVALIDATES THE PIN. Keeping the
+                          // old coordinates would leave the listing ranked at an
+                          // address it no longer claims, which is worse than
+                          // having no pin at all.
+                          setCoords(null);
+                        }}
+                        onResolved={(place) => {
+                          setAddress(place.address);
+                          if (place.lat !== undefined && place.lng !== undefined) {
+                            setCoords({ lat: place.lat, lng: place.lng });
+                            // The nearest service area, offered rather than
+                            // imposed: the landlord can still correct it.
+                            const near = nearestArea({ lat: place.lat, lng: place.lng }, areas);
+                            if (near) setArea(near);
+                          }
+                        }}
                       />
+
+                      <label htmlFor="area" className="mt-2 text-sm font-medium">
+                        Area
+                      </label>
+                      <Select value={area} onValueChange={setArea}>
+                        <SelectTrigger id="area">
+                          <SelectValue placeholder="Which area is it in?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {areas.map((a) => (
+                            <SelectItem key={a.slug} value={a.name}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-content-muted text-xs">
+                        {coords
+                          ? 'Located   this listing will show up for students searching near it.'
+                          : 'Not on the map yet, so it will not appear under “Near me”. Pick a suggestion as you type, or place it yourself below.'}
+                      </p>
+
+                      {/* The fallback the autocomplete cannot be: Places does
+                          not know most Malete addresses, and a landlord who
+                          types one by hand would otherwise have no way to give
+                          us coordinates at all. */}
+                      <button
+                        type="button"
+                        onClick={() => setShowPin((v) => !v)}
+                        className="text-lime-deep self-start text-xs underline underline-offset-2"
+                      >
+                        {showPin
+                          ? 'Hide the map'
+                          : coords
+                            ? 'Adjust the pin on the map'
+                            : 'Place it on the map instead'}
+                      </button>
+
+                      {showPin && (
+                        <PinDrop
+                          value={coords}
+                          onChange={(next) => {
+                            setCoords(next);
+                            // A hand-placed pin still answers "which area is
+                            // this", and the landlord can override it after.
+                            if (next) {
+                              const near = nearestArea(next, areas);
+                              if (near) setArea(near);
+                            }
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -394,7 +657,7 @@ export function PropertyForm({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/png,image/jpeg"
+                    accept={LISTING_ACCEPTED_TYPES.join(',')}
                     multiple
                     className="sr-only"
                     onChange={(event) => {
@@ -415,38 +678,76 @@ export function PropertyForm({
                     >
                       <UploadCloud className="size-8" />
                       <span className="text-sm font-medium">Click to upload or drag and drop</span>
-                      <span className="text-xs">
-                        Add one or more JPG or PNG files, up to 10MB each
-                      </span>
+                      <span className="text-xs">Photos to 5MB · video to 40MB</span>
                     </button>
                     <div className="min-w-0">
                       <p className="mb-2 text-sm font-medium">
-                        Listing photos ({imageUrls.length})
+                        Listing media ({media.length})
+                        {uploading > 0 ? ` · uploading ${uploading}…` : ''}
                       </p>
-                      {imageUrls.length ? (
+                      <p className="text-content-muted text-xs">
+                        The first photo is the one students see on the listing card. Videos can be
+                        added too they play on the listing, but cannot be the card image.
+                      </p>
+                      {media.length ? (
                         <div className="grid grid-cols-2 gap-2">
-                          {imageUrls.map((imageUrl, index) => (
+                          {media.map((item, index) => (
                             <div
-                              key={`${imageUrl}-${index}`}
+                              key={`${item.url}-${index}`}
                               className="relative aspect-[4/3] overflow-hidden rounded-xl first:col-span-2 first:aspect-video"
                             >
-                              <Image
-                                src={imageUrl}
-                                alt={`Listing preview ${index + 1}`}
-                                fill
-                                unoptimized
-                                className="object-cover"
-                              />
+                              {item.kind === 'video' ? (
+                                // Muted and controlled: a grid of autoplaying
+                                // walkthroughs would be four videos shouting at
+                                // a landlord editing a form.
+                                <video
+                                  src={item.url}
+                                  controls
+                                  muted
+                                  playsInline
+                                  className="size-full bg-black object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={item.url}
+                                  alt={`Listing preview ${index + 1}`}
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                              )}
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
                                 className="bg-panel absolute top-2 right-2"
-                                aria-label={`Remove photo ${index + 1}`}
-                                onClick={() => removeImage(index)}
+                                aria-label={`Remove item ${index + 1}`}
+                                onClick={() => removeMedia(index)}
                               >
                                 <X className="size-4" />
                               </Button>
+                              {/* Position 0 is what the card and every listing
+                                  tile shows, so it is worth naming rather than
+                                  leaving to be inferred from the layout. */}
+                              {index === 0 ? (
+                                <span className="bg-lime-deep absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide text-white uppercase">
+                                  Primary
+                                </span>
+                              ) : item.kind === 'image' ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-panel absolute bottom-2 left-2 text-xs"
+                                  onClick={() => makePrimary(index)}
+                                >
+                                  Make primary
+                                </Button>
+                              ) : (
+                                <span className="bg-ink/70 absolute bottom-2 left-2 rounded px-2 py-0.5 text-[10px] tracking-wide text-white uppercase">
+                                  Video
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -476,7 +777,7 @@ export function PropertyForm({
                     description="Select everything this property offers."
                   />
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {amenityOptions.map((amenity) => {
+                    {shownAmenities.map((amenity) => {
                       const checked = amenities.includes(amenity);
                       return (
                         <label
@@ -495,17 +796,118 @@ export function PropertyForm({
                       );
                     })}
                   </div>
+                  {/* The six above are the common ones, not the whole world.
+                      `hostels.amenities` is an unconstrained text[], so a
+                      borehole or a reading room has always been storable   there
+                      was simply no way to say it. */}
                   <div className="flex flex-col gap-2">
-                    <label htmlFor="rules" className="text-sm font-medium">
+                    <label htmlFor="amenity-draft" className="text-sm font-medium">
+                      Anything else it offers
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="amenity-draft"
+                        value={amenityDraft}
+                        onChange={(event) => setAmenityDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          // Enter adds the amenity; it must not submit the form
+                          // from step three.
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addAmenity();
+                          }
+                        }}
+                        placeholder="Borehole, reading room, generator…"
+                        maxLength={40}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addAmenity}
+                        disabled={!amenityDraft.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    <p className="text-content-muted text-xs">
+                      Added amenities appear above, ticked. Untick to remove one.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="rule-draft" className="text-sm font-medium">
                       House rules
                     </label>
-                    <Textarea
-                      id="rules"
-                      name="rules"
-                      rows={3}
-                      defaultValue={property?.houseRules}
-                      placeholder="e.g. No loud music after 10pm."
-                    />
+
+                    {/* A LIST, BECAUSE IT IS READ AS ONE. A student scanning
+                        rules to decide whether they can live here reads bullets;
+                        one textarea meant every renderer re-parsed the newlines
+                        and dashes slightly differently. */}
+                    {rules.length > 0 && (
+                      <ul className="border-line/15 divide-line/10 divide-y rounded-xl border">
+                        {rules.map((rule, index) => (
+                          <li
+                            key={`${index}-${rule}`}
+                            className="flex items-start gap-2 px-3 py-2 text-sm"
+                          >
+                            <span className="text-lime-deep mt-0.5 shrink-0" aria-hidden="true">
+                              &bull;
+                            </span>
+                            <span className="min-w-0 flex-1 break-words">{rule}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeRule(index)}
+                              className="text-content-muted hover:text-coral shrink-0"
+                              aria-label={`Remove rule: ${rule}`}
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/* Retired room types land here. A landlord who used to
+                        pick "Female only" as a room type finds it offered as
+                        what it actually is. */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {ruleSuggestions
+                        .filter((s) => !rules.some((r) => r.toLowerCase() === s.toLowerCase()))
+                        .map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => setRules((current) => [...current, suggestion])}
+                            className="border-line/15 text-content-muted hover:border-lime-deep hover:text-content rounded-full border px-2.5 py-1 text-xs transition-colors"
+                          >
+                            + {suggestion}
+                          </button>
+                        ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        id="rule-draft"
+                        value={ruleDraft}
+                        onChange={(event) => setRuleDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            addRule();
+                          }
+                        }}
+                        placeholder="e.g. Gate closes at 10pm"
+                        maxLength={200}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addRule}
+                        disabled={!ruleDraft.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -562,9 +964,9 @@ export function PropertyForm({
                           <SelectValue placeholder="Select room type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roomTypeOptions.map((roomType) => (
-                            <SelectItem key={roomType} value={roomType}>
-                              {roomType}
+                          {roomTypes.map((roomType) => (
+                            <SelectItem key={roomType.slug} value={roomType.name}>
+                              {roomType.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

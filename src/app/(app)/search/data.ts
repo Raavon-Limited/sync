@@ -1,14 +1,21 @@
+import { ROOM_TYPE_NAMES } from '@/lib/constants/room-types';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
- * Matches `hostels.room_type` exactly.
+ * A `room_types.name`.
  *
- * This used to be "Self-contain | Single | Shared | Bedsitter | Mini-flat",
- * of which only ONE value exists in the database. Filtering by any of the other
- * four returned nothing   silently, because "no matches" and "impossible
- * filter" look identical in a results list.
+ * NOT a closed union any more. It was "Self-contain | Single | Shared |
+ * Bedsitter | Mini-flat", of which only ONE value existed in the database, so
+ * four of the five filters returned nothing   silently, because "no matches"
+ * and "impossible filter" look identical in a results list. It was then
+ * narrowed to the four the CHECK constraint allowed.
+ *
+ * 20260907180000_room_types made the set a TABLE so it can grow without a
+ * deploy, which a union in application code cannot express. The guard against
+ * the original bug is now structural: the filter list and the landlord's picker
+ * read the same source, so an offered value always exists.
  */
-export type RoomType = "Self-contain" | "Sharing" | "Female only" | "Male only";
+export type RoomType = string;
 
 /**
  * `hostels.amenities` is a free-text array, not an enum, so this list is a
@@ -55,7 +62,7 @@ export type ViewMode = "Grid" | "List";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const ROOM_TYPES: RoomType[] = ["Self-contain", "Sharing", "Female only", "Male only"];
+export const ROOM_TYPES: RoomType[] = ROOM_TYPE_NAMES;
 
 export const AMENITIES: Amenity[] = [
   "Wi-Fi", "24h light", "Borehole water", "CCTV", "Inverter", "Tiled", "Kitchen",

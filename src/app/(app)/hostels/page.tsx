@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import { ROOM_TYPE_NAMES } from '@/lib/constants/room-types';
 import { useHostels } from '@/modules/hostels/hooks';
 import type { Hostel as DomainHostel } from '@/modules/hostels/types';
 import Image, { type StaticImageData } from 'next/image';
@@ -21,7 +22,8 @@ interface Hostel {
   host?: string;
   totalRooms: number;   
   roomsLeft: number;    
-  type: 'self contain' | 'room and parlour' | 'two bedroom' | 'others';
+  /** A `room_types` name, verbatim   see the note above `FILTERS`. */
+  type: string;
 }
 
 /**
@@ -31,15 +33,19 @@ interface Hostel {
 const HOSTEL_IMAGES = [hostelImg, hostel1Img, hostelArielImg];
 
 /**
- * `hostels.room_type` is OCCUPANCY ('Self-contain', 'Sharing', 'Female only',
- * 'Male only'). This page filters by LAYOUT ('self contain', 'room and parlour',
- * 'two bedroom'). They are different taxonomies, and only one value overlaps  
- * everything the schema cannot express as a layout falls to 'others' rather
- * than being guessed at. Reconciling them properly is a schema decision.
+ * RECONCILED. This page used to map an occupancy column onto a layout filter
+ * and send everything it could not express to 'others'   with only
+ * 'Self-contain' overlapping, that was most of the catalogue.
+ *
+ * 20260907180000_room_types made `hostels.room_type` the layout taxonomy, so
+ * there is nothing left to translate: the value IS the layout. The comment that
+ * stood here said "reconciling them properly is a schema decision", and that
+ * decision has now been made.
+ *
+ * Older listings whose room_type is a retired value ('Sharing', 'Female only',
+ * 'Male only') match no filter chip until their landlord re-picks one. Visible,
+ * and better than filing them under a layout nobody chose.
  */
-function toLayout(roomType: string): Hostel['type'] {
-  return roomType === 'Self-contain' ? 'self contain' : 'others';
-}
 
 function toStatus(availability?: string, roomsLeft?: number): Hostel['status'] {
   if (availability === 'full' || roomsLeft === 0) return 'reserved';
@@ -69,17 +75,18 @@ function toCard(h: DomainHostel): Hostel {
     host: undefined,
     totalRooms: roomsTotal,
     roomsLeft,
-    type: toLayout(h.roomType),
+    type: h.roomType,
   };
 }
 
+// Built from the room types rather than typed out, so adding a layout is an
+// insert in `room_types` and not an edit here. The label is the name: a
+// landlord picked "1 room 1 parlour", and showing a student anything else
+// invites them to wonder which one they are looking at.
 const FILTERS = [
   { value: 'all', label: 'All Layouts' },
-  { value: 'self contain', label: 'Self Contain' },
-  { value: 'room and parlour', label: 'Room and Parlour' },
-  { value: 'two bedroom', label: 'Two Bedroom' },
-  { value: 'others', label: 'Others' },
-] as const;
+  ...ROOM_TYPE_NAMES.map((name) => ({ value: name, label: name })),
+];
 
 const STATUS_MAP = {
   available: {

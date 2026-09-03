@@ -19,7 +19,13 @@ import { useState, useTransition } from 'react';
 import { Copy, Send, UserPlus } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { inviteAgent, revokeAgentInvite, assignVisit } from '@/modules/agents/actions';
+import { useRouter } from 'next/navigation';
+import {
+  inviteAgent,
+  resendAgentInvite,
+  revokeAgentInvite,
+  assignVisit,
+} from '@/modules/agents/actions';
 
 export interface AgentRow {
   id: string;
@@ -63,6 +69,52 @@ export function AgentsConsole({
   const [brief, setBrief] = useState('');
   const [assigning, startAssign] = useTransition();
   const [assignNote, setAssignNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const router = useRouter();
+  /** Which invite row is mid-action, so only its own buttons go quiet. */
+  const [busyInvite, setBusyInvite] = useState<string | null>(null);
+  const [inviteNote, setInviteNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function resend(id: string, email: string) {
+    setInviteNote(null);
+    setBusyInvite(id);
+    startInvite(async () => {
+      const res = await resendAgentInvite(id);
+      setBusyInvite(null);
+      if (!res.ok) {
+        setInviteNote({ ok: false, text: res.error });
+        return;
+      }
+      // The old link is dead now, so the new one replaces it in the box above
+      // rather than leaving a copyable link that no longer works.
+      setLink(res.link);
+      setInviteNote({
+        ok: res.emailed,
+        text: res.emailed
+          ? `Sent again to ${email}. The previous link stopped working.`
+          : `New link created, but the email did not send: ${res.emailError ?? 'unknown reason'}. Copy it below.`,
+      });
+      router.refresh();
+    });
+  }
+
+  function cancelInvite(id: string, email: string) {
+    setInviteNote(null);
+    setBusyInvite(id);
+    startInvite(async () => {
+      const res = await revokeAgentInvite(id);
+      setBusyInvite(null);
+      setInviteNote(
+        res.ok
+          ? { ok: true, text: `Invitation to ${email} cancelled. Its link no longer works.` }
+          : { ok: false, text: res.error },
+      );
+      // WAS FIRE-AND-FORGET. `revokeAgentInvite(i.id)` was called straight from
+      // onClick with nothing awaiting it, so a failure was silent and a success
+      // left the cancelled row on screen until the page was reloaded by hand.
+      if (res.ok) router.refresh();
+    });
+  }
 
   function invite() {
     setNote(null);
@@ -248,12 +300,28 @@ export function AgentsConsole({
                     })}
                   </p>
                 </div>
-                <Button variant="ghost" onClick={() => revokeAgentInvite(i.id)}>
+                <Button
+                  variant="outline"
+                  disabled={busyInvite === i.id || inviting}
+                  onClick={() => resend(i.id, i.email)}
+                >
+                  {busyInvite === i.id ? 'Sending…' : 'Resend'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={busyInvite === i.id || inviting}
+                  onClick={() => cancelInvite(i.id, i.email)}
+                >
                   Cancel
                 </Button>
               </div>
             ))}
           </div>
+          {inviteNote && (
+            <p className={cn('text-xs', inviteNote.ok ? 'text-lime-deep' : 'text-coral')}>
+              {inviteNote.text}
+            </p>
+          )}
         </div>
       )}
 

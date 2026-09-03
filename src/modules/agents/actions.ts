@@ -22,9 +22,10 @@ import { createElement } from 'react';
 import { render } from '@react-email/render';
 import { revalidatePath } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { SITE } from '@/config/site';
+import { SITE, canonicalOrigin } from '@/config/site';
 import { userMessage } from '@/lib/errors';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { assertArea } from '@/modules/access/guard';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
@@ -79,7 +80,17 @@ export async function inviteAgent(input: {
     | undefined;
   if (!row?.invite_token) return { ok: false, error: 'The invite was not created.' };
 
-  const link = `${SITE.url}/agent-invite?token=${row.invite_token}`;
+  // canonicalOrigin(), NOT SITE.url.
+  //
+  // SITE.url is the hardcoded production address, so an invite generated on a
+  // dev machine or a preview deploy pointed at the LIVE site   the recipient
+  // opened it, production knew nothing about that token, and they landed on
+  // signup being asked to make an account instead of setting a password.
+  //
+  // canonicalOrigin() prefers NEXT_PUBLIC_SITE_URL and falls back to SITE.url,
+  // which is what the staff invite has always used. The token is encoded for
+  // the same reason it is there   it is a credential in a query string.
+  const link = `${canonicalOrigin()}/agent-invite?token=${encodeURIComponent(row.invite_token)}`;
   const invitedBy = (await getCurrentUser())?.email ?? SITE.name;
 
   let emailed = false;
@@ -116,6 +127,60 @@ export async function inviteAgent(input: {
 
   revalidatePath('/admin/agents');
   return { ok: true, link, emailed, emailError };
+}
+
+/**
+ * Send the invitation again.
+ *
+ * A RE-ISSUE, NOT A RE-SEND OF THE SAME LINK
+ *   `create_agent_invite` already revokes any open invite for an address before
+ *   inserting a new one, so calling it again is the whole implementation: a
+ *   fresh token, a fresh three days, and the previous link dead. That is what
+ *   you want in both cases where somebody presses this   the mail never
+ *   arrived, or it arrived and sat until it expired. Re-mailing a token that
+ *   has already lapsed would be a button that reliably does nothing.
+ *
+ *   It also means a link somebody forwarded to the wrong person stops working
+ *   the moment the invitation is sent again, which is the safer default.
+ *
+ * The address comes from the invite row rather than the caller, so this cannot
+ * be used to mail an invitation somewhere it was never addressed.
+ */
+export async function resendAgentInvite(
+  id: string,
+): Promise<
+  | { ok: true; email: string; link: string; emailed: boolean; emailError?: string }
+  | { ok: false; error: string }
+> {
+  await assertAgentStaff();
+
+  // Service role: `agent_invites` is read here by the same console that lists
+  // it, and this action is already gated above.
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('agent_invites')
+    .select('email, campus_id, accepted_at, revoked_at')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not find that invitation.') };
+  if (!data) return { ok: false, error: 'That invitation no longer exists.' };
+
+  // Both are dead ends with different fixes, so they get different sentences.
+  if (data.accepted_at) {
+    return { ok: false, error: 'They have already accepted   there is nothing to resend.' };
+  }
+  if (data.revoked_at) {
+    return { ok: false, error: 'That invitation was cancelled. Invite the address again instead.' };
+  }
+
+  const res = await inviteAgent({
+    email: data.email as string,
+    campusId: (data.campus_id as string | null) ?? null,
+  });
+
+  if (!res.ok) return res;
+  return { ...res, email: data.email as string };
 }
 
 export async function revokeAgentInvite(id: string): Promise<AgentResult> {
@@ -165,6 +230,38 @@ export async function assignVisit(input: {
 }
 
 /**
+ * Move an open visit to a different agent, or with no agent stand the current
+ * one down.
+ *
+ * WHY THIS IS NOT assignVisit WITH AN ID
+ *   `assign_verification_visit` inserts. Calling it again for the same hostel
+ *   makes a SECOND visit and notifies the landlord twice, which is how "the
+ *   agent changed" turns into "two different people are coming". This edits the
+ *   row that already exists, and the RPC refuses once evidence has been filed
+ *   against it   those photos belong to whoever took them.
+ */
+export async function reassignVisit(input: {
+  visitId: string;
+  /** null stands the current agent down and returns the visit to the queue. */
+  agentId: string | null;
+}): Promise<AgentResult> {
+  await assertAgentStaff();
+
+  const supabase = await createServerClient();
+  const { error } = await rpc(supabase)('reassign_verification_visit', {
+    p_visit: input.visitId,
+    p_agent: input.agentId,
+  });
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not reassign that visit.') };
+
+  revalidatePath('/admin/agents');
+  revalidatePath('/admin/verify-visits');
+  revalidatePath('/agent');
+  return { ok: true };
+}
+
+/**
  * What an agent files when they get back.
  *
  * They cannot decide their own visit   that is the separation this whole table
@@ -185,6 +282,34 @@ export async function submitVisit(input: {
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not submit that visit.') };
+  revalidatePath('/agent');
+  return { ok: true };
+}
+
+/**
+ * File the report on a student's inspection   the visit the STUDENT paid for,
+ * which is a different thing from a verification visit and a different table.
+ *
+ * FILING IS WHAT STARTS THE AGENT'S OWN PAYMENT CLOCK
+ *   The fee sits in escrow with `release_after` null, so nothing can release
+ *   it until this call sets that date. Until an agent files, their money is
+ *   held on a visit the platform cannot prove happened   which is why the
+ *   screen tells them so in those words rather than calling this "submit".
+ *
+ * The RPC re-checks that the caller is the assigned agent (or staff), because
+ * this action is reachable by anyone signed in.
+ */
+export async function fileInspectionReport(input: {
+  inspectionId: string;
+  notes?: string;
+}): Promise<AgentResult> {
+  const supabase = await createServerClient();
+  const { error } = await rpc(supabase)('file_inspection_report', {
+    p_inspection: input.inspectionId,
+    p_notes: input.notes || null,
+  });
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not file that report.') };
   revalidatePath('/agent');
   return { ok: true };
 }

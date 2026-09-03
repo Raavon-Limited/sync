@@ -7,6 +7,7 @@
  * they are not a separate table; see the note on /admin/landlord.
  */
 import type { Metadata } from 'next';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, Mail, MapPin, Phone, ShieldCheck, ArrowLeft } from 'lucide-react';
@@ -152,78 +153,96 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         </p>
       </div>
 
-      {/* THE DECISION, ON THE PAGE THAT SHOWS THE BADGE.
+      {/* TABS, BECAUSE THIS PAGE ANSWERS TWO DIFFERENT QUESTIONS.
+          "Is this person who they say they are" and "what have they listed"
+          are separate jobs done at separate times, and stacking both made a
+          column long enough that the hostels fell below the fold behind four
+          document cards. Defaults to Verification: an unverified landlord is
+          the reason somebody opens this page.
+
+          Adding a third   payouts, bookings   is a TabsTrigger and a
+          TabsContent, which is the point of doing it now rather than at three. */}
+      <Tabs defaultValue="verification" className="flex flex-col gap-4">
+        <TabsList>
+          <TabsTrigger value="verification">
+            Verification{l.verification_status ? ` · ${l.verification_status}` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="hostels">Hostels · {hostels?.length ?? 0}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="verification">
+          {/* THE DECISION, ON THE PAGE THAT SHOWS THE BADGE.
           The status above used to be the end of it: an admin saw PENDING here
           and had to know, from nowhere, that the review lived under a nav item
           called "Vendors". Same component as the queue, so the two surfaces
           cannot drift into disagreeing about what a reviewer may do. */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-content-muted font-mono text-sm tracking-wide">
-          VERIFICATION · {l.verification_status}
-        </h2>
-        <VerificationReview
-          showHeader={false}
-          vendor={{
-            id: l.id,
-            businessName: l.business_name ?? 'Unnamed',
-            slug: l.slug,
-            category: 'landlord',
-            area: l.area ?? null,
-            verificationStatus: l.verification_status ?? 'unverified',
-            createdAt: l.created_at,
-            docs: reviewDocs,
-          }}
-          mailsSent={asked.count}
-          notifyPath="/landlord/settings"
-        />
-      </section>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-content-muted font-mono text-sm tracking-wide">
+              VERIFICATION · {l.verification_status}
+            </h2>
+            <VerificationReview
+              showHeader={false}
+              vendor={{
+                id: l.id,
+                businessName: l.business_name ?? 'Unnamed',
+                slug: l.slug,
+                category: 'landlord',
+                area: l.area ?? null,
+                verificationStatus: l.verification_status ?? 'unverified',
+                createdAt: l.created_at,
+                docs: reviewDocs,
+              }}
+              mailsSent={asked.count}
+              notifyPath="/landlord/settings"
+            />
+          </section>
+        </TabsContent>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-content-muted font-mono text-sm tracking-wide">
-          HOSTELS · {hostels?.length ?? 0}
-        </h2>
-
-        {(hostels?.length ?? 0) === 0 ? (
-          <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
-            This landlord has not listed any hostels.
-          </p>
-        ) : (
-          ((hostels ?? []) as Row[]).map((h) => {
-            const a = availById.get(h.id);
-            const visit = visitByHostel.get(h.id);
-            return (
-              <Link
-                key={h.id}
-                href={`/admin/landlord/${slug}/hostels/${h.slug}`}
-                className="border-line/10 bg-panel hover:border-line/25 flex items-center gap-3 rounded-xl border p-4 transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-content flex items-center gap-2 font-medium">
-                    {h.name}
-                    {h.verified && (
-                      <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
-                        <ShieldCheck className="size-3" /> verified
-                      </Badge>
-                    )}
-                  </p>
-                  <p className="text-content-muted flex flex-wrap items-center gap-3 text-xs">
-                    <span>{h.area}</span>
-                    <span>{h.room_type}</span>
-                    <span>{naira(h.price_per_session_kobo)} / session</span>
-                    <span>
-                      {a ? `${a.rooms_available}/${a.rooms_total} free` : 'no rooms listed'}
-                    </span>
-                    {/* The visit is how a hostel becomes verified, so its state
+        <TabsContent value="hostels">
+          <section className="flex flex-col gap-3">
+            {(hostels?.length ?? 0) === 0 ? (
+              <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
+                This landlord has not listed any hostels.
+              </p>
+            ) : (
+              ((hostels ?? []) as Row[]).map((h) => {
+                const a = availById.get(h.id);
+                const visit = visitByHostel.get(h.id);
+                return (
+                  <Link
+                    key={h.id}
+                    href={`/admin/landlord/${slug}/hostels/${h.slug}`}
+                    className="border-line/10 bg-panel hover:border-line/25 flex items-center gap-3 rounded-xl border p-4 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-content flex items-center gap-2 font-medium">
+                        {h.name}
+                        {h.verified && (
+                          <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+                            <ShieldCheck className="size-3" /> verified
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-content-muted flex flex-wrap items-center gap-3 text-xs">
+                        <span>{h.area}</span>
+                        <span>{h.room_type}</span>
+                        <span>{naira(h.price_per_session_kobo)} / session</span>
+                        <span>
+                          {a ? `${a.rooms_available}/${a.rooms_total} free` : 'no rooms listed'}
+                        </span>
+                        {/* The visit is how a hostel becomes verified, so its state
                         belongs next to the verified badge. */}
-                    <span>visit: {visit?.status ?? 'Not Visited'}</span>
-                  </p>
-                </div>
-                <ChevronRight className="text-content-muted size-4 shrink-0" />
-              </Link>
-            );
-          })
-        )}
-      </section>
+                        <span>visit: {visit?.status ?? 'Not Visited'}</span>
+                      </p>
+                    </div>
+                    <ChevronRight className="text-content-muted size-4 shrink-0" />
+                  </Link>
+                );
+              })
+            )}
+          </section>
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }

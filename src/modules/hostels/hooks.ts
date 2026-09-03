@@ -92,12 +92,8 @@ export function useCreateBooking() {
   const { userId } = useSession();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: {
-      hostelId: string;
-      roomId?: string;
-      moveIn?: string;
-      endDate?: string;
-    }) => api.createBooking(db(), { ...input, studentId: userId! }),
+    mutationFn: (input: { hostelId: string; roomId?: string; moveIn?: string; endDate?: string }) =>
+      api.createBooking(db(), { ...input, studentId: userId! }),
     onSuccess(booking) {
       qc.invalidateQueries({ queryKey: qk.bookings.all });
       // Availability on the detail page just changed.

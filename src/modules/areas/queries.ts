@@ -21,12 +21,16 @@ const configured = Boolean(
 );
 
 /**
- * Active areas in display order.
+ * Active areas in display order, optionally narrowed to one campus.
+ *
+ * Passing no campus returns every active area, which is right for the public
+ * /around picker on a single-campus platform and will need revisiting the day
+ * a signed-out visitor could be at either school.
  *
  * `cache()` de-dupes within a request: the layout renders the dock and the
  * page renders location-aware copy, and both want this list.
  */
-export const listAreas = cache(async (): Promise<Area[]> => {
+export const listAreas = cache(async (campusId?: string | null): Promise<Area[]> => {
   if (!configured) return FALLBACK_AREAS;
 
   try {
@@ -38,11 +42,14 @@ export const listAreas = cache(async (): Promise<Area[]> => {
     // and delete this cast. (Write it as UTF-8 - the current file is UTF-16,
     // which is why grep and most tooling can't read it.)
     const supabase = (await createClient()) as unknown as SupabaseClient;
-    const { data, error } = await supabase
-      .from('areas')
-      .select('name, slug, lat, lng')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
+    let query = supabase.from('areas').select('name, slug, lat, lng').eq('is_active', true);
+
+    // A campus filter, when the caller knows which school it is asking about.
+    // `campus_id is null` means "every campus", so those rows stay in the list
+    // rather than being filtered out alongside the other schools'.
+    if (campusId) query = query.or(`campus_id.eq.${campusId},campus_id.is.null`);
+
+    const { data, error } = await query.order('sort_order', { ascending: true });
 
     // An empty table is treated as "not set up yet", not as "no areas exist" -
     // rendering a picker with nothing in it would be worse than the fallback.

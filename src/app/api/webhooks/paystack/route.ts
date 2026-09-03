@@ -61,9 +61,9 @@ export async function POST(req: NextRequest) {
 type ChargeData = { reference?: string };
 
 /**
- * Wallet top-up crediting. Re-verifies the charge with Paystack (never trusts
- * the webhook body alone), then credits the user's wallet - idempotent by
- * reference. Other charge purposes (orders, tickets…) are handled elsewhere.
+ * Re-verifies the charge with Paystack (never trusts the webhook body alone),
+ * then dispatches on `metadata.purpose`. Every purpose must be idempotent by
+ * reference: Paystack retries, and a second delivery must not move money twice.
  */
 async function handleChargeSuccess(data: unknown) {
   const reference = (data as ChargeData)?.reference;
@@ -72,23 +72,43 @@ async function handleChargeSuccess(data: unknown) {
   const verified = await verifyTransaction(reference);
   if (verified.status !== 'success') return;
 
-  const meta = verified.metadata as { purpose?: string; userId?: string } | undefined;
-  if (meta?.purpose !== 'wallet_topup' || !meta.userId) return;
+  const meta = verified.metadata as ChargeMetadata | undefined;
 
   // The AMOUNT COMES FROM PAYSTACK, never from the webhook body or the client.
   // `verified` is the re-fetched transaction, so a forged payload cannot inflate
   // a credit even if it somehow passed the signature check.
   const amountKobo = verified.amount;
   if (!Number.isFinite(amountKobo) || amountKobo <= 0) {
-    console.error('paystack wallet_topup: non-positive amount', { reference, amountKobo });
+    console.error('paystack charge: non-positive amount', { reference, amountKobo });
     return;
   }
 
+  switch (meta?.purpose) {
+    case 'wallet_topup':
+      if (meta.userId) await creditWalletTopup(reference, meta.userId, amountKobo);
+      return;
+    case 'inspection_fee':
+      if (meta.inspectionId) await confirmInspection(reference, meta.inspectionId, amountKobo);
+      return;
+    default:
+      // A charge we don't recognise is a charge we've taken and not accounted
+      // for, so it's logged loudly rather than dropped in silence.
+      console.warn('paystack charge with unhandled purpose', { reference, purpose: meta?.purpose });
+  }
+}
+
+type ChargeMetadata = {
+  purpose?: string;
+  userId?: string;
+  inspectionId?: string;
+};
+
+async function creditWalletTopup(reference: string, userId: string, amountKobo: number) {
   // Idempotent by reference inside the RPC   Paystack retries, and a second
   // delivery must not credit twice. Service role: this runs outside any session.
   const admin = createAdminClient();
   const { error } = await admin.rpc('credit_wallet_topup', {
-    p_user_id: meta.userId,
+    p_user_id: userId,
     p_amount_kobo: amountKobo,
     p_reference: reference,
   });
@@ -100,9 +120,34 @@ async function handleChargeSuccess(data: unknown) {
     throw new Error(`credit_wallet_topup failed: ${error.message}`);
   }
 
-  console.info('paystack wallet_topup credited', {
+  console.info('paystack wallet_topup credited', { reference, userId, naira: amountKobo / 100 });
+}
+
+/**
+ * An inspection is paid for BEFORE it is booked, so this   not the client   is
+ * what schedules it. The RPC marks the row paid and opens the escrow hold that
+ * pays the agent; it is idempotent on `payment_reference`, which is unique.
+ */
+async function confirmInspection(reference: string, inspectionId: string, amountKobo: number) {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc('confirm_inspection_payment', {
+    p_inspection: inspectionId,
+    p_reference: reference,
+    p_amount_kobo: amountKobo,
+  });
+
+  if (error) {
+    console.error('paystack inspection_fee failed', {
+      reference,
+      inspectionId,
+      error: error.message,
+    });
+    throw new Error(`confirm_inspection_payment failed: ${error.message}`);
+  }
+
+  console.info('paystack inspection_fee confirmed', {
     reference,
-    userId: meta.userId,
+    inspectionId,
     naira: amountKobo / 100,
   });
 }

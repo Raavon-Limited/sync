@@ -118,6 +118,9 @@ export async function listHostels(opts: ListHostelsOptions = {}): Promise<Hostel
 
     if (opts.area) q = q.eq('area', opts.area);
     if (opts.roomType) q = q.eq('room_type', opts.roomType);
+    // RLS already hides unverified listings from everyone but the owner and
+    // staff (20260908150000). This stays as an explicit narrowing for the
+    // screens that want ONLY verified even when the caller is one of those two.
     if (opts.verifiedOnly) q = q.eq('verified', true);
     if (opts.maxPriceKobo != null) q = q.lte('price_per_session_kobo', opts.maxPriceKobo);
 

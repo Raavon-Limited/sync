@@ -24,7 +24,7 @@
 import 'server-only';
 import { createElement } from 'react';
 import { render } from '@react-email/render';
-import { SITE } from '@/config/site';
+import { SITE, canonicalOrigin } from '@/config/site';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Row } from '@/lib/supabase/row';
 import { logEmail, sendMail, type MailResult } from '@/modules/admin/mail';
@@ -83,7 +83,7 @@ export async function notifyVerification(input: NotifyInput): Promise<NotifyResu
         subject: input.subject,
         missing: input.missing ?? [],
         note: input.note ?? null,
-        actionUrl: `${SITE.url}${input.path ?? '/user'}`,
+        actionUrl: `${canonicalOrigin()}${input.path ?? '/user'}`,
       }),
     );
   } catch (e) {
