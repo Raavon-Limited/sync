@@ -22,6 +22,10 @@
  *   happens once at the boundary in landlord-data.ts.
  */
 
+import type { FeeMode } from '@/modules/hostels/types';
+
+export type { FeeMode };
+
 export type PropertyAvailability = 'available' | 'occupied' | 'review';
 
 export interface Property {
@@ -40,6 +44,12 @@ export interface Property {
   address?: string;
   /** Naira, per `term`. */
   price?: number;
+  /**
+   * Who bears Sync's 2.5% on the rent   'absorb' (out of the landlord's
+   * takings) or 'pass_on' (added to the student's total). See
+   * 20260909090000_hostel_fee_mode.
+   */
+  feeMode?: FeeMode;
   term?: 'per session' | 'per year' | 'per semester';
   availability?: PropertyAvailability;
   /** A reviewer has been and confirmed it exists. */

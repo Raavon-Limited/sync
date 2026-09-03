@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button, Badge } from '@/components/ui';
 import { useHostel } from '@/modules/hostels/hooks';
+import { rentQuote } from '@/modules/hostels/pricing';
 import { useCreateBooking } from '@/modules/hostels/hooks';
 import { useOpenHostelConversation } from '@/modules/messaging/hooks';
 import { openChat } from '@/lib/chat-events';
@@ -53,6 +54,9 @@ export function HostelDetail({ slug }: { slug: string }) {
   if (isError || !hostel) notFound();
 
   const availability = AVAILABILITY_LABEL[hostel.availability ?? 'draft'];
+  // Same helper /hostels uses, mirroring `public.quote_rent`   one arithmetic,
+  // so the two screens cannot quote different totals for the same room.
+  const quote = rentQuote(hostel.pricePerSessionKobo, hostel.feeMode);
   const cover = hostel.images[0]?.url ?? null;
   // Only rooms the landlord has listed are bookable; `state` comes from the
   // hostel_room_state view, so a held room is visibly held rather than missing.
@@ -96,13 +100,19 @@ export function HostelDetail({ slug }: { slug: string }) {
 
         <div className="border-line/10 bg-panel flex min-w-56 flex-col gap-3 rounded-2xl border p-4">
           <div>
-            <p className="text-content text-2xl font-semibold">
-              {naira(hostel.pricePerSessionKobo)}
+            <p className="text-content text-2xl font-semibold">{naira(quote.totalKobo)}</p>
+            <p className="text-content-muted text-xs">
+              per session
+              {quote.feeMode === 'pass_on' ? ', including Sync’s 2.5% service fee' : ''}
             </p>
-            <p className="text-content-muted text-xs">per session</p>
           </div>
+          {/* SEPARATE, AND SAID TO BE. Two money figures stacked in one card
+              read as a sum   this line used to sit directly under the rent with
+              no word between them, so a visit looked like part of the price. It
+              is optional, it goes to the agent, and most students never pay it. */}
           <p className="text-content-muted flex items-center gap-1 text-xs">
-            <Wallet className="size-3" /> Inspection fee {naira(hostel.inspectionFeeKobo)}
+            <Wallet className="size-3" /> Optional visit: {naira(hostel.inspectionFeeKobo)}, paid
+            separately
           </p>
 
           <Button

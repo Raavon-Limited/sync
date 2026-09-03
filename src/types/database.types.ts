@@ -1733,6 +1733,7 @@ export type Database = {
           created_at: string
           description: string | null
           distance_minutes: number | null
+          fee_mode: string
           geo: unknown
           house_rules: string[]
           id: string
@@ -1758,6 +1759,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           distance_minutes?: number | null
+          fee_mode?: string
           geo?: unknown
           house_rules?: string[]
           id?: string
@@ -1783,6 +1785,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           distance_minutes?: number | null
+          fee_mode?: string
           geo?: unknown
           house_rules?: string[]
           id?: string

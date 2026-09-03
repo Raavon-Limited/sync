@@ -32,11 +32,22 @@ const toHostel = (r: Row): Hostel => ({
   roomType: r.room_type,
   pricePerSessionKobo: Number(r.price_per_session_kobo ?? 0),
   inspectionFeeKobo: Number(r.inspection_fee_kobo ?? 0),
+  // 'absorb' is both the column default and the safe read for a row from
+  // before 20260909090000: it is the mode that adds nothing to the student's
+  // total, so a missing value can never overcharge somebody.
+  feeMode: r.fee_mode === 'pass_on' ? 'pass_on' : 'absorb',
   distanceMinutes: r.distance_minutes,
   amenities: r.amenities ?? [],
+  houseRules: r.house_rules ?? [],
+  description: r.description ?? null,
+  lat: r.lat ?? null,
+  lng: r.lng ?? null,
   isVerified: !!r.verified,
   ribbon: r.ribbon,
   images: (r.hostel_images ?? [])
+    // Photos only. A video row has no thumbnail, so it renders as a black
+    // rectangle in a gallery tile   the player belongs to the detail view.
+    .filter((i: Row) => i.kind !== 'video')
     .map((i: Row) => ({ id: i.id, url: i.url, position: i.position }))
     .sort((a: { position: number }, b: { position: number }) => a.position - b.position),
   rooms: (r.hostel_rooms ?? []).map((rm: Row) => ({
@@ -73,7 +84,7 @@ const toBooking = (r: Row): Booking => ({
 
 const HOSTEL_SELECT = `
   *,
-  hostel_images(id, url, position),
+  hostel_images(id, url, position, kind),
   hostel_rooms(id, label, price_per_session_kobo, is_listed)
 `;
 
@@ -401,6 +412,9 @@ export async function upsertHostel(
     room_type: input.roomType,
     price_per_session_kobo: input.pricePerSessionKobo,
     inspection_fee_kobo: input.inspectionFeeKobo ?? 500000,
+    // The landlord's own commercial choice, not a privileged column. Defaulted
+    // to the mode that leaves the advertised price alone.
+    fee_mode: input.feeMode ?? 'absorb',
     distance_minutes: input.distanceMinutes ?? null,
     amenities: input.amenities ?? [],
   };

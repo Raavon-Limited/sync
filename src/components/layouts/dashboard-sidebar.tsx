@@ -15,7 +15,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { Home, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SyncLogo } from '@/components/brand/sync-logo';
 import { DASHBOARD_NAV, type DashboardNavKey } from '@/config/dashboard-nav';
@@ -198,11 +198,6 @@ export function DashboardSidebar({
       {topSlot && <div className="shrink-0 px-1">{topSlot}</div>}
 
       {/* Grouped nav */}
-      {/* No "Home" link here. It pointed at `/`, the marketing landing page,
-          which is a web-only surface - inside the app (and in the installed
-          PWA) home is /around, reached from the bottom tab bar. Sending a
-          signed-in user to the landing page from their dashboard was a way out
-          of the product, not navigation. */}
       {/* The rail owns no scroll of its own: this list is the only part that
           scrolls, so the wordmark, the profile card and Log out stay put no
           matter how long a role's nav gets. min-h-0 is load-bearing - without
@@ -254,8 +249,28 @@ export function DashboardSidebar({
         ))}
       </nav>
 
-      {/* Log out */}
-      <div className="border-line/10 shrink-0 border-t pt-3">
+      {/* HOME, AND WHY IT POINTS AT /around RATHER THAN /.
+          This link was removed once, correctly: it went to `/`, the marketing
+          landing page, and sending a signed-in user there from their dashboard
+          is a way out of the product rather than navigation.
+
+          The removal left a hole, though. The reasoning was that home is
+          reached from the bottom tab bar   and that bar is `md:hidden`. So on
+          a laptop a vendor, a landlord, an agent or an admin had no route back
+          into the marketplace at all: they could reach their own dashboard and
+          nothing else. Same link, right destination.
+
+          It sits with Log out because both are ways OUT of this dashboard, and
+          keeping them together stops the nav above reading as though the app
+          were only this. */}
+      <div className="border-line/10 shrink-0 space-y-1 border-t pt-3">
+        <Link
+          href="/around"
+          className="text-content-muted hover:bg-ink/5 hover:text-content flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
+        >
+          <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Home
+        </Link>
         <button
           type="button"
           onClick={handleSignOut}

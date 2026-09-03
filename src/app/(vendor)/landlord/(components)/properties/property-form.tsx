@@ -35,6 +35,8 @@ import {
   type ListingMedia,
 } from '@/modules/hostels/media';
 import { saveHostel } from '@/modules/hostels/actions';
+import { rentQuote, naira } from '@/modules/hostels/pricing';
+import type { FeeMode } from '@/modules/hostels/types';
 import type { Property } from '../landlord-types';
 import { cn } from '@/lib/utils';
 
@@ -118,6 +120,115 @@ function SectionTitle({
   );
 }
 
+/**
+ * Who pays Sync's 2.5%, with the arithmetic done in front of the landlord.
+ *
+ * BOTH ROWS ARE ALWAYS ON SCREEN, not just the selected one. The decision is
+ * "which of these two outcomes do I want", and hiding the one you did not pick
+ * turns it into "what does this toggle do" - which is the question that gets
+ * answered by leaving it alone.
+ *
+ * The numbers come from `rentQuote`, which mirrors `public.quote_rent`. The
+ * student's listing page reads the same function, so the two screens cannot
+ * quote different totals for the same room.
+ */
+function FeeModeField({
+  mode,
+  onChange,
+  priceNaira,
+}: {
+  mode: FeeMode;
+  onChange: (mode: FeeMode) => void;
+  priceNaira: number;
+}) {
+  const kobo = Math.max(0, Math.round(priceNaira * 100));
+  const absorbed = rentQuote(kobo, 'absorb');
+  const passedOn = rentQuote(kobo, 'pass_on');
+  // Before a price is typed there is nothing to itemise, and "₦0 - ₦0 = ₦0"
+  // reads as a broken calculator rather than an empty one.
+  const priced = kobo > 0;
+
+  const options: { value: FeeMode; label: string; blurb: string; student: number; you: number }[] = [
+    {
+      value: 'absorb',
+      label: 'I pay it',
+      blurb: 'Students pay exactly what you list. Sync’s share comes out of your payout.',
+      student: absorbed.totalKobo,
+      you: absorbed.landlordNetKobo,
+    },
+    {
+      value: 'pass_on',
+      label: 'The student pays it',
+      blurb: 'Added to the student’s total at checkout. You keep the full rent.',
+      student: passedOn.totalKobo,
+      you: passedOn.landlordNetKobo,
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium">Sync’s fee (2.5% of rent)</span>
+      <p className="text-content-muted text-xs">
+        Taken once, when your rent is released a week after move-in. Nothing is charged while a
+        room is only on hold.
+      </p>
+
+      <div className="mt-1 flex flex-col gap-2">
+        {options.map((option) => {
+          const selected = mode === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'flex flex-col gap-2 rounded-2xl border p-3 text-left transition-colors',
+                selected
+                  ? 'border-lime-deep/40 bg-lime/5 ring-lime-deep/20 ring-2'
+                  : 'border-line/10 hover:border-line/25',
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'grid size-4 shrink-0 place-items-center rounded-full border',
+                    selected ? 'border-lime-deep' : 'border-line/30',
+                  )}
+                >
+                  {selected && <span className="bg-lime-deep size-2 rounded-full" />}
+                </span>
+                <span className="text-sm font-medium">{option.label}</span>
+              </span>
+              <span className="text-content-muted text-xs">{option.blurb}</span>
+
+              {priced && (
+                <span className="border-line/10 text-content-muted mt-1 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2 font-mono text-xs">
+                  <span>
+                    Student pays{' '}
+                    <span className="text-content font-semibold">{naira(option.student)}</span>
+                  </span>
+                  <span>
+                    You receive{' '}
+                    <span className="text-content font-semibold">{naira(option.you)}</span>
+                  </span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {priced && (
+        <p className="text-content-muted text-xs">
+          Sync’s share either way: {naira(absorbed.feeKobo)}.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function PropertyForm({
   property,
   /**
@@ -169,6 +280,18 @@ export function PropertyForm({
   const [uploading, setUploading] = useState(0);
   const [address, setAddress] = useState(property?.address ?? '');
   const [area, setArea] = useState(property?.area ?? '');
+  /**
+   * The price, mirrored into state purely so the fee breakdown under it can
+   * update as it is typed. The <input> is still what gets read on submit   this
+   * is a readout, not a second source of truth.
+   */
+  const [price, setPrice] = useState<number>(property?.price ?? 0);
+  /**
+   * Who bears Sync's 2.5%. 'absorb' by default: it leaves the advertised price
+   * alone, so a landlord who never touches this control cannot accidentally
+   * make their listing cost a student more than it says.
+   */
+  const [feeMode, setFeeMode] = useState<FeeMode>(property?.feeMode ?? 'absorb');
   /** Opened on demand: most landlords pick a suggestion and never need it. */
   const [showPin, setShowPin] = useState(false);
   /** The pin, or null when the address was typed rather than picked. */
@@ -413,6 +536,7 @@ export function PropertyForm({
       lat: coords?.lat,
       lng: coords?.lng,
       price: Number(formData.get('price')),
+      feeMode,
       roomType: String(formData.get('roomType')),
       amenities,
       houseRules: rules,
@@ -932,7 +1056,7 @@ export function PropertyForm({
                   <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-2">
                       <label htmlFor="price" className="text-sm font-medium">
-                        Price (₦)
+                        Rent per session (₦)
                       </label>
                       <Input
                         id="price"
@@ -941,9 +1065,23 @@ export function PropertyForm({
                         min="1"
                         placeholder="150000"
                         defaultValue={property?.price}
+                        onChange={(e) => setPrice(Number(e.target.value) || 0)}
                         required
                       />
                     </div>
+
+                    {/*
+                      SYNC'S CUT, SAID OUT LOUD.
+                      This form used to collect a price and stop, so a landlord
+                      found out what Sync takes when their payout arrived   and
+                      the student's listing page invented an "overhead fee" and
+                      a "mandatory inspection fee" to fill the silence. The
+                      charge is 2.5% of the rent either way; the only question
+                      is which side of the deal it comes out of, and that is the
+                      landlord's to answer.
+                    */}
+                    <FeeModeField mode={feeMode} onChange={setFeeMode} priceNaira={price} />
+
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-medium">Billing term</label>
                       <Select name="term" defaultValue={property?.term ?? 'per session'}>

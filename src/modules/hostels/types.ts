@@ -49,6 +49,17 @@ export interface HostelRoom {
   state?: 'free' | 'held' | 'taken';
 }
 
+/**
+ * Who bears Sync's 2.5% on the rent. Mirrors `hostels.fee_mode`
+ * (20260909090000) and `events.fee_mode`   one concept, one vocabulary.
+ *
+ *   absorb   the student pays the listed rent; the charge comes out of what the
+ *            landlord is paid when the rent releases.
+ *   pass_on  the charge is added to the student's total; the landlord keeps the
+ *            listed rent in full.
+ */
+export type FeeMode = 'absorb' | 'pass_on';
+
 export interface Hostel {
   id: string;
   landlordId: string;
@@ -60,9 +71,20 @@ export interface Hostel {
   campus: string;
   roomType: RoomType;
   pricePerSessionKobo: number;
+  /**
+   * What a VISIT costs, if the student books one. It is not part of the rent
+   * and is never added to a booking total   see `modules/hostels/pricing`.
+   */
   inspectionFeeKobo: number;
+  feeMode: FeeMode;
   distanceMinutes?: number | null;
   amenities: string[];
+  houseRules: string[];
+  /** The landlord's own words. Null when they have not written any. */
+  description?: string | null;
+  /** The map pin. Both or neither   the schema enforces that pairing. */
+  lat?: number | null;
+  lng?: number | null;
   isVerified: boolean;
   ribbon?: string | null;
   images: HostelImage[];

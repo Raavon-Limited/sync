@@ -52,7 +52,7 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
   const { data: hostels } = await db
     .from('hostels')
     .select(
-      'id, slug, name, area, address, lat, lng, room_type, amenities, house_rules, description, price_per_session_kobo, verified, created_at, hostel_images(url, position, kind)',
+      'id, slug, name, area, address, lat, lng, room_type, amenities, house_rules, description, price_per_session_kobo, fee_mode, verified, created_at, hostel_images(url, position, kind)',
     )
     .eq('landlord_id', landlordId)
     .is('archived_at', null)
@@ -130,6 +130,10 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
       imageUrl: images[0],
       media,
       price: naira(h.price_per_session_kobo as number),
+      // 'absorb' for anything written before 20260909090000   the mode that
+      // adds nothing to the student's total, so an unset value cannot
+      // overcharge anyone.
+      feeMode: h.fee_mode === 'pass_on' ? 'pass_on' : 'absorb',
       term: 'per session',
       roomType: (h.room_type as string) ?? undefined,
       amenities: (h.amenities as string[]) ?? undefined,

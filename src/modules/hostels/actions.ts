@@ -37,6 +37,13 @@ const hostelSchema = z
     area: z.string().trim().min(2, 'Pick the area this property is in').optional(),
     /** Naira. Converted to kobo below. */
     price: z.number().int().nonnegative('Price cannot be negative'),
+    /**
+     * Who bears Sync's 2.5% on the rent   see 20260909090000_hostel_fee_mode.
+     * 'absorb' by default: it is the mode that leaves the advertised price
+     * alone, so a landlord who never opens this control cannot accidentally
+     * make their listing cost more than it says.
+     */
+    feeMode: z.enum(['absorb', 'pass_on']).default('absorb'),
     roomType: z.string().trim().min(2).optional(),
     // NOT an enum. The six checkboxes are a shortcut for the common ones, and
     // a landlord with a borehole or a reading room can say so. Capped in count
@@ -280,6 +287,10 @@ export async function saveHostel(input: HostelInput): Promise<HostelResult> {
     house_rules: v.houseRules.map(stripBullet).filter(Boolean),
     description: v.description || null,
     price_per_session_kobo: v.price * 100,
+    // NOT privileged, unlike `verified`: this is the landlord's own call about
+    // whether Sync's 2.5% comes out of their rent or goes onto the student's
+    // total, and the row's own RLS is the ownership check it needs.
+    fee_mode: v.feeMode,
     // NULL RATHER THAN ABSENT, deliberately: editing a listing whose address
     // changed from a resolved one to a typed one has to CLEAR the old pin, or
     // the hostel keeps ranking at an address it is no longer at. A trigger
