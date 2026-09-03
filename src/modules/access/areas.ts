@@ -125,6 +125,13 @@ export const ADMIN_AREAS: AreaSpec[] = [
     href: '/admin/disputes',
   },
   {
+    key: 'revenue',
+    label: 'Revenue',
+    description:
+      'What Sync has earned in service charges, and where it came from. Reads the money ledger.',
+    href: '/admin/revenue',
+  },
+  {
     key: 'payouts',
     label: 'Payouts',
     description: 'Approve withdrawals. Moves money out of the platform.',

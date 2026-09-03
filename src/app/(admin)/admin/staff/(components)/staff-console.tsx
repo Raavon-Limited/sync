@@ -20,7 +20,7 @@
  *   rows, same action   a chip per role, on the person.
  *
  * REMOVING ACCESS RETURNS SOMEBODY TO 'student', NOT TO NOTHING.
- *   There is no such thing as an account with no role  
+ *   There is no such thing as an account with no role
  *   `profiles_active_role_is_held` requires the active role to be one they
  *   hold. Losing console access is a demotion to an ordinary account, and their
  *   vendor or rider profile, if they have one, is untouched.
@@ -32,7 +32,7 @@ import { Check, Clock, Copy, Loader2, Mail, Send, ShieldCheck, UserMinus, X } fr
 import { Badge, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { setAccountRole, setRoleMembership } from '@/modules/admin/actions';
-import { cancelStaffInvite, inviteStaff } from '@/modules/admin/invite-actions';
+import { cancelStaffInvite, inviteStaff, resendStaffAccess } from '@/modules/admin/invite-actions';
 import type { StaffMember } from '@/modules/admin/staff';
 import type { StaffInvite } from '@/modules/admin/invites';
 import type { AccessRole } from '@/modules/admin/roles';
@@ -186,7 +186,7 @@ export function StaffConsole({
           <p className="text-content-muted text-xs">
             They do not need a Sync account. If the address has one, access is granted straight
             away; if it does not, they get a link that works for 10 minutes and set their own
-            password on the way in   no password is ever emailed. If it lapses before they open it,
+            password on the way in no password is ever emailed. If it lapses before they open it,
             invite them again. Super admin is not offered here: it can appoint and remove everyone
             else, so it is granted deliberately from the database rather than from a form somebody
             could reach through a hijacked session.
@@ -305,7 +305,7 @@ export function StaffConsole({
 
       {staff.length === 0 ? (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
-          Nobody has console access. That should be impossible   you are reading this page.
+          Nobody has console access. That should be impossible you are reading this page.
         </p>
       ) : (
         <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
@@ -342,7 +342,7 @@ export function StaffConsole({
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {s.role === 'super_admin' ? (
                         <span className="text-content-muted text-xs">
-                          Super admin   every area, roles do not apply.
+                          Super admin every area, roles do not apply.
                         </span>
                       ) : (
                         roles.map((r) => {
@@ -396,6 +396,37 @@ export function StaffConsole({
                         docs/ADMIN_ACCESS.md. Removing access stays here, because
                         taking access away in a hurry is the thing you want to be
                         easy. */}
+                    {/* RESEND, ON THE ROSTER, WHERE THERE WAS NOTHING TO PRESS.
+                        A pending invitation has "Send again" beside it. Somebody
+                        who already had a Sync account never becomes a pending
+                        invitation at all - they are granted access on the spot -
+                        so the person most likely to be unaware of their own
+                        access was the one row with no way to tell them. This
+                        sends that: no token, no password prompt, just what they
+                        can now open and a link to it. */}
+                    <Button
+                      variant="ghost"
+                      disabled={busy}
+                      title={`Email ${s.name} to say they have console access`}
+                      onClick={() =>
+                        run(
+                          () => resendStaffAccess({ userId: s.id }),
+                          (result) => {
+                            const res = result as Awaited<ReturnType<typeof resendStaffAccess>>;
+                            if (res.emailed) {
+                              setMessage(`${res.name} was emailed at ${res.email}.`);
+                              return;
+                            }
+                            setFailure(res.emailError ?? 'The email did not send.');
+                            setMessage(`Nothing was emailed to ${res.email}.`);
+                          },
+                        )
+                      }
+                    >
+                      <Send aria-hidden="true" />
+                      Resend invite
+                    </Button>
+
                     {!(s.role === 'super_admin' && superAdmins <= 1) && (
                       <Button
                         variant="ghost"

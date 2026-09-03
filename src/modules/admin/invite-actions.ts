@@ -67,6 +67,19 @@ async function assertStaff(): Promise<void> {
   if (!isStaffRole(profile?.role)) throw new Error('Not authorised');
 }
 
+/**
+ * Stricter, and stated HERE rather than left to the database.
+ *
+ * Every other action in this file ends in an RPC that re-checks the caller, so
+ * the check in TypeScript is a courtesy and the database is the authority.
+ * `resendStaffAccess` ends in an email instead - there is no RPC underneath it
+ * to catch anything - so this is the only place the rule can live.
+ */
+async function assertSuperAdmin(): Promise<void> {
+  const profile = await getProfile();
+  if (profile?.role !== 'super_admin') throw new Error('Not authorised');
+}
+
 export type InviteStaffResult =
   /** They already had an account, so there was nothing to invite them to. */
   | { kind: 'granted'; name: string }
@@ -161,6 +174,11 @@ async function sendStaffInvite(input: {
   email: string;
   link: string;
   roleId: string | null;
+  /**
+   * 'invite' - the link is a single-use token and the copy says so.
+   * 'access' - they already had an account; the link is just the console.
+   */
+  mode?: 'invite' | 'access';
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? MAIL_FROM;
@@ -190,6 +208,7 @@ async function sendStaffInvite(input: {
   }
 
   const invitedBy = (await getCurrentUser())?.email ?? SITE.name;
+  const granted = input.mode === 'access';
 
   // Which step we are on, so a thrown exception can say where it came from.
   // Rendering and sending fail for entirely different reasons and the stack
@@ -204,6 +223,7 @@ async function sendStaffInvite(input: {
         areas,
         joinUrl: input.link,
         expiresIn: '10 minutes',
+        mode: input.mode ?? 'invite',
       }),
     );
 
@@ -212,7 +232,9 @@ async function sendStaffInvite(input: {
     const { error } = await resend.emails.send({
       from,
       to: input.email,
-      subject: `You have been invited to the ${SITE.name} admin console`,
+      subject: granted
+        ? `You now have access to the ${SITE.name} admin console`
+        : `You have been invited to the ${SITE.name} admin console`,
       html,
     });
 
@@ -232,6 +254,81 @@ async function sendStaffInvite(input: {
   }
 
   return { ok: true };
+}
+
+/**
+ * Tell somebody who ALREADY has console access that they have it.
+ *
+ * WHY THIS EXISTS AT ALL
+ *   `inviteStaff` has two paths and only one of them was ever an email. An
+ *   address with no account gets an invitation, which appears in the pending
+ *   list with a "Send again" beside it. An address that already has an account
+ *   is granted access on the spot and appears in the ROSTER - where there was
+ *   nothing to press, because there is no token behind that row and never was.
+ *
+ *   So the most likely person to need chasing was the only one who could not be
+ *   chased: an existing user, made an admin, never told, whose grant then sat
+ *   unused while somebody assumed an email had gone out. This is that email.
+ *
+ * IT IS NOT AN INVITATION AND MUST NOT LOOK LIKE ONE. No token, no "set your
+ * password" - they have one. The link is the console. See the 'access' mode in
+ * StaffInviteEmail for why a password prompt here would be teaching our own
+ * staff to click one.
+ *
+ * IT REFUSES ANYONE WHO IS NOT ALREADY STAFF, which is what stops it being a
+ * way to send mail to an arbitrary address from a Sync domain: the only inputs
+ * are a user id that must currently hold `admin` or `super_admin`, and the
+ * body is fixed.
+ */
+export async function resendStaffAccess(input: {
+  userId: string;
+}): Promise<{ emailed: boolean; email: string; name: string; emailError?: string }> {
+  await assertSuperAdmin();
+
+  const admin = createAdminClient();
+
+  // The role is read from profiles, not passed in: this action's whole safety
+  // argument is that it can only mail somebody who IS staff at this moment.
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id, full_name, role')
+    .eq('id', input.userId)
+    .maybeSingle();
+
+  const row = profile as Row | null;
+  if (!row || !isStaffRole(row.role as string)) {
+    throw new Error('That account does not have console access.');
+  }
+
+  const { data: authUser } = await admin.auth.admin.getUserById(input.userId);
+  const email = authUser?.user?.email;
+  if (!email) throw new Error('That account has no email address to send to.');
+
+  // Their first admin-scoped role, for the "what you can open" block. Absent,
+  // the email simply omits it rather than claiming an access level.
+  const { data: membership } = await admin
+    .from('access_members')
+    .select('role_id, access_roles(scope)')
+    .eq('user_id', input.userId);
+
+  const roleId =
+    ((membership ?? []) as Row[]).find(
+      (m) => ((m.access_roles as Row | null)?.scope as string) === 'admin',
+    )?.role_id ?? null;
+
+  const sent = await sendStaffInvite({
+    email,
+    link: `${canonicalOrigin()}/admin`,
+    roleId: roleId as string | null,
+    mode: 'access',
+  });
+
+  return {
+    emailed: sent.ok,
+    email,
+    name: (row.full_name as string) ?? email,
+    emailError: sent.ok ? undefined : sent.error,
+  };
 }
 
 /** Cancel an invitation that has not been accepted. The token stops working. */

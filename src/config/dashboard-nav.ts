@@ -291,6 +291,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       {
         label: 'Oversight',
         items: [
+          { href: '/admin/revenue', label: 'Revenue', icon: Wallet, area: 'revenue' },
           { href: '/admin/disputes', label: 'Disputes', icon: AlertOctagon, area: 'disputes' },
           // Its own area, held by nobody until it is granted   this is the one
           // row that can write to every account on the platform at once.

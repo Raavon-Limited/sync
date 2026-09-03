@@ -7,6 +7,20 @@
  * is bound to the address it was sent to. The recipient chooses their own
  * password on the way in, so Sync never has it and never sent it.
  *
+ * IT ALSO SENDS THE OTHER HALF OF THE STORY.
+ *   Two things can happen when somebody is brought into the console, and only
+ *   one of them was ever an email. An address with no account gets an
+ *   invitation; an address that already has one is simply GRANTED access, with
+ *   nothing to accept and no link to send - and, until this variant existed,
+ *   nothing at all. They became an admin and were never told, which meant
+ *   somebody had to remember to message them by hand or the grant sat unused.
+ *
+ *   `mode: 'access'` is that email. Same brand, same "what you can open"
+ *   block - which is the part worth reading either way - but it does not
+ *   mention a password, because they already have one and telling somebody to
+ *   set a new one is the exact shape of the phishing mail we are careful not
+ *   to send.
+ *
  * IT SAYS WHAT THE ROLE OPENS. Console access is not one thing   a reviewer and
  * a finance admin are handed very different keys   and somebody being asked to
  * take on either should be able to see which before they accept. A role with no
@@ -40,9 +54,21 @@ export interface StaffInviteEmailProps {
   roleName: string | null;
   /** Area labels the role opens, already resolved. */
   areas: string[];
+  /**
+   * Where the button goes: a single-use invite link in 'invite' mode, the
+   * console itself in 'access' mode.
+   */
   joinUrl: string;
-  /** e.g. "10 minutes". Rendered, not computed, so the copy matches the token. */
-  expiresIn: string;
+  /**
+   * e.g. "10 minutes". Rendered, not computed, so the copy matches the token.
+   * Ignored in 'access' mode, where there is no token to expire.
+   */
+  expiresIn?: string;
+  /**
+   * 'invite' - they have no account and must accept.
+   * 'access' - they already had one and now hold console access.
+   */
+  mode?: 'invite' | 'access';
 }
 
 export function StaffInviteEmail({
@@ -51,11 +77,17 @@ export function StaffInviteEmail({
   areas,
   joinUrl,
   expiresIn,
+  mode = 'invite',
 }: StaffInviteEmailProps) {
+  const granted = mode === 'access';
   return (
     <Html>
       <Head />
-      <Preview>{invitedBy} invited you to the Sync admin console</Preview>
+      <Preview>
+        {granted
+          ? 'You now have access to the Sync admin console'
+          : `${invitedBy} invited you to the Sync admin console`}
+      </Preview>
       <Body
         style={{
           backgroundColor: CREAM,
@@ -87,11 +119,27 @@ export function StaffInviteEmail({
           </Text>
 
           <Heading style={{ color: INK, fontSize: 24, fontWeight: 700, margin: '24px 0 8px' }}>
-            {roleName ? `You have been invited as ${roleName}` : 'You have been invited to Sync'}
+            {granted
+              ? roleName
+                ? `You now have console access as ${roleName}`
+                : 'You now have access to the Sync console'
+              : roleName
+                ? `You have been invited as ${roleName}`
+                : 'You have been invited to Sync'}
           </Heading>
           <Text style={{ color: MUTED, fontSize: 14, lineHeight: '22px', margin: 0 }}>
-            {invitedBy} wants you on the team that runs Sync. Accepting takes a minute   you will
-            pick your own password on the way in.
+            {granted ? (
+              <>
+                {invitedBy} has given your existing Sync account access to the admin console.
+                Nothing to accept and nothing to set up sign in the way you always do and the
+                console is there.
+              </>
+            ) : (
+              <>
+                {invitedBy} wants you on the team that runs Sync. Accepting takes a minute you will
+                pick your own password on the way in.
+              </>
+            )}
           </Text>
 
           {areas.length > 0 && (
@@ -132,13 +180,14 @@ export function StaffInviteEmail({
                 textDecoration: 'none',
               }}
             >
-              Accept and set a password
+              {granted ? 'Open the console' : 'Accept and set a password'}
             </Button>
           </Section>
 
           <Text style={{ color: FAINT, fontSize: 12, lineHeight: '20px', margin: '0 0 4px' }}>
-            This link works once and expires in {expiresIn}. It was sent to this address only   if
-            it reached you by mistake, ignore it and nothing happens.
+            {granted
+              ? 'Your password has not changed and nobody has asked you to set a new one. If this reached you by mistake, tell whoever sent it   console access can be removed as easily as it was given.'
+              : `This link works once and expires in ${expiresIn ?? '10 minutes'}. It was sent to this address only   if it reached you by mistake, ignore it and nothing happens.`}
           </Text>
           <Text style={{ color: FAINT, fontSize: 12, lineHeight: '20px', margin: 0 }}>
             If the button does not work, paste this into your browser:{' '}
