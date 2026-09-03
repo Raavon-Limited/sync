@@ -72,7 +72,7 @@ const WEB_ROUTES = [
   // THE WAY BACK IN. These were missed when auth was allowlisted, and the two
   // of them fail differently:
   //
-  //   /forgot-password  is reached by clicking "Forgot password?" ON /login  
+  //   /forgot-password  is reached by clicking "Forgot password?" ON /login
   //                     an allowed page handing you straight to a blocked one.
   //                     Someone who cannot remember their password is exactly
   //                     the person who cannot get past a wall that says "sign
@@ -87,6 +87,27 @@ const WEB_ROUTES = [
   // browsing, it is someone locked out of an account they already have.
   '/forgot-password',
   '/reset-password',
+  // INVITATIONS, for the same reason and one more.
+  //
+  // These are where an emailed link LANDS, so whatever device opens the mail
+  // decides   routinely a phone with no app and no session. And the person
+  // holding it does not have an account yet: that is the entire point of the
+  // link. An install wall in front of it is asking somebody to install an app
+  // for a platform they have not joined, to complete the one step that would
+  // let them join it.
+  //
+  // The link also EXPIRES   three days for an agent, ten minutes for staff   so
+  // "install first, come back after" is not a delay, it is a dead invitation.
+  //
+  // AND THE PROMPT CANNOT BE HONEST HERE. A browser tab cannot tell whether
+  // this person already installed the app, and on iOS nothing can hand them
+  // off to it, so an invitee who HAS the app is told to install it again with
+  // no way to act on that. Not gating is the only version of this that is true
+  // for everybody who arrives.
+  '/agent-invite',
+  '/staff-invite',
+  // The vendor equivalent, reached from a storefront team invite.
+  '/vendor/join',
   // ID CARD CHECKS. `/v/<code>` is where a QR on a vendor's or agent's card
   // resolves, and the person scanning it is a stranger   a tenant at their own
   // front door deciding whether the caller is who the platform says they are.
