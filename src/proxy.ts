@@ -61,6 +61,26 @@ function underPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+/**
+ * Public pages that happen to live UNDER a protected prefix.
+ *
+ * '/agent-invite' was fixed by matching on segment boundaries, because it only
+ * looked nested. '/vendor/join' genuinely is nested, and no boundary rule can
+ * help it: it sits under '/vendor', which is gated on the vendor role.
+ *
+ * WHICH MADE IT UNREACHABLE BY EVERY PERSON IT EXISTS FOR. It is where a
+ * storefront team invitation lands   somebody who is not a vendor, usually has
+ * no account at all, and is following a link from their email. Gating it on
+ * the vendor role means only a vendor can accept an invitation to become one.
+ * A signed-out invitee was sent to /login, then to /signup, and the invite
+ * expired while they were being asked to create an unrelated account.
+ *
+ * THE TOKEN IS THE CREDENTIAL on these pages, and it is checked server-side by
+ * the RPC behind the form   this list only decides who may see the form. Add a
+ * path here only when that is true of it.
+ */
+const PUBLIC_UNDER_PROTECTED = ['/vendor/join'];
+
 const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   // /around is the public "home of the full Sync app" per the wireframe -
   // signed-out users land here, so it's deliberately not in the gate list.
@@ -112,6 +132,32 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
   { prefix: '/admin', roles: ['admin', 'super_admin'] },
 ];
 
+/**
+ * Where /<handle> rewrites to, per role.
+ *
+ * `agent` was missing from the chain this replaces, so `base` came out null,
+ * the rewrite never happened and /<their-handle> fell through to a 404   which
+ * is what the "Dashboard" link in the account menu points at. A signed-in agent
+ * clicking Dashboard was told the page did not exist.
+ *
+ * null means "no handle-rooted dashboard": admins go to /admin explicitly, and
+ * a creator has no dashboard of their own yet. Those are decisions, not gaps,
+ * so they are written down rather than left to a fall-through.
+ *
+ * A Record<Role, …> so adding a role without deciding this is a type error.
+ */
+const HANDLE_DASHBOARD: Record<Role, string | null> = {
+  student: '/user',
+  landlord: '/landlord',
+  vendor: '/vendor',
+  rider: '/rider',
+  event_manager: '/organiser',
+  agent: '/agent',
+  creator: null,
+  admin: null,
+  super_admin: null,
+};
+
 const supabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
@@ -127,7 +173,12 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const segments = pathname.split('/').filter(Boolean);
   const firstSeg = segments[0];
-  const guarded = PROTECTED_PREFIXES.find(({ prefix }) => underPrefix(pathname, prefix));
+  // The exemption is consulted FIRST, so a public path under a protected
+  // prefix never reaches the role check at all.
+  const publiclyExempt = PUBLIC_UNDER_PROTECTED.some((path) => underPrefix(pathname, path));
+  const guarded = publiclyExempt
+    ? undefined
+    : PROTECTED_PREFIXES.find(({ prefix }) => underPrefix(pathname, prefix));
 
   // Supabase not configured yet → no session can exist → everyone is
   // logged-out. Gate protected routes, let public ones through.
@@ -156,18 +207,7 @@ export async function proxy(request: NextRequest) {
         business_name: meta.business_name as string | undefined,
         email: user.email,
       });
-      const base =
-        role === 'student'
-          ? '/user'
-          : role === 'landlord'
-            ? '/landlord'
-            : role === 'vendor'
-              ? '/vendor'
-              : role === 'rider'
-                ? '/rider'
-                : role === 'event_manager'
-                  ? '/organiser'
-                  : null;
+      const base = HANDLE_DASHBOARD[role] ?? null;
       if (handle && base && firstSeg === handle) {
         const rest = segments.slice(1).join('/');
         const url = request.nextUrl.clone();

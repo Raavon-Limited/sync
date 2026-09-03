@@ -54,15 +54,26 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
   // name-based handle URL (/muiz-owolabi) which the proxy rewrites to the right
   // dashboard; admins to /admin; fall back to the static base per role.
   const isAdmin = role === 'admin' || role === 'super_admin';
+
+  // The no-handle fallback. It ended at '/user' for every role it did not name,
+  // so an agent without a handle was sent to a student dashboard   and WITH a
+  // handle they were sent to /<handle>, which 404'd until the proxy learned the
+  // agent rewrite (see HANDLE_DASHBOARD in proxy.ts). This is the half that
+  // does not depend on a handle existing.
+  const DASHBOARD_BY_ROLE: Record<string, string> = {
+    landlord: '/landlord',
+    vendor: '/vendor',
+    rider: '/rider',
+    agent: '/agent',
+    event_manager: '/organiser',
+    student: '/user',
+  };
+
   const dashboardHref = isAdmin
     ? '/admin'
     : handle
       ? `/${handle}`
-      : role === 'landlord'
-        ? '/landlord'
-        : role === 'vendor'
-          ? '/vendor'
-          : '/user';
+      : (role && DASHBOARD_BY_ROLE[role]) || '/user';
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : null;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;

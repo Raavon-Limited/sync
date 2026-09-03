@@ -42,47 +42,75 @@ export function ServicesDock({ role }: ServicesDockProps) {
     return pathname === target || pathname?.startsWith(`${target}/`);
   };
 
-
-
   // `iconName` is the brand-kit section/role icon. It is OPTIONAL because the
   // kit only draws sections and roles - there is no kit icon for Saved,
   // Chats, Orders, Search, Inbox or Admin, which are account actions. Those
   // fall back to lucide until the kit covers them.
-  const accountTabs: {
+  interface DockTab {
     href: string;
     label: string;
     icon: LucideIcon;
     iconName?: SyncIconName;
     badge?: number;
-  }[] =
-    isFood
-      ? [
-          { href: '/food/search',    label: 'Search',    icon: Search },
-          { href: '/food/orders',    label: 'Orders',    icon: ClipboardList },
-          { href: '/food/favorites', label: 'Saved',     icon: Heart },
-          // { href: '/user',             label: 'You',       icon: User },
-        ]
-      : role === 'vendor'
-        ? [
-            { href: '/vendor/orders', label: 'Orders',  icon: ClipboardList },
-            { href: '/vendor/inbox',  label: 'Inbox',   icon: MessageCircle, badge: 2 },
-            { href: '/vendor',        label: 'You',     icon: LayoutDashboard },
-          ]
-        : role === 'landlord'
-          ? [
-              { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
-              { href: '/landlord/inbox',    label: 'Inbox',    icon: MessageCircle, badge: 2 },
-              { href: '/landlord',          label: 'You',      icon: LayoutDashboard, iconName: 'landlord' },
-            ]
-          : role === 'admin' || role === 'super_admin'
-            ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
-            : role === 'student'
-              ? [
-                  { href: '/user/saved',    label: 'Saved',  icon: Heart },
-                  { href: '/user/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
-                  { href: '/user',          label: 'You',    icon: User, iconName: 'student' },
-                ]
-              : [{ href: '/login', label: 'Sign in', icon: LogIn }];
+  }
+
+  /**
+   * One entry per role, as a RECORD rather than a ternary chain.
+   *
+   * The chain this replaces had branches for vendor, landlord, admin and
+   * student and fell through to a "Sign in" tab for everything else. `agent`,
+   * `rider`, `event_manager` and `creator` all landed in that fallback, so a
+   * signed-in agent was shown the signed-out dock   the bar told them to log in
+   * while the page above it greeted them by name.
+   *
+   * A Record<Role, ...> makes that impossible to repeat: adding a role to the
+   * union without giving it tabs is now a type error, which is what the comment
+   * on that union always claimed to guarantee.
+   */
+  const TABS_BY_ROLE: Record<Role, DockTab[]> = {
+    vendor: [
+      { href: '/vendor/orders', label: 'Orders', icon: ClipboardList },
+      { href: '/vendor/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/vendor', label: 'You', icon: LayoutDashboard },
+    ],
+    landlord: [
+      { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
+      { href: '/landlord/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/landlord', label: 'You', icon: LayoutDashboard, iconName: 'landlord' },
+    ],
+    student: [
+      { href: '/user/saved', label: 'Saved', icon: Heart },
+      { href: '/user/messages', label: 'Chats', icon: MessageCircle, badge: 3 },
+      { href: '/user', label: 'You', icon: User, iconName: 'student' },
+    ],
+    // An agent's whole job is the visits assigned to them, so that IS the
+    // dashboard   there is no separate list worth a second tab yet.
+    agent: [{ href: '/agent', label: 'Visits', icon: ClipboardList }],
+    rider: [
+      { href: '/rider/board', label: 'Board', icon: ClipboardList },
+      { href: '/rider', label: 'You', icon: LayoutDashboard },
+    ],
+    event_manager: [
+      { href: '/organiser/events', label: 'Events', icon: ClipboardList },
+      { href: '/organiser', label: 'You', icon: LayoutDashboard },
+    ],
+    // No dashboard of their own yet   they browse as a student would, and a tab
+    // pointing at a route that does not exist is the 404 this file just caused.
+    creator: [{ href: '/user', label: 'You', icon: User, iconName: 'student' }],
+    admin: [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }],
+    super_admin: [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }],
+  };
+
+  const accountTabs: DockTab[] = isFood
+    ? [
+        { href: '/food/search', label: 'Search', icon: Search },
+        { href: '/food/orders', label: 'Orders', icon: ClipboardList },
+        { href: '/food/favorites', label: 'Saved', icon: Heart },
+      ]
+    : // No role means SIGNED OUT, and only that. It used to also mean "a role
+      // this chain forgot", which is how a signed-in agent was offered a login
+      // tab.
+      (role && TABS_BY_ROLE[role]) || [{ href: '/login', label: 'Sign in', icon: LogIn }];
 
   // The bar is [ ...left, AI, ...right ]. Home is just the first tab rather
   // than a special case, so the split stays correct for every role - admins
@@ -123,7 +151,7 @@ export function ServicesDock({ role }: ServicesDockProps) {
 
           <nav
             aria-label="Sync services"
-            className="-mx-1 hidden flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden"
+            className="-mx-1 hidden flex-1 [scrollbar-width:none] items-center gap-1 overflow-x-auto px-1 md:flex [&::-webkit-scrollbar]:hidden"
           >
             {MODULES.map(({ slug, label }) => {
               const active = isActive(slug);

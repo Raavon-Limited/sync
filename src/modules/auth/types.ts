@@ -15,6 +15,12 @@ export type Role =
   | 'vendor'
   | 'landlord'
   | 'rider'
+  // An agent verifies listings on the ground. It was missing here while the
+  // proxy gated /agent on it, accept_agent_invite wrote it to profiles.role,
+  // and the dashboard existed   so a signed-in agent came through every
+  // Role-typed consumer as no role at all, and the services dock fell to its
+  // signed-out branch and offered them a Sign in tab.
+  | 'agent'
   // Not open for signup yet   /signup shows both as 'Not yet'. Listed because
   // the proxy, the dashboards and submit_personal_verification all already
   // handle them, and a role legal in the database but absent from this union
