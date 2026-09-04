@@ -18,10 +18,11 @@ import { useMemo, useState } from 'react';
 import { OrderStageTracker } from '@/components/shared';
 import { EmptyState } from '@/components/shared';
 import { Calendar, Home, Shirt, Sparkles, Ticket } from 'lucide-react';
-import { useMyBookings } from '@/modules/hostels/hooks';
+import { useMyBookings, useMyInspections } from '@/modules/hostels/hooks';
 import { useServiceRequests } from '@/modules/services/hooks';
 import { useMyTickets } from '@/modules/events/hooks';
 import type { Booking, BookingStatus } from '@/modules/hostels/types';
+import { ViewingConfirm, type StudentInspection } from './(components)/viewing-confirm';
 import type { ServiceRequest, ServiceRequestStatus } from '@/modules/services/types';
 import type { Ticket as EventTicket } from '@/modules/events/queries';
 
@@ -115,6 +116,10 @@ export default function BookingsPage() {
   const { data: hostelBookings = [], isLoading: lb } = useMyBookings();
   const { data: serviceRequests = [], isLoading: ls } = useServiceRequests();
   const { data: tickets = [], isLoading: lt } = useMyTickets();
+  // Paid viewings. Their own section rather than a BookingCard: that card is a
+  // stage rail, and the only thing that matters on a viewing is a question the
+  // student has to answer.
+  const { data: inspections = [] } = useMyInspections();
   const isLoading = lb || ls || lt;
 
   const allBookings = useMemo<BookingCard[]>(
@@ -143,6 +148,22 @@ export default function BookingsPage() {
       <h1 className="font-mono text-sm tracking-wide text-content-muted">
         /ME/BOOKINGS
       </h1>
+
+      {/* ABOVE THE TABS, because it is the only thing on this page that asks
+          something of the student rather than telling them something. */}
+      <ViewingConfirm
+        inspections={inspections.map<StudentInspection>((i) => ({
+          id: i.id,
+          hostelName: i.hostelName ?? 'Hostel',
+          scheduledFor: i.scheduledFor,
+          status: i.status,
+          feeKobo: i.feeKobo,
+          agentName: i.agentName ?? null,
+          meetingPoint: i.meetingPoint ?? null,
+          reportFiledAt: i.reportFiledAt ?? null,
+          disputedAt: i.disputedAt ?? null,
+        }))}
+      />
 
       {/* Header Title */}
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

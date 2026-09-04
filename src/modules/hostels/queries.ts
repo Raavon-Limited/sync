@@ -320,6 +320,16 @@ export async function fetchMyInspections(db: Client): Promise<Inspection[]> {
     bookingId: r.booking_id,
     scheduledFor: r.scheduled_for,
     status: r.status,
+    feeKobo: Number(r.fee_kobo ?? 0),
+    // Set by the agent on or after claiming. It is the only thing that tells a
+    // student where to stand   see 20260909210000.
+    meetingPoint: r.meeting_point ?? null,
+    // The agent's NAME is not readable here: profiles is own-row-only under RLS.
+    // The claim notification carries it, and disclosing it on this row needs an
+    // RPC like the vendor roster's.
+    agentName: null,
+    reportFiledAt: r.report_filed_at ?? null,
+    disputedAt: r.disputed_at ?? null,
     createdAt: r.created_at,
   }));
 }
@@ -365,6 +375,13 @@ export async function scheduleInspection(
     bookingId: row.booking_id,
     scheduledFor: row.scheduled_for,
     status: row.status,
+    feeKobo: Number(row.fee_kobo ?? 0),
+    // A freshly booked inspection has no agent and no meeting point yet   both
+    // arrive when somebody takes it off the board.
+    meetingPoint: row.meeting_point ?? null,
+    agentName: null,
+    reportFiledAt: row.report_filed_at ?? null,
+    disputedAt: row.disputed_at ?? null,
     createdAt: row.created_at,
   };
 }

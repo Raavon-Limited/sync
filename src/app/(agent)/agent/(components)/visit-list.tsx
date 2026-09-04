@@ -43,8 +43,9 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { formatKobo } from '@/lib/query/helpers';
-import { fileInspectionReport, submitVisit, releaseInspection } from '@/modules/agents/actions';
+import { submitVisit, releaseInspection } from '@/modules/agents/actions';
 import { EvidenceFields, EMPTY_EVIDENCE, type Evidence } from './evidence-fields';
+import { MeetingPoint, ReportSheet } from './inspection-report';
 
 export interface AgentVisit {
   id: string;
@@ -77,8 +78,12 @@ export interface AgentInspection {
   studentPhone: string | null;
   feeKobo: number;
   reportFiledAt: string | null;
-  photoCount: number;
-  hasSelfie: boolean;
+  /** What the agent filed: they viewed it together, or the student never came. */
+  outcome: 'viewed' | 'student_no_show' | null;
+  /** Where the agent told the student to meet them. Null means at the property. */
+  meetingPoint: string | null;
+  /** The student says it did not happen. The fee is held until staff settle it. */
+  disputedAt: string | null;
   rescheduleCount: number;
 }
 
@@ -329,6 +334,17 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
         />
       )}
 
+      {/* WHERE THEY MEET. The agent owns this   they know the area and which
+          gate is usable   and changing it re-notifies the student, who may
+          already have set off. */}
+      {!done && <MeetingPoint inspectionId={i.id} current={i.meetingPoint} />}
+
+      {i.disputedAt && (
+        <p className="text-coral border-coral/20 bg-coral/5 rounded-lg border px-3 py-2 text-xs">
+          The student says this viewing did not happen. Your fee is on hold until staff settle it.
+        </p>
+      )}
+
       {fileable && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}>
@@ -349,10 +365,9 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
 
       {filed && !done && (
         <p className="text-content-muted text-xs">
-          Filed
-          {i.photoCount > 0 ? ` with ${i.photoCount} photo${i.photoCount === 1 ? '' : 's'}` : ''}
-          {i.hasSelfie ? ' and a photo of you there' : ''}. Your fee releases in 24 hours unless the
-          student objects.
+          {i.outcome === 'student_no_show'
+            ? 'Filed as a no-show. Staff decide this one — reporting it does not release your fee.'
+            : 'Filed. Your fee releases in 24 hours, or the moment the student confirms.'}
         </p>
       )}
 
@@ -360,23 +375,12 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
         <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
       )}
 
-      <FileSheet
+      <ReportSheet
         open={open}
         onOpenChange={setOpen}
-        title="File your report"
-        description={i.hostelName}
-        submitLabel="File report"
-        onSubmit={(evidence, notes) =>
-          fileInspectionReport({
-            inspectionId: i.id,
-            notes,
-            photos: evidence.photos,
-            videoUrl: evidence.videoUrl ?? undefined,
-            selfieUrl: evidence.selfieUrl ?? undefined,
-          })
-        }
-        notesPlaceholder="How did the viewing go? What did the student ask about?"
-        successText="Filed. Your fee releases in 24 hours unless the student objects."
+        hostelName={i.hostelName}
+        studentName={i.studentName}
+        inspectionId={i.id}
       />
     </CardShell>
   );

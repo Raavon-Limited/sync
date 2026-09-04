@@ -305,17 +305,18 @@ export async function submitVisit(input: {
 export async function fileInspectionReport(input: {
   inspectionId: string;
   notes?: string;
-  photos?: string[];
-  videoUrl?: string;
-  selfieUrl?: string;
+  /**
+   * What happened, not what it looked like. The student walked through the
+   * house WITH the agent, so they are the witness   see 20260909210000. A
+   * reported no-show does not start the payment clock.
+   */
+  outcome?: 'viewed' | 'student_no_show';
 }): Promise<AgentResult> {
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('file_inspection_report', {
     p_inspection: input.inspectionId,
     p_notes: input.notes || null,
-    p_photos: input.photos ?? null,
-    p_video: input.videoUrl || null,
-    p_selfie: input.selfieUrl || null,
+    p_outcome: input.outcome ?? 'viewed',
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not file that report.') };
@@ -337,9 +338,20 @@ export async function fileInspectionReport(input: {
  * arrive here as the RPC's own sentence, which is why `userMessage` passes them
  * through   see lib/errors.
  */
-export async function claimInspection(inspectionId: string): Promise<AgentResult> {
+export async function claimInspection(input: {
+  inspectionId: string;
+  /**
+   * Where the agent will meet the student. THE AGENT decides: they know the
+   * area, which gate is usable, and whether the place is findable by a
+   * stranger. Blank means at the property.
+   */
+  meetingPoint?: string;
+}): Promise<AgentResult> {
   const supabase = await createServerClient();
-  const { error } = await rpc(supabase)('claim_inspection', { p_inspection: inspectionId });
+  const { error } = await rpc(supabase)('claim_inspection', {
+    p_inspection: input.inspectionId,
+    p_meeting: input.meetingPoint?.trim() || null,
+  });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not take that one.') };
   revalidatePath('/agent/requests');
@@ -366,6 +378,27 @@ export async function releaseInspection(input: {
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not release that one.') };
+  revalidatePath('/agent/requests');
+  return { ok: true };
+}
+
+/**
+ * Move the meeting point after claiming.
+ *
+ * Re-notifies the student every time, because somebody who has already set off
+ * needs to hear that it moved far more than they needed the first message.
+ */
+export async function setInspectionMeetingPoint(input: {
+  inspectionId: string;
+  meetingPoint: string;
+}): Promise<AgentResult> {
+  const supabase = await createServerClient();
+  const { error } = await rpc(supabase)('set_inspection_meeting_point', {
+    p_inspection: input.inspectionId,
+    p_point: input.meetingPoint.trim() || null,
+  });
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not save that.') };
   revalidatePath('/agent/requests');
   return { ok: true };
 }

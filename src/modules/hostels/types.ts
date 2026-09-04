@@ -132,6 +132,14 @@ export interface Inspection {
   hostelName?: string | null;
   bookingId?: string | null;
   scheduledFor: string;
-  status: 'pending_payment' | 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: string;
+  /** The agent's, in full   Sync takes no commission on an inspection. */
+  feeKobo: number;
+  /** Where the agent will meet the student. Null means at the property. */
+  meetingPoint?: string | null;
+  agentName?: string | null;
+  reportFiledAt?: string | null;
+  /** The student says it did not happen; the fee is held for staff. */
+  disputedAt?: string | null;
   createdAt: string;
 }

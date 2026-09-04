@@ -64,11 +64,16 @@ export function OpenBoard({ jobs }: { jobs: BoardJob[] }) {
     });
     setBusy(id);
     startTransition(async () => {
-      const res = await claimInspection(id);
+      // NO MEETING POINT AT THIS MOMENT, on purpose. Claiming is a race and
+      // every second spent typing is a second another agent is tapping. The
+      // student is told "at the property" straight away, which is true and is
+      // the common case, and the agent sets a pickup point afterwards on the
+      // card below   which re-notifies them.
+      const res = await claimInspection({ inspectionId: id });
       setBusy(null);
       if (res.ok) {
-        // The row leaves this list and appears below, assigned, with the
-        // student's details on it. A refresh is the whole transition.
+        // The row leaves this list and appears above, taken, with the student's
+        // details and the meeting-point control on it.
         router.refresh();
       } else {
         setErrors((prev) => ({ ...prev, [id]: res.error }));

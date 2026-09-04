@@ -1563,18 +1563,19 @@ export type Database = {
           availability_note: string | null
           booking_id: string | null
           created_at: string
+          dispute_reason: string | null
+          disputed_at: string | null
           fee_kobo: number
           full_name: string
           hostel_id: string
           id: string
+          meeting_point: string | null
+          outcome: string | null
           paid_at: string | null
           payment_reference: string | null
           phone: string
           report_filed_at: string | null
           report_notes: string | null
-          report_photos: string[]
-          report_selfie_url: string | null
-          report_video_url: string | null
           reschedule_count: number
           scheduled_for: string
           status: string
@@ -1586,18 +1587,19 @@ export type Database = {
           availability_note?: string | null
           booking_id?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           fee_kobo: number
           full_name: string
           hostel_id: string
           id?: string
+          meeting_point?: string | null
+          outcome?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           phone: string
           report_filed_at?: string | null
           report_notes?: string | null
-          report_photos?: string[]
-          report_selfie_url?: string | null
-          report_video_url?: string | null
           reschedule_count?: number
           scheduled_for: string
           status?: string
@@ -1609,18 +1611,19 @@ export type Database = {
           availability_note?: string | null
           booking_id?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          disputed_at?: string | null
           fee_kobo?: number
           full_name?: string
           hostel_id?: string
           id?: string
+          meeting_point?: string | null
+          outcome?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           phone?: string
           report_filed_at?: string | null
           report_notes?: string | null
-          report_photos?: string[]
-          report_selfie_url?: string | null
-          report_video_url?: string | null
           reschedule_count?: number
           scheduled_for?: string
           status?: string
@@ -4390,7 +4393,10 @@ export type Database = {
       }
       claim_business_name: { Args: { p_name: string }; Returns: string }
       claim_delivery: { Args: { p_delivery_id: string }; Returns: string }
-      claim_inspection: { Args: { p_inspection: string }; Returns: string }
+      claim_inspection: {
+        Args: { p_inspection: string; p_meeting?: string }
+        Returns: string
+      }
       claim_role: { Args: { p_role: string }; Returns: string[] }
       confirm_inspection_payment: {
         Args: {
@@ -4455,6 +4461,10 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
+      dispute_inspection: {
+        Args: { p_inspection: string; p_reason?: string }
+        Returns: string
+      }
       document_retention_days: { Args: { p_doc_type: string }; Returns: number }
       documents_due_for_purge: {
         Args: never
@@ -4471,13 +4481,7 @@ export type Database = {
       ensure_vendor_profile: { Args: never; Returns: string }
       expire_stale_holds: { Args: never; Returns: number }
       file_inspection_report: {
-        Args: {
-          p_inspection: string
-          p_notes?: string
-          p_photos?: string[]
-          p_selfie?: string
-          p_video?: string
-        }
+        Args: { p_inspection: string; p_notes?: string; p_outcome?: string }
         Returns: string
       }
       get_unread_counts: {
@@ -4766,6 +4770,10 @@ export type Database = {
       }
       set_hostel_fee_mode: {
         Args: { p_hostel: string; p_mode: string }
+        Returns: string
+      }
+      set_inspection_meeting_point: {
+        Args: { p_inspection: string; p_point: string }
         Returns: string
       }
       set_personal_verification: {

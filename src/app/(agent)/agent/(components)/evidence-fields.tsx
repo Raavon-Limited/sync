@@ -1,31 +1,38 @@
 /**
- * What an agent files: photos, an optional walkthrough video, and a photo of
- * themselves at the property.
+ * Evidence for a VERIFICATION VISIT: photos, an optional walkthrough video, and
+ * a photo of the agent at the property.
+ *
+ * NOT FOR STUDENT INSPECTIONS, and the distinction is the point.
+ *   A verification visit is the agent going ALONE to check a listing is real.
+ *   Nobody else was there, so photographs are the only thing that can tell a
+ *   reviewer what was in the building, and one picture of the agent standing at
+ *   it is the only thing that says they went.
+ *
+ *   A student inspection is the agent and the student walking through the house
+ *   TOGETHER. The student is the witness and confirms it themselves, so asking
+ *   the agent to photograph a room the student just stood in is friction with
+ *   nothing on the other side of it. That form collects an outcome instead   see
+ *   20260909210000.
  *
  * WHY THE SELFIE IS ITS OWN FIELD
  *   Photographs of a building prove the building exists. They do not prove the
- *   person who sent them was ever there - a listing's own photos, forwarded,
- *   are indistinguishable from a visit. One picture of the agent standing at
- *   the place is the only piece of evidence that is about them rather than the
- *   property, which is why it has its own slot and its own column rather than
- *   being the fourth item in a grid.
+ *   person who sent them was ever there   a listing's own photos, forwarded,
+ *   are indistinguishable from a visit. It has its own slot and its own column
+ *   so a reviewer can ask "is there one?" without opening every image.
  *
  * `capture` IS A HINT, NOT A GUARANTEE
- *   On a phone, `capture="environment"` opens the camera straight to the back
- *   lens and `capture="user"` to the front. On a desktop browser the attribute
- *   is ignored and the user gets a file picker. That is the correct degradation
- *   and the reason both a "Take a photo" and a "Choose files" control exist for
- *   the same field: an agent on a laptop must not meet a button that does
- *   nothing, and an agent on a phone should not have to go via the gallery for
- *   a picture they are about to take.
+ *   On a phone, `capture="environment"` opens the back lens and `capture="user"`
+ *   the front. On a desktop browser it is ignored and the user gets a file
+ *   picker   which is the correct degradation, and the reason both a "take" and
+ *   a "choose" control exist for the same field: an agent on a laptop must not
+ *   meet a button that does nothing.
  *
  *   It also cannot be trusted as proof. A file picker can hand back anything, so
  *   `capture` is a convenience for the honest majority and never a control.
  *
- * UPLOADS HAPPEN ON SELECTION, NOT ON SUBMIT
- *   The parent's submit is a server action that sends URLs. Uploading at submit
- *   time would mean a spinner of unknown length after the agent thinks they are
- *   done, on campus wifi, with a form they can still navigate away from.
+ * UPLOADS HAPPEN ON SELECTION, NOT ON SUBMIT. Uploading at submit time would
+ * mean a spinner of unknown length after the agent thinks they are done, on
+ * campus wifi, with a form they can still navigate away from.
  */
 'use client';
 
@@ -135,8 +142,6 @@ export function EvidenceFields({
           />
         </div>
 
-        {/* Straight to the back camera on a phone; a file picker everywhere
-            else. Both write into the same list. */}
         <input
           ref={cameraInput}
           type="file"

@@ -54,7 +54,7 @@ export default async function Page() {
         // snapshotted on the inspection row at booking. They are not always the
         // same as the ones on their profile   somebody booking a viewing may
         // well give the number they will actually be carrying that afternoon.
-        'id, hostel_id, full_name, phone, scheduled_for, status, fee_kobo, report_filed_at, report_photos, report_selfie_url, reschedule_count',
+        'id, hostel_id, full_name, phone, scheduled_for, status, fee_kobo, report_filed_at, outcome, meeting_point, disputed_at, reschedule_count',
       )
       .eq('ambassador_id', user.id)
       .order('scheduled_for', { ascending: true, nullsFirst: false }),
@@ -83,8 +83,9 @@ export default async function Page() {
       studentPhone: (i.phone as string) ?? null,
       feeKobo: Number(i.fee_kobo ?? 0),
       reportFiledAt: (i.report_filed_at as string) ?? null,
-      photoCount: ((i.report_photos as string[] | null) ?? []).length,
-      hasSelfie: i.report_selfie_url != null,
+      outcome: (i.outcome as 'viewed' | 'student_no_show' | null) ?? null,
+      meetingPoint: (i.meeting_point as string) ?? null,
+      disputedAt: (i.disputed_at as string) ?? null,
       rescheduleCount: Number(i.reschedule_count ?? 0),
     };
   });
