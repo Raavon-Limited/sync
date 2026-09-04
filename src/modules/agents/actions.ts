@@ -225,7 +225,7 @@ export async function assignVisit(input: {
 
   revalidatePath('/admin/agents');
   revalidatePath('/admin/verify-visits');
-  revalidatePath('/agent');
+  revalidatePath('/agent/requests');
   return { ok: true };
 }
 
@@ -257,7 +257,7 @@ export async function reassignVisit(input: {
 
   revalidatePath('/admin/agents');
   revalidatePath('/admin/verify-visits');
-  revalidatePath('/agent');
+  revalidatePath('/agent/requests');
   return { ok: true };
 }
 
@@ -272,6 +272,8 @@ export async function submitVisit(input: {
   photos?: string[];
   videoUrl?: string;
   notes?: string;
+  /** The agent at the property. See 20260909180000 for why it is its own field. */
+  selfieUrl?: string;
 }): Promise<AgentResult> {
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('submit_verification_visit', {
@@ -279,10 +281,11 @@ export async function submitVisit(input: {
     p_photos: input.photos ?? null,
     p_video: input.videoUrl || null,
     p_notes: input.notes || null,
+    p_selfie: input.selfieUrl || null,
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not submit that visit.') };
-  revalidatePath('/agent');
+  revalidatePath('/agent/visits');
   return { ok: true };
 }
 
@@ -302,15 +305,21 @@ export async function submitVisit(input: {
 export async function fileInspectionReport(input: {
   inspectionId: string;
   notes?: string;
+  photos?: string[];
+  videoUrl?: string;
+  selfieUrl?: string;
 }): Promise<AgentResult> {
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('file_inspection_report', {
     p_inspection: input.inspectionId,
     p_notes: input.notes || null,
+    p_photos: input.photos ?? null,
+    p_video: input.videoUrl || null,
+    p_selfie: input.selfieUrl || null,
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not file that report.') };
-  revalidatePath('/agent');
+  revalidatePath('/agent/requests');
   return { ok: true };
 }
 
@@ -333,7 +342,7 @@ export async function claimInspection(inspectionId: string): Promise<AgentResult
   const { error } = await rpc(supabase)('claim_inspection', { p_inspection: inspectionId });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not take that one.') };
-  revalidatePath('/agent');
+  revalidatePath('/agent/requests');
   return { ok: true };
 }
 
@@ -357,6 +366,6 @@ export async function releaseInspection(input: {
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not release that one.') };
-  revalidatePath('/agent');
+  revalidatePath('/agent/requests');
   return { ok: true };
 }

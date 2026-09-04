@@ -1,13 +1,19 @@
 /**
- * An agent's visits, and filing one.
+ * An agent's work, and filing it.
  *
- * FILING IS NOTES AND A COUNT, NOT AN UPLOADER   YET
- *   Photographs are the substance of a visit and they belong in the private
- *   bucket the review screen already reads from. That upload path exists for
- *   verification documents and has not been pointed at visits, so this screen
- *   deliberately does NOT pretend: it submits notes and a video link, and says
- *   plainly that photos come next. A file picker that silently dropped what
- *   somebody photographed at a gate would be worse than no picker.
+ * TWO LISTS, NOT ONE
+ *   This used to merge verification visits and paid inspections into a single
+ *   time-sorted column, arguing that an agent's afternoon does not distinguish
+ *   them. It does distinguish them: a verification visit is somewhere you are
+ *   already expected, and a viewing is work you chose to take off a board. They
+ *   now live on `/agent/visits` and `/agent/requests` and this file exports one
+ *   list for each.
+ *
+ * FILING IS A SHEET, NOT AN INLINE BLOCK
+ *   The form was rendered inside the card, so opening it pushed every other job
+ *   down the page and, on a phone, put the submit button somewhere below three
+ *   other listings. It is now a side sheet - full screen on mobile, a panel
+ *   from `sm` up, which is what SheetContent already does.
  *
  * NOTHING HERE DECIDES ANYTHING. Submitting moves a visit to Under Review and
  * that is the end of an agent's authority over it   the separation the whole
@@ -16,25 +22,29 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import Image from 'next/image';
 import {
   Building2,
   CalendarClock,
   Home,
-  ImagePlus,
   MapPin,
   Phone,
   Store,
   User,
   Wallet,
 } from 'lucide-react';
-import { Badge, Button, Input } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
-import { useSession } from '@/providers/session-provider';
-import { uploadVendorImage, MAX_IMAGE_BYTES, ACCEPTED_IMAGE_TYPES } from '@/modules/vendor/queries';
 import { formatKobo } from '@/lib/query/helpers';
-import { fileInspectionReport, submitVisit } from '@/modules/agents/actions';
+import { fileInspectionReport, submitVisit, releaseInspection } from '@/modules/agents/actions';
+import { EvidenceFields, EMPTY_EVIDENCE, type Evidence } from './evidence-fields';
 
 export interface AgentVisit {
   id: string;
@@ -45,6 +55,7 @@ export interface AgentVisit {
   scheduledFor: string | null;
   brief: string | null;
   photoCount: number;
+  hasSelfie: boolean;
   meetName: string | null;
   meetPhone: string | null;
 }
@@ -53,8 +64,8 @@ export interface AgentVisit {
  * A viewing a STUDENT paid for, which is not a verification visit.
  *
  * Different table, different question ("will this student rent it?" rather than
- * "is this listing real?"), different money   and the same agent, on the same
- * afternoon, which is why both are one list.
+ * "is this listing real?"), and different money   the fee is the agent's in
+ * full, because Sync takes no commission on an inspection.
  */
 export interface AgentInspection {
   id: string;
@@ -64,9 +75,10 @@ export interface AgentInspection {
   scheduledFor: string | null;
   studentName: string | null;
   studentPhone: string | null;
-  /** The agent's, in full: Sync takes no commission on an inspection. */
   feeKobo: number;
   reportFiledAt: string | null;
+  photoCount: number;
+  hasSelfie: boolean;
   rescheduleCount: number;
 }
 
@@ -76,7 +88,6 @@ const STATUS_STYLE: Record<string, string> = {
   'Under Review': 'bg-blue-500/10 text-blue-600',
   Verified: 'bg-emerald-500/10 text-emerald-600',
   Rejected: 'bg-rose-500/10 text-rose-600',
-  // Inspection statuses share the map: they are shown in the same list.
   pending_payment: 'bg-ink/5 text-content-muted',
   scheduled: 'bg-amber-500/10 text-amber-600',
   completed: 'bg-emerald-500/10 text-emerald-600',
@@ -85,7 +96,6 @@ const STATUS_STYLE: Record<string, string> = {
   agent_no_show: 'bg-rose-500/10 text-rose-600',
 };
 
-/** What a status reads as to the agent, where the raw value is not a sentence. */
 const INSPECTION_LABEL: Record<string, string> = {
   pending_payment: 'Awaiting payment',
   scheduled: 'Scheduled',
@@ -98,44 +108,40 @@ const INSPECTION_LABEL: Record<string, string> = {
 const INSPECTION_DONE = new Set(['completed', 'cancelled', 'student_no_show', 'agent_no_show']);
 const VISIT_DONE = new Set(['Verified', 'Rejected']);
 
-/**
- * ONE LIST, TWO KINDS OF ERRAND.
- *
- * A verification visit and a paid inspection are different rows answering
- * different questions, but they are the same agent walking to the same street
- * on the same afternoon. Splitting them into tabs would make "where am I going
- * next" a question the screen asks back, so they merge and sort by when.
- */
-export function VisitList({
-  visits,
-  inspections = [],
-}: {
-  visits: AgentVisit[];
-  inspections?: AgentInspection[];
-}) {
-  const items = [
-    ...visits.map((v) => ({
-      key: `visit:${v.id}`,
-      when: v.scheduledFor,
-      done: VISIT_DONE.has(v.status),
-      node: <VisitCard visit={v} />,
-    })),
-    ...inspections.map((i) => ({
-      key: `inspection:${i.id}`,
-      when: i.scheduledFor,
-      done: INSPECTION_DONE.has(i.status),
-      node: <InspectionCard inspection={i} />,
-    })),
-  ].sort((a, b) => {
-    // Finished things sink rather than disappear   "did that one land?" is the
-    // second question an agent has.
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return (a.when ?? '9999').localeCompare(b.when ?? '9999');
+function when(iso: string | null, fallback: string): string {
+  if (!iso) return fallback;
+  return new Date(iso).toLocaleString('en-NG', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/** Shared card chrome. `min-w-0` at every level is what stops a long address
+ *  from pushing the status badge off a narrow screen. */
+function CardShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="border-line/10 bg-panel flex min-w-0 flex-col gap-3 rounded-xl border p-3 sm:p-4">
+      {children}
+    </div>
+  );
+}
+
+// ── Verification visits ─────────────────────────────────────────────────────
+
+export function VisitList({ visits }: { visits: AgentVisit[] }) {
+  const items = [...visits].sort((a, b) => {
+    const ad = VISIT_DONE.has(a.status) ? 1 : 0;
+    const bd = VISIT_DONE.has(b.status) ? 1 : 0;
+    if (ad !== bd) return ad - bd;
+    return (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
   });
 
   if (items.length === 0) {
     return (
-      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-8 text-center text-sm">
+      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm sm:p-8">
         Nothing assigned yet. When somebody sends you out, it appears here and your phone gets a
         notification.
       </p>
@@ -144,258 +150,37 @@ export function VisitList({
 
   return (
     <div className="flex flex-col gap-3">
-      {items.map((item) => (
-        <div key={item.key}>{item.node}</div>
+      {items.map((v) => (
+        <VisitCard key={v.id} visit={v} />
       ))}
-    </div>
-  );
-}
-
-/**
- * A paid viewing.
- *
- * THE FEE AND THE CLOCK ARE THE HEADLINE, DELIBERATELY
- *   An inspection hold sits in escrow with `release_after` NULL   nothing can
- *   pay the agent until they file. So this card does not say "submit"; it says
- *   what filing does to their own money, because that is the honest reason to
- *   do it before they get home.
- */
-function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
-  const [open, setOpen] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [busy, startSubmit] = useTransition();
-  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
-
-  const filed = Boolean(i.reportFiledAt);
-  const done = INSPECTION_DONE.has(i.status);
-  // Only a paid, scheduled visit can be filed on   the RPC says the same and
-  // would refuse, but a button that cannot work should not be offered.
-  const fileable = i.status === 'scheduled' && !filed;
-
-  function file() {
-    setNote(null);
-    startSubmit(async () => {
-      const res = await fileInspectionReport({ inspectionId: i.id, notes });
-      setNote(
-        res.ok
-          ? { ok: true, text: 'Filed. Your fee releases in 24 hours unless the student objects.' }
-          : { ok: false, text: res.error },
-      );
-      if (res.ok) setOpen(false);
-    });
-  }
-
-  return (
-    <div className="border-line/10 bg-panel flex flex-col gap-3 rounded-xl border p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <Home className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="text-content font-medium">{i.hostelName}</p>
-          <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            <span className="flex items-center gap-1">
-              <MapPin className="size-3.5" />
-              {i.address}
-            </span>
-            <span className="flex items-center gap-1">
-              <CalendarClock className="size-3.5" />
-              {i.scheduledFor
-                ? new Date(i.scheduledFor).toLocaleString('en-NG', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })
-                : 'No time set'}
-            </span>
-            <span className="text-lime-deep flex items-center gap-1">
-              <Wallet className="size-3.5" />
-              {formatKobo(i.feeKobo)} yours in full
-            </span>
-          </p>
-        </div>
-        <Badge className={STATUS_STYLE[i.status] ?? STATUS_STYLE['pending_payment']}>
-          {INSPECTION_LABEL[i.status] ?? i.status}
-        </Badge>
-      </div>
-
-      <p className="border-line/15 bg-surface-deep text-content rounded-lg border px-3 py-2 text-sm">
-        Showing a student around. They are deciding whether to rent it answer what they ask, and
-        file what you saw.
-      </p>
-
-      {i.studentName && (
-        <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span className="flex items-center gap-1">
-            <User className="size-3.5" />
-            Meeting {i.studentName}
-          </span>
-          {i.studentPhone && (
-            <a href={`tel:${i.studentPhone}`} className="text-lime-deep flex items-center gap-1">
-              <Phone className="size-3.5" />
-              {i.studentPhone}
-            </a>
-          )}
-          {/* They have moved it once already, so the next miss forfeits their
-              fee. Worth the agent knowing before they wait an hour at a gate. */}
-          {i.rescheduleCount > 0 && <span>Moved {i.rescheduleCount} time(s)</span>}
-        </p>
-      )}
-
-      {i.status === 'pending_payment' && (
-        <p className="text-content-muted text-xs">
-          Not paid for yet, so it is not confirmed. Nothing to do until it is.
-        </p>
-      )}
-
-      {fileable && !open && (
-        <div>
-          <Button variant="outline" onClick={() => setOpen(true)}>
-            File your report
-          </Button>
-        </div>
-      )}
-
-      {filed && !done && (
-        <p className="text-content-muted text-xs">
-          Filed {new Date(i.reportFiledAt as string).toLocaleDateString('en-NG')}. Your fee of{' '}
-          {formatKobo(i.feeKobo)} releases 24 hours after filing, or sooner if the student confirms.
-        </p>
-      )}
-
-      {i.status === 'completed' && (
-        <p className="text-xs text-emerald-600">
-          Settled {formatKobo(i.feeKobo)} went to your wallet.
-        </p>
-      )}
-
-      {open && (
-        <div className="flex flex-col gap-2">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="What you showed them, and how it went. Anything the listing got wrong?"
-            className="border-line/15 bg-surface-deep text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={busy} onClick={file}>
-              {busy ? 'Filing…' : 'File report'}
-            </Button>
-            <Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <span className="text-content-muted text-xs">
-              This starts the 24-hour clock on your fee. Filing again later does not delay it.
-            </span>
-          </div>
-        </div>
-      )}
-
-      {note && (
-        <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
-      )}
     </div>
   );
 }
 
 function VisitCard({ visit }: { visit: AgentVisit }) {
   const [open, setOpen] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [video, setVideo] = useState('');
-  const [busy, startSubmit] = useTransition();
-  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(0);
-  const { userId } = useSession();
-
-  const decided = visit.status === 'Verified' || visit.status === 'Rejected';
+  const decided = VISIT_DONE.has(visit.status);
   const filed = visit.status === 'Under Review';
-
-  /**
-   * THE PHOTOGRAPH IS THE EVIDENCE, so this is not optional chrome.
-   *
-   * `submit_verification_visit` raises "Add at least one photo before
-   * submitting" and has since it was written   and this screen had no way to
-   * attach one, so no visit could ever reach Under Review and nothing could
-   * legitimately be verified. Its own copy admitted as much.
-   */
-  async function addPhotos(files: FileList | File[]) {
-    const chosen = Array.from(files);
-    if (!chosen.length) return;
-    if (!userId) {
-      setNote({ ok: false, text: 'Sign in again before adding photos.' });
-      return;
-    }
-
-    const accepted = chosen.filter(
-      (f) => ACCEPTED_IMAGE_TYPES.includes(f.type) && f.size <= MAX_IMAGE_BYTES,
-    );
-    if (accepted.length !== chosen.length) {
-      setNote({ ok: false, text: 'Photos must be JPEG, PNG, WebP or AVIF, under 5MB each.' });
-    }
-    if (!accepted.length) return;
-
-    const db = createClient();
-    setUploading((n) => n + accepted.length);
-    for (const f of accepted) {
-      try {
-        const url = await uploadVendorImage(db, { userId, file: f, folder: 'visits' });
-        setPhotos((current) => [...current, url]);
-      } catch (e) {
-        setNote({ ok: false, text: e instanceof Error ? e.message : 'That photo did not upload.' });
-      } finally {
-        setUploading((n) => Math.max(0, n - 1));
-      }
-    }
-  }
-
-  function file() {
-    setNote(null);
-    startSubmit(async () => {
-      const res = await submitVisit({
-        visitId: visit.id,
-        notes,
-        videoUrl: video,
-        photos,
-      });
-      setNote(
-        res.ok
-          ? { ok: true, text: 'Filed. A reviewer takes it from here.' }
-          : { ok: false, text: res.error },
-      );
-      if (res.ok) setOpen(false);
-    });
-  }
-
   const Icon = visit.kind === 'hostel' ? Building2 : Store;
 
   return (
-    <div className="border-line/10 bg-panel flex flex-col gap-3 rounded-xl border p-4">
-      <div className="flex flex-wrap items-start gap-3">
+    <CardShell>
+      <div className="flex min-w-0 items-start gap-3">
         <Icon className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-content font-medium">{visit.place}</p>
-          <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            <span className="flex items-center gap-1">
-              <MapPin className="size-3.5" />
-              {visit.address}
+          <p className="text-content truncate font-medium">{visit.place}</p>
+          <p className="text-content-muted mt-0.5 flex flex-col gap-1 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+            <span className="flex min-w-0 items-center gap-1">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="truncate">{visit.address}</span>
             </span>
             <span className="flex items-center gap-1">
-              <CalendarClock className="size-3.5" />
-              {visit.scheduledFor
-                ? new Date(visit.scheduledFor).toLocaleString('en-NG', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })
-                : 'Arrange a time with them'}
+              <CalendarClock className="size-3.5 shrink-0" />
+              {when(visit.scheduledFor, 'Arrange a time with them')}
             </span>
           </p>
         </div>
-        <Badge className={STATUS_STYLE[visit.status] ?? STATUS_STYLE['Not Visited']}>
+        <Badge className={cn('shrink-0', STATUS_STYLE[visit.status] ?? STATUS_STYLE['Not Visited'])}>
           {visit.status}
         </Badge>
       </div>
@@ -408,24 +193,11 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
         </p>
       )}
 
-      {visit.meetName && (
-        <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span className="flex items-center gap-1">
-            <User className="size-3.5" />
-            Meeting {visit.meetName}
-          </span>
-          {visit.meetPhone && (
-            <a href={`tel:${visit.meetPhone}`} className="text-lime-deep flex items-center gap-1">
-              <Phone className="size-3.5" />
-              {visit.meetPhone}
-            </a>
-          )}
-        </p>
-      )}
+      {visit.meetName && <MeetLine name={visit.meetName} phone={visit.meetPhone} />}
 
-      {!decided && !filed && !open && (
+      {!decided && !filed && (
         <div>
-          <Button variant="outline" onClick={() => setOpen(true)}>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpen(true)}>
             File what you found
           </Button>
         </div>
@@ -437,82 +209,323 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
           {visit.photoCount > 0
             ? ` with ${visit.photoCount} photo${visit.photoCount === 1 ? '' : 's'}`
             : ''}
-          . A reviewer decides from here.
+          {visit.hasSelfie ? ' and a photo of you there' : ''}. A reviewer decides from here.
         </p>
       )}
 
-      {open && (
-        <div className="flex flex-col gap-2">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="What you saw. Does it match the listing? Anything that does not?"
-            className="border-line/15 bg-surface-deep text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
-          />
-          <Input
-            value={video}
-            onChange={(e) => setVideo(e.target.value)}
-            placeholder="Link to a walkthrough video (optional)"
-          />
+      <FileSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={`File what you found`}
+        description={visit.place}
+        requirePhoto
+        submitLabel="Submit for review"
+        onSubmit={(evidence, notes) =>
+          submitVisit({
+            visitId: visit.id,
+            notes,
+            photos: evidence.photos,
+            videoUrl: evidence.videoUrl ?? undefined,
+            selfieUrl: evidence.selfieUrl ?? undefined,
+          })
+        }
+        notesPlaceholder="What you saw. Does it match the listing? Anything that does not?"
+        successText="Filed. A reviewer takes it from here."
+      />
+    </CardShell>
+  );
+}
 
-          <label className="border-line/15 hover:bg-surface-deep flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-4 text-sm">
-            <ImagePlus className="size-4" />
-            {photos.length
-              ? `${photos.length} photo${photos.length === 1 ? '' : 's'} attached`
-              : 'Add a photo of what you found'}
-            <input
-              type="file"
-              accept={ACCEPTED_IMAGE_TYPES.join(',')}
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) void addPhotos(e.target.files);
-                e.target.value = '';
-              }}
-            />
-          </label>
+// ── Paid student viewings ───────────────────────────────────────────────────
 
-          {photos.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {photos.map((src, i) => (
-                <div
-                  key={src}
-                  className="border-line/10 relative size-16 overflow-hidden rounded-lg border"
-                >
-                  <Image
-                    src={src}
-                    alt={`Evidence ${i + 1}`}
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+export function InspectionList({ inspections }: { inspections: AgentInspection[] }) {
+  const items = [...inspections].sort((a, b) => {
+    const ad = INSPECTION_DONE.has(a.status) ? 1 : 0;
+    const bd = INSPECTION_DONE.has(b.status) ? 1 : 0;
+    if (ad !== bd) return ad - bd;
+    return (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
+  });
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={busy || uploading > 0 || photos.length === 0} onClick={file}>
-              {busy ? 'Filing…' : uploading > 0 ? 'Uploading…' : 'Submit for review'}
-            </Button>
-            <Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            {/* Stated here rather than discovered on submit: the database
-                refuses a visit with no photograph on it. */}
-            {photos.length === 0 && (
-              <span className="text-content-muted text-xs">
-                At least one photo is required it is the evidence a reviewer decides on.
-              </span>
-            )}
-          </div>
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
+        Taken by you · {items.length}
+      </p>
+      {items.length === 0 ? (
+        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
+          You have not taken any viewings yet. Anything on the board below is yours if you tap it
+          first.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map((i) => (
+            <InspectionCard key={i.id} inspection={i} />
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A paid viewing this agent has taken.
+ *
+ * THE FEE AND THE CLOCK ARE THE HEADLINE, DELIBERATELY
+ *   An inspection hold sits in escrow with `release_after` NULL   nothing can
+ *   pay the agent until they file. So this card does not say "submit"; it says
+ *   what filing does to their own money, because that is the honest reason to
+ *   do it before they get home.
+ */
+function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
+  const [open, setOpen] = useState(false);
+  const [handingBack, startHandBack] = useTransition();
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const filed = Boolean(i.reportFiledAt);
+  const done = INSPECTION_DONE.has(i.status);
+  const fileable = i.status === 'scheduled' && !filed;
+
+  function handBack() {
+    setNote(null);
+    startHandBack(async () => {
+      const res = await releaseInspection({ inspectionId: i.id });
+      if (!res.ok) setNote({ ok: false, text: res.error });
+    });
+  }
+
+  return (
+    <CardShell>
+      <div className="flex min-w-0 items-start gap-3">
+        <Home className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-content truncate font-medium">{i.hostelName}</p>
+          <p className="text-content-muted mt-0.5 flex flex-col gap-1 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+            <span className="flex min-w-0 items-center gap-1">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="truncate">{i.address}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <CalendarClock className="size-3.5 shrink-0" />
+              {when(i.scheduledFor, 'No time set')}
+            </span>
+            <span className="text-lime-deep flex items-center gap-1">
+              <Wallet className="size-3.5 shrink-0" />
+              {formatKobo(i.feeKobo)} yours in full
+            </span>
+          </p>
+        </div>
+        <Badge
+          className={cn('shrink-0', STATUS_STYLE[i.status] ?? STATUS_STYLE['pending_payment'])}
+        >
+          {INSPECTION_LABEL[i.status] ?? i.status}
+        </Badge>
+      </div>
+
+      {i.studentName && (
+        <MeetLine
+          name={i.studentName}
+          phone={i.studentPhone}
+          extra={i.rescheduleCount > 0 ? `Moved ${i.rescheduleCount} time(s)` : null}
+        />
+      )}
+
+      {fileable && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}>
+            File your report
+          </Button>
+          {/* Handing back early is better for the student than a no-show, and
+              costs the agent the same job either way   see releaseInspection. */}
+          <Button
+            variant="ghost"
+            className="w-full sm:w-auto"
+            disabled={handingBack}
+            onClick={handBack}
+          >
+            {handingBack ? 'Releasing…' : 'I cannot make it'}
+          </Button>
+        </div>
+      )}
+
+      {filed && !done && (
+        <p className="text-content-muted text-xs">
+          Filed
+          {i.photoCount > 0 ? ` with ${i.photoCount} photo${i.photoCount === 1 ? '' : 's'}` : ''}
+          {i.hasSelfie ? ' and a photo of you there' : ''}. Your fee releases in 24 hours unless the
+          student objects.
+        </p>
       )}
 
       {note && (
         <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
       )}
-    </div>
+
+      <FileSheet
+        open={open}
+        onOpenChange={setOpen}
+        title="File your report"
+        description={i.hostelName}
+        submitLabel="File report"
+        onSubmit={(evidence, notes) =>
+          fileInspectionReport({
+            inspectionId: i.id,
+            notes,
+            photos: evidence.photos,
+            videoUrl: evidence.videoUrl ?? undefined,
+            selfieUrl: evidence.selfieUrl ?? undefined,
+          })
+        }
+        notesPlaceholder="How did the viewing go? What did the student ask about?"
+        successText="Filed. Your fee releases in 24 hours unless the student objects."
+      />
+    </CardShell>
+  );
+}
+
+function MeetLine({
+  name,
+  phone,
+  extra,
+}: {
+  name: string;
+  phone: string | null;
+  extra?: string | null;
+}) {
+  return (
+    <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      <span className="flex items-center gap-1">
+        <User className="size-3.5" />
+        Meeting {name}
+      </span>
+      {phone && (
+        <a href={`tel:${phone}`} className="text-lime-deep flex items-center gap-1">
+          <Phone className="size-3.5" />
+          {phone}
+        </a>
+      )}
+      {extra && <span>{extra}</span>}
+    </p>
+  );
+}
+
+/**
+ * The filing form.
+ *
+ * One component for both errands: they collect the same evidence and differ
+ * only in wording and in whether a photo is mandatory (the database refuses a
+ * verification visit with none; an inspection report it accepts).
+ */
+function FileSheet({
+  open,
+  onOpenChange,
+  title,
+  description,
+  requirePhoto = false,
+  submitLabel,
+  notesPlaceholder,
+  successText,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  requirePhoto?: boolean;
+  submitLabel: string;
+  notesPlaceholder: string;
+  successText: string;
+  onSubmit: (
+    evidence: Evidence,
+    notes: string,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
+}) {
+  const [evidence, setEvidence] = useState<Evidence>(EMPTY_EVIDENCE);
+  const [notes, setNotes] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [busy, startSubmit] = useTransition();
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const blocked = requirePhoto && evidence.photos.length === 0;
+
+  function submit() {
+    setNote(null);
+    startSubmit(async () => {
+      const res = await onSubmit(evidence, notes);
+      if (res.ok) {
+        setNote({ ok: true, text: successText });
+        onOpenChange(false);
+        setEvidence(EMPTY_EVIDENCE);
+        setNotes('');
+      } else {
+        setNote({ ok: false, text: res.error });
+      }
+    });
+  }
+
+  return (
+    <>
+      {note && !open && (
+        <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
+      )}
+
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        {/* Full screen on a phone, a panel from `sm` up   SheetContent's own
+            `side` variant already does exactly that. */}
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+          <SheetHeader className="border-line/10 shrink-0 border-b p-4">
+            <SheetTitle>{title}</SheetTitle>
+            <SheetDescription>{description}</SheetDescription>
+          </SheetHeader>
+
+          {/* The only scrolling region, so the actions below stay reachable
+              with a thumb however many photos are attached. */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="agent-notes" className="text-content text-sm font-medium">
+                  Notes
+                </label>
+                <textarea
+                  id="agent-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                  placeholder={notesPlaceholder}
+                  className="border-line/15 bg-surface-deep text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
+                />
+              </div>
+
+              <EvidenceFields
+                value={evidence}
+                onChange={setEvidence}
+                onBusyChange={setUploading}
+              />
+            </div>
+          </div>
+
+          <div className="border-line/10 bg-panel shrink-0 border-t p-4">
+            {blocked && (
+              <p className="text-content-muted mb-2 text-xs">
+                At least one photo is required — it is the evidence a reviewer decides on.
+              </p>
+            )}
+            {note && !note.ok && <p className="text-coral mb-2 text-xs">{note.text}</p>}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={busy}
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button className="flex-1" disabled={busy || uploading || blocked} onClick={submit}>
+                {busy ? 'Filing…' : uploading ? 'Uploading…' : submitLabel}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

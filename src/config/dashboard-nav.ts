@@ -370,7 +370,32 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
     sections: [
       {
         items: [
-          { href: '/agent', label: 'Your visits', heading: 'Where you are expected', icon: MapPin },
+          // TWO ROWS, BECAUSE THEY ARE TWO JOBS.
+          //
+          // A verification visit is staff sending you to check a listing is
+          // real. A viewing request is a student who paid for somebody to show
+          // them a room, and it is picked up off an open board rather than
+          // handed out. Different table, different question, different money,
+          // and only one of them is something you choose - so a single list
+          // made "what can I pick up?" and "where am I expected?" the same
+          // question, which they are not.
+          //
+          // `/agent/visits` also has to exist for its own sake: every agent
+          // notification sets href 'visits', which the bell resolves against
+          // the dashboard root, so all of them 404'd while the page lived at
+          // `/agent`.
+          {
+            href: '/agent/visits',
+            label: 'Your visits',
+            heading: 'Where you are expected',
+            icon: MapPin,
+          },
+          {
+            href: '/agent/requests',
+            label: 'Viewing requests',
+            heading: 'Viewings you can take',
+            icon: ClipboardList,
+          },
           // An agent earns per visit, so the wallet is not an account setting
           // it is the second thing they came here to look at. The row existed
           // for every other paid role and not for the one that is paid per job.
