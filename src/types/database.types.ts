@@ -1574,11 +1574,13 @@ export type Database = {
           paid_at: string | null
           payment_reference: string | null
           phone: string
+          proposed_for: string | null
           report_filed_at: string | null
           report_notes: string | null
           reschedule_count: number
           scheduled_for: string
           status: string
+          student_confirmed_at: string | null
           student_id: string
           updated_at: string
         }
@@ -1598,11 +1600,13 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           phone: string
+          proposed_for?: string | null
           report_filed_at?: string | null
           report_notes?: string | null
           reschedule_count?: number
           scheduled_for: string
           status?: string
+          student_confirmed_at?: string | null
           student_id: string
           updated_at?: string
         }
@@ -1622,11 +1626,13 @@ export type Database = {
           paid_at?: string | null
           payment_reference?: string | null
           phone?: string
+          proposed_for?: string | null
           report_filed_at?: string | null
           report_notes?: string | null
           reschedule_count?: number
           scheduled_for?: string
           status?: string
+          student_confirmed_at?: string | null
           student_id?: string
           updated_at?: string
         }
@@ -4394,7 +4400,7 @@ export type Database = {
       claim_business_name: { Args: { p_name: string }; Returns: string }
       claim_delivery: { Args: { p_delivery_id: string }; Returns: string }
       claim_inspection: {
-        Args: { p_inspection: string; p_meeting?: string }
+        Args: { p_inspection: string; p_meeting?: string; p_proposed?: string }
         Returns: string
       }
       claim_role: { Args: { p_role: string }; Returns: string[] }
@@ -4404,6 +4410,10 @@ export type Database = {
           p_inspection: string
           p_reference: string
         }
+        Returns: string
+      }
+      confirm_inspection_time: {
+        Args: { p_inspection: string }
         Returns: string
       }
       conversation_counterparties: {
@@ -4461,6 +4471,10 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
+      decline_inspection_time: {
+        Args: { p_inspection: string; p_reason?: string }
+        Returns: string
+      }
       dispute_inspection: {
         Args: { p_inspection: string; p_reason?: string }
         Returns: string
@@ -4632,6 +4646,7 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           area: string
+          availability_note: string
           claimed_before: boolean
           fee_kobo: number
           hostel_id: string

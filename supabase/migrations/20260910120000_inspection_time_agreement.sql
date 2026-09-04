@@ -60,6 +60,13 @@ comment on column public.hostel_inspections.student_confirmed_at is
 -- a request whose ORIGINALLY preferred slot has passed is still on the board.
 -- The old `scheduled_for > now()` guard quietly stranded every request nobody
 -- happened to pick up in time, with the student's money already taken.
+-- DROPPED FIRST, NOT REPLACED. This gains an eighth output column
+-- (availability_note), and CREATE OR REPLACE cannot change the row type an
+-- OUT-parameter function returns   Postgres raises 42P13 rather than
+-- silently reshaping something callers may already depend on. The argument
+-- list is unchanged, so there is exactly one function to drop.
+drop function if exists public.open_inspection_board(integer);
+
 create or replace function public.open_inspection_board(p_limit integer default 50)
 returns table (
   inspection_id     uuid,

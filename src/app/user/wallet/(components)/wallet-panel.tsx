@@ -113,6 +113,12 @@ export function WalletPanel() {
   const { data: ledger = [], isLoading: txnsLoading } = useWalletTransactions({ pageSize: 50 });
 
   const balance = (wallet?.balanceKobo ?? 0) / 100;
+  // Money earned and not yet released   an agent with three held viewings, a
+  // vendor whose orders have not matured. `pending_kobo` has existed since
+  // 20260817090300 and this file even referred to it in a comment, but
+  // nothing wrote it and nothing showed it, so a wallet with work behind it
+  // read as empty.
+  const held = (wallet?.pendingKobo ?? 0) / 100;
   const txns = useMemo(() => ledger.map(toCard), [ledger]);
 
   // "This month" is derived from the ledger rather than stored: a running
@@ -199,9 +205,19 @@ export function WalletPanel() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-cream/60 font-mono text-[11px] tracking-wide uppercase">
-              Sync wallet balance
+              Available to withdraw
             </p>
             <p className="font-display mt-1 text-4xl font-semibold">{naira(balance)}</p>
+            {/*
+              ONLY WHEN THERE IS SOME. A permanent "₦0 held" line on a student
+              wallet is noise; on an agent mid-round it is the reason the big
+              number is smaller than the work they have done.
+            */}
+            {held > 0 && (
+              <p className="text-cream/60 mt-1.5 text-xs">
+                {naira(held)} held in escrow — released when the work is confirmed.
+              </p>
+            )}
           </div>
           <span className="bg-cream/10 flex size-12 shrink-0 items-center justify-center rounded-full">
             <Wallet className="size-6" />
