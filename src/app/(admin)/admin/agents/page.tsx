@@ -49,6 +49,7 @@ export default async function Page() {
     { data: visits },
     { data: hostels },
     { data: vendors },
+    { data: authList },
   ] = await Promise.all([
     admin
       .from('profiles')
@@ -59,34 +60,70 @@ export default async function Page() {
       .select('id, email, invited_by, expires_at, accepted_at, revoked_at, created_at')
       .order('created_at', { ascending: false })
       .limit(50),
-    admin.from('verification_visits').select('id, hostel_id, ambassador_id, status'),
+    admin.from('verification_visits').select('id, hostel_id, ambassador_id, status, submitted_at'),
     admin.from('hostels').select('id, name, area').is('archived_at', null).limit(500),
     admin
       .from('vendor_profiles')
       .select('id, business_name, category, area')
       .is('archived_at', null)
       .limit(500),
+    // THE MISSING HALF. Every other admin roster reads emails this way - see
+    // /admin/students, /admin/accounts, /admin/mail. This screen did not, so an
+    // agent whose `full_name` is null (which is every agent who accepted an
+    // invite and only set a password) rendered as the literal string "No name
+    // set", with nothing to identify them by and no way to tell two of them
+    // apart. `profiles` has no email column; auth does.
+    admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
   const rows = (people ?? []) as Row[];
+  const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? null]));
+  const joinedById = new Map((authList?.users ?? []).map((u) => [u.id, u.created_at ?? null]));
+  const lastSeenById = new Map((authList?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null]));
 
   // An agent is anyone HOLDING the role, not only anyone currently wearing it:
   // an admin who also does visits is both, and leaving them out of the list
   // would make them unassignable.
   const agents: AgentRow[] = rows
     .filter((p) => p.role === 'agent' || (p.roles as string[] | null)?.includes('agent'))
-    .map((p) => ({
-      id: p.id as string,
-      name: (p.full_name as string) ?? 'No name set',
-      suspended: p.suspended_at != null,
-      // Their current load, so nobody is handed a tenth visit while somebody
-      // else has none.
-      open: ((visits ?? []) as Row[]).filter(
-        (v) => v.ambassador_id === p.id && v.status !== 'Verified' && v.status !== 'Rejected',
-      ).length,
-    }));
+    .map((p) => {
+      const id = p.id as string;
+      const mine = ((visits ?? []) as Row[]).filter((v) => v.ambassador_id === id);
+      const email = emailById.get(id) ?? null;
+      return {
+        id,
+        // Name, then email, then a last resort. An account always has an email,
+        // so the last resort is now genuinely unreachable rather than the
+        // default.
+        name:
+          (p.full_name as string | null) ?? email ?? 'No name set',
+        // Kept separately as well as in the fallback: the roster shows both when
+        // a name exists, because "which taomina is this" is answered by the
+        // address and not by the display name.
+        email,
+        hasName: (p.full_name as string | null) != null,
+        suspended: p.suspended_at != null,
+        joinedAt: (joinedById.get(id) as string | null) ?? null,
+        lastSeenAt: (lastSeenById.get(id) as string | null) ?? null,
+        // Their current load, so nobody is handed a tenth visit while somebody
+        // else has none.
+        open: mine.filter((v) => v.status !== 'Verified' && v.status !== 'Rejected').length,
+        submitted: mine.filter((v) => v.submitted_at != null).length,
+        decided: mine.filter((v) => v.status === 'Verified' || v.status === 'Rejected').length,
+      };
+    })
+    // Active first, then the busiest. A suspended agent at the top of the list
+    // is the one person on it who cannot be assigned anything.
+    .sort((a, b) =>
+      a.suspended === b.suspended ? b.open - a.open : a.suspended ? 1 : -1,
+    );
 
-  const nameById = new Map(rows.map((p) => [p.id as string, (p.full_name as string) ?? null]));
+  const nameById = new Map(
+    rows.map((p) => [
+      p.id as string,
+      (p.full_name as string | null) ?? emailById.get(p.id as string) ?? null,
+    ]),
+  );
 
   const pending: InviteRow[] = ((invites ?? []) as Row[])
     .filter((i) => !i.accepted_at && !i.revoked_at)

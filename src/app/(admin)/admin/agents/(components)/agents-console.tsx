@@ -16,8 +16,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Copy, Send, UserPlus } from 'lucide-react';
-import { Badge, Button, Input } from '@/components/ui';
+import Link from 'next/link';
+import { ChevronRight, Copy, Send, UserPlus } from 'lucide-react';
+import { Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,10 +30,21 @@ import {
 
 export interface AgentRow {
   id: string;
+  /** `full_name`, else the account email. Never a placeholder in practice. */
   name: string;
+  /** From auth   `profiles` has no email column. Null only if auth had none. */
+  email: string | null;
+  /** False when `name` IS the email, so the row does not print it twice. */
+  hasName: boolean;
   suspended: boolean;
+  joinedAt: string | null;
+  lastSeenAt: string | null;
   /** Visits assigned and not yet decided. */
   open: number;
+  /** Visits they have sent evidence for. */
+  submitted: number;
+  /** Visits a reviewer has closed either way. */
+  decided: number;
 }
 
 export interface InviteRow {
@@ -167,8 +179,24 @@ export function AgentsConsole({
   const field =
     'border-line/15 bg-surface-deep text-content rounded-lg border px-3 py-2 text-sm w-full';
 
+  const active = agents.filter((a) => !a.suspended);
+
   return (
-    <div className="flex flex-col gap-6">
+    <Tabs defaultValue="assign" className="flex flex-col gap-4">
+      {/*
+        THREE TABS, BECAUSE THERE ARE THREE JOBS.
+        Everything used to be one column, so the roster - the answer to "who
+        have I actually got?" - was below an invite form and a link box and was
+        the last thing on the page. The counts are on the triggers so the
+        question is answered before the tab is opened.
+      */}
+      <TabsList>
+        <TabsTrigger value="assign">Assign a visit</TabsTrigger>
+        <TabsTrigger value="agents">Agents ({active.length})</TabsTrigger>
+        <TabsTrigger value="invites">Invites ({invites.length})</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="assign" className="flex flex-col gap-6">
       {/* ── Send one somewhere ── */}
       <div className="border-line/10 bg-panel flex flex-col gap-3 rounded-xl border p-4">
         <p className="text-content flex items-center gap-2 text-sm font-medium">
@@ -178,13 +206,11 @@ export function AgentsConsole({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className={field}>
             <option value="">Choose an agent…</option>
-            {agents
-              .filter((a) => !a.suspended)
-              .map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} · {a.open} open
-                </option>
-              ))}
+            {active.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} · {a.open} open
+              </option>
+            ))}
           </select>
 
           <select value={placeKey} onChange={(e) => setPlaceKey(e.target.value)} className={field}>
@@ -241,6 +267,9 @@ export function AgentsConsole({
         )}
       </div>
 
+      </TabsContent>
+
+      <TabsContent value="invites" className="flex flex-col gap-6">
       {/* ── Invite one ── */}
       <div className="border-line/10 bg-panel flex flex-col gap-3 rounded-xl border p-4">
         <p className="text-content flex items-center gap-2 text-sm font-medium">
@@ -282,7 +311,11 @@ export function AgentsConsole({
       </div>
 
       {/* ── Who is outstanding ── */}
-      {invites.length > 0 && (
+      {invites.length === 0 ? (
+        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
+          No invites are outstanding. Everyone invited has either accepted or been cancelled.
+        </p>
+      ) : (
         <div className="flex flex-col gap-2">
           <span className="text-content-muted text-[11px] tracking-wide uppercase">
             Invited, not yet accepted
@@ -325,9 +358,10 @@ export function AgentsConsole({
         </div>
       )}
 
+      </TabsContent>
+
       {/* ── The roster ── */}
-      <div className="flex flex-col gap-2">
-        <span className="text-content-muted text-[11px] tracking-wide uppercase">Agents</span>
+      <TabsContent value="agents" className="flex flex-col gap-2">
         {agents.length === 0 ? (
           <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
             Nobody has accepted an agent invite yet.
@@ -335,17 +369,69 @@ export function AgentsConsole({
         ) : (
           <div className="border-line/10 divide-line/10 divide-y rounded-xl border">
             {agents.map((a) => (
-              <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-                <p className="text-content min-w-0 flex-1 truncate text-sm">{a.name}</p>
-                {a.suspended && <Badge className="bg-coral/10 text-coral">suspended</Badge>}
-                <span className="text-content-muted text-xs">
-                  {a.open} open visit{a.open === 1 ? '' : 's'}
-                </span>
-              </div>
+              // The whole row is the link. An oversight screen where the name is
+              // not clickable makes you hunt for the way in.
+              <Link
+                key={a.id}
+                href={`/admin/agents/${a.id}`}
+                className="hover:bg-surface-deep flex flex-wrap items-center gap-3 px-4 py-3 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-content flex items-center gap-2 truncate text-sm">
+                    {a.name}
+                    {a.suspended && <Badge className="bg-coral/10 text-coral">suspended</Badge>}
+                  </p>
+                  {/* Only when it is not already the name   printing
+                      taomina007@gmail.com twice tells nobody anything. */}
+                  {a.hasName && a.email && (
+                    <p className="text-content-muted truncate text-xs">{a.email}</p>
+                  )}
+                  <p className="text-content-muted mt-0.5 text-xs">
+                    {a.lastSeenAt
+                      ? `last seen ${new Date(a.lastSeenAt).toLocaleDateString('en-NG', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}`
+                      : 'has never signed in'}
+                  </p>
+                </div>
+
+                {/* The three numbers that say whether they are working: what is
+                    on them, what they have sent back, what a reviewer closed. */}
+                <div className="flex items-center gap-4 text-xs">
+                  <Stat label="open" value={a.open} highlight={a.open > 0} />
+                  <Stat label="submitted" value={a.submitted} />
+                  <Stat label="decided" value={a.decided} />
+                </div>
+
+                <ChevronRight className="text-content-muted size-4 shrink-0" />
+              </Link>
             ))}
           </div>
         )}
-      </div>
-    </div>
+        <p className="text-content-muted text-xs">
+          Open one to see everything that agent has done, in order.
+        </p>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: number;
+  highlight?: boolean;
+}) {
+  return (
+    <span className="flex w-16 flex-col items-end">
+      <span className={cn('font-mono text-sm', highlight ? 'text-lime-deep' : 'text-content')}>
+        {value}
+      </span>
+      <span className="text-content-muted text-[10px] tracking-wide uppercase">{label}</span>
+    </span>
   );
 }
