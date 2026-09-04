@@ -1572,6 +1572,9 @@ export type Database = {
           phone: string
           report_filed_at: string | null
           report_notes: string | null
+          report_photos: string[]
+          report_selfie_url: string | null
+          report_video_url: string | null
           reschedule_count: number
           scheduled_for: string
           status: string
@@ -1592,6 +1595,9 @@ export type Database = {
           phone: string
           report_filed_at?: string | null
           report_notes?: string | null
+          report_photos?: string[]
+          report_selfie_url?: string | null
+          report_video_url?: string | null
           reschedule_count?: number
           scheduled_for: string
           status?: string
@@ -1612,6 +1618,9 @@ export type Database = {
           phone?: string
           report_filed_at?: string | null
           report_notes?: string | null
+          report_photos?: string[]
+          report_selfie_url?: string | null
+          report_video_url?: string | null
           reschedule_count?: number
           scheduled_for?: string
           status?: string
@@ -4069,6 +4078,7 @@ export type Database = {
           notes: string | null
           photos: string[]
           scheduled_for: string | null
+          selfie_url: string | null
           status: string
           submitted_at: string | null
           updated_at: string
@@ -4089,6 +4099,7 @@ export type Database = {
           notes?: string | null
           photos?: string[]
           scheduled_for?: string | null
+          selfie_url?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -4109,6 +4120,7 @@ export type Database = {
           notes?: string | null
           photos?: string[]
           scheduled_for?: string | null
+          selfie_url?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -4459,7 +4471,13 @@ export type Database = {
       ensure_vendor_profile: { Args: never; Returns: string }
       expire_stale_holds: { Args: never; Returns: number }
       file_inspection_report: {
-        Args: { p_inspection: string; p_notes?: string }
+        Args: {
+          p_inspection: string
+          p_notes?: string
+          p_photos?: string[]
+          p_selfie?: string
+          p_video?: string
+        }
         Returns: string
       }
       get_unread_counts: {
@@ -4965,6 +4983,7 @@ export type Database = {
         Args: {
           p_notes?: string
           p_photos?: string[]
+          p_selfie?: string
           p_video?: string
           p_visit: string
         }
