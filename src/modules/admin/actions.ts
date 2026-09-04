@@ -392,6 +392,33 @@ export async function decideHostelVisit(input: {
   revalidatePath('/admin/verify-visits');
 }
 
+/**
+ * Mark a visit as fraud and block the account behind it.
+ *
+ * NOT decideHostelVisit WITH A THIRD DECISION. That helper writes the visit
+ * row and the hostel flag with the service role, and a permanent block has to
+ * move three things together   the visit, the listing and
+ * vendor_profiles.verification_blocked_at   or it half-applies. flag_visit_fraud
+ * does all three in one transaction and re-checks staff itself, so this is a
+ * thin call rather than a fourth place that knows the rule.
+ */
+export async function flagVisitFraud(input: { visitId: string; reason: string }) {
+  await assertStaffArea('verify_visits');
+
+  // The SESSION client, not the service role: flag_visit_fraud gates on
+  // is_staff(), which reads auth.uid(). A service-role call has none and the
+  // function's own guard would refuse it   correctly.
+  const supabase = await createServerClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc('flag_visit_fraud', { p_visit: input.visitId, p_reason: input.reason });
+
+  if (error) throw new Error(userMessage(error, 'We could not flag that visit.'));
+
+  revalidatePath('/admin/verify-visits');
+  revalidatePath('/admin/accounts');
+}
+
 /** Assign an ambassador and put a visit on the calendar. */
 export async function scheduleHostelVisit(input: {
   hostelId: string;
@@ -407,7 +434,7 @@ export async function scheduleHostelVisit(input: {
     .from('verification_visits')
     .select('id')
     .eq('hostel_id', input.hostelId)
-    .not('status', 'in', '("Verified","Rejected")')
+    .not('status', 'in', '("Verified","Rejected","Fraud")')
     .maybeSingle();
 
   const payload = {

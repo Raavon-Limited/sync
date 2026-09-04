@@ -80,7 +80,12 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
   // ─── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total = users.length;
-    const active = users.filter((u) => !u.archived_at && u.verification_status === 'active').length;
+    // 'active' is not a value verification_status can hold (0001 permits
+    // unverified/pending/verified/rejected), so this tile read 0 on a platform
+    // full of verified accounts. "Verified" is the state it was reaching for.
+    const active = users.filter(
+      (u) => !u.archived_at && u.verification_status === 'verified',
+    ).length;
     const vendors = users.filter((u) => u.role === 'vendor' || u.role === 'landlord').length;
     const now = new Date();
     const newThisMonth = users.filter((u) => {
@@ -97,8 +102,10 @@ export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = fa
     if (tab === 'archived') result = result.filter((u) => u.archived_at);
     else if (tab !== 'all') result = result.filter((u) => u.role === tab && !u.archived_at);
 
+    // Same correction as the tile above: the option labelled Active is asking
+    // for verified accounts, and was matching a value that does not exist.
     if (statusFilter === 'active')
-      result = result.filter((u) => !u.archived_at && u.verification_status === 'active');
+      result = result.filter((u) => !u.archived_at && u.verification_status === 'verified');
     else if (statusFilter === 'pending')
       result = result.filter((u) => !u.archived_at && u.verification_status === 'pending');
     else if (statusFilter === 'archived') result = result.filter((u) => Boolean(u.archived_at));

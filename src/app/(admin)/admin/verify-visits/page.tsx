@@ -32,7 +32,7 @@ export default async function Page() {
     admin
       .from('verification_visits')
       .select(
-        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, notes, submitted_at, decided_at',
+        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, selfie_url, notes, submitted_at, decided_at',
       )
       .order('updated_at', { ascending: false }),
     // THE WHOLE LISTING, because this is the screen where somebody decides
@@ -78,6 +78,9 @@ export default async function Page() {
       decidedAt: v.decided_at ?? null,
       photos: (v.photos ?? []) as string[],
       videoUrl: v.video_url ?? null,
+      // Collected since 20260909180000 and never rendered, which is why the
+      // review panel only ever showed one picture.
+      selfieUrl: v.selfie_url ?? null,
       notes: v.notes ?? null,
     };
   });
@@ -101,7 +104,8 @@ export default async function Page() {
   const openByAgent = new Map<string, number>();
   for (const v of rows) {
     if (!v.ambassadorId) continue;
-    if (v.status === 'Verified' || v.status === 'Rejected') continue;
+    // Fraud is a decision too   a flagged visit is not still on the agent's plate.
+    if (v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud') continue;
     openByAgent.set(v.ambassadorId, (openByAgent.get(v.ambassadorId) ?? 0) + 1);
   }
 

@@ -33,6 +33,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { selfieUrlsFor } from '@/modules/admin/selfies';
 import { AccountTabs } from '@/components/admin/account-tabs';
 import { AccountsBrowser, type AccountRow } from './(components)/accounts-browser';
+import { hasVerification } from '@/modules/admin/account-types';
 import type { Row } from '@/lib/supabase/row';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -52,9 +53,22 @@ const ROLE_LABEL: Record<string, string> = {
   creator: 'Content creator',
   admin: 'Admin',
   super_admin: 'Super admin',
+  // WAS MISSING, and `heldRoles` filters on `ROLE_LABEL[r]`   so an agent's
+  // only role was dropped and their card rendered with no role chip at all,
+  // beside a status of 'unverified' it could never shed.
+  agent: 'Agent',
 };
 
-/** Staff do not trade, so they have nothing to verify. */
+/**
+ * Staff do not trade, so they have nothing to verify   and neither does an
+ * agent, who arrives by invitation rather than by application.
+ *
+ * This was a private `STAFF` set holding admin and super_admin. The agent role
+ * was added to the platform afterwards and nobody came back here, so every
+ * invited agent read as 'unverified' against a review that does not exist. The
+ * rule now lives in modules/admin/account-types, where /admin/users reads the
+ * same one   a second copy is how the first fell behind.
+ */
 const STAFF = new Set(['admin', 'super_admin']);
 
 /**
@@ -128,9 +142,11 @@ async function loadAccounts(): Promise<AccountRow[]> {
     // The authority for the role being WORN. See the header.
     let status = 'unverified';
     let href = '/admin/users';
-    if (STAFF.has(role)) {
+    if (!hasVerification(role)) {
       status = 'n/a';
-      href = '/admin/staff';
+      // An agent is not staff and /admin/staff cannot show them. They have a
+      // screen of their own   the record of what they have actually done.
+      href = role === 'agent' ? `/admin/agents/${id}` : '/admin/staff';
     } else if (role === 'vendor' || role === 'landlord') {
       status = (vendor?.verification_status as string) ?? 'unverified';
       href = vendor?.slug
@@ -163,7 +179,7 @@ async function loadAccounts(): Promise<AccountRow[]> {
      * per hat instead of once per person.
      */
     const statusFor = (r: string): string => {
-      if (STAFF.has(r)) return 'n/a';
+      if (!hasVerification(r)) return 'n/a';
       if (r === 'vendor' || r === 'landlord')
         return (vendor?.verification_status as string) ?? 'unverified';
       if (r === 'rider') return (rider?.verification_status as string) ?? 'unverified';

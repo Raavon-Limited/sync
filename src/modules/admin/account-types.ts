@@ -69,3 +69,42 @@ export interface AccountRecord {
   href: string;
   createdAt: string;
 }
+
+/**
+ * Roles that have nothing to verify, ever.
+ *
+ * WHY THIS EXISTS AS A SHARED RULE
+ *   `profiles.verification_status` is `not null default 'unverified'` (0001), so
+ *   EVERY account carries that word from the moment it is created   including
+ *   the ones that will never apply for anything. Staff do not trade. An agent
+ *   arrives by invitation, which is a stronger check than any document review,
+ *   and there is no agent application to approve.
+ *
+ *   So /admin/users listed every super admin and every invited agent as
+ *   "Unverified": a task-shaped label against people for whom no such task can
+ *   ever exist, sitting in the same column as vendors who genuinely are waiting
+ *   on a decision. /admin/accounts had already worked this out for staff and
+ *   written its own private STAFF set; agents were added later and nobody
+ *   updated it, so they fell through to the same wrong word.
+ *
+ *   One rule, in a client-safe module, because both screens need it and a
+ *   second copy is how the first one came to be out of date.
+ */
+const NO_VERIFICATION = new Set(['admin', 'super_admin', 'agent']);
+
+/** True when this role can actually hold a verification decision. */
+export function hasVerification(role?: string | null): boolean {
+  return !!role && !NO_VERIFICATION.has(role);
+}
+
+/**
+ * The four values `profiles.verification_status` may hold, per 0001's check
+ * constraint.
+ *
+ * 'active' IS NOT ONE OF THEM. /admin/users tested for it in three places   the
+ * badge, the stat tile and the filter   so the green badge was unreachable, the
+ * "Active" count was permanently 0, and the Active filter returned nothing on a
+ * platform full of verified accounts.
+ */
+export const VERIFICATION_STATUSES = ['unverified', 'pending', 'verified', 'rejected'] as const;
+export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];

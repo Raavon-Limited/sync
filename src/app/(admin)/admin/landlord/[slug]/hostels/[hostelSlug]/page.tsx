@@ -9,8 +9,10 @@
  */
 import type { Metadata } from 'next';
 import { HostelFacts, hostelFactsFromRow } from '@/components/shared/hostel-facts';
+import { PhotoGrid } from '@/components/shared/photo-grid';
+import { WalkthroughVideo } from '@/components/shared/walkthrough-video';
+import { HostelDetailTabs } from './(components)/hostel-detail-tabs';
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui';
@@ -95,7 +97,7 @@ export default async function Page({
       // the newest verdict is current, so this is a list-of-one, not a single.
       admin
         .from('verification_visits')
-        .select('status, scheduled_for, notes, photos, video_url, decided_at, created_at')
+        .select('status, scheduled_for, notes, photos, video_url, selfie_url, decided_at, created_at')
         .eq('hostel_id', h.id)
         .order('created_at', { ascending: false })
         .limit(1),
@@ -116,23 +118,30 @@ export default async function Page({
         <ArrowLeft className="size-4" /> Back to landlord
       </Link>
 
-      <div className="flex flex-col gap-2">
-        {/* THE SAME COMPONENT the verification side modal renders.
-            This block used to be hand-rolled here and a thinner version lived
-            on the visits screen, so a reviewer saw different facts depending on
-            which door they came in through   including no house rules and no
-            description at all. One component, one set of facts. */}
-        <HostelFacts
-          hostel={hostelFactsFromRow(h)}
-          headingClassName="font-display text-content flex flex-wrap items-center gap-2 text-3xl"
-        />
-      </div>
+      {/*
+        LISTING AND FINDINGS ARE TABS, not one long column.
+        The two things a reviewer compares   the landlord’s photographs and
+        the agent’s   were about two screens apart, with the rooms and the
+        bookings between them, so the comparison was made from memory. Same
+        mistake the verification panel had, fixed the same way so the two
+        screens keep behaving alike.
+      */}
+      <HostelDetailTabs
+        hasFindings={!!v}
+        photoCount={((v?.photos as string[] | undefined) ?? []).length}
+        listing={
+          /* THE SAME COMPONENT the verification side modal renders, so a
+             reviewer sees the same facts whichever door they came in
+             through. */
+          <HostelFacts
+            hostel={hostelFactsFromRow(h)}
+            headingClassName="font-display text-content flex flex-wrap items-center gap-2 text-2xl"
+          />
+        }
+        findings={<AgentFindings visit={v} />}
+        occupancy={
+          <>
 
-      {/* The gallery that stood here is gone. HostelFacts above renders the
-          photos AND the walkthrough, so this drew every image a second time
-          and it used <Image> for every row, so a video came out as a broken
-          thumbnail showing its alt text. One renderer, which is the whole
-          reason that component exists. */}
 
       {/* COLLAPSED BY DEFAULT once there are more than a handful.
           A hundred-room hostel rendered a hundred tiles between the listing and
@@ -201,53 +210,84 @@ export default async function Page({
             ))}
           </div>
         )}
-      </section>
+          </section>
+          </>
+        }
+      />
+    </section>
+  );
+}
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-content-muted font-mono text-sm tracking-wide">VERIFICATION VISIT</h2>
-        {!v ? (
-          <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
-            Nobody has been sent to this hostel.{' '}
-            <Link
-              href="/admin/verify-visits"
-              className="text-lime-deep underline underline-offset-2"
-            >
-              Schedule a visit
-            </Link>
+/**
+ * What the agent found, or that nobody has been.
+ *
+ * SAME EVIDENCE THE DECISION SCREEN SHOWS. This block used to render the
+ * photos alone, as 96px crops, with no video and no selfie   so the account
+ * view and /admin/verify-visits disagreed about what "the agent found" even
+ * means. PhotoGrid and the same three sections keep them saying one thing.
+ */
+function AgentFindings({ visit: v }: { visit: Row | null }) {
+  if (!v) {
+    return (
+      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-4 text-sm">
+        Nobody has been sent to this hostel.{' '}
+        <Link href="/admin/verify-visits" className="text-lime-deep underline underline-offset-2">
+          Schedule a visit
+        </Link>
+      </p>
+    );
+  }
+
+  const photos = ((v.photos as string[] | null) ?? []).filter(Boolean);
+  const selfie = (v.selfie_url as string | null) ?? null;
+  const video = (v.video_url as string | null) ?? null;
+
+  return (
+    <div className="border-line/10 bg-panel flex flex-col gap-4 rounded-xl border p-4">
+      <p className="text-content flex flex-wrap items-center gap-2 text-sm">
+        <Badge className="bg-ink/5 text-content-muted">{v.status as string}</Badge>
+        {v.scheduled_for ? (
+          <span className="text-content-muted flex items-center gap-1 text-xs">
+            <Calendar className="size-3" />
+            {new Date(v.scheduled_for as string).toLocaleString('en-NG')}
+          </span>
+        ) : null}
+      </p>
+
+      {v.notes ? <p className="text-content-muted text-sm">{v.notes as string}</p> : null}
+
+      {photos.length > 0 && (
+        <section className="flex flex-col gap-1.5">
+          <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
+            What the agent photographed · {photos.length}
           </p>
+          <PhotoGrid photos={photos} label="Agent photo" />
+        </section>
+      )}
+
+      {/* The one piece of evidence about the AGENT rather than the building.
+          Absence is stated, because it is a thing a reviewer should weigh. */}
+      <section className="flex flex-col gap-1.5">
+        <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
+          The agent, at the property
+        </p>
+        {selfie ? (
+          <PhotoGrid photos={[selfie]} label="The agent there" />
         ) : (
-          <div className="border-line/10 bg-panel flex flex-col gap-2 rounded-xl border p-4">
-            <p className="text-content flex items-center gap-2 text-sm">
-              <Badge className="bg-ink/5 text-content-muted">{v.status}</Badge>
-              {v.scheduled_for && (
-                <span className="text-content-muted flex items-center gap-1 text-xs">
-                  <Calendar className="size-3" />
-                  {new Date(v.scheduled_for).toLocaleString('en-NG')}
-                </span>
-              )}
-            </p>
-            {v.notes && <p className="text-content-muted text-sm">{v.notes}</p>}
-            {(v.photos ?? []).length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {(v.photos as string[]).map((src, i) => (
-                  <div
-                    key={i}
-                    className="border-line/10 relative size-24 overflow-hidden rounded-lg border"
-                  >
-                    <Image
-                      src={src}
-                      alt={`Visit ${i + 1}`}
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <p className="text-content-muted text-xs">
+            None. Photos of a building do not prove who took them.
+          </p>
         )}
       </section>
-    </section>
+
+      {video && (
+        <section className="flex flex-col gap-1.5">
+          <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
+            Walkthrough
+          </p>
+          <WalkthroughVideo src={video} />
+        </section>
+      )}
+    </div>
   );
 }

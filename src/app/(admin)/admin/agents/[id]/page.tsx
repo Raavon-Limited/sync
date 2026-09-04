@@ -112,6 +112,20 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       : Promise.resolve({ data: [] }),
   ]);
 
+  /*
+   * WHERE THEY WORK, from the places they have been sent to.
+   *
+   * There is no location store for agents and this does not invent one   see
+   * the note on /admin/agents. Areas they have actually visited answer the
+   * question without following anybody around.
+   */
+  const areaCount = new Map<string, number>();
+  for (const h of (hostels ?? []) as Row[]) {
+    const area = (h.area as string) ?? null;
+    if (area) areaCount.set(area, (areaCount.get(area) ?? 0) + 1);
+  }
+  const areas = [...areaCount.entries()].sort((x, y) => y[1] - x[1]).map(([a]) => a);
+
   const placeName = new Map<string, string>();
   for (const h of (hostels ?? []) as Row[]) placeName.set(h.id as string, h.name as string);
   for (const v of (vendors ?? []) as Row[]) {
@@ -173,6 +187,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               that tells two unnamed agents apart. */}
           {email ?? 'no email on the account'}
           {p.phone ? ` · ${p.phone}` : ''} · joined {day(p.created_at as string)}
+          {areas.length > 0 ? ` · works in ${areas.slice(0, 3).join(", ")}` : ''}
         </p>
         {p.suspended_at != null && (
           <p className="text-coral text-sm">

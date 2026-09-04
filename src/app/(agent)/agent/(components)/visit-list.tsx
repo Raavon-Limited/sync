@@ -35,6 +35,9 @@ import {
 import {
   Badge,
   Button,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   Sheet,
   SheetContent,
   SheetDescription,
@@ -136,28 +139,47 @@ function CardShell({ children }: { children: React.ReactNode }) {
 
 // ── Verification visits ─────────────────────────────────────────────────────
 
+/**
+ * ACTIVE AND COMPLETED ARE TABS, NOT ONE LIST WITH THE DEAD ONES AT THE BOTTOM.
+ *
+ * Sinking decided visits kept them findable, which was the point   but it also
+ * means an agent with a season behind them scrolls past their whole history to
+ * reach the one place they are going this afternoon. "Where am I going next"
+ * and "did that one land?" are two questions, and only the first is urgent.
+ *
+ * A visit under review counts as ACTIVE: the agent has filed and a reviewer has
+ * not decided, so it is still live work as far as they are concerned. Only
+ * Verified and Rejected are finished.
+ */
 export function VisitList({ visits }: { visits: AgentVisit[] }) {
-  const items = [...visits].sort((a, b) => {
-    const ad = VISIT_DONE.has(a.status) ? 1 : 0;
-    const bd = VISIT_DONE.has(b.status) ? 1 : 0;
-    if (ad !== bd) return ad - bd;
-    return (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
-  });
+  const [tab, setTab] = useState<'active' | 'completed'>('active');
 
-  if (items.length === 0) {
-    return (
-      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm sm:p-8">
-        Nothing assigned yet. When somebody sends you out, it appears here and your phone gets a
-        notification.
-      </p>
-    );
-  }
+  const byWhen = (a: AgentVisit, b: AgentVisit) =>
+    (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
+
+  const active = visits.filter((v) => !VISIT_DONE.has(v.status)).sort(byWhen);
+  // Newest first: the last thing decided is the one being asked about.
+  const completed = visits.filter((v) => VISIT_DONE.has(v.status)).sort((a, b) => byWhen(b, a));
+  const items = tab === 'active' ? active : completed;
 
   return (
     <div className="flex flex-col gap-3">
-      {items.map((v) => (
-        <VisitCard key={v.id} visit={v} />
-      ))}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'active' | 'completed')}>
+        <TabsList>
+          <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {items.length === 0 ? (
+        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm sm:p-8">
+          {tab === 'active'
+            ? 'Nothing assigned yet. When somebody sends you out, it appears here and your phone gets a notification.'
+            : 'Nothing decided yet. Visits a reviewer has accepted or rejected land here.'}
+        </p>
+      ) : (
+        items.map((v) => <VisitCard key={v.id} visit={v} />)
+      )}
     </div>
   );
 }
@@ -235,7 +257,6 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
           })
         }
         notesPlaceholder="What you saw. Does it match the listing? Anything that does not?"
-        successText="Filed. A reviewer takes it from here."
       />
     </CardShell>
   );
@@ -243,30 +264,36 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
 
 // ── Paid student viewings ───────────────────────────────────────────────────
 
+/** Same active/completed split as the visits list, for the same reason. */
 export function InspectionList({ inspections }: { inspections: AgentInspection[] }) {
-  const items = [...inspections].sort((a, b) => {
-    const ad = INSPECTION_DONE.has(a.status) ? 1 : 0;
-    const bd = INSPECTION_DONE.has(b.status) ? 1 : 0;
-    if (ad !== bd) return ad - bd;
-    return (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
-  });
+  const [tab, setTab] = useState<'active' | 'completed'>('active');
+
+  const byWhen = (a: AgentInspection, b: AgentInspection) =>
+    (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
+
+  const active = inspections.filter((i) => !INSPECTION_DONE.has(i.status)).sort(byWhen);
+  const completed = inspections
+    .filter((i) => INSPECTION_DONE.has(i.status))
+    .sort((a, b) => byWhen(b, a));
+  const items = tab === 'active' ? active : completed;
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
-        Taken by you · {items.length}
-      </p>
+    <div className="flex flex-col gap-3">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'active' | 'completed')}>
+        <TabsList>
+          <TabsTrigger value="active">Taken ({active.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {items.length === 0 ? (
         <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
-          You have not taken any viewings yet. Anything on the board below is yours if you tap it
-          first.
+          {tab === 'active'
+            ? 'You have not taken any viewings. Anything on the board below is yours if you tap it first.'
+            : 'Nothing finished yet. Viewings settle here once they are confirmed or closed.'}
         </p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((i) => (
-            <InspectionCard key={i.id} inspection={i} />
-          ))}
-        </div>
+        items.map((i) => <InspectionCard key={i.id} inspection={i} />)
       )}
     </div>
   );
@@ -427,7 +454,6 @@ function FileSheet({
   requirePhoto = false,
   submitLabel,
   notesPlaceholder,
-  successText,
   onSubmit,
 }: {
   open: boolean;
@@ -437,7 +463,6 @@ function FileSheet({
   requirePhoto?: boolean;
   submitLabel: string;
   notesPlaceholder: string;
-  successText: string;
   onSubmit: (
     evidence: Evidence,
     notes: string,
@@ -456,7 +481,6 @@ function FileSheet({
     startSubmit(async () => {
       const res = await onSubmit(evidence, notes);
       if (res.ok) {
-        setNote({ ok: true, text: successText });
         onOpenChange(false);
         setEvidence(EMPTY_EVIDENCE);
         setNotes('');
@@ -468,9 +492,6 @@ function FileSheet({
 
   return (
     <>
-      {note && !open && (
-        <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
-      )}
 
       <Sheet open={open} onOpenChange={onOpenChange}>
         {/* Full screen on a phone, a panel from `sm` up   SheetContent's own

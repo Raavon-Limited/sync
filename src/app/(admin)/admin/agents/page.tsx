@@ -50,6 +50,7 @@ export default async function Page() {
     { data: visits },
     { data: hostels },
     { data: vendors },
+    { data: campuses },
     { data: authList },
   ] = await Promise.all([
     admin
@@ -68,6 +69,7 @@ export default async function Page() {
       .select('id, business_name, category, area')
       .is('archived_at', null)
       .limit(500),
+    admin.from('campuses').select('id, name'),
     // THE MISSING HALF. Every other admin roster reads emails this way - see
     // /admin/students, /admin/accounts, /admin/mail. This screen did not, so an
     // agent whose `full_name` is null (which is every agent who accepted an
@@ -78,6 +80,29 @@ export default async function Page() {
   ]);
 
   const rows = (people ?? []) as Row[];
+
+  /*
+   * WHERE AN AGENT WORKS, from rows that already exist.
+   *
+   * There is no location store for agents   no position table, no last-seen
+   * coordinate, nothing. The honest answer to "where is this agent" is
+   * therefore not a pin on a map, and inventing one would mean building
+   * continuous tracking of a worker, which is a consent decision and not a
+   * display detail.
+   *
+   * What IS knowable: the campus on their profile, and the areas of the
+   * places they have actually been sent to. That answers the question this
+   * screen asks it for   "who do I send to Safari on Tuesday" without
+   * following anybody around.
+   */
+  // Built from the hostels already fetched for the place picker rather than a
+  // second query against the same table.
+  const areaByHostel = new Map(
+    ((hostels ?? []) as Row[]).map((h) => [h.id as string, (h.area as string) ?? null]),
+  );
+  const campusName = new Map(
+    ((campuses ?? []) as Row[]).map((c) => [c.id as string, c.name as string]),
+  );
   const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? null]));
   const joinedById = new Map((authList?.users ?? []).map((u) => [u.id, u.created_at ?? null]));
   const lastSeenById = new Map((authList?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null]));
@@ -91,6 +116,15 @@ export default async function Page() {
       const id = p.id as string;
       const mine = ((visits ?? []) as Row[]).filter((v) => v.ambassador_id === id);
       const email = emailById.get(id) ?? null;
+      // Most-worked first, so the top one is where they actually operate.
+      const areaCount = new Map<string, number>();
+      for (const v of mine) {
+        const area = areaByHostel.get(v.hostel_id as string);
+        if (area) areaCount.set(area, (areaCount.get(area) ?? 0) + 1);
+      }
+      const areas = [...areaCount.entries()]
+        .sort((x, y) => y[1] - x[1])
+        .map(([area]) => area);
       return {
         id,
         // Name, then email, then a last resort   see `displayName`, which is
@@ -102,6 +136,8 @@ export default async function Page() {
         email,
         hasName: (p.full_name as string | null) != null,
         suspended: p.suspended_at != null,
+        campus: campusName.get(p.campus_id as string) ?? null,
+        areas,
         joinedAt: (joinedById.get(id) as string | null) ?? null,
         lastSeenAt: (lastSeenById.get(id) as string | null) ?? null,
         // Their current load, so nobody is handed a tenth visit while somebody

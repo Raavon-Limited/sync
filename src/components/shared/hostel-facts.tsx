@@ -17,10 +17,10 @@
  * actions. The decision buttons belong to the screen that owns the decision,
  * because only one of these two screens is allowed to make one.
  */
-import Image from 'next/image';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { formatKobo } from '@/lib/query/helpers';
+import { PhotoGrid } from '@/components/shared/photo-grid';
 import { WalkthroughVideo } from '@/components/shared/walkthrough-video';
 import type { Row } from '@/lib/supabase/row';
 
@@ -116,27 +116,12 @@ export function HostelFacts({
           <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
             Listing photos · {images.length}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {images.map((src, i) => (
-              <div
-                key={src}
-                className="border-line/10 relative size-24 overflow-hidden rounded-lg border"
-              >
-                <Image
-                  src={src}
-                  alt={`${hostel.name} photo ${i + 1}`}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                />
-                {i === 0 && (
-                  <span className="bg-lime-deep absolute bottom-1 left-1 rounded px-1 text-[9px] font-medium tracking-wide text-white uppercase">
-                    primary
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+          {/* EXPANDABLE. These were 96px cover-crops   a reviewer deciding
+              whether a building matches its listing was looking at a square
+              inch of it, with no way to see the rest. PhotoGrid is the same
+              tile with a lightbox behind it, shared with the agent evidence
+              so the two cannot diverge again. */}
+          <PhotoGrid photos={images} label={hostel.name + " photo"} />
         </div>
       )}
 

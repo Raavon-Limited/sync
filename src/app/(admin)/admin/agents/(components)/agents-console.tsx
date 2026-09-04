@@ -17,7 +17,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Copy, Send, UserPlus } from 'lucide-react';
+import { ChevronRight, Copy, MapPin, Send, UserPlus } from 'lucide-react';
 import { Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -37,6 +37,10 @@ export interface AgentRow {
   /** False when `name` IS the email, so the row does not print it twice. */
   hasName: boolean;
   suspended: boolean;
+  /** From their profile. Null when they never picked one. */
+  campus: string | null;
+  /** Areas they have actually been sent to, most-worked first. */
+  areas: string[];
   joinedAt: string | null;
   lastSeenAt: string | null;
   /** Visits assigned and not yet decided. */
@@ -209,6 +213,7 @@ export function AgentsConsole({
             {active.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} · {a.open} open
+                {a.areas.length > 0 ? " · " + a.areas.slice(0, 2).join(", ") : ""}
               </option>
             ))}
           </select>
@@ -385,6 +390,16 @@ export function AgentsConsole({
                       taomina007@gmail.com twice tells nobody anything. */}
                   {a.hasName && a.email && (
                     <p className="text-content-muted truncate text-xs">{a.email}</p>
+                  )}
+                  {/* WHERE THEY WORK. Not a live position   see the note in
+                      page.tsx   but the areas they have actually been to,
+                      which is what an assignment decision needs. */}
+                  {(a.areas.length > 0 || a.campus) && (
+                    <p className="text-content-muted mt-0.5 flex items-center gap-1 truncate text-xs">
+                      <MapPin className="size-3 shrink-0" />
+                      {a.areas.length > 0 ? a.areas.slice(0, 3).join(", ") : a.campus}
+                      {a.areas.length > 3 ? " +" + (a.areas.length - 3) : ""}
+                    </p>
                   )}
                   <p className="text-content-muted mt-0.5 text-xs">
                     {a.lastSeenAt
