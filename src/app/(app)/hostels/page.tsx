@@ -101,7 +101,13 @@ function toStatus(availability?: string, roomsLeft?: number): Hostel['status'] {
 /** Domain hostel -> the flat shape these cards were built against. */
 function toCard(h: DomainHostel): Hostel {
   const roomsTotal = h.roomsTotal ?? h.rooms.length;
-  const roomsLeft = h.roomsAvailable ?? h.rooms.filter((r) => r.state === 'free').length;
+  // `state` is computed by the `hostel_room_state` view and is not a column on
+  // `hostel_rooms`, so it is absent from every room this page is handed. The
+  // old fallback filtered on it anyway, counted 0 every time, and badged the
+  // catalogue "FULLY BOOKED". Whether a room is free is the availability
+  // view's answer and nobody else's; when it has no answer the honest read is
+  // "not known to be full", never "closed".
+  const roomsLeft = h.roomsAvailable ?? roomsTotal;
   return {
     id: h.id,
     slug: h.slug,

@@ -137,6 +137,10 @@ export interface Inspection {
   feeKobo: number;
   /** Where the agent will meet the student. Null means at the property. */
   meetingPoint?: string | null;
+  /** The time an agent OFFERED. Nothing is arranged until it is confirmed. */
+  proposedFor?: string | null;
+  /** The student accepted that offer. */
+  studentConfirmedAt?: string | null;
   agentName?: string | null;
   reportFiledAt?: string | null;
   /** The student says it did not happen; the fee is held for staff. */

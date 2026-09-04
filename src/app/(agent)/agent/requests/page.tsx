@@ -21,8 +21,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { Row } from '@/lib/supabase/row';
 import { requireAgent } from '../(components)/require-agent';
-import { InspectionList, type AgentInspection } from '../(components)/visit-list';
-import { OpenBoard, type BoardJob } from '../(components)/open-board';
+import { type AgentInspection } from '../(components)/visit-list';
+import { RequestsTabs, type BoardJob } from '../(components)/requests-tabs';
 import { AgentIntro } from '../(components)/agent-intro';
 
 export const metadata: Metadata = { title: 'Viewing requests' };
@@ -54,7 +54,7 @@ export default async function Page() {
         // snapshotted on the inspection row at booking. They are not always the
         // same as the ones on their profile   somebody booking a viewing may
         // well give the number they will actually be carrying that afternoon.
-        'id, hostel_id, full_name, phone, scheduled_for, status, fee_kobo, report_filed_at, outcome, meeting_point, disputed_at, reschedule_count',
+        'id, hostel_id, full_name, phone, scheduled_for, status, fee_kobo, report_filed_at, outcome, meeting_point, proposed_for, student_confirmed_at, disputed_at, reschedule_count',
       )
       .eq('ambassador_id', user.id)
       .order('scheduled_for', { ascending: true, nullsFirst: false }),
@@ -85,6 +85,8 @@ export default async function Page() {
       reportFiledAt: (i.report_filed_at as string) ?? null,
       outcome: (i.outcome as 'viewed' | 'student_no_show' | null) ?? null,
       meetingPoint: (i.meeting_point as string) ?? null,
+      proposedFor: (i.proposed_for as string) ?? null,
+      studentConfirmedAt: (i.student_confirmed_at as string) ?? null,
       disputedAt: (i.disputed_at as string) ?? null,
       rescheduleCount: Number(i.reschedule_count ?? 0),
     };
@@ -93,9 +95,12 @@ export default async function Page() {
   const board: BoardJob[] = ((boardRows ?? []) as Row[]).map((b) => ({
     inspectionId: b.inspection_id as string,
     hostelName: (b.hostel_name as string) ?? 'Unnamed hostel',
-    // Area only. The street address is unsealed on claim   see open-board.tsx.
+    // Area only. The street address is unsealed on claim.
     area: (b.area as string) ?? null,
     scheduledFor: (b.scheduled_for as string) ?? null,
+    // The student's own words about when they are free. An agent cannot
+    // offer a sensible time without them.
+    availabilityNote: (b.availability_note as string) ?? null,
     feeKobo: Number(b.fee_kobo ?? 0),
   }));
 
@@ -113,9 +118,7 @@ export default async function Page() {
         <AgentIntro kind="requests" />
       </div>
 
-      <InspectionList inspections={inspections} />
-
-      <OpenBoard jobs={board} />
+      <RequestsTabs taken={inspections} board={board} />
     </section>
   );
 }

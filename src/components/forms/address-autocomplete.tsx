@@ -56,7 +56,9 @@ export function AddressAutocomplete(props: AddressAutocompleteProps) {
   if (!googleMapsConfigured) return <PlainInput {...props} />;
 
   return (
-    <GoogleMapsProvider fallback={<PlainInput {...props} />}>
+    // needsMapId={false}: this draws no map. Places works off the key alone,
+    // and a missing Map ID must not quietly cost onboarding its suggestions.
+    <GoogleMapsProvider needsMapId={false} fallback={<PlainInput {...props} />}>
       <Suggesting {...props} />
     </GoogleMapsProvider>
   );

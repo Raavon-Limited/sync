@@ -25,6 +25,8 @@ import { useState, useTransition } from 'react';
 import {
   Building2,
   CalendarClock,
+  CheckCircle2,
+  Hourglass,
   Home,
   MapPin,
   Phone,
@@ -85,6 +87,10 @@ export interface AgentInspection {
   outcome: 'viewed' | 'student_no_show' | null;
   /** Where the agent told the student to meet them. Null means at the property. */
   meetingPoint: string | null;
+  /** The time this agent OFFERED. Not agreed until studentConfirmedAt is set. */
+  proposedFor: string | null;
+  /** The student accepted the offer. Until then nothing is arranged. */
+  studentConfirmedAt: string | null;
   /** The student says it did not happen. The fee is held until staff settle it. */
   disputedAt: string | null;
   rescheduleCount: number;
@@ -264,37 +270,40 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
 
 // ── Paid student viewings ───────────────────────────────────────────────────
 
-/** Same active/completed split as the visits list, for the same reason. */
-export function InspectionList({ inspections }: { inspections: AgentInspection[] }) {
-  const [tab, setTab] = useState<'active' | 'completed'>('active');
-
+/**
+ * One state of an agent's viewings. The TABS own the split now   see
+ * requests-tabs   so this renders the slice it is handed.
+ */
+export function InspectionList({
+  inspections,
+  only,
+}: {
+  inspections: AgentInspection[];
+  only: 'active' | 'completed';
+}) {
   const byWhen = (a: AgentInspection, b: AgentInspection) =>
     (a.scheduledFor ?? '9999').localeCompare(b.scheduledFor ?? '9999');
 
-  const active = inspections.filter((i) => !INSPECTION_DONE.has(i.status)).sort(byWhen);
-  const completed = inspections
-    .filter((i) => INSPECTION_DONE.has(i.status))
-    .sort((a, b) => byWhen(b, a));
-  const items = tab === 'active' ? active : completed;
+  const items =
+    only === 'active'
+      ? inspections.filter((i) => !INSPECTION_DONE.has(i.status)).sort(byWhen)
+      : inspections.filter((i) => INSPECTION_DONE.has(i.status)).sort((a, b) => byWhen(b, a));
+
+  if (items.length === 0) {
+    return (
+      <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
+        {only === 'active'
+          ? 'Nothing on. Offer a time on a request and it appears here while the student decides.'
+          : 'Nothing finished yet. Viewings settle here once they are filed and confirmed.'}
+      </p>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'active' | 'completed')}>
-        <TabsList>
-          <TabsTrigger value="active">Taken ({active.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {items.length === 0 ? (
-        <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-center text-sm">
-          {tab === 'active'
-            ? 'You have not taken any viewings. Anything on the board below is yours if you tap it first.'
-            : 'Nothing finished yet. Viewings settle here once they are confirmed or closed.'}
-        </p>
-      ) : (
-        items.map((i) => <InspectionCard key={i.id} inspection={i} />)
-      )}
+      {items.map((i) => (
+        <InspectionCard key={i.id} inspection={i} />
+      ))}
     </div>
   );
 }
@@ -315,7 +324,10 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
 
   const filed = Boolean(i.reportFiledAt);
   const done = INSPECTION_DONE.has(i.status);
-  const fileable = i.status === 'scheduled' && !filed;
+  // An unconfirmed offer has not happened yet, so there is nothing to file
+  // on   and filing would start the payment clock on a viewing the student
+  // never agreed to.
+  const fileable = i.status === 'scheduled' && !filed && !!i.studentConfirmedAt;
 
   function handBack() {
     setNote(null);
@@ -360,6 +372,28 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
           extra={i.rescheduleCount > 0 ? `Moved ${i.rescheduleCount} time(s)` : null}
         />
       )}
+
+      {/*
+        AGREED, OR STILL AN OFFER. Everything else on this card reads the same
+        either way, and the difference is the only thing that decides whether
+        the agent should set off.
+      */}
+      {!done &&
+        (i.studentConfirmedAt ? (
+          <p className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600">
+            <CheckCircle2 className="size-4 shrink-0" />
+            Confirmed by the student.
+          </p>
+        ) : (
+          <p className="border-line/15 bg-surface-deep text-content-muted flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm">
+            <Hourglass className="size-4 shrink-0" />
+            Waiting on them to confirm
+            {i.proposedFor
+              ? ' ' + when(i.proposedFor, '')
+              : ''}
+            . Do not set off until they do.
+          </p>
+        ))}
 
       {/* WHERE THEY MEET. The agent owns this   they know the area and which
           gate is usable   and changing it re-notifies the student, who may

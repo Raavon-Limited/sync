@@ -14,7 +14,7 @@
  */
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
 
 // Read as full static literals: Next inlines `process.env.NEXT_PUBLIC_*` at
@@ -39,6 +39,24 @@ export const GOOGLE_MAP_ID =
   MAP_ID || (process.env.NODE_ENV === 'development' ? 'DEMO_MAP_ID' : '');
 
 /**
+ * A map surface needs BOTH a key and a Map ID; the Places autocomplete needs
+ * only the key.
+ *
+ * "A visible failure rather than a silent downgrade" is what the comment above
+ * promised, and production was not keeping it. With no Map ID set, `mapId`
+ * went to Google as an empty string: Maps logged "The map is initialized
+ * without a valid Map ID", refused every Advanced Marker, and painted its own
+ * "This page can't load Google Maps correctly" dialog on top. /around then
+ * rendered a map of Malete with none of our pins on it   under a heading that
+ * says "Tap a pin"   and the only thing on screen addressed the operator
+ * rather than the student.
+ *
+ * An empty Map ID is now the same unconfigured state a missing key is, and it
+ * degrades to <MapUnavailable /> like one.
+ */
+export const googleMapsRenderable = googleMapsConfigured && GOOGLE_MAP_ID.length > 0;
+
+/**
  * Google's own handling of a rejected key is to paint the map grey and drop a
  * white "This page can't load Google Maps correctly / Do you own this website?"
  * dialog on top of it - unstyled, un-dismissable, and addressed to us rather
@@ -58,34 +76,78 @@ declare global {
   }
 }
 
+/**
+ * The hook that used to install this did it in a `useEffect`, and it lost two
+ * races it had no way to win.
+ *
+ * Child effects run before parent effects, so <APIProvider> had already
+ * injected the loader script by the time the provider's own effect assigned
+ * the handler   and on unmount the cleanup put `undefined` back, so a page
+ * with two maps could tear the handler down while the other one still needed
+ * it. Whenever the assignment lost, Google fell back to painting its own
+ * un-dismissable "This page can't load Google Maps correctly / Do you own this
+ * website?" dialog over the tiles: a message addressed to us, shown to the
+ * student.
+ *
+ * So it is installed once at module scope   this file is imported before any
+ * map can mount, which is earlier than any effect can run   and it is never
+ * uninstalled. Components subscribe instead of assigning.
+ */
+let authFailed = false;
+const authSubscribers = new Set<() => void>();
+
+if (typeof window !== 'undefined') {
+  const previous = window.gm_authFailure;
+  window.gm_authFailure = () => {
+    authFailed = true;
+    for (const notify of authSubscribers) notify();
+    previous?.();
+  };
+}
+
+function subscribeToAuthFailure(notify: () => void): () => void {
+  authSubscribers.add(notify);
+  return () => {
+    authSubscribers.delete(notify);
+  };
+}
+
+/**
+ * `useSyncExternalStore` rather than state-plus-effect because that is exactly
+ * what this is: a value owned by something outside React (the Maps loader),
+ * which may already have failed before the component ever mounts. It reads the
+ * current value on subscribe instead of needing an effect to catch up, and the
+ * server snapshot is `false`   nothing has failed during a render that has no
+ * `window`.
+ */
 function useMapsAuthFailure(): boolean {
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    const previous = window.gm_authFailure;
-    window.gm_authFailure = () => {
-      setFailed(true);
-      previous?.();
-    };
-    return () => {
-      window.gm_authFailure = previous;
-    };
-  }, []);
-
-  return failed;
+  return useSyncExternalStore(
+    subscribeToAuthFailure,
+    () => authFailed,
+    () => false,
+  );
 }
 
 export function GoogleMapsProvider({
   children,
   fallback = null,
+  needsMapId = true,
 }: {
   children: ReactNode;
-  /** Rendered instead of the map when no API key is configured. */
+  /** Rendered instead of the map when Maps is not usable. */
   fallback?: ReactNode;
+  /**
+   * Whether these children draw a map. Default true, because almost all of
+   * them do. The address autocomplete is the exception: it talks to Places,
+   * which has no Map ID and no map, so a missing one must not silently turn
+   * the field into a plain input.
+   */
+  needsMapId?: boolean;
 }) {
   const authFailed = useMapsAuthFailure();
+  const usable = needsMapId ? googleMapsRenderable : googleMapsConfigured;
 
-  if (!googleMapsConfigured || authFailed) return <>{fallback}</>;
+  if (!usable || authFailed) return <>{fallback}</>;
 
   return (
     // 'marker' is what Advanced Markers live in. Naming it here loads it with
@@ -111,9 +173,11 @@ export function MapUnavailable({ className }: { className?: string }) {
     >
       <p className="text-content-muted max-w-72 text-center text-sm">
         {process.env.NODE_ENV === 'development'
-          ? googleMapsConfigured
-            ? 'Map unavailable: Google rejected the API key. Check the browser console - usually the Maps JavaScript API is not enabled on the project, billing is off, or the key’s HTTP-referrer list does not include this origin.'
-            : 'Map unavailable: set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local.'
+          ? !googleMapsConfigured
+            ? 'Map unavailable: set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local.'
+            : !GOOGLE_MAP_ID
+              ? 'Map unavailable: set NEXT_PUBLIC_GOOGLE_MAPS_ID. Advanced Markers - every pin we draw - need a Map ID, and an empty one makes Google reject the map outright.'
+              : 'Map unavailable: Google rejected the API key. Check the browser console - usually the Maps JavaScript API is not enabled on the project, billing is off, or the key’s HTTP-referrer list does not include this origin.'
           : 'The map is unavailable right now.'}
       </p>
     </div>

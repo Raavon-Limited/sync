@@ -338,6 +338,14 @@ export async function fileInspectionReport(input: {
  * arrive here as the RPC's own sentence, which is why `userMessage` passes them
  * through   see lib/errors.
  */
+/**
+ * Take a viewing request off the board, offering a time.
+ *
+ * TAKING IT IS A PROPOSAL, NOT AN ARRANGEMENT. The request leaves the board
+ * immediately   so two agents cannot both be offering   but nothing is agreed
+ * until the student confirms. If they decline, it goes back and this agent
+ * cannot take it again: they have made their offer and it was refused.
+ */
 export async function claimInspection(input: {
   inspectionId: string;
   /**
@@ -346,11 +354,14 @@ export async function claimInspection(input: {
    * stranger. Blank means at the property.
    */
   meetingPoint?: string;
+  /** ISO. Falls back server-side to what the student originally asked for. */
+  proposedFor?: string;
 }): Promise<AgentResult> {
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('claim_inspection', {
     p_inspection: input.inspectionId,
     p_meeting: input.meetingPoint?.trim() || null,
+    p_proposed: input.proposedFor || null,
   });
 
   if (error) return { ok: false, error: userMessage(error, 'We could not take that one.') };

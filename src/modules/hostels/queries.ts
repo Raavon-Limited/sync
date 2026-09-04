@@ -12,7 +12,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { unwrap, unwrapList, unwrapMaybe, toRange, type PageParams } from '@/lib/query/helpers';
-import type { Area, Availability, Booking, Hostel, Inspection, NearbyHostel } from './types';
+import type {
+  Area,
+  Availability,
+  Booking,
+  Hostel,
+  HostelRoom,
+  Inspection,
+  NearbyHostel,
+} from './types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- see lib/query/helpers.ts */
 type Row = any;
@@ -57,6 +65,10 @@ const toHostel = (r: Row): Hostel => ({
     // component has to know that rule.
     priceKobo: Number(rm.price_per_session_kobo ?? r.price_per_session_kobo ?? 0),
     isListed: rm.is_listed,
+    // Set by attachRoomState, which the detail fetch runs. Undefined on the
+    // list fetch: that screen counts rooms from `hostel_availability` and has
+    // no use for a per-room answer.
+    state: rm.state,
   })),
   roomsAvailable: r.availability?.rooms_available ?? undefined,
   roomsTotal: r.availability?.rooms_total ?? undefined,
@@ -108,6 +120,49 @@ const AVAILABILITY_FROM_VIEW: Record<string, Availability> = {
   ending_soon: 'filling_up',
   active: 'available',
 };
+
+/**
+ * Per-room state has the same two-vocabulary problem the hostel-level one had.
+ * `hostel_room_state.state` says booked / reserved / free; `HostelRoom.state`
+ * says taken / held / free, and /hostels/[slug] checks for those. Translate
+ * once, here, beside the other one.
+ */
+const ROOM_STATE_FROM_VIEW: Record<string, NonNullable<HostelRoom['state']>> = {
+  booked: 'taken',
+  reserved: 'held',
+  free: 'free',
+};
+
+/**
+ * Fills in `state` on a hostel's rooms.
+ *
+ * `hostel_rooms` has no such column   whether a room is taken is a question
+ * about `bookings`, and `hostel_room_state` is the view that answers it. The
+ * detail page was reading `r.state` off rows that had never carried one, so
+ * every room in the building rendered free and bookable: a student could pick
+ * a room somebody else had already paid for.
+ */
+async function attachRoomState(db: Client, row: Row): Promise<Row> {
+  const rooms = row.hostel_rooms ?? [];
+  if (!rooms.length) return row;
+
+  const { data } = await db
+    .from('hostel_room_state')
+    .select('room_id, state')
+    .eq('hostel_id', row.id);
+
+  const byId = new Map((data ?? []).map((s: Row) => [s.room_id, s.state]));
+  return {
+    ...row,
+    hostel_rooms: rooms.map((rm: Row) => ({
+      ...rm,
+      // No row for this room means the view has not caught up with an
+      // insert. Unknown is not "free": leaving it undefined keeps the room
+      // visible without promising it is available.
+      state: ROOM_STATE_FROM_VIEW[byId.get(rm.id) as string] ?? undefined,
+    })),
+  };
+}
 
 async function attachAvailability(db: Client, rows: Row[]): Promise<Row[]> {
   const ids = rows.map((r) => r.id).filter(Boolean);
@@ -185,7 +240,14 @@ export async function fetchHostels(
   if (opts.maxPriceKobo != null) q = q.lte('price_per_session_kobo', opts.maxPriceKobo);
   if (opts.search) q = q.ilike('name', `%${opts.search}%`);
 
-  return unwrapList<Row>(await q).map(toHostel);
+  // Availability comes from the `hostel_availability` view, exactly as the
+  // detail page reads it. It used to be skipped here, and the fallback in the
+  // card mapper counts `rooms.filter(r => r.state === 'free')`   but `state`
+  // lives on the `hostel_room_state` view, not on `hostel_rooms`, so it is
+  // never present on a row this select returns. Every count came out 0 and the
+  // entire catalogue rendered "FULLY BOOKED", a hostel with 100 free rooms
+  // included. One list, one source of truth for whether a room is free.
+  return (await attachAvailability(db, unwrapList<Row>(await q))).map(toHostel);
 }
 
 /**
@@ -203,7 +265,7 @@ export async function fetchHostelBySlug(db: Client, slug: string): Promise<Hoste
   // `availability` arrived as 'active' / 'ending_soon'   values the Availability
   // type does not contain. Same helper as the list, same translation.
   const [withAvailability] = await attachAvailability(db, [row]);
-  return toHostel(withAvailability);
+  return toHostel(await attachRoomState(db, withAvailability));
 }
 
 /** PostGIS proximity search. `hostels_near` was created in 0006. */
@@ -324,6 +386,8 @@ export async function fetchMyInspections(db: Client): Promise<Inspection[]> {
     // Set by the agent on or after claiming. It is the only thing that tells a
     // student where to stand   see 20260909210000.
     meetingPoint: r.meeting_point ?? null,
+    proposedFor: r.proposed_for ?? null,
+    studentConfirmedAt: r.student_confirmed_at ?? null,
     // The agent's NAME is not readable here: profiles is own-row-only under RLS.
     // The claim notification carries it, and disclosing it on this row needs an
     // RPC like the vendor roster's.
@@ -379,6 +443,8 @@ export async function scheduleInspection(
     // A freshly booked inspection has no agent and no meeting point yet   both
     // arrive when somebody takes it off the board.
     meetingPoint: row.meeting_point ?? null,
+    proposedFor: row.proposed_for ?? null,
+    studentConfirmedAt: row.student_confirmed_at ?? null,
     agentName: null,
     reportFiledAt: row.report_filed_at ?? null,
     disputedAt: row.disputed_at ?? null,

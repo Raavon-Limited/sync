@@ -32,7 +32,7 @@ export default async function Page() {
     admin
       .from('verification_visits')
       .select(
-        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, selfie_url, notes, submitted_at, decided_at',
+        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, selfie_url, notes, submitted_at, decided_at, decided_by',
       )
       .order('updated_at', { ascending: false }),
     // THE WHOLE LISTING, because this is the screen where somebody decides
@@ -76,6 +76,8 @@ export default async function Page() {
       scheduledFor: v.scheduled_for ?? null,
       submittedAt: v.submitted_at ?? null,
       decidedAt: v.decided_at ?? null,
+      // Resolved from the same map the ambassador uses   staff are profiles too.
+      decidedByName: v.decided_by ? (nameById.get(v.decided_by) ?? null) : null,
       photos: (v.photos ?? []) as string[],
       videoUrl: v.video_url ?? null,
       // Collected since 20260909180000 and never rendered, which is why the

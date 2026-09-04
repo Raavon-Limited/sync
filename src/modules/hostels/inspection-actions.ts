@@ -73,3 +73,49 @@ export async function disputeViewing(input: {
   revalidatePath('/user/bookings');
   return { ok: true };
 }
+
+/**
+ * "Yes, that time works."
+ *
+ * Until this runs the viewing is an offer, not an arrangement:
+ * `scheduled_for` still holds whatever the student asked for when they paid,
+ * and `proposed_for` holds what the agent can actually do. Confirming is what
+ * makes the second the first.
+ */
+export async function confirmViewingTime(inspectionId: string): Promise<InspectionResult> {
+  const supabase = await createClient();
+  const { error } = await rpc(supabase)('confirm_inspection_time', {
+    p_inspection: inspectionId,
+  });
+
+  if (error) {
+    return { ok: false, error: userMessage(error, 'We could not confirm that time.') };
+  }
+  revalidatePath('/user/bookings');
+  return { ok: true };
+}
+
+/**
+ * "I cannot make that."
+ *
+ * Returns the request to the board for another agent. It costs the student
+ * nothing   their fee stays in escrow and the viewing is still theirs   and it
+ * is not recorded against the agent as a missed visit. It does mean that agent
+ * cannot take this one again, which is the point: their offer was refused.
+ */
+export async function declineViewingTime(input: {
+  inspectionId: string;
+  reason?: string;
+}): Promise<InspectionResult> {
+  const supabase = await createClient();
+  const { error } = await rpc(supabase)('decline_inspection_time', {
+    p_inspection: input.inspectionId,
+    p_reason: input.reason?.trim() || null,
+  });
+
+  if (error) {
+    return { ok: false, error: userMessage(error, 'We could not send that back.') };
+  }
+  revalidatePath('/user/bookings');
+  return { ok: true };
+}

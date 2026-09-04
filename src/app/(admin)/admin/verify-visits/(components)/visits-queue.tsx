@@ -80,6 +80,8 @@ export interface AdminVisit {
   scheduledFor: string | null;
   submittedAt: string | null;
   decidedAt: string | null;
+  /** Who verified, rejected or flagged it. On the row since 0006, never read. */
+  decidedByName: string | null;
   photos: string[];
   videoUrl: string | null;
   /** The agent, at the property. Its own field because it proves a different
@@ -446,11 +448,13 @@ function VisitCard({
               <TabsTrigger value="listing" className="flex-1">
                 Listing
               </TabsTrigger>
+              {/* NO SEPARATE DECISION TAB. The decision IS looking at the
+                  evidence   putting the buttons behind a tab meant deciding
+                  from memory of the photographs you had just navigated away
+                  from, which is the same mistake as splitting the listing
+                  from the findings. They live at the foot of Findings. */}
               <TabsTrigger value="findings" className="flex-1">
-                Findings
-              </TabsTrigger>
-              <TabsTrigger value="decision" className="flex-1">
-                Decision
+                Findings &amp; decision
               </TabsTrigger>
             </TabsList>
 
@@ -527,9 +531,8 @@ function VisitCard({
                   No photos, video or notes submitted yet.
                 </p>
               )}
-            </TabsContent>
 
-            <TabsContent value="decision" className="flex flex-col gap-6 pt-4">
+              <div className="border-line/10 mt-2 border-t pt-4" />
 
           {/* Who is going. Until this existed the screen could schedule a visit
               and never name anybody, so a row read "Visit Scheduled" with
@@ -677,13 +680,44 @@ function VisitCard({
             </section>
           )}
 
+              {/*
+                THE RECORD OF THE DECISION, not just the fact of one.
+                It said "Decided." and a date. Who verified a hostel is the
+                thing anybody asks about afterwards   an appeal, a complaint,
+                a listing that turns out not to exist   and it was on the row
+                the whole time in `decided_by`, never read.
+              */}
               {settled && (
-                <p className="text-content-muted text-xs">
-                  {v.status === 'Fraud'
-                    ? 'Flagged as fraud. The account behind it is blocked from re-submitting.'
-                    : 'Decided. A rejected listing can be sent for another visit from the list below.'}
-                  {v.decidedAt ? ' ' + new Date(v.decidedAt).toLocaleDateString('en-NG') : ''}
-                </p>
+                <section className="border-line/10 bg-surface-deep flex flex-col gap-1.5 rounded-lg border p-3">
+                  <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
+                    The decision
+                  </p>
+                  <p className="text-content flex flex-wrap items-center gap-2 text-sm">
+                    <Badge className={STATUS_BADGE[v.status] ?? STATUS_BADGE['Not Visited']}>
+                      {v.status}
+                    </Badge>
+                    {v.decidedByName ? (
+                      <span>
+                        by <span className="font-medium">{v.decidedByName}</span>
+                      </span>
+                    ) : (
+                      <span className="text-content-muted">by a staff account</span>
+                    )}
+                    {v.decidedAt && (
+                      <span className="text-content-muted text-xs">
+                        {new Date(v.decidedAt).toLocaleString('en-NG')}
+                      </span>
+                    )}
+                  </p>
+                  {v.notes && <p className="text-content-muted text-sm">{v.notes}</p>}
+                  <p className="text-content-muted text-xs">
+                    {v.status === 'Fraud'
+                      ? 'The account behind this listing is blocked from submitting again.'
+                      : v.status === 'Rejected'
+                        ? 'A rejected listing can be sent for another visit from the list below.'
+                        : 'This listing is live to students.'}
+                  </p>
+                </section>
               )}
             </TabsContent>
           </Tabs>

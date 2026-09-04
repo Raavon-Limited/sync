@@ -160,6 +160,8 @@ export default function BookingsPage() {
           feeKobo: i.feeKobo,
           agentName: i.agentName ?? null,
           meetingPoint: i.meetingPoint ?? null,
+          proposedFor: i.proposedFor ?? null,
+          studentConfirmedAt: i.studentConfirmedAt ?? null,
           reportFiledAt: i.reportFiledAt ?? null,
           disputedAt: i.disputedAt ?? null,
         }))}

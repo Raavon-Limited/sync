@@ -26,7 +26,12 @@ import { useRouter } from 'next/navigation';
 import { CalendarClock, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { confirmViewing, disputeViewing } from '@/modules/hostels/inspection-actions';
+import {
+  confirmViewing,
+  confirmViewingTime,
+  declineViewingTime,
+  disputeViewing,
+} from '@/modules/hostels/inspection-actions';
 
 export interface StudentInspection {
   id: string;
@@ -36,6 +41,10 @@ export interface StudentInspection {
   feeKobo: number;
   agentName: string | null;
   meetingPoint: string | null;
+  /** The time an agent offered. Null when nobody has taken it yet. */
+  proposedFor: string | null;
+  /** You accepted that time. Until then nothing is arranged. */
+  studentConfirmedAt: string | null;
   reportFiledAt: string | null;
   disputedAt: string | null;
 }
@@ -70,7 +79,9 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
   // viewing that is still three hours away is a question with no answer.
   const past = new Date(i.scheduledFor).getTime() < Date.now();
   const settled = i.status !== 'scheduled';
-  const answerable = past && !settled && !i.disputedAt;
+  // Only once a time was actually AGREED. Asking "did it happen?" about an
+  // offer nobody accepted is a question with no answer.
+  const answerable = past && !settled && !i.disputedAt && !!i.studentConfirmedAt;
 
   function confirm() {
     setError(null);
@@ -122,6 +133,16 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
           <p className="text-content-muted mt-1 text-xs">Your agent is {i.agentName}.</p>
         )}
       </div>
+
+      {/*
+        THE OFFER, AND THE ONLY QUESTION ON THIS CARD THAT BLOCKS ANYTHING.
+        An agent has taken the request and said when they can do it. Until the
+        student answers, nobody is going anywhere   which is why this sits
+        above the meeting point and the confirm-it-happened block.
+      */}
+      {i.proposedFor && !i.studentConfirmedAt && !settled && (
+        <TimeOffer inspection={i} />
+      )}
 
       {i.disputedAt && (
         <p className="text-content-muted border-line/15 bg-surface-deep rounded-lg border px-3 py-2 text-xs">
@@ -199,6 +220,113 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
       )}
 
       {error && <p className={cn('text-coral text-xs')}>{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * "Can you make this time?"
+ *
+ * DECLINING COSTS THE STUDENT NOTHING. Their fee stays in escrow and the
+ * viewing is still theirs   the request simply goes back on the board for a
+ * different agent. Said on the button, because "No" next to money somebody has
+ * already paid reads as cancelling the whole thing.
+ */
+function TimeOffer({ inspection: i }: { inspection: StudentInspection }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState('');
+
+  function confirm() {
+    setError(null);
+    start(async () => {
+      const res = await confirmViewingTime(i.id);
+      if (res.ok) router.refresh();
+      else setError(res.error);
+    });
+  }
+
+  function decline() {
+    setError(null);
+    start(async () => {
+      const res = await declineViewingTime({ inspectionId: i.id, reason });
+      if (res.ok) {
+        setAsking(false);
+        router.refresh();
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+
+  return (
+    <div className="border-lime-deep/30 bg-lime/5 flex flex-col gap-2 rounded-lg border p-3">
+      <p className="text-content text-sm font-medium">
+        {i.agentName ?? "An agent"} can show you this on{" "}
+        {new Date(i.proposedFor as string).toLocaleString("en-NG", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          hour: "numeric",
+          minute: "2-digit",
+        })}
+        .
+      </p>
+      {i.meetingPoint && (
+        <p className="text-content-muted flex items-center gap-1 text-xs">
+          <MapPin className="size-3.5 shrink-0" />
+          Meeting at {i.meetingPoint}
+        </p>
+      )}
+
+      {!asking ? (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button className="w-full sm:w-auto" disabled={busy} onClick={confirm}>
+              {busy ? 'Confirming…' : 'Yes, that works'}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => setAsking(true)}
+            >
+              I cannot make it
+            </Button>
+          </div>
+          <p className="text-content-muted text-xs">
+            Saying no does not cancel your viewing or cost you anything — it goes back for a
+            different agent to offer another time.
+          </p>
+        </>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder="When would suit you better? (optional)"
+            className="border-line/15 bg-panel text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              disabled={busy}
+              onClick={() => setAsking(false)}
+            >
+              Back
+            </Button>
+            <Button className="flex-1 sm:flex-none" disabled={busy} onClick={decline}>
+              {busy ? 'Sending…' : 'Send it back'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-coral text-xs">{error}</p>}
     </div>
   );
 }
