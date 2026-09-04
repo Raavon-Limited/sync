@@ -4484,6 +4484,10 @@ export type Database = {
         Args: { p_inspection: string; p_notes?: string; p_outcome?: string }
         Returns: string
       }
+      flag_visit_fraud: {
+        Args: { p_reason: string; p_visit: string }
+        Returns: string
+      }
       get_unread_counts: {
         Args: never
         Returns: {
