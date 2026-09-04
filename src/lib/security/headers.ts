@@ -64,6 +64,23 @@ export const contentSecurityPolicy = [
   `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_SCRIPT}`,
   `style-src 'self' 'unsafe-inline' ${GOOGLE_FONTS_STYLE}`,
   `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${GOOGLE_MAPS_IMG}`,
+  // AUDIO AND VIDEO ARE NOT COVERED BY img-src.
+  //
+  // There was no media-src at all, so <video> and <audio> fell through to
+  // `default-src 'self'` and every media file we host on Supabase was blocked -
+  // while the photographs beside them loaded, because img-src names Supabase
+  // and media-src did not exist. The failure is near-silent by design: the
+  // element still renders its controls, the duration reads 0:00, the frame
+  // stays black, and the only evidence is a CSP violation in the console. It
+  // looks exactly like a corrupt upload.
+  //
+  // Three things need it, all of them shipped without it:
+  //   - the hostel walkthrough video (listing-media, public)   20260908120000
+  //   - message attachments: video and voice notes (message-attachments,
+  //     private, served as signed URLs on the same origin)   20260819180000
+  //   - blob: for the local preview a sender sees before their own upload
+  //     finishes (chat-window, property-form)
+  `media-src 'self' data: blob: ${SUPABASE_ORIGINS}`,
   `font-src 'self' data: ${GOOGLE_FONTS_FONT}`,
   `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_CONNECT}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
   `worker-src 'self' blob:`,

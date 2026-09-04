@@ -20,6 +20,7 @@ import type { Metadata } from 'next';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { displayName } from '@/modules/admin/emails';
 import type { Row } from '@/lib/supabase/row';
 import {
   AgentsConsole,
@@ -92,11 +93,9 @@ export default async function Page() {
       const email = emailById.get(id) ?? null;
       return {
         id,
-        // Name, then email, then a last resort. An account always has an email,
-        // so the last resort is now genuinely unreachable rather than the
-        // default.
-        name:
-          (p.full_name as string | null) ?? email ?? 'No name set',
+        // Name, then email, then a last resort   see `displayName`, which is
+        // where that rule lives now that five screens need it.
+        name: displayName(p.full_name as string | null, email),
         // Kept separately as well as in the fallback: the roster shows both when
         // a name exists, because "which taomina is this" is answered by the
         // address and not by the display name.
@@ -121,7 +120,7 @@ export default async function Page() {
   const nameById = new Map(
     rows.map((p) => [
       p.id as string,
-      (p.full_name as string | null) ?? emailById.get(p.id as string) ?? null,
+      displayName(p.full_name as string | null, emailById.get(p.id as string)),
     ]),
   );
 

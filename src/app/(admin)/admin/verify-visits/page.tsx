@@ -7,6 +7,7 @@
 import type { Metadata } from 'next';
 import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { displayName, emailsByAccount } from '@/modules/admin/emails';
 import { hostelFactsFromRow } from '@/components/shared/hostel-facts';
 import {
   VisitsQueue,
@@ -47,7 +48,17 @@ export default async function Page() {
       .is('archived_at', null),
   ]);
 
-  const nameById = new Map(((profiles ?? []) as Row[]).map((p) => [p.id, p.full_name]));
+  // SAME FIX AS /admin/agents. `full_name` is null for anyone who accepted an
+  // invite and only set a password, so every such agent rendered as the literal
+  // "No name set"   including inside the "Send an agent" dropdown, where two of
+  // them would have been indistinguishable.
+  const emailById = await emailsByAccount();
+  const nameById = new Map(
+    ((profiles ?? []) as Row[]).map((p) => [
+      p.id as string,
+      displayName(p.full_name as string | null, emailById.get(p.id as string)),
+    ]),
+  );
   const hostelById = new Map(((hostels ?? []) as Row[]).map((h) => [h.id, h]));
 
   const rows: AdminVisit[] = ((visits ?? []) as Row[]).map((v) => {
@@ -98,7 +109,7 @@ export default async function Page() {
     .filter((p) => p.role === 'agent' || (p.roles as string[] | null)?.includes('agent'))
     .map((p) => ({
       id: p.id as string,
-      name: (p.full_name as string) ?? 'No name set',
+      name: displayName(p.full_name as string | null, emailById.get(p.id as string)),
       suspended: !!p.suspended_at,
       open: openByAgent.get(p.id as string) ?? 0,
     }))

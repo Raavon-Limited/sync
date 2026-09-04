@@ -29,3 +29,51 @@ export async function emailFor(id: string): Promise<string | null> {
   if (error) return null;
   return data.user?.email ?? null;
 }
+
+/**
+ * Every account's address, for a screen that lists people.
+ *
+ * The LIST counterpart to `emailFor`. One round trip for the whole page, which
+ * is the shape the note above says is right here   the mistake it warns about
+ * is using this for a detail page.
+ *
+ * An error returns an empty map rather than throwing, for the same reason
+ * `emailFor` returns null: a roster that cannot resolve addresses should render
+ * names and be slightly less useful, not 500.
+ */
+export async function emailsByAccount(): Promise<Map<string, string>> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  if (error) return new Map();
+  return new Map(
+    (data.users ?? [])
+      .filter((u) => u.email)
+      .map((u) => [u.id, u.email as string] as const),
+  );
+}
+
+/**
+ * What to call somebody on screen.
+ *
+ * WHY THE EMAIL IS THE FALLBACK AND NOT A PLACEHOLDER
+ *   `profiles.full_name` is null for anyone who has never filled it in, which
+ *   is every agent who accepted an invite and only set a password. Five admin
+ *   screens wrote `full_name ?? 'No name set'`, so those people appeared as
+ *   that literal string   identical to each other, unsearchable, and impossible
+ *   to tell apart in a dropdown. An account always has an address; it is a
+ *   worse label than a name and an enormously better one than a placeholder.
+ *
+ *   'No name set' survives only as the third branch, for an account with
+ *   neither. That is not reachable through normal sign-up and is left in so the
+ *   return type stays a string.
+ */
+export function displayName(
+  fullName?: string | null,
+  email?: string | null,
+): string {
+  const named = fullName?.trim();
+  if (named) return named;
+  const address = email?.trim();
+  if (address) return address;
+  return 'No name set';
+}

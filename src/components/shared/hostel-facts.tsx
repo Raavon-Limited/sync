@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { MapPin, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { formatKobo } from '@/lib/query/helpers';
+import { WalkthroughVideo } from '@/components/shared/walkthrough-video';
 import type { Row } from '@/lib/supabase/row';
 
 /** The hostel's own claims. Every screen showing a hostel builds this shape. */
@@ -148,14 +149,7 @@ export function HostelFacts({
               which a set of stills cannot fake as easily. */}
           <div className="flex flex-wrap gap-2">
             {(hostel.videos ?? []).map((src) => (
-              <video
-                key={src}
-                src={src}
-                controls
-                playsInline
-                preload="metadata"
-                className="border-line/10 h-40 rounded-lg border bg-black"
-              />
+              <WalkthroughVideo key={src} src={src} />
             ))}
           </div>
         </div>
