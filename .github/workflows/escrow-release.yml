@@ -1,6 +1,10 @@
-name: Release matured escrow
+name: Hourly sweeps
 
-# Hourly sweep of matured escrow holds.
+# Two hourly sweeps: matured escrow holds, and inspections whose agent never
+# turned up. They share this file because they share every reason for being
+# here - the Vercel Hobby cron cap explained below, the bearer-secret endpoint
+# shape, and the idempotency that makes a late or missed run harmless. Splitting
+# them would mean maintaining two copies of that reasoning.
 #
 # WHY THIS IS NOT VERCEL CRON
 # ---------------------------
@@ -99,3 +103,44 @@ jobs:
           fi
 
           echo "Escrow sweep completed."
+
+  # Independent of the escrow job on purpose: no `needs:`. A failing escrow
+  # sweep must not stop a student who was stood up an hour ago from getting
+  # another agent, and the two touch nothing in common.
+  inspections:
+    name: Release missed inspections
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the inspection sweep endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/release-inspections" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Inspection sweep returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi
+
+          echo "Inspection sweep completed."

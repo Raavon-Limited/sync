@@ -12,6 +12,16 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // ANY build directory, not just the default one.
+    //
+    // `.gitignore` has `/.next-*`, so a build written to `.next-verify` (which
+    // is what you get from `next build --distDir`) is invisible to git and
+    // therefore invisible to CI - but ESLint was still linting it locally. That
+    // is ~1,100 errors in generated bundles that CI never sees, which makes
+    // `npm run lint` locally disagree with `npm run lint` on the runner in the
+    // one direction that matters: it cries wolf, so a real error hides in the
+    // noise. Exactly that happened.
+    ".next-*/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

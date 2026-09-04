@@ -313,3 +313,50 @@ export async function fileInspectionReport(input: {
   revalidatePath('/agent');
   return { ok: true };
 }
+
+/**
+ * Take an inspection off the open board.
+ *
+ * NO ARGUMENT SAYS WHO IS CLAIMING. The RPC reads `auth.uid()`, so an agent
+ * cannot claim on somebody else's behalf by editing a request   which matters
+ * more here than usual, because claiming moves `escrow_holds.payee_id` and is
+ * therefore a write about money.
+ *
+ * THE TWO REFUSALS MEAN DIFFERENT THINGS and the RPC words them differently on
+ * purpose: "somebody already took this one" is bad luck and the board will have
+ * other work on it, while "you have already had this one" is permanent. Both
+ * arrive here as the RPC's own sentence, which is why `userMessage` passes them
+ * through   see lib/errors.
+ */
+export async function claimInspection(inspectionId: string): Promise<AgentResult> {
+  const supabase = await createServerClient();
+  const { error } = await rpc(supabase)('claim_inspection', { p_inspection: inspectionId });
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not take that one.') };
+  revalidatePath('/agent');
+  return { ok: true };
+}
+
+/**
+ * Hand one back before the time, rather than not turning up.
+ *
+ * The agent loses it either way   `release_inspection_claim` forfeits their
+ * claim whoever calls it, so this is not an escape from the one-shot rule. It
+ * exists because an agent who knows at noon that they cannot make four o'clock
+ * saves the student a wasted trip, and the platform would rather have that
+ * hour's notice than punish them into silence.
+ */
+export async function releaseInspection(input: {
+  inspectionId: string;
+  reason?: string;
+}): Promise<AgentResult> {
+  const supabase = await createServerClient();
+  const { error } = await rpc(supabase)('release_inspection_claim', {
+    p_inspection: input.inspectionId,
+    p_reason: input.reason?.trim() || 'the agent handed it back',
+  });
+
+  if (error) return { ok: false, error: userMessage(error, 'We could not release that one.') };
+  revalidatePath('/agent');
+  return { ok: true };
+}

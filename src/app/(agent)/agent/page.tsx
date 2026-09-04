@@ -20,9 +20,11 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import type { Row } from '@/lib/supabase/row';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { VisitList, type AgentVisit, type AgentInspection } from './(components)/visit-list';
+import { OpenBoard, type BoardJob } from './(components)/open-board';
 
 export const metadata: Metadata = { title: 'Your visits' };
 
@@ -58,10 +60,21 @@ export default async function Page() {
   const { data: inspectionRows } = await loose(admin)
     .from('hostel_inspections')
     .select(
-      'id, hostel_id, student_id, scheduled_for, status, fee_kobo, report_filed_at, reschedule_count',
+      // full_name and phone are the CONTACT THE STUDENT GAVE FOR THIS VISIT,
+      // snapshotted on the inspection row at booking. They are not always the
+      // same as the ones on their profile   somebody booking a viewing may well
+      // give the number they will actually be carrying that afternoon   and the
+      // inspection's own columns are the ones that were agreed.
+      'id, hostel_id, student_id, full_name, phone, scheduled_for, status, fee_kobo, report_filed_at, reschedule_count',
     )
     .eq('ambassador_id', user.id)
     .order('scheduled_for', { ascending: true, nullsFirst: false });
+
+  // The open board, read as the agent   `open_inspection_board` gates on
+  // auth.uid() and returns nothing for anyone who is not a working agent, so
+  // the session client is what makes that check mean something.
+  const session = await createClient();
+  const { data: boardRows } = await loose(session).rpc('open_inspection_board', { p_limit: 50 });
 
   const { data: visits } = await loose(admin)
     .from('verification_visits')
@@ -140,15 +153,29 @@ export default async function Page() {
       address: (h?.address as string) ?? (h?.area as string) ?? 'No address on the listing',
       status: (i.status as string) ?? 'pending_payment',
       scheduledFor: (i.scheduled_for as string) ?? null,
-      studentName: (student?.full_name as string) ?? null,
+      // THE INSPECTION'S OWN CONTACT FIRST, the profile only as a fallback.
+      // This read the profile alone, so an agent rang whatever number was on
+      // the account rather than the one the student gave when booking THIS
+      // viewing   and `hostel_inspections.full_name` / `.phone` are NOT NULL
+      // precisely because the visit needs its own.
+      studentName: (i.full_name as string) ?? (student?.full_name as string) ?? null,
       // Same reason the verification card carries one: an agent at a locked
       // gate needs to ring somebody, not open a support ticket.
-      studentPhone: (student?.phone as string) ?? null,
+      studentPhone: (i.phone as string) ?? (student?.phone as string) ?? null,
       feeKobo: Number(i.fee_kobo ?? 0),
       reportFiledAt: (i.report_filed_at as string) ?? null,
       rescheduleCount: Number(i.reschedule_count ?? 0),
     };
   });
+
+  const board: BoardJob[] = ((boardRows ?? []) as Row[]).map((b) => ({
+    inspectionId: b.inspection_id as string,
+    hostelName: (b.hostel_name as string) ?? 'Unnamed hostel',
+    // Area only. The street address is not on the board   see open-board.tsx.
+    area: (b.area as string) ?? null,
+    scheduledFor: (b.scheduled_for as string) ?? null,
+    feeKobo: Number(b.fee_kobo ?? 0),
+  }));
 
   // Undecided first, then by date. Decided visits keep their place at the
   // bottom rather than vanishing   "was that one accepted?" is a real question.
@@ -172,6 +199,11 @@ export default async function Page() {
           filing your report is what releases your fee.
         </p>
       </div>
+
+      {/* The board comes FIRST. An agent opening this screen with nothing
+          assigned needs work, not an empty list; one with a full afternoon
+          scrolls past it. */}
+      <OpenBoard jobs={board} />
 
       <VisitList visits={list} inspections={inspections} />
     </section>
