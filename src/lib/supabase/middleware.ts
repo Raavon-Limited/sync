@@ -47,14 +47,27 @@ export async function updateSession(request: NextRequest) {
   // a student to the page they were routed to. There is one source now, and it
   // is the row   see modules/admin/guard.
   let role: string | undefined;
+  // EVERY hat held, not just the one being worn. Gating a dashboard on the
+  // active role alone means a landlord invited as staff loses /landlord, with
+  // no way back: their active role is now `admin`, and switching it is a
+  // separate act they cannot perform from a page they cannot open.
+  //
+  // Safe to trust only because `roles` is frozen against client writes by
+  // guard_profile_privileged_cols (20260910210000). Before that migration it
+  // was self-assignable, and reading it here would have turned a latent
+  // escalation into an immediate one.
+  let roles: string[] = [];
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, roles')
       .eq('id', user.id)
       .maybeSingle();
     role =
       (profile?.role as string | undefined) ?? (user.user_metadata?.role as string | undefined);
+    // user_metadata is NOT consulted for this. It is editable by its owner,
+    // and the whole point of the array is that it decides access.
+    roles = (profile?.roles as string[] | null) ?? [];
   }
 
   // MANAGING A STORE IS NOT THE SAME AS BEING A VENDOR.
@@ -77,5 +90,5 @@ export async function updateSession(request: NextRequest) {
     isStorefrontStaff = !!membership;
   }
 
-  return { response, user, role, isStorefrontStaff };
+  return { response, user, role, roles, isStorefrontStaff };
 }

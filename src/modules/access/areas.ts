@@ -135,13 +135,18 @@ export const ADMIN_AREAS: AreaSpec[] = [
     key: 'payouts',
     label: 'Payouts',
     description: 'Approve withdrawals. Moves money out of the platform.',
-    href: '/admin/payouts',
+    // NO href: `/admin/payouts` has never been built. An area that names a
+    // route which 404s is worse than one that names none - the sidebar would
+    // link it and the console root would redirect a scoped admin into it. The
+    // grant still means something (actions check the area); it just has no
+    // screen yet. Give it one and put the href back.
   },
   {
     key: 'promotions',
     label: 'Promotions & placement',
     description: 'Platform promotions and paid front-page slots.',
-    href: '/admin/promotions',
+    // NO href: `/admin/promotions` has never been built either. Same reason as
+    // payouts above.
   },
   {
     key: 'agents',

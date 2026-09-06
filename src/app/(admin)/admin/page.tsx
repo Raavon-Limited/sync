@@ -10,7 +10,10 @@
  * start at zero.
  */
 import type { Metadata } from 'next';
-import { requireStaffArea } from '@/modules/admin/guard';
+import { redirect } from 'next/navigation';
+import { requireStaff } from '@/modules/admin/guard';
+import { accessLevel, visibleAreas } from '@/modules/access/guard';
+import { ADMIN_AREAS } from '@/modules/access/areas';
 import { StatCards } from './overview-components/StatCards';
 import { RevenueChart } from './overview-components/RevenueChart';
 import { GrowthChart } from './overview-components/GrowthChart';
@@ -23,8 +26,33 @@ export const metadata: Metadata = { title: 'Overview   Admin' };
 // Queue sizes and the activity feed are stale the moment anything happens.
 export const dynamic = 'force-dynamic';
 
+/**
+ * THE CONSOLE ROOT CANNOT REQUIRE ONE PARTICULAR AREA.
+ *
+ * It called `requireStaffArea('overview')`, so a scoped admin who was not
+ * granted `overview` hit /403 the moment they signed in   and again every
+ * time they clicked Dashboard, because that is where Dashboard points. A
+ * reviewer granted Finance (payouts and disputes) could not open the console
+ * at all, despite holding two areas inside it.
+ *
+ * The sidebar already solved this for the Accounts row: it points at the first
+ * area the viewer actually holds. The root now does the same, and only refuses
+ * somebody who holds nothing   which is the one case where /403 is the honest
+ * answer.
+ */
 export default async function AdminOverviewPage() {
-  await requireStaffArea('overview');
+  await requireStaff();
+
+  if ((await accessLevel('overview')) === 'none') {
+    const held = (await visibleAreas()) ?? [];
+    // An area with no `href` has no page yet, so it cannot be landed on even
+    // though the grant is real   see the notes in areas.ts. And /admin itself
+    // is skipped, or this redirects to the page it is already on.
+    const first = ADMIN_AREAS.find(
+      (a) => held.includes(a.key) && a.href && a.href !== '/admin',
+    );
+    redirect(first?.href ?? '/403');
+  }
 
   const o = await getOverview();
 

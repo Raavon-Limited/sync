@@ -4,7 +4,11 @@
  * caution fees) and need their own navigation. Its sidebar nav lives in
  * config/dashboard-nav under the `landlord` key.
  *
- * Authorization (role=landlord) is enforced by the proxy.
+ * Authorization is enforced by the proxy, and on HOLDING landlord rather than
+ * wearing it   a landlord invited onto staff has an active role of 'admin' and
+ * is still the owner of these hostels. Nothing here re-checks the role: these
+ * queries are scoped by landlord_id = auth.uid() in RLS, so a viewer gets their
+ * own rows whichever hat they have on.
  *
  * AND THE MIRROR OF THE REDIRECT IN /vendor: a business that is not a landlord
  * does not belong on the landlord dashboard, whichever role it happens to be

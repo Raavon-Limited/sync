@@ -97,6 +97,9 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
           email={user.email ?? ''}
           initial={initial}
           role={role}
+          // Free: getProfile() is already resolved above. Without it this menu
+          // cannot take a hat off - see the note at the top of UserMenu.
+          roles={profile?.roles ?? undefined}
           category={category}
           handle={handle}
         />

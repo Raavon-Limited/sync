@@ -109,7 +109,20 @@ function underPrefix(pathname: string, prefix: string): boolean {
  */
 const PUBLIC_UNDER_PROTECTED = ['/vendor/join'];
 
-const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
+/**
+ * `activeOnly` means the role must be WORN, not merely held.
+ *
+ * Every other dashboard is scoped by ownership in RLS   landlord_id =
+ * auth.uid() and friends   so a landlord who is also staff gets exactly their
+ * own rows whichever hat is on, and holding the role is the honest test.
+ *
+ * The console is not like that. `requireStaff()` and `is_staff()` in the
+ * database both read `profiles.role` alone, so admitting somebody who holds
+ * admin without wearing it would let the proxy wave through a page that then
+ * redirects to /403 by itself   a gate that says yes over a screen that says
+ * no. Switching hats is what grants it, and that is a deliberate act.
+ */
+const PROTECTED_PREFIXES: { prefix: string; roles: Role[]; activeOnly?: boolean }[] = [
   // /around is the public "home of the full Sync app" per the wireframe -
   // signed-out users land here, so it's deliberately not in the gate list.
   { prefix: '/hostels', roles: ALL },
@@ -157,7 +170,7 @@ const PROTECTED_PREFIXES: { prefix: string; roles: Role[] }[] = [
    * substitute for the other, which is the whole reason the missing one was not
    * noticed.
    */
-  { prefix: '/admin', roles: ['admin', 'super_admin'] },
+  { prefix: '/admin', roles: ['admin', 'super_admin'], activeOnly: true },
 ];
 
 /**
@@ -217,7 +230,13 @@ export async function proxy(request: NextRequest) {
     return guarded ? redirectToLogin(request, pathname) : NextResponse.next({ request });
   }
 
-  const { response, user, role: trustedRole, isStorefrontStaff } = await updateSession(request);
+  const {
+    response,
+    user,
+    role: trustedRole,
+    roles: heldRoles,
+    isStorefrontStaff,
+  } = await updateSession(request);
 
   // Personalised dashboard handles: /<handle>/<page> → the real /user or /vendor
   // page, but ONLY when <handle> is the signed-in user's own handle (private).
@@ -256,7 +275,31 @@ export async function proxy(request: NextRequest) {
   // Server-trusted role (profiles.role / admin allowlist), not the editable
   // user_metadata - so a user can't self-assign a role to reach /admin.
   const role = (trustedRole as Role | undefined) ?? 'student';
-  if (!guarded.roles.includes(role)) {
+
+  /*
+   * HOLDING THE ROLE IS ENOUGH. WEARING IT IS NOT REQUIRED.
+   *
+   * This compared the ACTIVE role only, so a landlord invited as staff was
+   * refused /landlord   their active role had become 'admin' and the array
+   * saying they are still a landlord was never read. Accepting a staff invite
+   * took away the dashboard for the property they still own, and the Dashboard
+   * link in the account menu   which follows the active role   pointed at the
+   * console instead, so the way back was not obvious from anywhere.
+   *
+   * Switching hats in the account menu would have restored it, and that is the
+   * point: a hat is a VIEW, not a grant. Nothing about wearing one should
+   * revoke a dashboard the other one earned.
+   *
+   * `roles` is the set of hats legitimately granted, and it is frozen against
+   * client writes by guard_profile_privileged_cols. Reading it here is only
+   * sound because of that freeze   see 20260910210000, and do not weaken one
+   * without the other.
+   *
+   * The console opts out via `activeOnly`, for the reason given on that field.
+   */
+  const holds = (r: Role) =>
+    role === r || (!guarded.activeOnly && (heldRoles ?? []).includes(r));
+  if (!guarded.roles.some(holds)) {
     // One exception: a branch manager. They are invited to run a storefront and
     // keep their own role - usually 'student' - so a pure role gate would send
     // them to /403 on the dashboard they were just granted. Membership is
