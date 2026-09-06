@@ -26,19 +26,44 @@ export function useAreas() {
 
 // ── Browse ─────────────────────────────────────────────────────────────────
 
+/**
+ * The public catalogue.
+ *
+ * VERIFIED-ONLY BY DEFAULT, AND THAT DEFAULT IS THE POINT.
+ *   RLS (20260908150000) already hides unverified listings   but deliberately
+ *   not from the landlord who owns one, who has to be able to fix it, nor from
+ *   staff, whose job is reviewing it. So a signed-in admin browsing /hostels
+ *   saw "Not visited yet" listings sitting beside real ones, in the catalogue
+ *   students buy from.
+ *
+ *   The `verifiedOnly` flag existed for exactly that   "an explicit narrowing
+ *   for the screens that want ONLY verified even when the caller is one of
+ *   those two"   and none of the three student-facing callers passed it.
+ *
+ *   Passing it at each call site fixes three screens and not the fourth
+ *   somebody writes next month, which is the failure 20260908150000 warns
+ *   about in its own header. So the default flips: this hook is the public
+ *   catalogue, and a caller that genuinely wants unverified rows has to say
+ *   `verifiedOnly: false` and mean it. The landlord and admin screens do not
+ *   use this hook at all   they have useMyHostels and their own queries.
+ */
 export function useHostels(
   filters: {
     area?: string;
     roomType?: string;
     minPriceKobo?: number;
     maxPriceKobo?: number;
+    /** Defaults to TRUE. Pass false only for a screen that reviews listings. */
     verifiedOnly?: boolean;
     search?: string;
   } & PageParams = {},
 ) {
+  const scoped = { ...filters, verifiedOnly: filters.verifiedOnly ?? true };
   return useQuery({
-    queryKey: qk.hostels.list(filters),
-    queryFn: () => api.fetchHostels(db(), filters),
+    // The key carries the resolved filter, not the caller's   otherwise a
+    // verified-only list and an everything list would share a cache entry.
+    queryKey: qk.hostels.list(scoped),
+    queryFn: () => api.fetchHostels(db(), scoped),
   });
 }
 
