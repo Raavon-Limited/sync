@@ -17,6 +17,7 @@
 'use client';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { compressImage } from './compress';
 
 export const LISTING_BUCKET = 'listing-media';
 
@@ -48,7 +49,14 @@ export function rejectReason(file: File): string | null {
 
   const cap = kind === 'video' ? MAX_LISTING_VIDEO_BYTES : MAX_LISTING_IMAGE_BYTES;
   if (file.size > cap) {
-    return `${file.name} is over ${kind === 'video' ? '40MB' : '5MB'}`;
+    // A size and a number an agent cannot act on is a dead end. Phones record
+    // at 4K by default and a 30s clip clears 40MB easily, so the message says
+    // the two things that actually fix it.
+    if (kind === 'video') {
+      const mb = Math.round(file.size / (1024 * 1024));
+      return `That video is ${mb}MB and the limit is 40MB. Record a shorter clip, or drop your camera to 1080p and try again.`;
+    }
+    return `${file.name} is over 5MB even after shrinking — try a different photo`;
   }
   return null;
 }
@@ -62,24 +70,68 @@ export function rejectReason(file: File): string | null {
  */
 export async function uploadListingMedia(
   db: SupabaseClient,
-  input: { userId: string; file: File },
+  input: { userId: string; file: File; signal?: AbortSignal },
 ): Promise<ListingMedia> {
-  const reason = rejectReason(input.file);
+  const declaredKind = kindOf(input.file.type);
+  if (!declaredKind) throw new Error(rejectReason(input.file) ?? 'Unsupported file');
+
+  /*
+   * SHRINK FIRST, THEN JUDGE THE SIZE.
+   *
+   * The order matters and used to be the other way round, which refused work
+   * that was perfectly uploadable: phone cameras routinely produce 6-8MB JPEGs
+   * and the image cap is 5MB, so an agent photographing a property with a
+   * recent phone got "over 5MB" on a picture the reviewer needed. Compressing
+   * before the check means that photo lands at a few hundred KB and is simply
+   * accepted   and every accepted photo is now 10-20x quicker over the mobile
+   * data these are actually filed on. See ./compress.
+   */
+  const file = declaredKind === 'image' ? await compressImage(input.file) : input.file;
+
+  const reason = rejectReason(file);
   if (reason) throw new Error(reason);
 
-  const kind = kindOf(input.file.type) as MediaKind;
-  const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+  const kind = kindOf(file.type) as MediaKind;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   const token = crypto.randomUUID().slice(0, 8);
   const path = `${input.userId}/hostels/${token}-${safeName}`;
 
-  const { error } = await db.storage.from(LISTING_BUCKET).upload(path, input.file, {
-    contentType: input.file.type,
-    // A random prefix makes collisions vanishingly unlikely; an unexpected one
-    // should fail rather than silently replace somebody's photo.
-    upsert: false,
-  });
-  if (error) throw error;
+  /*
+   * RETRIED, BECAUSE ONE BAR IS NOT THE SAME AS NO SIGNAL.
+   *
+   * A single dropped request on a weak link surfaced as "That upload failed.
+   * Try again." and threw away everything already transferred. Three attempts
+   * with a widening gap turns most of those into a slow success instead of an
+   * agent re-picking the same photo at the gate.
+   *
+   * Only transport failures are retried. A refusal from storage   wrong type,
+   * over the cap, no permission   returns the same answer every time, so
+   * retrying it just costs more of the data we are trying to save.
+   */
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (input.signal?.aborted) throw new Error('Upload cancelled');
 
-  const { data } = db.storage.from(LISTING_BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, kind };
+    const { error } = await db.storage.from(LISTING_BUCKET).upload(path, file, {
+      contentType: file.type,
+      // A random prefix makes collisions vanishingly unlikely; an unexpected one
+      // should fail rather than silently replace somebody's photo.
+      upsert: false,
+    });
+    if (!error) {
+      const { data } = db.storage.from(LISTING_BUCKET).getPublicUrl(path);
+      return { url: data.publicUrl, kind };
+    }
+
+    lastError = error;
+    const status = (error as { statusCode?: string | number }).statusCode;
+    const permanent = status !== undefined && Number(status) >= 400 && Number(status) < 500;
+    if (permanent) break;
+
+    await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('That upload did not go through. Check your signal and try again.');
 }

@@ -183,7 +183,9 @@ export function EvidenceFields({
 
       {/* ── The agent ── */}
       <div className="flex flex-col gap-2">
-        <p className="text-content text-sm font-medium">You, at the property</p>
+        <p className="text-content text-sm font-medium">
+          You, at the property <span className="text-coral">*</span>
+        </p>
         <p className="text-content-muted text-xs">
           One photo of you there. Photos of a building only prove the building exists.
         </p>
@@ -220,9 +222,12 @@ export function EvidenceFields({
 
       {/* ── The walkthrough ── */}
       <div className="flex flex-col gap-2">
-        <p className="text-content text-sm font-medium">Walkthrough video</p>
+        <p className="text-content text-sm font-medium">
+          Walkthrough video <span className="text-coral">*</span>
+        </p>
         <p className="text-content-muted text-xs">
-          Optional, up to 40MB. A continuous pan is much harder to fake than stills.
+          A continuous pan is much harder to fake than stills. Keep it short — 20 to 30 seconds is
+          plenty, and it is the one file we cannot shrink for you before it uploads.
         </p>
 
         {value.videoUrl ? (
@@ -279,11 +284,22 @@ export function EvidenceFields({
         />
       </div>
 
+      {/*
+        A BARE SPINNER ON A WEAK SIGNAL READS AS A HANG.
+        Storage gives us no progress events, so we cannot show a percentage
+        honestly. What we can say is that it is still going and that leaving
+        loses it - which is the thing an agent standing at a gate needs to know
+        before they close the tab and file it all again.
+      */}
       {uploading > 0 && (
-        <p className="text-content-muted flex items-center gap-2 text-xs">
-          <Loader2 className="size-3.5 animate-spin" />
-          Uploading {uploading} file{uploading === 1 ? '' : 's'}…
-        </p>
+        <div className="text-content-muted flex items-start gap-2 text-xs">
+          <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin" />
+          <p>
+            Uploading {uploading} file{uploading === 1 ? '' : 's'}… Photos are shrunk on your phone
+            first, so they go quickly. A video on a weak signal can take a minute — keep this open,
+            it retries on its own.
+          </p>
+        </div>
       )}
       {error && <p className="text-coral text-xs">{error}</p>}
     </div>

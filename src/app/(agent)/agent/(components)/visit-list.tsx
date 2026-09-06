@@ -135,9 +135,44 @@ function when(iso: string | null, fallback: string): string {
 
 /** Shared card chrome. `min-w-0` at every level is what stops a long address
  *  from pushing the status badge off a narrow screen. */
-function CardShell({ children }: { children: React.ReactNode }) {
+/**
+ * The card, optionally the button.
+ *
+ * TAPPING THE CARD IS THE WHOLE INTERACTION, so the card takes the tap.
+ * Filing used to be reachable only through the small "File what you found"
+ * button, and an agent standing at a gate on a phone taps the big obvious
+ * rectangle with the address on it. That did nothing, which reads as broken.
+ *
+ * `onOpen` is only passed when there is something to file, so a decided visit
+ * stays inert rather than offering a press that goes nowhere.
+ *
+ * Not a <button>: this contains a phone link, and an anchor inside a button is
+ * invalid HTML that browsers resolve by dropping one of them. role/tabIndex and
+ * an explicit key handler give the same keyboard and screen-reader behaviour
+ * while leaving the children clickable in their own right   see the
+ * stopPropagation in MeetLine, which is what keeps "call them" from also
+ * opening the filing sheet.
+ */
+function CardShell({ children, onOpen }: { children: React.ReactNode; onOpen?: () => void }) {
   return (
-    <div className="border-line/10 bg-panel flex min-w-0 flex-col gap-3 rounded-xl border p-3 sm:p-4">
+    <div
+      className={cn(
+        'border-line/10 bg-panel flex min-w-0 flex-col gap-3 rounded-xl border p-3 sm:p-4',
+        onOpen &&
+          'hover:border-line/25 focus-visible:ring-lime-deep/40 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2',
+      )}
+      {...(onOpen && {
+        role: 'button',
+        tabIndex: 0,
+        onClick: onOpen,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen();
+          }
+        },
+      })}
+    >
       {children}
     </div>
   );
@@ -195,9 +230,10 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
   const decided = VISIT_DONE.has(visit.status);
   const filed = visit.status === 'Under Review';
   const Icon = visit.kind === 'hostel' ? Building2 : Store;
+  const canFile = !decided && !filed;
 
   return (
-    <CardShell>
+    <CardShell onOpen={canFile ? () => setOpen(true) : undefined}>
       <div className="flex min-w-0 items-start gap-3">
         <Icon className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -228,9 +264,12 @@ function VisitCard({ visit }: { visit: AgentVisit }) {
 
       {visit.meetName && <MeetLine name={visit.meetName} phone={visit.meetPhone} />}
 
-      {!decided && !filed && (
+      {/* Kept even though the whole card now opens this: the card being
+          pressable is discoverable only by trying it, and this is the label
+          that says what pressing it does. */}
+      {canFile && (
         <div>
-          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setOpen(true)}>
+          <Button variant="outline" className="w-full sm:w-auto">
             File what you found
           </Button>
         </div>
@@ -338,7 +377,7 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
   }
 
   return (
-    <CardShell>
+    <CardShell onOpen={fileable ? () => setOpen(true) : undefined}>
       <div className="flex min-w-0 items-start gap-3">
         <Home className="text-content-muted mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -398,7 +437,13 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
       {/* WHERE THEY MEET. The agent owns this   they know the area and which
           gate is usable   and changing it re-notifies the student, who may
           already have set off. */}
-      {!done && <MeetingPoint inspectionId={i.id} current={i.meetingPoint} />}
+      {/* Sealed off from the card's own click: this is an editor, and setting
+          where to meet is not filing a report. */}
+      {!done && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <MeetingPoint inspectionId={i.id} current={i.meetingPoint} />
+        </div>
+      )}
 
       {i.disputedAt && (
         <p className="text-coral border-coral/20 bg-coral/5 rounded-lg border px-3 py-2 text-xs">
@@ -406,8 +451,13 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
         </p>
       )}
 
+      {/* Also sealed: "I cannot make it" sits here, and a mis-tap that opened
+          the report sheet instead would be the opposite of what was pressed. */}
       {fileable && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div
+          className="flex flex-col gap-2 sm:flex-row sm:items-center"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Button className="w-full sm:w-auto" onClick={() => setOpen(true)}>
             File your report
           </Button>
@@ -462,8 +512,14 @@ function MeetLine({
         <User className="size-3.5" />
         Meeting {name}
       </span>
+      {/* The card around this opens the filing sheet on click. Calling
+          somebody is not filing, so that tap stops at the anchor. */}
       {phone && (
-        <a href={`tel:${phone}`} className="text-lime-deep flex items-center gap-1">
+        <a
+          href={`tel:${phone}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-lime-deep flex items-center gap-1"
+        >
           <Phone className="size-3.5" />
           {phone}
         </a>
@@ -508,7 +564,25 @@ function FileSheet({
   const [busy, startSubmit] = useTransition();
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const blocked = requirePhoto && evidence.photos.length === 0;
+  /*
+   * A COMPLETE FILING IS A PHOTO, A VIDEO AND A PICTURE OF THE AGENT THERE.
+   *
+   * Photos and the walkthrough were the only evidence a reviewer had, and the
+   * video and selfie were both optional   so most filings arrived with neither,
+   * and "was this agent actually at this building" was unanswerable from the
+   * review screen. All three are required now.
+   *
+   * The message NAMES what is missing rather than saying the filing is
+   * incomplete. An agent standing outside in the sun should not have to scroll
+   * the form to work out which slot is empty.
+   */
+  const missing: string[] = [];
+  if (requirePhoto) {
+    if (evidence.photos.length === 0) missing.push('a photo of the place');
+    if (!evidence.videoUrl) missing.push('a walkthrough video');
+    if (!evidence.selfieUrl) missing.push('a photo of you there');
+  }
+  const blocked = missing.length > 0;
 
   function submit() {
     setNote(null);
@@ -565,7 +639,7 @@ function FileSheet({
           <div className="border-line/10 bg-panel shrink-0 border-t p-4">
             {blocked && (
               <p className="text-content-muted mb-2 text-xs">
-                At least one photo is required — it is the evidence a reviewer decides on.
+                Still needed: {missing.join(', ')}. This is everything a reviewer decides on.
               </p>
             )}
             {note && !note.ok && <p className="text-coral mb-2 text-xs">{note.text}</p>}
