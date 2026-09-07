@@ -258,8 +258,17 @@ Roughly in priority order. Nothing here is started.
   switch from `/user` — but the same gap.
 - **Resumable uploads (TUS)** for walkthrough video. Compression cannot help video; a drop at 80%
   still restarts. This is the real fix for the field team and needs a dependency plus bucket config.
-- **Email deliverability** — OTP codes are landing in spam. Unexamined. DMARC aggregate reports are
-  arriving for `letsyncyou.com`, which is normal in itself.
+- **Email deliverability** — diagnosed and being fixed. Sign-in codes were landing in spam because
+  auth email used Supabase's **built-in sender**: a Supabase-owned address on shared
+  infrastructure, covered by none of this domain's DKIM/SPF/DMARC, rate-limited to single digits
+  per hour. It is on by default and needs no configuration, which is exactly why nobody noticed.
+  The fix is **custom SMTP through Resend** (Dashboard → Project Settings → Authentication → SMTP
+  Settings; username is the literal string `resend`, password is the Resend API key).
+  `src/app/api/auth/send-email/route.ts` is a working Send Email Hook that does the same delivery
+  with our own template — it is deliberately **disabled**, and enabling it replaces the email
+  templates outright rather than layering on SMTP. Read that file's header before switching it on.
+  The DMARC aggregate reports arriving for `letsyncyou.com` are normal and currently all-pass;
+  they are requested by `rua=` in the domain's own DMARC record.
 - Several columns and RPCs are still hand-typed or `loose()`-cast. Regenerate types (see
   [§3](#3-house-rules)).
 

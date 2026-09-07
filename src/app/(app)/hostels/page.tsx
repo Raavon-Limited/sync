@@ -1,9 +1,10 @@
 ﻿'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ROOM_TYPE_NAMES } from '@/lib/constants/room-types';
-import { useCreateBooking, useHostels, useMyBookings } from '@/modules/hostels/hooks';
+import { useCreateBooking, useHostel, useHostels, useMyBookings } from '@/modules/hostels/hooks';
 import { rentQuote, naira } from '@/modules/hostels/pricing';
 import type {
   Booking,
@@ -296,7 +297,21 @@ const STATUS_MAP = {
   },
 } as const;
 
+/**
+ * useSearchParams() suspends, and Next requires a boundary above it or the
+ * whole route opts out of static rendering with a build-time error. The
+ * boundary is here rather than around a fragment of the tree because the
+ * selected hostel drives the entire screen.
+ */
 export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <HostelsPage />
+    </Suspense>
+  );
+}
+
+function HostelsPage() {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState<(typeof FILTERS)[number]['value']>('all');
   const [selectedHostel, setSelectedHostel] = useState<Hostel | null>(null);
@@ -326,9 +341,46 @@ export default function Page() {
    * visitor gets an empty list rather than an error, so this is safe to call
    * on a public page.
    */
-  const { isAuthenticated } = useSession();
+  // `isLoading` matters as much as the answer. "Not signed in" and "not known
+  // yet" are different states, and rendering the first while the second is true
+  // is what told a signed-in student to sign in.
+  const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const book = useCreateBooking();
   const { data: myBookings = [] } = useMyBookings();
+
+  /**
+   * ROOMS FOR THE PICKER.
+   *
+   * The list query does not attach room state   `hostel_room_state` is a
+   * per-hostel view and joining it across a whole catalogue is a query per
+   * card. The DETAIL fetch does attach it (`fetchHostelBySlug` runs
+   * `attachRoomState`), and the detail is one hostel, so this is where the
+   * question is cheap to ask. Disabled until a hostel is actually selected.
+   */
+  /*
+    The choice is stored WITH the hostel it was made on, so it cannot leak onto
+    another one. Resetting it in an effect keyed on the hostel would work, but
+    only after a render in which the previous hostel's room was still selected
+    - and that render is the one that decides whether the request button is
+    enabled.
+  */
+  const [roomChoice, setRoomChoice] = useState<{ hostelId: string; roomId: string } | null>(null);
+  const selectedRoomId =
+    roomChoice && roomChoice.hostelId === selectedHostel?.id ? roomChoice.roomId : null;
+  const setSelectedRoomId = (roomId: string | null) =>
+    setRoomChoice(roomId && selectedHostel ? { hostelId: selectedHostel.id, roomId } : null);
+  const { data: selectedDetail, isLoading: roomsLoading } = useHostel(selectedHostel?.slug);
+  const freeRooms = useMemo(
+    () =>
+      (selectedDetail?.rooms ?? []).filter(
+        // `undefined` means the view had no row for this room yet, which is not
+        // a promise that it is free   see attachRoomState. Only an explicit
+        // 'free' is offered.
+        (r) => r.state === 'free',
+      ),
+    [selectedDetail],
+  );
+
 
   const bookingForSelected = useMemo(
     () => (selectedHostel ? activeBookingFor(myBookings, selectedHostel.id) : undefined),
@@ -397,7 +449,12 @@ export default function Page() {
     if (!selectedHostel) return;
     setBookingError(null);
     book.mutate(
-      { hostelId: selectedHostel.id },
+      // `roomId` was always accepted by the mutation and never sent, so every
+      // booking landed with room_id null - the landlord got "somebody wants a
+      // room" with no way to know which, and the per-room unique index had
+      // nothing to enforce. undefined (not null) when a hostel lists no rooms
+      // at all, which is still a legitimate request for the building.
+      { hostelId: selectedHostel.id, roomId: selectedRoomId ?? undefined },
       {
         onSuccess: () => setShowModal(false),
         onError: (e) =>
@@ -446,6 +503,40 @@ export default function Page() {
   // Real hostels. The page keeps its own card shape; `toCard` bridges the two.
   const { data: domainHostels = [], isLoading: hostelsLoading } = useHostels();
   const HOSTELS = useMemo(() => domainHostels.map(toCard), [domainHostels]);
+
+  /**
+   * DEEP LINK: /hostels?h=<slug> OPENS THAT HOSTEL'S DETAIL.
+   *
+   * There were two hostel detail screens. `/hostels/[slug]` rendered an older,
+   * thinner one and is what the landing page and /around have always linked to;
+   * this page rendered the maintained one but only ever reachable by clicking a
+   * card, because the selection lived in local state and nothing put it in the
+   * URL. So the same hostel looked different depending on how you arrived, and
+   * the fee breakdown, the map and the verified badge were missing from the
+   * route most visitors actually landed on.
+   *
+   * Selecting into state rather than routing per hostel is what the rest of
+   * this screen is built around (the grid stays mounted behind the detail), so
+   * the URL is made to drive the state instead of the other way round. The slug
+   * route now redirects here   see hostels/[slug]/page.tsx.
+   *
+   * Runs once per slug, not once per render: re-selecting on every list refetch
+   * would fight a student who has since pressed Back to the grid.
+   */
+  const deepLinkSlug = useSearchParams().get('h');
+  const [appliedDeepLink, setAppliedDeepLink] = useState<string | null>(null);
+  // Derived during render, not in an effect. The list arrives asynchronously so
+  // this cannot be initial state, and an effect would paint the grid first and
+  // then snap to the detail. Setting state during render of the SAME component
+  // is the supported pattern for exactly this.
+  if (deepLinkSlug && appliedDeepLink !== deepLinkSlug) {
+    const match = HOSTELS.find((h) => h.slug === deepLinkSlug);
+    // No match yet means the list is still loading; try again next render.
+    if (match) {
+      setAppliedDeepLink(deepLinkSlug);
+      setSelectedHostel(match);
+    }
+  }
   /**
    * The landlord's own first photo, or a placeholder when they uploaded none.
    *
@@ -930,7 +1021,18 @@ export default function Page() {
                     capacity, the session for the identity.
                   */}
                   <div className="space-y-3">
-                    {!isAuthenticated ? (
+                    {sessionLoading ? (
+                      /* Neither state asserted while the answer is unknown. The
+                         session is seeded from the server in the root layout, so
+                         this is a blink on a cold client rather than the norm. */
+                      <div
+                        aria-busy="true"
+                        className="bg-surface-deep border-line/10 flex w-full items-center justify-center rounded-xl border py-3.5 text-xs font-bold tracking-wider uppercase opacity-60"
+                      >
+                        <span className="border-content-muted/40 border-t-content-muted mr-2 size-4 animate-spin rounded-full border-2" />
+                        Checking your account
+                      </div>
+                    ) : !isAuthenticated ? (
                       <Link
                         href={`/login?next=${encodeURIComponent('/hostels')}`}
                         className="w-full py-3.5 bg-lime-400 hover:bg-lime-500 text-black font-extrabold rounded-xl text-xs transition-all uppercase tracking-wider shadow-lg active:scale-95 flex items-center justify-center"
@@ -998,15 +1100,60 @@ export default function Page() {
                       </div>
                     ) : (
                       <>
+                        {/*
+                          PICK THE ROOM, THEN REQUEST IT.
+                          "Request this room" sat under no room at all: the
+                          booking went in with `room_id` null, so neither the
+                          student nor the landlord knew which room had been
+                          asked for, and `bookings_one_hold_per_room_idx` had
+                          nothing to protect.
+
+                          Only free rooms are listed. `state` comes from the
+                          `hostel_room_state` view via the detail fetch - taken
+                          and held rooms are not rendered at all rather than
+                          shown disabled, because a room somebody else is paying
+                          for is not this student's to consider.
+                        */}
+                        {roomsLoading ? (
+                          <p className="text-content-muted text-[11px]">Loading rooms…</p>
+                        ) : freeRooms.length > 0 ? (
+                          <label className="block space-y-1.5">
+                            <span className="text-content-muted text-[10px] font-bold tracking-widest uppercase">
+                              Choose a room
+                            </span>
+                            <select
+                              value={selectedRoomId ?? ''}
+                              onChange={(e) => setSelectedRoomId(e.target.value || null)}
+                              className="border-line/15 bg-surface-deep text-content w-full rounded-xl border px-3 py-3 text-sm font-medium"
+                            >
+                              <option value="">Select a room…</option>
+                              {freeRooms.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.label}
+                                  {r.priceKobo ? ` — ${naira(r.priceKobo)}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+
                         <button
                           type="button"
                           onClick={() => setShowModal(true)}
-                          disabled={selectedHostel.status === 'full' || book.isPending}
+                          disabled={
+                            selectedHostel.status === 'full' ||
+                            book.isPending ||
+                            (freeRooms.length > 0 && !selectedRoomId)
+                          }
                           className="w-full py-3.5 bg-lime-400 hover:bg-lime-500 disabled:bg-surface-deep disabled:text-content-muted text-black font-extrabold rounded-xl text-xs transition-all uppercase tracking-wider shadow-lg active:scale-95 disabled:active:scale-100 disabled:cursor-not-allowed"
                         >
                           {/* A full hostel had a live "Lock Apartment Layout" button
                               over a "SOLD OUT" counter. One of the two was lying. */}
-                          {selectedHostel.status === 'full' ? 'No rooms left' : 'Request this room'}
+                          {selectedHostel.status === 'full'
+                            ? 'No rooms left'
+                            : freeRooms.length > 0 && !selectedRoomId
+                              ? 'Choose a room first'
+                              : 'Request this room'}
                         </button>
                         {/* The modal owns the error while it is open; this catches
                             one that arrives after it closes. */}

@@ -144,3 +144,49 @@ jobs:
           fi
 
           echo "Inspection sweep completed."
+
+  # Also independent: a hostel room whose hold lapsed must go back on the market
+  # even if escrow or inspections are failing. Nothing here is shared with them.
+  #
+  # This one is pure catch-up rather than a promise to a waiting person, because
+  # `hostel_room_state` already reads lapsed holds as `free`. What it fixes is
+  # the WRITE path - `bookings_one_hold_per_room_idx` cannot test a timestamp,
+  # so until the row is swept the room is un-requestable while displaying as
+  # available. See the route's own header.
+  holds:
+    name: Expire lapsed room holds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the hold expiry endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/expire-holds" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Hold expiry returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi
+
+          echo "Hold expiry completed."

@@ -435,22 +435,58 @@ input:-webkit-autofill:focus {
    done by the marker's `anchorPoint` (AdvancedMarkerAnchorPoint.CENTER), NOT by
    a transform here - under Leaflet's divIcon it was the other way round, and
    leaving both in place offsets every pin by half its own size. */
+/*
+  A PIN IS A DOT UNTIL IT IS ASKED ABOUT.
+
+  Every pin used to render its name and distance permanently, so a handful of
+  neighbours around the campus gate covered the streets they were describing -
+  the map became unreadable exactly where it mattered most. The label now opens
+  on hover or tap, one at a time (see `openPin` in around-map-google).
+
+  Collapsed is a dot with padding, not `display:none` on the text: the pill has
+  to keep its shape so opening it grows rather than pops into existence, and the
+  text stays in the DOM so `title` and screen readers still have it.
+*/
 .amap-pin {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0;
   background: #fff;
   color: #0e0e12;
-  padding: 4px 10px;
-  border-radius: 14px;
+  padding: 4px;
+  border-radius: 9999px;
   white-space: nowrap;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition:
+    gap 140ms ease,
+    padding 140ms ease,
+    border-radius 140ms ease;
+}
+
+.amap-pin--open {
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
 }
 
 .amap-pin__text {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+  /* Collapsed: zero width, clipped, and unreadable to nobody - the marker's
+     own `title` carries the name for hover tooltips and assistive tech. */
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-width 160ms ease,
+    opacity 120ms ease;
+}
+
+.amap-pin--open .amap-pin__text {
+  max-width: 160px;
+  opacity: 1;
 }
 
 .amap-pin__name {
@@ -476,8 +512,10 @@ input:-webkit-autofill:focus {
 }
 
 .amap-pin__dot {
-  width: 7px;
-  height: 7px;
+  /* Big enough to hit with a thumb once the label is gone. */
+  width: 10px;
+  height: 10px;
+  flex: none;
   border-radius: 9999px;
 }
 

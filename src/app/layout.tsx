@@ -87,9 +87,11 @@ export default async function RootLayout({
   // Fetched here, not in each shell, so the single root LocationProvider has the
   // real list on first paint. listAreas() is React-cached (one query per
   // request) and falls back to the built-in list if Supabase is unreachable.
-  // Both reads are independent, so fire them together. `user` decides only
-  // whether the InstallGate renders - it must come from the server, because the
-  // browser's Supabase client does not learn about a server-action sign-in.
+  // Both reads are independent, so fire them together. `user` MUST come from
+  // the server: the browser's Supabase client does not learn about a
+  // server-action sign-in, so anything asking the client first paints as
+  // signed-out. It seeds SessionProvider (so no screen contradicts the header)
+  // and decides whether the InstallGate renders.
   const [areas, user] = await Promise.all([listAreas(), getCurrentUser()]);
 
   return (
@@ -114,7 +116,9 @@ export default async function RootLayout({
             below are fixed overlays that must not be inside the scroll
             container Lenis drives. */}
         <SmoothScroll>
-          <Providers areas={areas}>{children}</Providers>
+          <Providers areas={areas} user={user}>
+            {children}
+          </Providers>
         </SmoothScroll>
         {/* Renders only in a browser tab, only when signed out, and only on a
             route outside WEB_ROUTES.

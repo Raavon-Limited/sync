@@ -1,12 +1,30 @@
 /**
  * Supabase Send Email Hook → Resend.
  *
- * Supabase calls this endpoint (signed, Standard Webhooks) whenever it needs to
- * send an auth email. We render our own template (src/emails) and deliver it via
- * Resend, so the email is fully owned by the codebase. Returning 200 tells
- * Supabase the email was handled; a non-2xx makes it surface an error.
+ * ⚠ NOT THE LIVE PATH. Auth email is delivered by CUSTOM SMTP (Resend), set in
+ * Supabase Dashboard → Project Settings → Authentication → SMTP Settings. This
+ * route is written and working but the hook is DISABLED, so nothing calls it.
  *
- * Setup (Supabase Dashboard → Authentication → Hooks → Send Email Hook):
+ * WHY SMTP WON, so nobody "finishes" this by switching it on:
+ *   Both routes mail through Resend from hello@letsyncyou.com, so deliverability
+ *   is identical - which was the actual problem. Before either existed, auth
+ *   email used Supabase's built-in sender: a Supabase-owned address on shared
+ *   infrastructure, covered by none of this domain's DKIM/SPF/DMARC, and
+ *   rate-limited to single digits per hour. That is why sign-in codes were
+ *   landing in spam.
+ *
+ *   SMTP fixes that with no signing secret, no deploy-time environment and
+ *   nothing that can half-work. This hook buys ONE further thing: the template
+ *   in src/emails instead of the one in the dashboard.
+ *
+ * ENABLING THIS IS NOT ADDITIVE - IT IS A SWITCH.
+ *   Turning the hook on replaces the email templates outright. If
+ *   SEND_EMAIL_HOOK_SECRET and RESEND_API_KEY are not already set in the
+ *   DEPLOYED environment, auth email does not fall back to SMTP - it fails, and
+ *   nobody can sign in. Set the variables and redeploy FIRST, then enable.
+ *
+ * Setup, when that day comes (Supabase Dashboard → Authentication → Hooks):
+ *   - Hook type HTTPS, not Postgres. This is an HTTPS endpoint.
  *   - Enable, URL = https://<your-deploy>/api/auth/send-email
  *   - Copy the signing secret into SEND_EMAIL_HOOK_SECRET (v1,whsec_…)
  *   - Set RESEND_API_KEY and EMAIL_FROM (a Resend-verified sender)

@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AdvancedMarker,
@@ -182,6 +182,12 @@ function LocateControl() {
  *  has coordinates, not an error. */
 export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
   const router = useRouter();
+  /**
+   * Which pin has its label open. One at a time, by construction: this holds a
+   * single id, so opening any pin closes whichever was open before   there is
+   * no way to represent two being open.
+   */
+  const [openPin, setOpenPin] = useState<string | null>(null);
   const loc = useOptionalLocation();
   const here = loc?.coords;
 
@@ -218,6 +224,9 @@ export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
             // Google's own POI pins would collide with ours and are clickable,
             // opening info windows we don't control.
             clickableIcons={false}
+            // Tapping the map itself dismisses an open label, the way any
+            // popover should close when you look away from it.
+            onClick={() => setOpenPin(null)}
             className="h-full w-full"
           >
             <Recenter />
@@ -238,10 +247,35 @@ export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
                 position={{ lat: pin.lat, lng: pin.lng }}
                 anchorPoint={AdvancedMarkerAnchorPoint.CENTER}
                 title={`${pin.name} · ${pin.distance}`}
-                zIndex={pin.featured ? 10 : 1}
-                onClick={() => router.push(pin.href)}
+                // An open label must sit above every other pin, or the thing
+                // just clicked is covered by its neighbours.
+                zIndex={openPin === pin.id ? 100 : pin.featured ? 10 : 1}
+                /*
+                  FIRST CLICK OPENS, SECOND NAVIGATES.
+                  Every pin used to carry its name and distance permanently, so
+                  three neighbours covered the map they were describing   which
+                  is what a student saw around the campus gate. The label is now
+                  revealed on demand, and only one at a time.
+
+                  Clicking straight through to the listing on the first tap was
+                  also wrong on a phone: there is no hover, so a pin could not be
+                  identified without leaving the map to find out.
+                */
+                onClick={() => {
+                  if (openPin === pin.id) router.push(pin.href);
+                  else setOpenPin(pin.id);
+                }}
               >
-                <div className={`amap-pin${pin.featured ? ' amap-pin--featured' : ''}`}>
+                <div
+                  className={
+                    `amap-pin` +
+                    (pin.featured ? ' amap-pin--featured' : '') +
+                    (openPin === pin.id ? ' amap-pin--open' : '')
+                  }
+                  // Hover reveals on a mouse without committing to anything.
+                  // Touch has no hover and falls through to the click above.
+                  onMouseEnter={() => setOpenPin(pin.id)}
+                >
                   <span
                     className="amap-pin__dot"
                     style={{

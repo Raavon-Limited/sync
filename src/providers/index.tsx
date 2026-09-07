@@ -38,20 +38,39 @@ import { QueryProvider } from './query-provider';
 import { SessionProvider } from './session-provider';
 import { LocationProvider } from './location-provider';
 import { AccountSwitchProvider } from './account-switch-provider';
+import type { User } from '@supabase/supabase-js';
 import type { Area } from '@/lib/constants/areas';
 
 export function Providers({
   children,
   areas,
+  user,
 }: {
   children: React.ReactNode;
   /** Service areas, fetched once in the root layout. */
   areas?: Area[];
+  /**
+   * The signed-in user, already resolved on the server by the root layout.
+   *
+   * THREADING THIS IS NOT AN OPTIMISATION, IT IS THE FIX FOR A REAL BUG.
+   * Without it SessionProvider starts at `user: null` on every single page
+   * load and only learns otherwise after a `getUser()` round trip. Anything
+   * that renders off `isAuthenticated` therefore paints its SIGNED-OUT state
+   * first   which is why a signed-in student was shown "Sign in to request a
+   * room" on a hostel they were looking at while their own avatar sat in the
+   * header two inches above it.
+   *
+   * The header was right because it is server-rendered. The button was wrong
+   * because it was not. The layout has had this value all along and was
+   * already using it for InstallGate; it just never reached the provider whose
+   * prop exists to receive it.
+   */
+  user?: User | null;
 }) {
   return (
     <ReduxProvider>
       <QueryProvider>
-        <SessionProvider>
+        <SessionProvider initialUser={user ?? null}>
           <TooltipProvider delayDuration={150}>
             <LocationProvider areas={areas}>
               {/* Inside QueryProvider because switching roles clears the whole
