@@ -69,6 +69,39 @@ All payouts land in **user wallets** — agents, landlords, vendors — and stud
 wallet too. Source of truth for the numbers is `20260902090000` and `20260909090000`, not this
 table. Verify before you rely on it.
 
+**Paying is what makes an inspection live.** `confirm_inspection_payment` sets the inspection to
+`scheduled`, and `open_inspection_board` lists only `scheduled` inspections with no agent yet — so
+payment is what puts the job in front of agents. An unpaid request is invisible to every one of
+them. Any copy saying a student pays *after* an agent confirms is wrong; that exact wording was live
+on the hostel page and left students waiting for a confirmation their own payment triggers.
+
+### Room holds
+
+A landlord accepting a request starts a **24h hold** (`hold_interval()`), and a student may hold
+**3 hostels at once** (`max_holds_per_student()`). Both predate this doc — check the functions, not
+this paragraph. `20260911090000` added three rules on top:
+
+- **Activity extends a hold, up to a ceiling.** A non-system message in the booking's thread pushes
+  the deadline 24h from that message, but never past `max_hold_interval()` (72h) from the lock.
+  Without the ceiling one "hi" a day parks a room forever — `sync_booking_hold`'s verify block
+  asserts the ceiling survives, because a rewrite that drops it reintroduces that silently.
+- **Lapses are counted; a second round is a flag.** At `lapse_flag_threshold()` (6, i.e. two full
+  rounds) the student is flagged, staff are notified, and they are deprioritised for 7 days. They
+  are **never blocked** — a blocked student just makes another account.
+- **A deprioritised student's hold is *soft*.** `bookings.soft_hold` is excluded from
+  `bookings_one_hold_per_room_idx` and from `hostel_room_state`, so their request does not take the
+  room off the market. The cost of gaming the board is losing races, not losing access.
+
+The flag is **deliberately invisible to the student**. That is why `booking_conduct` is its own
+table rather than columns on `profiles` (which its owner can read), why it has a staff-only policy,
+and why `anon` has no grant on it at all. Do not add a student-facing policy or grant.
+
+`expire_stale_holds()` is what releases lapsed holds and counts the lapses. It had existed since
+`0006` with **nothing ever calling it** — now driven hourly from `.github/workflows/escrow-release.yml`
+via `/api/cron/expire-holds`. Read paths are self-healing (`reserved_until > now()`), but the
+per-room unique index cannot test a timestamp, so an unswept hold blocks the room while the page
+shows it free.
+
 ---
 
 ## 3. House rules

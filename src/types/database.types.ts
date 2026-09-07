@@ -505,12 +505,45 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_conduct: {
+        Row: {
+          deprioritised_until: string | null
+          flagged_at: string | null
+          lapses: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          deprioritised_until?: string | null
+          flagged_at?: string | null
+          lapses?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          deprioritised_until?: string | null
+          flagged_at?: string | null
+          lapses?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_conduct_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           created_at: string
           end_date: string | null
           hostel_id: string
           id: string
+          last_activity_at: string | null
           locked_at: string | null
           move_in: string | null
           paid_at: string | null
@@ -519,6 +552,7 @@ export type Database = {
           requested_at: string | null
           reserved_until: string | null
           room_id: string | null
+          soft_hold: boolean
           status: string
           student_id: string
           updated_at: string
@@ -528,6 +562,7 @@ export type Database = {
           end_date?: string | null
           hostel_id: string
           id?: string
+          last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
           paid_at?: string | null
@@ -536,6 +571,7 @@ export type Database = {
           requested_at?: string | null
           reserved_until?: string | null
           room_id?: string | null
+          soft_hold?: boolean
           status?: string
           student_id: string
           updated_at?: string
@@ -545,6 +581,7 @@ export type Database = {
           end_date?: string | null
           hostel_id?: string
           id?: string
+          last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
           paid_at?: string | null
@@ -553,6 +590,7 @@ export type Database = {
           requested_at?: string | null
           reserved_until?: string | null
           room_id?: string | null
+          soft_hold?: boolean
           status?: string
           student_id?: string
           updated_at?: string
@@ -4475,6 +4513,7 @@ export type Database = {
         Args: { p_inspection: string; p_reason?: string }
         Returns: string
       }
+      deprioritise_interval: { Args: never; Returns: string }
       dispute_inspection: {
         Args: { p_inspection: string; p_reason?: string }
         Returns: string
@@ -4526,9 +4565,12 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      is_assigned_agent: { Args: { p_hostel: string }; Returns: boolean }
+      is_deprioritised: { Args: { p_student: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_suspended: { Args: { p_user: string }; Returns: boolean }
+      lapse_flag_threshold: { Args: never; Returns: number }
       list_staff: {
         Args: never
         Returns: {
@@ -4542,6 +4584,7 @@ export type Database = {
       }
       login_method: { Args: { p_email: string }; Returns: string }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
+      max_hold_interval: { Args: never; Returns: string }
       max_holds_per_student: { Args: never; Returns: number }
       my_access: {
         Args: { p_storefront?: string }

@@ -13,6 +13,7 @@ import type {
   Hostel as DomainHostel,
 } from '@/modules/hostels/types';
 import { useSession } from '@/providers/session-provider';
+import { useScrollLock } from '@/hooks/use-scroll-lock';
 import Image, { type StaticImageData } from 'next/image';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HostelMap } from './(components)/hostel-map';
@@ -347,6 +348,11 @@ function HostelsPage() {
   const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const book = useCreateBooking();
   const { data: myBookings = [] } = useMyBookings();
+
+  // These modals are hand-rolled `fixed inset-0` divs rather than Radix, so
+  // nothing was stopping the listing scrolling away behind them. Covers both:
+  // whichever is open, the page underneath holds still.
+  useScrollLock(showModal || showScheduleModal);
 
   /**
    * ROOMS FOR THE PICKER.
@@ -698,9 +704,21 @@ function HostelsPage() {
                   <span className="font-extrabold text-white block mb-0.5">
                     A visit costs {naira(selectedHostel.inspectionFeeKobo)}
                   </span>
+                  {/*
+                    THE ORDER HERE WAS BACKWARDS AND CONTRADICTED THE DATABASE.
+                    This read "you pay after an agent confirms a time, not now".
+                    The opposite is true: `confirm_inspection_payment` sets the
+                    inspection to 'scheduled', and `open_inspection_board` only
+                    lists inspections that are 'scheduled' with no agent yet. So
+                    paying is what PUTS the job in front of agents - an unpaid
+                    request is invisible to every one of them and nobody is ever
+                    coming. Telling a student to wait for a confirmation that
+                    their own payment triggers left them waiting forever.
+                  */}
                   It goes to the agent who shows you around, and it is separate from the rent
-                  {' '}&mdash; skip the visit and you never pay it. You pay after an agent confirms a
-                  time, not now, and one reschedule is free.
+                  {' '}&mdash; skip the visit and you never pay it. Paying is what puts your request
+                  in front of agents: one takes it, proposes a time, and you confirm before anybody
+                  sets off. One reschedule is free.
                 </div>
               </div>
 
