@@ -193,6 +193,15 @@ broken by accident already.
 11. **Verification and inspection evidence are different shapes.** See [§2](#2-the-product-in-one-page).
     Do not add photo columns to inspection reports.
 
+12. **Scrolling is driven by Lenis, not the browser.** `SmoothScroll` wraps the root layout and
+    takes over `window` scroll. It runs with `allowNestedScroll: true`, which hands the gesture back
+    to any container that genuinely scrolls — so the app's ~73 internal scroll areas keep working
+    without annotation, and new ones work automatically. If a container ever does need forcing, put
+    `data-lenis-prevent` on it; per-element attributes still win. Do not remove the
+    `lenis/dist/lenis.css` import — it sets `html.lenis { height: auto }`, without which the root
+    layout's `h-full` makes the page unscrollable. Lenis is not mounted at all under
+    `prefers-reduced-motion`.
+
 ---
 
 ## 5. Where we stopped

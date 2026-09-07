@@ -16,6 +16,7 @@ import { Providers } from '@/providers';
 import { listAreas } from '@/modules/areas/queries';
 import { getCurrentUser } from '@/modules/auth/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
+import { SmoothScroll } from '@/components/layouts/smooth-scroll';
 import { RegisterSW } from '@/components/pwa/register-sw';
 import { InstallGate } from '@/components/pwa/install-gate';
 import { Cursor } from '@/components/ui/cursor';
@@ -109,7 +110,12 @@ export default async function RootLayout({
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
         <RegisterSW />
-        <Providers areas={areas}>{children}</Providers>
+        {/* Wraps the page content only. BootSplash, InstallGate and the rest
+            below are fixed overlays that must not be inside the scroll
+            container Lenis drives. */}
+        <SmoothScroll>
+          <Providers areas={areas}>{children}</Providers>
+        </SmoothScroll>
         {/* Renders only in a browser tab, only when signed out, and only on a
             route outside WEB_ROUTES.
 
