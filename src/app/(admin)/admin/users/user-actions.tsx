@@ -1,6 +1,6 @@
 /**
  * Row actions for the admin users table: Restore an archived account (admin+),
- * or permanently Purge it (super_admin only, irreversible — confirmed via modal).
+ * or permanently Purge it (super_admin only, irreversible   confirmed via modal).
  */
 'use client';
 

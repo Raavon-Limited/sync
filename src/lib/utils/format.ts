@@ -23,6 +23,27 @@ export function formatNaira(
   }).format(amount);
 }
 
+/**
+ * Kobo → Naira for display. ALL money is stored in kobo (Paystack's unit, and
+ * an integer, so no float rounding), and this is the single place it converts
+ * back. ₦500,000 is stored as 50_000_000 and renders "₦500,000".
+ *
+ * Rule of thumb: if a value came out of a `*_kobo` column, it must pass through
+ * here before a user sees it. Never call formatNaira() on a kobo value.
+ */
+export function formatKobo(
+  kobo: number,
+  opts: { withDecimals?: boolean } = {},
+): string {
+  return formatNaira(kobo / 100, opts);
+}
+
+/** Naira → kobo, for writing to a `*_kobo` column. Rounds, so a stray float
+ *  from a form can't persist as a fractional kobo. */
+export function toKobo(naira: number): number {
+  return Math.round(naira * 100);
+}
+
 /** Standard medium date - e.g. "12 Mar 2026". */
 export function formatDate(date: Date | string | number): string {
   return format(new Date(date), 'd MMM yyyy');

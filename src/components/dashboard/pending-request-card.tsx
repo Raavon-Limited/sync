@@ -13,11 +13,11 @@
  * Accept: fires immediately, row shows a brief "Accepting…" state, then is
  * removed on success. On failure the row is restored with an inline error.
  * Decline: opens a reason popover anchored to that row's Decline button
- * (portaled to body — see DeclineReasonPopover) before the decline call
+ * (portaled to body   see DeclineReasonPopover) before the decline call
  * fires.
  *
  * Swap `onAccept`/`onDecline` defaults for real API calls once the backend
- * exists — see order-actions.ts for the exact shape to match.
+ * exists   see order-actions.ts for the exact shape to match.
  */
 import { useRef, useState } from 'react';
 import { Button, Card } from '@/components/ui';
@@ -60,7 +60,7 @@ function PendingRow({
   const [state, setState] = useState<RowState>('idle');
   const [error, setError] = useState('');
   const [declineOpen, setDeclineOpen] = useState(false);
-  // Plain span wrapper (not the Button itself) as the popover anchor — this
+  // Plain span wrapper (not the Button itself) as the popover anchor   this
   // works whether or not the Button component forwards refs.
   const declineAnchorRef = useRef<HTMLElement | null>(null);
 
@@ -92,7 +92,7 @@ function PendingRow({
   }
 
   return (
-    <Card className="group border-line/5 flex flex-col gap-2 border bg-transparent px-4 py-4 transition-shadow duration-300 hover:shadow-2xl sm:px-5">
+    <Card className="group border-line/5 flex flex-col gap-2 border px-4 py-4 transition-shadow duration-300 hover:shadow-2xl sm:px-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <div className="bg-ink/10 size-10 shrink-0 overflow-hidden rounded-full transition-transform duration-300 group-hover:scale-110">
@@ -194,7 +194,14 @@ export function PendingRequestList({
   }
 
   if (items.length === 0) {
-    return <p className="text-content-muted text-sm">No pending orders right now.</p>;
+    // A panel whether or not anything is in it. Dropping the surface for the
+    // empty state left a bare patch of page next to the revenue card beside
+    // it, which reads as a render that failed rather than as "nothing yet".
+    return (
+      <Card className="border-line/5 text-content-muted border px-5 py-6 text-sm">
+        No pending orders right now.
+      </Card>
+    );
   }
 
   return (

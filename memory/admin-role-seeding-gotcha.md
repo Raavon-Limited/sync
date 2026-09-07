@@ -16,4 +16,4 @@ Two recurring gotchas:
    **The only reliable fix: a direct UPDATE as `postgres` in the Supabase SQL Editor**, e.g.
    `update public.profiles p set role='admin' from auth.users u where u.id=p.id and lower(u.email)='muiz@raavon.com';`
 
-Configured admins: `hello@raavon.com` (super_admin), `muiz@raavon.com` (admin) — both passwordless (email OTP). Fixed on 2026-06-17; `seed-admins.ts` was patched to read-back and fail loudly instead of printing a false success.
+Configured admins: `hello@raavon.com` (super_admin), `muiz@raavon.com` (admin)   both passwordless (email OTP). Fixed on 2026-06-17; `seed-admins.ts` was patched to read-back and fail loudly instead of printing a false success.

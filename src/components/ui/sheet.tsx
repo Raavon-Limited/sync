@@ -21,8 +21,14 @@ const sheetVariants = cva(
       side: {
         top: 'inset-x-0 top-0 border-b rounded-b-xl',
         bottom: 'inset-x-0 bottom-0 border-t rounded-t-xl',
-        left: 'inset-y-0 left-0 h-full w-3/4 max-w-sm rounded-r-xl',
-        right: 'inset-y-0 right-0 h-full w-3/4 max-w-sm rounded-l-xl',
+        // FULL SCREEN ON MOBILE, a panel from `sm` up. A side drawer that
+        // leaves a 25% strip of dimmed page beside it is showing a phone user
+        // nothing they can use while taking the width a form needs   and the
+        // rounded outer corner only reads as a corner when there is something
+        // behind it. Overrides come from the caller as `sm:max-w-*`, so a
+        // wider desktop panel does not drag the mobile one off full bleed.
+        left: 'inset-y-0 left-0 h-full w-full rounded-none sm:w-3/4 sm:max-w-sm sm:rounded-r-xl',
+        right: 'inset-y-0 right-0 h-full w-full rounded-none sm:w-3/4 sm:max-w-sm sm:rounded-l-xl',
       },
     },
     defaultVariants: { side: 'right' },

@@ -7,7 +7,7 @@
  *
  * Why portal instead of `absolute` inside the card: the pending list is a
  * stack of sibling Cards. An `absolute` popover nested inside one Card has
- * no guarantee of painting above the *next* Card in that stack — without a
+ * no guarantee of painting above the *next* Card in that stack   without a
  * portal it can render behind/under later siblings, which is exactly the
  * "popover gets hidden" bug. Rendering at the body level with `fixed`
  * coordinates sidesteps any ancestor's overflow/stacking entirely.

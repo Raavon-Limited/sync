@@ -1,36 +1,45 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-import { EarningsData, RevenueDataPoint } from '@/modules/vendor/types';
-import { mockData } from '@/mock/chart';
+import type { RevenueDataPoint } from '@/modules/vendor/types';
 import { RevenueChart } from './RevenueChart';
 
 type ChartPeriod = '3M' | '6M' | '1Y';
 
 interface EarningsChartProps {
-  data?: EarningsData;
+  /**
+   * Top sellers, already ranked and converted to Naira by the caller.
+   *
+   * Previously this defaulted to a mock `EarningsData` blob and reached into
+   * `.bestSellingFood` itself. Taking the points directly means the component
+   * no longer needs to know where "best selling" comes from - the page derives
+   * it from listings, and a future materialised view can replace that without
+   * touching this file.
+   */
+  data: RevenueDataPoint[];
 }
 
-export default function EarningsChart({ data = mockData }: EarningsChartProps) {
+export default function EarningsChart({ data }: EarningsChartProps) {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('1Y');
 
-  const mappedChartData: RevenueDataPoint[] = data.bestSellingFood.slice(0, 3).map((food) => ({
-    label: food.name, // ← just the first word e.g. "Jollof", "Egusi", "Suya", "Akara"
-    revenue: food.totalRevenue,
-  }));
+  if (data.length === 0) {
+    return (
+      <div className="border-line/10 text-content-muted flex h-[230px] items-center justify-center rounded-xl border text-sm">
+        No sales yet. Your best sellers will chart here once orders come in.
+      </div>
+    );
+  }
 
   return (
-    <>
-      <RevenueChart
-        title="Best Selling Food"
-        data={mappedChartData}
-        variant="area"
-        showPeriodSelector
-        activePeriod={chartPeriod}
-        onPeriodChange={setChartPeriod}
-        height={230}
-      />
-    </>
+    <RevenueChart
+      title="Best Selling Food"
+      data={data}
+      variant="area"
+      showPeriodSelector
+      activePeriod={chartPeriod}
+      onPeriodChange={setChartPeriod}
+      height={230}
+    />
   );
 }

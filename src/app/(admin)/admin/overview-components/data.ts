@@ -1,12 +1,25 @@
-// ─── Types ────────────────────────────────────────────────────────────────────
+/**
+ * Shapes for the /admin overview. The seed data that used to live here   1248
+ * vendors, six months of invented revenue, four fictional activity lines   is
+ * gone; everything now comes from `public.admin_overview` via `overview-data.ts`.
+ *
+ * The types stay in this file because the chart components are client
+ * components and import them directly.
+ */
 
 export interface StatCard {
   key: string;
   label: string;
   value: number;
-  change: number;  
+  change: number;
   iconBg: string;
-  icon: string;  
+  icon: string;
+  /**
+   * Where the number can be seen as a list. Every card has one: a count on the
+   * front door that cannot be opened is the reason PENDING VERIFICATIONS and
+   * the verification queue were allowed to disagree for as long as they did.
+   */
+  href: string;
 }
 
 export interface RevenuePoint {
@@ -23,7 +36,7 @@ export interface Activity {
   id: number;
   text: string;
   timeAgo: string;
-  type: "vendor" | "dispute" | "verification" | "user";
+  type: 'vendor' | 'dispute' | 'verification' | 'user';
 }
 
 export interface VendorStatusData {
@@ -31,43 +44,3 @@ export interface VendorStatusData {
   pending: number;
   suspended: number;
 }
-
-// ─── Seed data ────────────────────────────────────────────────────────────────
-
-export const STAT_CARDS: StatCard[] = [
-  { key: "vendors", label: "Total Vendors", value: 1248, change: 12, iconBg: "bg-blue-500", icon: "vendors" },
-  { key: "users", label: "Active Users", value: 8542, change: 18, iconBg: "bg-emerald-500", icon: "users" },
-  { key: "verifications", label: "Pending Verifications",value: 47, change: -5, iconBg: "bg-orange-500", icon: "verifications" },
-  { key: "disputes", label: "Open Disputes", value: 23, change: 3, iconBg: "bg-red-500", icon: "disputes" },
-];
-
-export const REVENUE_DATA: RevenuePoint[] = [
-  { month: "Jan", revenue: 44000 },
-  { month: "Feb", revenue: 52000 },
-  { month: "Mar", revenue: 47000 },
-  { month: "Apr", revenue: 61000 },
-  { month: "May", revenue: 55000 },
-  { month: "Jun", revenue: 67000 },
-];
-
-export const GROWTH_DATA: GrowthPoint[] = [
-  { month: "Jan", users: 3100 },
-  { month: "Feb", users: 4100 },
-  { month: "Mar", users: 5300 },
-  { month: "Apr", users: 6400 },
-  { month: "May", users: 7500 },
-  { month: "Jun", users: 8700 },
-];
-
-export const ACTIVITIES: Activity[] = [
-  { id: 1, text: "New vendor registration: Fresh Foods Market", timeAgo: "5 minutes ago", type: "vendor" },
-  { id: 2, text: "Dispute #DR-2843 resolved", timeAgo: "12 minutes ago", type: "dispute" },
-  { id: 3, text: "Verification completed for Organic Grocers", timeAgo: "1 hour ago", type: "verification" },
-  { id: 4, text: "500 new user registrations today", timeAgo: "2 hours ago", type: "user" },
-];
-
-export const VENDOR_STATUS: VendorStatusData = {
-  active: 1024,
-  pending: 147,
-  suspended: 77,
-};

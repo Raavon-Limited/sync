@@ -12,7 +12,7 @@
 --   caller is the payer or the platform, the hold has matured, and the hold is
 --   still 'held'. It never looks at `orders.status`.
 --
---   `release_matured_escrow` — the hourly cron — selects purely on
+--   `release_matured_escrow`   the hourly cron   selects purely on
 --   `status = 'held' and release_after <= now()`.
 --
 --   So: sell out, cancel, wait 24 hours, and the cron pays the vendor in full
@@ -28,7 +28,7 @@
 --   1. `release_order_escrow` refuses a cancelled order. This is the guard
 --      that should always have been there: the money must not move for an
 --      order that is not happening, whoever asks and however long they wait.
---   2. `cancel_order` exists at all — cancelling and refunding in ONE
+--   2. `cancel_order` exists at all   cancelling and refunding in ONE
 --      transaction, so there is no window in which the order is dead and the
 --      money is not yet back. Cancelling without refunding is what created
 --      this, and leaving the two as separate steps invites it again.
@@ -80,7 +80,7 @@ begin
   -- THE ONLY CHANGE FROM 20260825130000.
   -- An order that is not happening does not pay out, to anyone, however long
   -- its hold has been sitting there. Checked before the caller checks, because
-  -- this is true regardless of who is asking — including the cron, which is
+  -- this is true regardless of who is asking   including the cron, which is
   -- the caller that actually made this bite.
   if v_order.status = 'cancelled' then
     raise exception 'order % was cancelled; its escrow is refunded, not released', p_order_id
@@ -95,7 +95,7 @@ begin
 
   -- Authorisation, restated because SECURITY DEFINER turned RLS off.
   -- v_uid is null for the service role (a cron), which may release once the
-  -- hold has matured. The vendor is deliberately absent — see the header.
+  -- hold has matured. The vendor is deliberately absent   see the header.
   if v_uid is not null and v_uid <> v_hold.payer_id then
     raise exception 'only the payer or the platform can release escrow'
       using errcode = '42501';
@@ -152,7 +152,9 @@ begin
   return v_txn;
 end;
 $fn$;
+
 grant execute on function public.release_order_escrow(uuid) to authenticated, service_role;
+
 -- 2. Cancel and refund, in one transaction -----------------------------------
 create or replace function public.cancel_order(p_order_id uuid, p_reason text default null)
 returns uuid
@@ -171,7 +173,7 @@ begin
   -- A null v_uid means the service role, exactly as release_order_escrow
   -- reads it. NOT `current_user <> 'service_role'`: inside a SECURITY DEFINER
   -- function current_user is the function's OWNER, so that test is true for
-  -- every caller alive — the bug 20260828130000 exists to fix. Following the
+  -- every caller alive   the bug 20260828130000 exists to fix. Following the
   -- convention already in this file is safer than inventing a second one.
 
   select * into v_order from public.orders where id = p_order_id for update;
@@ -241,10 +243,13 @@ begin
   return v_txn;
 end;
 $fn$;
+
 revoke all on function public.cancel_order(uuid, text) from public, anon;
 grant execute on function public.cancel_order(uuid, text) to authenticated, service_role;
+
 comment on function public.cancel_order(uuid, text) is
   'Cancel an order and refund its escrow in full, in one transaction. Vendor, store manager or staff. Idempotent by reference. No commission is taken on a cancellation.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

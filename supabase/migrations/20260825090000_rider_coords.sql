@@ -5,7 +5,7 @@
 --
 -- `active_delivery_positions` projects `rider_profiles.current_geo` so a student
 -- can watch their delivery move. `fetchDeliveryTracking` reads it as
--- `toLatLng(row.current_geo)` — and a geography column comes back over
+-- `toLatLng(row.current_geo)`   and a geography column comes back over
 -- PostgREST as WKB hex, never GeoJSON, so `riderPosition` has always been null.
 -- The map would simply never show a rider.
 --
@@ -13,7 +13,7 @@
 -- truth, `geo` is derived by trigger and stays the indexed column.
 --
 -- WHY IT MATTERS MORE HERE THAN ELSEWHERE
---   Rider position is WRITTEN by a client — the rider's device posting its
+--   Rider position is WRITTEN by a client   the rider's device posting its
 --   location, repeatedly, while moving. Plain columns are the difference
 --   between a two-number PATCH and constructing WKT on a phone with patchy
 --   signal.
@@ -30,6 +30,7 @@
 alter table public.rider_profiles
   add column if not exists lat double precision,
   add column if not exists lng double precision;
+
 do $chk$
 begin
   if not exists (select 1 from pg_constraint where conname = 'rider_profiles_lat_range') then
@@ -46,10 +47,12 @@ begin
   end if;
 end;
 $chk$;
+
 update public.rider_profiles
    set lat = extensions.ST_Y(current_geo::extensions.geometry),
        lng = extensions.ST_X(current_geo::extensions.geometry)
  where current_geo is not null and lat is null;
+
 create or replace function public.sync_rider_geo()
 returns trigger
 language plpgsql
@@ -69,12 +72,15 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists rider_profiles_sync_geo on public.rider_profiles;
 create trigger rider_profiles_sync_geo
   before insert or update of lat, lng on public.rider_profiles
   for each row execute function public.sync_rider_geo();
+
 -- The view must expose what clients can now read.
 drop view if exists public.active_delivery_positions;
+
 create view public.active_delivery_positions
 with (security_invoker = true) as
 select
@@ -88,6 +94,8 @@ select
 from public.deliveries d
 join public.rider_profiles rp on rp.id = d.rider_id
 where d.status in ('assigned', 'picked_up', 'delivering');
+
 comment on view public.active_delivery_positions is
   'Rider location, visible only while a delivery is in flight. lat/lng rather than the geography column, which is unreadable over PostgREST.';
+
 grant select on public.active_delivery_positions to authenticated;

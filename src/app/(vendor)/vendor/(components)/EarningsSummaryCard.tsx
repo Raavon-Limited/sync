@@ -1,6 +1,15 @@
 import React from 'react';
 import { Button, Card, CardContent } from '@/components/ui';
-import { EarningsSummary } from '@/mock/vendor';
+/**
+ * Period totals in Naira. Structurally what the old mock exported, but sourced
+ * from `fetchVendorDashboard` so the card and the KPI strip agree.
+ */
+export interface EarningsSummary {
+  thisWeek: number;
+  lastWeek: number;
+  thisMonth: number;
+  lastMonth: number;
+}
 import Link from 'next/link';
 
 interface EarningsSummaryCardProps {
@@ -28,7 +37,7 @@ const EarningsSummaryCard = ({ data }: EarningsSummaryCardProps) => {
   ];
 
   return (
-    <Card className="border-line/10 w-96 max-w-7xl bg-transparent">
+    <Card className="border-line/10 w-96 max-w-7xl">
       <CardContent className="flex-col gap-4 p-4 shadow-none">
         {summaries
           .sort((a, b) => {

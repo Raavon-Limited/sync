@@ -65,7 +65,9 @@ as $fn$
   -- Active first, then most recently added.
   order by (st.revoked_at is null) desc, st.joined_at desc;
 $fn$;
+
 grant execute on function public.storefront_roster(uuid) to authenticated, service_role;
+
 -- 2. Pending invitations, so an owner can chase or revoke one ----------------
 -- The token is deliberately NOT returned: it is the credential, and an owner
 -- listing invites has no need to re-read it. Re-inviting supersedes instead.
@@ -96,7 +98,9 @@ as $fn$
     and (p_storefront_id is null or i.storefront_id = p_storefront_id)
   order by i.created_at desc;
 $fn$;
+
 grant execute on function public.storefront_invites_pending(uuid) to authenticated, service_role;
+
 -- 3. Give the activity feed a usable actor label ------------------------------
 -- Same body as 20260822140000 except actor_name, which now falls back through
 -- full_name -> email -> 'Removed account' rather than rendering blank.
@@ -157,4 +161,5 @@ as $fn$
   order by al.occurred_at desc
   limit greatest(1, least(coalesce(p_limit, 100), 500));
 $fn$;
+
 grant execute on function public.storefront_activity(uuid, integer) to authenticated, service_role;

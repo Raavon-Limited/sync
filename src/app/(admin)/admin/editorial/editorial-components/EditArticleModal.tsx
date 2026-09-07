@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Upload } from "lucide-react";
-import { ARTICLE_CATEGORIES } from "../admin-editorialConstants";
 import type { Article, ArticleStatus } from "../admin-editorialTypes";
 import Image from "next/image";
 import { Input, Button, Textarea, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Checkbox } from "@/components/ui";
@@ -19,21 +18,35 @@ export interface EditArticleFormValues {
   existingImage: string | undefined;
   markAsFeatured: boolean;
   status: ArticleStatus;
+  /** datetime-local. Only read when status is Scheduled. */
+  publishAt: string;
 }
 
 interface EditArticleModalProps {
   article: Article | null;
   onClose: () => void;
-  onSave: (id: string, values: EditArticleFormValues) => void;
+  categories: string[];
+  /** Rejects by throwing; the message is shown in the footer. */
+  onSave: (id: string, values: EditArticleFormValues) => Promise<void>;
+}
+
+/** An ISO timestamp as the value a datetime-local input will accept. */
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS: ArticleStatus[] = ["Published", "Draft", "Scheduled"];
+const STATUS_OPTIONS: ArticleStatus[] = ["Published", "Draft", "Scheduled", "Archived"];
 
-export function EditArticleModal({ article, onClose, onSave }: EditArticleModalProps) {
+export function EditArticleModal({ article, onClose, categories, onSave }: EditArticleModalProps) {
   const [form, setForm] = useState<EditArticleFormValues | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Populate form when the article changes ────────────────────────────────
@@ -51,11 +64,13 @@ export function EditArticleModal({ article, onClose, onSave }: EditArticleModalP
         existingImage: article.image,
         markAsFeatured: article.featured,
         status: article.status,
+        publishAt: toLocalInput(article.publishedAt),
       });
+      setError(null);
     }
   }
 
-  // ── Enter animation — fires after article + form are ready ───────────────
+  // ── Enter animation   fires after article + form are ready ───────────────
   useEffect(() => {
     if (article) {
       const id = requestAnimationFrame(() => setIsVisible(true));
@@ -89,18 +104,21 @@ export function EditArticleModal({ article, onClose, onSave }: EditArticleModalP
     setForm((prev) => prev ? { ...prev, [key]: value } : prev);
   }
 
-  function handleSave() {
-    if (!article || !form) return;
-    if (!form.title || !form.category) return;
-    onSave(article.id, form);
-    handleClose();
-  }
-
-  function handleSaveDraft() {
-    if (!article || !form) return;
-    if (!form.title || !form.category) return;
-    onSave(article.id, { ...form, status: "Draft" });
-    handleClose();
+  // The save can be refused   a past scheduled time, a rejected upload   so
+  // the modal stays open until the server has actually accepted it.
+  async function submit(values: EditArticleFormValues) {
+    if (!article) return;
+    if (!values.title || !values.category) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await onSave(article.id, values);
+      handleClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the article");
+    } finally {
+      setBusy(false);
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -166,7 +184,7 @@ export function EditArticleModal({ article, onClose, onSave }: EditArticleModalP
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent className="w-[--radix-select-trigger-width]">
-                  {ARTICLE_CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <SelectItem key={cat} value={cat} className="text-sm">
                       {cat}
                     </SelectItem>
@@ -195,6 +213,19 @@ export function EditArticleModal({ article, onClose, onSave }: EditArticleModalP
               </Select>
             </div>
           </div>
+
+          {form.status === "Scheduled" && (
+            <div className="space-y-1.5">
+              <label className="block text-[12px] uppercase tracking-widest font-bold text-content-muted/90">
+                Publish At
+              </label>
+              <Input
+                type="datetime-local"
+                value={form.publishAt}
+                onChange={(e) => updateField("publishAt", e.target.value)}
+                className="w-full bg-surface-deep/40 border-line/15 text-sm text-content h-9 transition-colors focus:border-line/40 focus:bg-surface-deep/70" />
+            </div>
+          )}
 
           {/* Excerpt */}
           <div className="space-y-1.5">
@@ -308,32 +339,35 @@ export function EditArticleModal({ article, onClose, onSave }: EditArticleModalP
         </div>
 
         {/* Form Control Strip */}
-        <div className="flex items-center gap-2 px-2 md:px-6 py-4 border-t border-line/15 shrink-0 bg-surface-deep/10">
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleSave}
-            disabled={!form.title || !form.category}
-            className="bg-lime text-ink font-semibold hover:opacity-90 transition-opacity text-xs md:text-sm md:px-4 h-9 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" >
-            Save Changes
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleSaveDraft}
-            disabled={!form.title || !form.category}
-            className="bg-panel border-line/15 text-content hover:bg-surface-deep text-xs md:text-sm md:px-4 h-9 disabled:opacity-40 disabled:cursor-not-allowed" >
-            Save as Draft
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleClose}
-            className="bg-panel border-line/15 text-content hover:bg-surface-deep md:px-4 text-xs md:text-sm h-9" >
-            Cancel
-          </Button>
+        <div className="flex flex-col gap-2 px-2 md:px-6 py-4 border-t border-line/15 shrink-0 bg-surface-deep/10">
+          {error && <p className="text-xs font-medium text-coral">{error}</p>}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => submit(form)}
+              disabled={busy || !form.title || !form.category}
+              className="bg-lime text-ink font-semibold hover:opacity-90 transition-opacity text-xs md:text-sm md:px-4 h-9 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed" >
+              {busy ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => submit({ ...form, status: "Draft" })}
+              disabled={busy || !form.title || !form.category}
+              className="bg-panel border-line/15 text-content hover:bg-surface-deep text-xs md:text-sm md:px-4 h-9 disabled:opacity-40 disabled:cursor-not-allowed" >
+              Save as Draft
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClose}
+              className="bg-panel border-line/15 text-content hover:bg-surface-deep md:px-4 text-xs md:text-sm h-9" >
+              Cancel
+            </Button>
+          </div>
         </div>
       </div>
     </div>

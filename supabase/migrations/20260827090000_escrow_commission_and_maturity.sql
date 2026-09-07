@@ -7,7 +7,7 @@
 -- The consequence is quiet and expensive: `escrow_holds.commission_kobo`
 -- defaults to 0 and no code path sets it, so every release pays the vendor the
 -- full order value and the platform earns nothing on orders. The dispute
--- resolver already honours commission correctly — there has simply never been
+-- resolver already honours commission correctly   there has simply never been
 -- any to honour.
 --
 -- WHY A TRIGGER RATHER THAN EDITING checkout_cart
@@ -54,7 +54,9 @@ exception
     return p_default;
 end;
 $fn$;
+
 grant execute on function private.setting_int(text, integer) to service_role;
+
 -- 2. Apply the settings to every hold at creation ------------------------------
 create or replace function public.apply_escrow_settings()
 returns trigger
@@ -84,10 +86,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists escrow_holds_apply_settings on public.escrow_holds;
 create trigger escrow_holds_apply_settings
   before insert on public.escrow_holds
   for each row execute function public.apply_escrow_settings();
+
 -- 3. Release matured holds ------------------------------------------------------
 -- The student UI promises escrow "releases automatically once the hold
 -- matures". Nothing kept that promise: release_order_escrow existed and only
@@ -130,7 +134,9 @@ begin
   return;
 end;
 $fn$;
+
 revoke all on function public.release_matured_escrow(integer) from public, anon, authenticated;
 grant execute on function public.release_matured_escrow(integer) to service_role;
+
 comment on function public.release_matured_escrow is
   'Releases every matured hold. Service role only, called by the escrow cron. Safe to re-run: each release is idempotent.';

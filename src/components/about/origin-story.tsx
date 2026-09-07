@@ -20,8 +20,8 @@ export function OriginStory() {
               In every Nigerian university town, a fresher arrives with one bag and one mission -
               find somewhere to sleep before lectures start. What follows is a week of walking.
               Street by street. Gate by gate. Asking strangers. Trusting agents you&rsquo;ve never
-              met. Paying <em>10 to 20 percent</em> of a year&rsquo;s rent to someone who barely
-              showed you two hostels before disappearing.
+              met. Paying <em>10 to 20 percent</em> of a year’s rent to someone who barely showed
+              you two hostels before disappearing.
             </p>
             <p>
               We thought: <em>that can&rsquo;t be it.</em>

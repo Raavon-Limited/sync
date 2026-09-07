@@ -4,7 +4,9 @@ import type { VendorBar } from "../data";
 
 export function TopVendorsChart({ data }: { data: VendorBar[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
-  const maxVal = Math.max(...data.map(d => d.revenue));
+  // Math.max() of an empty list is -Infinity, and every bar width below then
+  // renders as NaN%. Seeded to 1 so an empty or all-zero list draws flat.
+  const maxVal = Math.max(1, ...data.map(d => d.revenue));
   const sorted  = [...data].sort((a, b) => b.revenue - a.revenue);
 
   return (

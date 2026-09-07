@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { href: '/around', label: 'Home', icon: Compass },
   { href: '/search', label: 'Browse', icon: Grid3x3 },
-  { href: '/me/saved', label: 'Saved', icon: Heart },
-  { href: '/me/messages', label: 'Inbox', icon: Inbox },
-  { href: '/me', label: 'Me', icon: User },
+  { href: '/user/saved', label: 'Saved', icon: Heart },
+  { href: '/user/messages', label: 'Inbox', icon: Inbox },
+  { href: '/user', label: 'Me', icon: User },
 ];
 
 export function MobileBottomNav() {

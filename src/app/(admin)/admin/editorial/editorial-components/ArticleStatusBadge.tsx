@@ -11,6 +11,7 @@ const STATUS_STYLES: Record<ArticleStatus, string> = {
   Published: "bg-green-100 text-green-600",
   Draft: "bg-gray-100 text-gray-600",
   Scheduled: "bg-blue-100 text-blue-600",
+  Archived: "bg-amber-100 text-amber-700",
 };
 
 export function ArticleStatusBadge({ status }: ArticleStatusBadgeProps) {

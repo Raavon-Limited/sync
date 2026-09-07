@@ -1,7 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { mockContacts, mockCustomers, mockMessages } from '@/mock/chat';
+import { useEffect, useMemo, useState } from 'react';
+import { formatRelative } from '@/lib/utils';
+import { koboToNaira } from '@/lib/query/helpers';
+import {
+  useConversations,
+  useConversationsRealtime,
+  useConversationRealtime,
+  useMessages,
+  useSendMessage,
+  useMarkConversationRead,
+  useAttachmentUrls,
+} from '@/modules/messaging/hooks';
+import type { AttachmentType } from './attachments/attachment';
+import { useVendorOrders } from '@/modules/vendor/hooks';
+import type { ChatContact, ChatCustomer } from '@/modules/vendor/types';
 import { ChatList, ChatFilter } from './chat-list';
 import { ChatWindow } from './chat-window';
 import { ChatCustomerPanel } from './chat-panel';
@@ -14,12 +27,7 @@ import { ChatMessage } from '@/modules/vendor/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/toast';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
-import {
-  ChatTheme,
-  ConversationPrefs,
-  DEFAULT_PREFS,
-  useChatStore,
-} from '@/store/use-chat-store';
+import { ChatTheme, ConversationPrefs, DEFAULT_PREFS, useChatStore } from '@/store/use-chat-store';
 
 /*
  * Stable empty values used before hydration. zustand's persist middleware reads
@@ -32,23 +40,22 @@ const NO_IDS: string[] = [];
 type ConfirmKind = 'clear' | 'delete' | 'block';
 
 /**
- * Seeds the in-memory message map from the mock data, skipping conversations
- * the vendor has cleared. Messages themselves aren't persisted (attachment
- * object URLs don't survive a reload), so a cleared chat simply stays empty.
+ * The viewer switches on a coarse category, not the raw MIME type. Anything
+ * unrecognised falls back to 'document', which renders a download chip - the
+ * one presentation that is safe for a format we cannot preview.
  */
-function seedMessages(): Record<string, ChatMessage[]> {
-  const { clearedIds } = useChatStore.getState();
-
-  return Object.fromEntries(
-    Object.entries(mockMessages).map(([id, list]) => [id, clearedIds.includes(id) ? [] : list]),
-  );
+function mimeToAttachmentType(mime: string | null): AttachmentType {
+  if (!mime) return 'document';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  return 'document';
 }
 
 export default function ChatComponent() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ChatFilter>('all');
-  const [messagesByConversation, setMessagesByConversation] = useState(seedMessages);
 
   const [customerOpen, setCustomerOpen] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
@@ -57,6 +64,83 @@ export default function ChatComponent() {
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
 
   const hydrated = useIsHydrated();
+
+  /* ------------------------------------------------------------------ */
+  /*                             Live data                              */
+  /* ------------------------------------------------------------------ */
+
+  // Thread list + open thread. Two channels: one for the list (a new message in
+  // any thread reorders it) and one filtered to the open conversation.
+  useConversationsRealtime();
+  useConversationRealtime(selectedId ?? undefined);
+
+  const { data: conversations = [], isLoading: threadsLoading } = useConversations({
+    pageSize: 50,
+  });
+  const { data: threadMessages = [], isLoading: messagesLoading } = useMessages(
+    selectedId ?? undefined,
+  );
+  const send = useSendMessage(selectedId ?? '');
+  const markRead = useMarkConversationRead();
+
+  // The customer panel cannot join `profiles` - a vendor has no read on it. All
+  // of it is derived from orders the vendor already owns, plus the contact
+  // snapshot taken at checkout.
+  const { data: vendorOrders = [] } = useVendorOrders();
+
+  const contacts: ChatContact[] = useMemo(
+    () =>
+      conversations.map((c) => ({
+        id: c.id,
+        name: c.title,
+        avatarUrl: c.avatarUrl ?? undefined,
+        lastMessage: c.lastMessagePreview ?? '',
+        timeAgo: formatRelative(c.lastMessageAt),
+        unreadCount: c.unreadCount || undefined,
+        hasUnread: c.hasUnread,
+      })),
+    [conversations],
+  );
+
+  const customersById: Record<string, ChatCustomer> = useMemo(() => {
+    const out: Record<string, ChatCustomer> = {};
+
+    for (const c of conversations) {
+      const theirOrders = vendorOrders.filter((o) => o.studentId === c.counterpartId);
+      const first = theirOrders[theirOrders.length - 1];
+
+      out[c.id] = {
+        id: c.counterpartId ?? c.id,
+        name: theirOrders[0]?.customerName ?? c.title,
+        avatarUrl: c.avatarUrl ?? undefined,
+        location: theirOrders[0]?.deliveryAddress ?? 'Not provided',
+        memberSince: first ? formatRelative(first.placedAt) : '-',
+        totalOrders: theirOrders.length,
+        totalSpent: koboToNaira(
+          theirOrders.reduce((sum, o) => sum + o.totalKobo, 0),
+        ).toLocaleString('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }),
+        recentOrders: theirOrders.slice(0, 5).map((o) => ({
+          orderId: o.id,
+          items: o.lines.map((l) => l.name).join(', ') || '-',
+          total: koboToNaira(o.totalKobo).toLocaleString('en-NG', {
+            style: 'currency',
+            currency: 'NGN',
+            maximumFractionDigits: 0,
+          }),
+          status:
+            o.status === 'delivered'
+              ? 'Completed'
+              : o.status === 'cancelled'
+                ? 'Cancelled'
+                : o.status === 'pending'
+                  ? 'Pending'
+                  : 'Processing',
+        })),
+      };
+    }
+
+    return out;
+  }, [conversations, vendorOrders]);
 
   const storedPrefs = useChatStore((state) => state.prefs);
   const storedDeleted = useChatStore((state) => state.deletedIds);
@@ -79,26 +163,45 @@ export default function ChatComponent() {
 
   const archivedCount = useMemo(
     () =>
-      mockContacts.filter(
+      contacts.filter(
         (contact) => !deletedIds.includes(contact.id) && (prefs[contact.id]?.archived ?? false),
       ).length,
-    [prefs, deletedIds],
+    [contacts, prefs, deletedIds],
   );
 
   /*
-   * Conversations for the current tab: deleted ones are gone entirely, the
-   * archived flag decides which tab a chat belongs to, and pinned chats float
-   * to the top of whichever list they're in.
+   * Unread is counted across BOTH tabs, deliberately.
+   *
+   * Archiving is the vendor tidying their own inbox; it says nothing about
+   * whether the customer is still waiting. Excluding archived threads here would
+   * let a vendor archive a conversation and lose the only signal that someone
+   * needs a reply - so the badge counts every thread with unread messages, and
+   * the Unread tab shows them all.
+   */
+  const unreadCount = useMemo(
+    () =>
+      contacts.filter((contact) => !deletedIds.includes(contact.id) && contact.hasUnread).length,
+    [contacts, deletedIds],
+  );
+
+  /*
+   * Conversations for the current tab: deleted ones are gone entirely; 'all' and
+   * 'archived' partition by the archived flag, while 'unread' cuts across both.
+   * Pinned chats float to the top of whichever list they're in.
    */
   const visibleContacts = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    const list = mockContacts.filter((contact) => {
+    const list = contacts.filter((contact) => {
       if (deletedIds.includes(contact.id)) return false;
 
       const archived = prefs[contact.id]?.archived ?? false;
 
-      if (archived !== (filter === 'archived')) return false;
+      if (filter === 'unread') {
+        if (!contact.hasUnread) return false;
+      } else if (archived !== (filter === 'archived')) {
+        return false;
+      }
 
       return !query || contact.name.toLowerCase().includes(query);
     });
@@ -106,18 +209,72 @@ export default function ChatComponent() {
     return [...list].sort(
       (a, b) => Number(prefs[b.id]?.pinned ?? false) - Number(prefs[a.id]?.pinned ?? false),
     );
-  }, [search, filter, prefs, deletedIds]);
+  }, [contacts, search, filter, prefs, deletedIds]);
 
   const selectedContact = selectedId
-    ? mockContacts.find((contact) => contact.id === selectedId)
+    ? contacts.find((contact) => contact.id === selectedId)
     : undefined;
 
-  const selectedMessages = selectedId ? (messagesByConversation[selectedId] ?? []) : [];
-  const selectedCustomer = selectedId ? mockCustomers[selectedId] : undefined;
+  const clearedIds = useChatStore((state) => state.clearedIds);
+
+  /*
+   * "Clear chat" is a LOCAL preference, not a delete: the other party still has
+   * the thread, and a vendor hiding their own copy must not destroy the
+   * customer's. So the messages stay on the server and are filtered out here.
+   */
+  /*
+   * Attachments live in a PRIVATE bucket, so there is no URL to construct -
+   * each one needs a signed link. They are fetched as a batch (one round trip
+   * per thread rather than one per file) and cached separately from the
+   * messages, because signed links expire on their own schedule.
+   */
+  const attachmentPaths = useMemo(
+    () => threadMessages.flatMap((m) => m.attachments.map((a) => a.storagePath)),
+    [threadMessages],
+  );
+  const { data: signedUrls = {} } = useAttachmentUrls(attachmentPaths);
+
+  const selectedMessages: ChatMessage[] = useMemo(() => {
+    if (!selectedId || clearedIds.includes(selectedId)) return [];
+
+    return threadMessages.map((m) => ({
+      id: m.id,
+      content: m.body ?? '',
+      isVendor: m.isMine,
+      timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      attachments: m.attachments
+        // A link that has not resolved yet is skipped rather than rendered
+        // broken; the query refetches and it appears on the next pass.
+        .filter((a) => signedUrls[a.storagePath])
+        .map((a) => ({
+          id: a.id,
+          // No File: this came from Storage. Display code reads name/mimeType.
+          type: mimeToAttachmentType(a.mimeType),
+          url: signedUrls[a.storagePath],
+          name: a.fileName ?? 'Attachment',
+          size: a.sizeBytes ?? 0,
+          mimeType: a.mimeType ?? 'application/octet-stream',
+          duration: a.durationMs ?? undefined,
+          width: a.width ?? undefined,
+          height: a.height ?? undefined,
+        })),
+    }));
+  }, [selectedId, clearedIds, threadMessages, signedUrls]);
+  const selectedCustomer = selectedId ? customersById[selectedId] : undefined;
   const selectedPrefs = selectedId ? prefsFor(selectedId) : DEFAULT_PREFS;
   const linkedOrder = selectedCustomer?.recentOrders[0];
 
-  //SEND FUNCTION
+  /*
+   * Send. The mutation is optimistic, so the bubble appears immediately; files
+   * are uploaded to Storage before the row is written, and the realtime channel
+   * reconciles both sides afterwards.
+   *
+   * `Attachment` carries a real `File`, which is what Storage needs - the
+   * in-memory object URL it also holds is only for the local preview.
+   */
   const handleSend = (message: string, attachments: Attachment[]) => {
     if (!selectedId) return;
 
@@ -125,25 +282,35 @@ export default function ChatComponent() {
 
     if (!trimmed && attachments.length === 0) return;
 
-    const newMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      content: trimmed,
-      isVendor: true,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      attachments,
-    };
+    send.mutate(
+      {
+        body: trimmed || undefined,
+        // Only compose-time attachments carry a File; a forwarded one would
+        // not. Filter rather than assert so the type stays honest.
+        files: attachments.map((a) => a.file).filter((f): f is File => !!f),
+      },
+      {
+        onError: (error) =>
+          toast(error instanceof Error ? error.message : 'Message could not be sent'),
+      },
+    );
 
-    setMessagesByConversation((prev) => ({
-      ...prev,
-      [selectedId]: [...(prev[selectedId] ?? []), newMessage],
-    }));
-
-    // The conversation has content again, so stop suppressing its mock seed.
+    // The thread has content again, so stop hiding it locally.
     unmarkCleared(selectedId);
   };
+
+  /*
+   * Opening a thread marks it read. Keyed on the id so switching threads
+   * re-runs it, and guarded on `hydrated` so it does not fire during SSR.
+   */
+  useEffect(() => {
+    if (!selectedId || !hydrated) return;
+
+    markRead.mutate(selectedId);
+    // `markRead` is a stable mutation object; including it would re-fire the
+    // effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, hydrated]);
 
   /* ------------------------------------------------------------------ */
   /*                            Menu actions                            */
@@ -205,7 +372,7 @@ export default function ChatComponent() {
     setReported(selectedId, true);
     setReportOpen(false);
 
-    toast(`Report submitted: ${reason}${details ? ' — details included' : ''}`);
+    toast(`Report submitted: ${reason}${details ? '   details included' : ''}`);
   };
 
   /**
@@ -227,7 +394,7 @@ export default function ChatComponent() {
                 timestamp: item.timestamp,
                 content: item.content,
                 attachments: (item.attachments ?? []).map((attachment) => ({
-                  name: attachment.file.name,
+                  name: attachment.name,
                   type: attachment.type,
                 })),
               })),
@@ -242,7 +409,7 @@ export default function ChatComponent() {
             ...selectedMessages.map((item) => {
               const who = item.isVendor ? 'You' : name;
               const files = (item.attachments ?? [])
-                .map((attachment) => `[${attachment.type}: ${attachment.file.name}]`)
+                .map((attachment) => `[${attachment.type}: ${attachment.name}]`)
                 .join(' ');
 
               return `[${item.timestamp}] ${who}: ${item.content}${files ? ` ${files}` : ''}`;
@@ -278,14 +445,17 @@ export default function ChatComponent() {
   > = {
     clear: {
       title: 'Clear this conversation?',
-      description: 'Every message will be removed. The conversation itself stays in your inbox.',
+      // Deliberately explicit that this is one-sided. The vendor is hiding
+      // their own copy; the customer still has the thread, and one party must
+      // not be able to erase the other's record of what was agreed.
+      description:
+        'Messages are hidden from your inbox. The customer keeps their copy, and nothing is deleted.',
       confirmLabel: 'Clear',
       run: () => {
         if (!selectedId) return;
 
-        setMessagesByConversation((prev) => ({ ...prev, [selectedId]: [] }));
         markCleared(selectedId);
-        toast('Conversation cleared');
+        toast('Conversation cleared from your inbox');
       },
     },
     delete: {
@@ -349,12 +519,13 @@ export default function ChatComponent() {
     filter,
     onFilterChange: setFilter,
     archivedCount,
+    unreadCount,
     prefs,
   };
 
   return (
     <>
-      <div className="border-ink/5 flex h-[calc(100vh-170px)] overflow-hidden rounded-xl border bg-white">
+      <div className="border-line/10 bg-panel flex h-[calc(100vh-170px)] overflow-hidden rounded-xl border">
         {/* Mobile */}
         <div className="h-full w-full lg:hidden">
           {!chatWindowProps ? (
@@ -372,7 +543,7 @@ export default function ChatComponent() {
             <>
               <ChatWindow {...chatWindowProps} />
 
-              {/* mockCustomers is keyed by id, so there is no index-0 fallback to lean on. */}
+              {/* Keyed by conversation id, so there is no index-0 fallback to lean on. */}
               {selectedCustomer && (
                 <ChatCustomerPanel
                   customer={selectedCustomer}

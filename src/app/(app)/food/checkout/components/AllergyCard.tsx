@@ -78,7 +78,7 @@ export default function AllergyCard({
                     />
 
                     <p className="mt-3 text-xs text-content-muted">
-                        We'll send these notes to the restaurant, but we can't guarantee every request can be accommodated.
+                        We&rsquo;ll send these notes to the restaurant, but we can&rsquo;t guarantee every request can be accommodated.
                     </p>
 
                 </div>

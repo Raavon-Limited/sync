@@ -44,10 +44,12 @@ alter table public.conversations drop constraint if exists conversations_kind_ch
 alter table public.conversations add  constraint conversations_kind_check
   check (kind in ('direct', 'order', 'listing', 'booking', 'service_request',
                   'hostel', 'delivery', 'support'));
+
 alter table public.conversations drop constraint if exists conversations_subject_type_check;
 alter table public.conversations add  constraint conversations_subject_type_check
   check (subject_type in ('order', 'listing', 'booking', 'service_request',
                           'hostel', 'delivery'));
+
 -- 2. Student <-> Landlord, about a booking ------------------------------------
 create or replace function public.open_booking_conversation(p_booking_id uuid)
 returns uuid
@@ -99,7 +101,9 @@ begin
   return v_convo;
 end;
 $fn$;
+
 grant execute on function public.open_booking_conversation(uuid) to authenticated, service_role;
+
 -- 3. Student <-> Landlord, BEFORE booking -------------------------------------
 -- The hostel equivalent of open_listing_conversation: "is this room still
 -- available" is asked long before any booking row exists.
@@ -154,7 +158,9 @@ begin
   return v_convo;
 end;
 $fn$;
+
 grant execute on function public.open_hostel_conversation(uuid) to authenticated, service_role;
+
 -- 4. Student <-> Vendor, about a service request ------------------------------
 -- Covers beauty, laundry and workmanship, which all run through
 -- public.service_requests.
@@ -205,7 +211,9 @@ begin
   return v_convo;
 end;
 $fn$;
+
 grant execute on function public.open_service_conversation(uuid) to authenticated, service_role;
+
 -- 5. Student <-> Rider, about a delivery --------------------------------------
 -- Keyed by ORDER because that is what both parties hold: the student is looking
 -- at their order, the rider at their job. deliveries.order_id is unique, so it
@@ -263,4 +271,5 @@ begin
   return v_convo;
 end;
 $fn$;
+
 grant execute on function public.open_delivery_conversation(uuid) to authenticated, service_role;

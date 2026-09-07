@@ -1,138 +1,151 @@
-'use client'
+/**
+ * ROUTE: /food/orders
+ *
+ * WHAT CHANGED
+ *   This read `getAllDemoOrders()`   a localStorage array written by a fake
+ *   checkout. It now reads the student's real orders, and subscribes to them:
+ *   `orders` is in the realtime publication, so a vendor moving an order to
+ *   "preparing" updates this screen without a refresh.
+ *
+ * STATUS COVERAGE
+ *   The demo shim knew four states. The table allows six   `pending` (placed,
+ *   not yet accepted) and `cancelled` were unrepresentable, so an order sitting
+ *   in either rendered as nothing at all. Both are handled here.
+ */
+'use client';
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { ChevronRight, ShoppingBag, ClipboardList } from 'lucide-react'
-import { getAllDemoOrders, type DemoOrder } from '@/lib/demo-order'
+import Link from 'next/link';
+import { ChevronRight, ShoppingBag, ClipboardList } from 'lucide-react';
+import { useMyOrders, useMyOrdersRealtime } from '@/modules/food/hooks';
+import type { FoodOrder, OrderStatus } from '@/modules/food/types';
 
-// Maps order status to a progress percentage and colour
-const STATUS_CONFIG: Record<DemoOrder['status'], {
-    label: string
-    pct: number
-    colour: string
-    timeOffset: number // minutes to add to order time for ETA end
-}> = {
-    preparing: { label: 'Preparing', pct: 20, colour: 'bg-yellow-400', timeOffset: 35 },
-    picked_up: { label: 'Picked up', pct: 50, colour: 'bg-blue-400', timeOffset: 25 },
-    on_the_way: { label: 'On the way', pct: 75, colour: 'bg-lime', timeOffset: 15 },
-    delivered: { label: 'Delivered', pct: 100, colour: 'bg-lime', timeOffset: 0 },
+const STATUS_CONFIG: Record<OrderStatus, { label: string; pct: number; colour: string }> = {
+  pending: { label: 'Placed', pct: 10, colour: 'bg-yellow-400' },
+  preparing: { label: 'Preparing', pct: 30, colour: 'bg-yellow-400' },
+  picked_up: { label: 'Picked up', pct: 55, colour: 'bg-blue-400' },
+  on_the_way: { label: 'On the way', pct: 80, colour: 'bg-lime' },
+  delivered: { label: 'Delivered', pct: 100, colour: 'bg-lime' },
+  cancelled: { label: 'Cancelled', pct: 100, colour: 'bg-coral' },
+};
+
+const CLOSED: OrderStatus[] = ['delivered', 'cancelled'];
+
+function timeWindow(placedAt: string, etaMinutes?: number | null) {
+  const start = new Date(placedAt);
+  if (Number.isNaN(start.getTime())) return '';
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const end = new Date(start.getTime() + (etaMinutes ?? 30) * 60_000);
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 
-function formatTimeWindow(createdAt: number, etaMinutes: number, status: DemoOrder['status']) {
-    const start = new Date(createdAt)
-    const endOffset = STATUS_CONFIG[status].timeOffset
-    const end = new Date(createdAt + etaMinutes * 60_000)
+function OrderCard({ order }: { order: FoodOrder }) {
+  const config = STATUS_CONFIG[order.status];
+  if (!config) return null;
+  const isActive = !CLOSED.includes(order.status);
 
-    const fmt = (d: Date) =>
-        d.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return (
+    <Link
+      href={`/food/orders/${order.id}/track`}
+      className="border-line/10 bg-panel shadow-card hover:border-line/20 block overflow-hidden rounded-2xl border transition-colors"
+    >
+      <div className="flex items-center gap-4 px-4 py-4">
+        <div className="bg-surface-deep border-line/10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border">
+          <ShoppingBag size={20} className="text-content-muted" />
+        </div>
 
-    if (status === 'delivered') return `${fmt(start)} – ${fmt(end)}`
-    return `${fmt(start)} – ${fmt(new Date(end.getTime() + endOffset * 60_000))}`
-}
+        <div className="min-w-0 flex-1">
+          <span
+            className={`mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              isActive ? 'text-lime-deep dark:text-lime bg-lime/10' : 'text-content-muted bg-surface-deep'
+            }`}
+          >
+            {isActive && <span className="bg-lime h-1.5 w-1.5 animate-pulse rounded-full" />}
+            {config.label}
+          </span>
+          <p className="text-content truncate text-sm font-semibold">
+            {order.vendorName ?? 'Vendor'}
+          </p>
+          <p className="text-content text-xl font-black tracking-tight">
+            {timeWindow(order.placedAt, order.etaMinutes)}
+          </p>
+          <p className="text-content-muted text-xs">
+            ₦{(order.totalKobo / 100).toLocaleString()} · {order.lines.length} item
+            {order.lines.length === 1 ? '' : 's'}
+          </p>
+        </div>
 
-function OrderCard({ order }: { order: DemoOrder }) {
-    const config = STATUS_CONFIG[order.status]
+        <ChevronRight size={18} className="text-content-muted flex-shrink-0" />
+      </div>
 
-    if (!config) {
-        return null
-    }
-
-    const timeWindow = formatTimeWindow(order.createdAt, order.etaMinutes, order.status)
-    const isActive = order.status !== 'delivered'
-
-    return (
-        <Link
-            href={`/food/orders/${order.id}/track`}
-            className="block rounded-2xl border border-line/10 bg-panel shadow-card overflow-hidden hover:border-line/20 transition-colors"
-        >
-            <div className="flex items-center gap-4 px-4 py-4">
-                {/* Vendor icon */}
-                <div className="w-12 h-12 rounded-xl bg-surface-deep flex items-center justify-center flex-shrink-0 border border-line/10">
-                    {order.vendorLogo ? (
-                        <img src={order.vendorLogo} alt={order.vendorName} className="w-full h-full object-cover rounded-xl" />
-                    ) : (
-                        <ShoppingBag size={20} className="text-content-muted" />
-                    )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                    {isActive && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-lime-deep dark:text-lime bg-lime/10 px-2 py-0.5 rounded-full mb-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
-                            On time
-                        </span>
-                    )}
-                    <p className="text-sm font-semibold text-content truncate">{order.vendorName}</p>
-                    <p className="text-xl font-black text-content tracking-tight">{timeWindow}</p>
-                </div>
-
-                <ChevronRight size={18} className="text-content-muted flex-shrink-0" />
-            </div>
-
-            {/* Progress bar */}
-            <div className="h-1.5 bg-surface-deep">
-                <div
-                    className={`h-full ${config.colour} transition-all duration-700`}
-                    style={{ width: `${config.pct}%` }}
-                />
-            </div>
-        </Link>
-    )
+      <div className="bg-surface-deep h-1.5">
+        <div
+          className={`h-full ${config.colour} transition-all duration-700`}
+          style={{ width: `${config.pct}%` }}
+        />
+      </div>
+    </Link>
+  );
 }
 
 export default function OrdersPage() {
-    const [orders, setOrders] = useState<DemoOrder[]>([])
+  // Keeps the list live while the vendor works through the queue.
+  useMyOrdersRealtime();
+  const { data: orders = [], isLoading } = useMyOrders();
 
-    useEffect(() => {
-        setOrders(getAllDemoOrders())
-    }, [])
+  const active = orders.filter((o) => !CLOSED.includes(o.status));
+  const past = orders.filter((o) => CLOSED.includes(o.status));
 
-    const activeOrders = orders.filter(o => o.status !== 'delivered')
-    const pastOrders = orders.filter(o => o.status === 'delivered')
+  return (
+    <div className="flex flex-col gap-6 pb-24">
+      <h1 className="text-content text-2xl font-black">Orders</h1>
 
-    return (
-        <div className="flex flex-col gap-6 pb-24">
-            <h1 className="text-2xl font-black text-content">Orders</h1>
-
-            {/* Active orders */}
-            {activeOrders.length > 0 && (
-                <section className="flex flex-col gap-3">
-                    {activeOrders.map(o => <OrderCard key={o.id} order={o} />)}
-                </section>
-            )}
-
-            {/* Continue your order / empty state */}
-            <section>
-                <h2 className="text-lg font-bold text-content mb-3">Continue your order</h2>
-                <div className="rounded-2xl border border-line/10 bg-panel shadow-card px-6 py-8 flex flex-col items-center gap-2 text-center">
-                    <ShoppingBag size={36} className="text-content-muted/40" strokeWidth={1} />
-                    <p className="text-sm font-semibold text-content mt-1">No carts yet</p>
-                    <p className="text-xs text-content-muted">Add items from stores to create new carts</p>
-                </div>
-            </section>
-
-            {/* Past orders */}
-            {pastOrders.length > 0 && (
-                <section className="flex flex-col gap-3">
-                    <h2 className="text-lg font-bold text-content">Past orders</h2>
-                    {pastOrders.map(o => <OrderCard key={o.id} order={o} />)}
-                </section>
-            )}
-
-            {/* Order history link */}
-            <Link
-                href="/food/orders/history"
-                className="rounded-2xl border border-line/10 bg-panel shadow-card px-4 py-4 flex items-center gap-3 hover:border-line/20 transition-colors"
-            >
-                <ClipboardList size={20} className="text-content-muted flex-shrink-0" />
-                <div className="flex-1">
-                    <p className="text-sm text-content-muted">Need to review past orders or reorder?</p>
-                    <p className="text-sm font-bold text-lime-deep dark:text-lime underline underline-offset-2">
-                        Check your order history
-                    </p>
-                </div>
-            </Link>
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="bg-ink/5 h-24 animate-pulse rounded-2xl" />
+          ))}
         </div>
-    )
+      )}
+
+      {!isLoading && active.length > 0 && (
+        <section className="flex flex-col gap-3">
+          {active.map((o) => (
+            <OrderCard key={o.id} order={o} />
+          ))}
+        </section>
+      )}
+
+      {!isLoading && orders.length === 0 && (
+        <section>
+          <div className="border-line/10 bg-panel shadow-card flex flex-col items-center gap-2 rounded-2xl border px-6 py-8 text-center">
+            <ShoppingBag size={36} className="text-content-muted/40" strokeWidth={1} />
+            <p className="text-content mt-1 text-sm font-semibold">No orders yet</p>
+            <p className="text-content-muted text-xs">Your orders will show up here</p>
+          </div>
+        </section>
+      )}
+
+      {past.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-content text-lg font-bold">Past orders</h2>
+          {past.map((o) => (
+            <OrderCard key={o.id} order={o} />
+          ))}
+        </section>
+      )}
+
+      <Link
+        href="/food/orders/history"
+        className="border-line/10 bg-panel shadow-card hover:border-line/20 flex items-center gap-3 rounded-2xl border px-4 py-4 transition-colors"
+      >
+        <ClipboardList size={20} className="text-content-muted flex-shrink-0" />
+        <div className="flex-1">
+          <p className="text-content-muted text-sm">Need to review past orders or reorder?</p>
+          <p className="text-content text-sm font-semibold">Order history</p>
+        </div>
+        <ChevronRight size={18} className="text-content-muted flex-shrink-0" />
+      </Link>
+    </div>
+  );
 }

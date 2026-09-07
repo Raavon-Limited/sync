@@ -51,7 +51,10 @@ export async function initializeTransaction(p: InitializeParams): Promise<Initia
     data?: InitializeResult;
   };
   if (!res.ok || !json.status || !json.data) {
-    throw new Error(json.message || 'Paystack initialize failed');
+    // Paystack writes for people ("Invalid amount"), so its own words are kept.
+    // The fallback is ours, and names no vendor the payer has never heard of.
+    console.error('[paystack] initialize failed', res.status, json.message);
+    throw new Error(json.message || 'We could not start that payment. Please try again.');
   }
   return json.data;
 }
@@ -70,7 +73,8 @@ export async function verifyTransaction(reference: string): Promise<{
   });
   const json = (await res.json()) as { status?: boolean; message?: string; data?: never };
   if (!res.ok || !json.status || !json.data) {
-    throw new Error(json.message || 'Paystack verify failed');
+    console.error('[paystack] verify failed', res.status, json.message);
+    throw new Error(json.message || 'We could not confirm that payment. Please try again.');
   }
   return json.data;
 }

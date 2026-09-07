@@ -22,7 +22,7 @@
 --   product working. A renewal is a new period and therefore a new reference.
 --
 -- THE FREE PLAN IS NOT A PAYMENT
---   Downgrading to Starter must not post a zero-kobo transaction —
+--   Downgrading to Starter must not post a zero-kobo transaction  
 --   post_transaction requires balanced entries and a zero entry is noise in a
 --   statement. Free plans switch the subscription and write no ledger row.
 --
@@ -35,6 +35,7 @@
 -- vendor accumulates a row per plan change.
 create unique index if not exists subscriptions_one_per_vendor_idx
   on public.subscriptions (vendor_id);
+
 create or replace function public.subscribe_to_plan(p_plan_id uuid)
 returns uuid
 language plpgsql
@@ -127,6 +128,8 @@ begin
   return v_sub;
 end;
 $fn$;
+
 grant execute on function public.subscribe_to_plan(uuid) to authenticated, service_role;
+
 comment on function public.subscribe_to_plan is
   'Subscribes the calling vendor, paying from wallet. Idempotent per (vendor, plan, period). Free plans write no ledger row.';

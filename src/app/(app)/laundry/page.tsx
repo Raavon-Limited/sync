@@ -1,22 +1,20 @@
 /**
  * ROUTE: /laundry
- * ACCESS: authenticated student
- * PURPOSE: Laundry vendor list + pickup scheduler. Pick a vendor, choose pickup/dropoff times, pay on completion (escrow).
- * BUILT HERE: Vendor cards, slot picker, address form.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * ACCESS: public to browse; signing in is required to request.
+ * PURPOSE: Browse laundry services and send a request to a vendor.
+ *
+ * All three service verticals share one browser   see
+ * components/services/services-browser. The vertical is the only difference.
  */
 import type { Metadata } from 'next';
+import { ServicesBrowser } from '@/components/services/services-browser';
 
 export const metadata: Metadata = { title: 'Laundry' };
 
 export default function Page() {
   return (
     <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/laundry</p>
-      <h1 className="font-display text-section text-content">Laundry</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+      <ServicesBrowser vertical="laundry" />
     </section>
   );
 }

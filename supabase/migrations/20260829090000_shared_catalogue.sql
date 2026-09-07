@@ -17,7 +17,7 @@
 --
 --   After: one catalogue row, three `storefront_listings` rows. Renaming the
 --   dish or replacing its photo is one edit. Price and stock stay per store,
---   because those genuinely differ by location — which was the right half of
+--   because those genuinely differ by location   which was the right half of
 --   the original design and is kept.
 --
 -- 20260822090000 ARGUED FOR THE OPPOSITE, DELIBERATELY
@@ -25,22 +25,22 @@
 --   differently by location, and because splitting a shared catalogue apart
 --   later is far harder than consolidating independent ones."
 --   The first clause survives: price and stock are still per store. The second
---   is why this migration is safe to write now — consolidating is the easy
+--   is why this migration is safe to write now   consolidating is the easy
 --   direction, and it is the one we are going in.
 --
 -- NOTHING IS MERGED
 --   The obvious move is to collapse rows with the same (vendor_id, name) into
 --   one catalogue item. This migration does NOT do that. Two stores that both
 --   sell "Jollof Rice" today keep two catalogue rows, each carried by the one
---   store that had it. Merging is lossy and irreversible — different photos,
---   different descriptions, different `sold` counts — and it cannot be
+--   store that had it. Merging is lossy and irreversible   different photos,
+--   different descriptions, different `sold` counts   and it cannot be
 --   distinguished from two genuinely different dishes with the same name. The
 --   vendor consolidates from the UI, where they can see what they are merging.
 --   What this migration buys is the CAPABILITY: from now on, one item can be
 --   carried by many stores.
 --
 -- listings.storefront_id IS KEPT, AND DEMOTED
---   It stays NOT NULL and now means "the store this item was created at" — its
+--   It stays NOT NULL and now means "the store this item was created at"   its
 --   home. Availability is `storefront_listings`. Dropping the column would
 --   break `sync_listing_vendor_to_storefront`, which derives `vendor_id` from
 --   it and is the thing stopping staff writing a listing into another
@@ -69,7 +69,7 @@ create table if not exists public.storefront_listings (
   -- order and do not count portions; forcing them to would empty their menu
   -- the first day they forgot to top the number up. `listings.stock` is
   -- `not null default 0`, which combined with the editor defaulting the field
-  -- to 0 means every listing created without touching it is born unbuyable —
+  -- to 0 means every listing created without touching it is born unbuyable  
   -- visible on the menu, addable to a cart, and refused at the Pay button.
   -- This column is nullable so that the common case (we just cook it) has a
   -- representation, and 0 can mean what it says.
@@ -92,11 +92,13 @@ create table if not exists public.storefront_listings (
   updated_at    timestamptz not null default now(),
   primary key (storefront_id, listing_id)
 );
+
 create index if not exists storefront_listings_listing_idx
   on public.storefront_listings (listing_id);
 -- The student-facing query: what does THIS store sell right now.
 create index if not exists storefront_listings_available_idx
   on public.storefront_listings (storefront_id) where is_available;
+
 -- 2. Backfill: every existing listing is carried by its home store -----------
 --    Price is left null (inherit) rather than copied, per the note above.
 --
@@ -114,6 +116,7 @@ select l.storefront_id,
   from public.listings l
  where l.storefront_id is not null
 on conflict (storefront_id, listing_id) do nothing;
+
 -- 3. Price resolution, in one place ------------------------------------------
 --    Every caller that needs "what does this item cost at this store" asks
 --    here, so the fallback rule cannot be implemented differently twice.
@@ -131,26 +134,33 @@ as $$
            (select l.price_kobo from public.listings l where l.id = p_listing_id)
          );
 $$;
+
 grant execute on function public.store_price(uuid, uuid) to anon, authenticated, service_role;
+
 comment on function public.store_price(uuid, uuid) is
   'Price of a catalogue item at one store: the store override if set, else the catalogue price. One definition of the fallback so two callers cannot disagree.';
+
 -- 4. RLS ---------------------------------------------------------------------
 alter table public.storefront_listings enable row level security;
+
 -- Readable by anyone who can already see the store and the item; this table
 -- adds no new disclosure, it only says where something is sold.
 drop policy if exists "storefront_listings_select_public" on public.storefront_listings;
 create policy "storefront_listings_select_public" on public.storefront_listings
   for select to anon, authenticated using (true);
--- Written by whoever may work that store — the same predicate as listings, so
+
+-- Written by whoever may work that store   the same predicate as listings, so
 -- widening `can_manage_storefront` widens both together and neither drifts.
 drop policy if exists "storefront_listings_write_manager" on public.storefront_listings;
 create policy "storefront_listings_write_manager" on public.storefront_listings
   for all to authenticated
   using (private.can_manage_storefront(storefront_id, (select auth.uid())))
   with check (private.can_manage_storefront(storefront_id, (select auth.uid())));
+
 revoke all on public.storefront_listings from anon, authenticated;
 grant select                         on public.storefront_listings to anon, authenticated;
 grant insert, update, delete         on public.storefront_listings to authenticated;
+
 -- 5. A listing is always carried by its home store ---------------------------
 --    Without this, an item created through the normal listings path would be
 --    in the catalogue and sold nowhere, which looks exactly like a bug in the
@@ -172,10 +182,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists listings_carry_at_home_store on public.listings;
 create trigger listings_carry_at_home_store
   after insert on public.listings
   for each row execute function public.carry_listing_at_home_store();
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

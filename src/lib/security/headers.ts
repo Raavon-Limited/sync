@@ -16,13 +16,30 @@ const PAYSTACK_ORIGINS = 'https://js.paystack.co https://checkout.paystack.com';
 // Allow Supabase storage + signed URLs for images, and Supabase realtime / REST.
 const SUPABASE_ORIGINS = 'https://*.supabase.co https://*.supabase.in wss://*.supabase.co';
 
-// OpenStreetMap raster tiles for the AroundMap (Leaflet). The {s} subdomain
-// expands to a/b/c.tile.openstreetmap.org - all covered by the wildcard.
-const MAP_TILE_ORIGINS = 'https://*.tile.openstreetmap.org';
+// Google Maps JavaScript API, which backs every interactive map in the app.
+// Split by directive because the SDK pulls from four different origins:
+//   - maps.googleapis.com  the loader script itself, plus every tile/data XHR
+//   - maps.gstatic.com     sprites, control icons, the Google logo
+//   - *.googleapis.com     tile subdomains for vector/raster imagery
+//   - *.ggpht.com          Street View and place photography
+// `blob:` in worker-src is NOT optional: vector maps rasterise in a blob-backed
+// web worker, and without it the map renders as a blank grey box with only an
+// opaque worker error in the console.
+const GOOGLE_MAPS_SCRIPT = 'https://maps.googleapis.com';
+const GOOGLE_MAPS_IMG = 'https://maps.gstatic.com https://*.googleapis.com https://*.ggpht.com';
+// places.googleapis.com is a SEPARATE origin from maps.googleapis.com, and it
+// is where the Places API (New) actually sends its requests - the address
+// autocomplete in onboarding talks to it via the SDK. Without it here, CSP
+// blocks every suggestion request; the field then falls back to a plain input
+// and looks merely unhelpful rather than broken, which is a bad way to find out.
+const GOOGLE_MAPS_CONNECT = 'https://maps.googleapis.com https://places.googleapis.com';
+// The SDK injects a Google Fonts <link> for its own UI text.
+const GOOGLE_FONTS_STYLE = 'https://fonts.googleapis.com';
+const GOOGLE_FONTS_FONT = 'https://fonts.gstatic.com';
 
 // Google Maps embed (event detail page's location preview iframe, using the
-// `output=embed` query format). Scoped to https://www.google.com only — not
-// a wildcard on *.google.com — since that's the single origin the embed
+// `output=embed` query format). Scoped to https://www.google.com only   not
+// a wildcard on *.google.com   since that's the single origin the embed
 // iframe actually loads from. Without this, frame-src silently blocked the
 // iframe before it ever requested anything, which is why the map rendered
 // as permanently blank with no console error and onLoad never fired.
@@ -44,11 +61,29 @@ const DEV_SCRIPT_RELAXATIONS = isDev ? `'unsafe-eval'` : '';
 
 export const contentSecurityPolicy = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS}`,
-  `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${MAP_TILE_ORIGINS}`,
-  `font-src 'self' data:`,
-  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
+  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_SCRIPT}`,
+  `style-src 'self' 'unsafe-inline' ${GOOGLE_FONTS_STYLE}`,
+  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${GOOGLE_MAPS_IMG}`,
+  // AUDIO AND VIDEO ARE NOT COVERED BY img-src.
+  //
+  // There was no media-src at all, so <video> and <audio> fell through to
+  // `default-src 'self'` and every media file we host on Supabase was blocked -
+  // while the photographs beside them loaded, because img-src names Supabase
+  // and media-src did not exist. The failure is near-silent by design: the
+  // element still renders its controls, the duration reads 0:00, the frame
+  // stays black, and the only evidence is a CSP violation in the console. It
+  // looks exactly like a corrupt upload.
+  //
+  // Three things need it, all of them shipped without it:
+  //   - the hostel walkthrough video (listing-media, public)   20260908120000
+  //   - message attachments: video and voice notes (message-attachments,
+  //     private, served as signed URLs on the same origin)   20260819180000
+  //   - blob: for the local preview a sender sees before their own upload
+  //     finishes (chat-window, property-form)
+  `media-src 'self' data: blob: ${SUPABASE_ORIGINS}`,
+  `font-src 'self' data: ${GOOGLE_FONTS_FONT}`,
+  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_CONNECT}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
+  `worker-src 'self' blob:`,
   `frame-src ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_EMBED_ORIGIN}`,
   `frame-ancestors 'none'`,
   `base-uri 'self'`,

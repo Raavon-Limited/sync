@@ -9,7 +9,7 @@
 --   enforced by absolutely nothing. A vendor on the free plan could add ten
 --   thousand listings and the only thing that ever mentioned the cap was the
 --   card advertising it. A limit nobody enforces is not a limit, it is a
---   claim — and it is the kind that gets noticed by the people you least want
+--   claim   and it is the kind that gets noticed by the people you least want
 --   noticing it.
 --
 -- THE LADDER
@@ -24,7 +24,7 @@
 -- before you hit it.
 --
 -- COUNTS ARE OF WHAT IS LIVE, NOT OF WHAT EVER EXISTED. Archived listings and
--- archived stores do not count — otherwise a vendor who tidied up would be
+-- archived stores do not count   otherwise a vendor who tidied up would be
 -- permanently poorer for having done so, and the only fix would be a hard
 -- delete we deliberately do not offer.
 --
@@ -64,9 +64,11 @@ alter table public.plans
     check (dispute_support in ('none', 'managed', 'priority')),
   add column if not exists boost_percent   integer not null default 0
     check (boost_percent between 0 and 100);
+
 comment on column public.plans.max_stores is 'Live stores this plan allows. Null = unlimited.';
 comment on column public.plans.max_team is 'Active staff per business. 0 = no invites at all; null = unlimited.';
 comment on column public.plans.boost_percent is 'Discount on promotion placement, as a percentage. 0 = pays full price.';
+
 update public.plans set
   max_listings    = 1,
   max_stores      = 1,
@@ -76,6 +78,7 @@ update public.plans set
   boost_percent   = 0,
   description     = 'Get listed and start selling.'
  where code = 'free';
+
 update public.plans set
   max_listings    = 5,
   max_stores      = 3,
@@ -87,6 +90,7 @@ update public.plans set
   boost_percent   = 30,
   description     = 'More stores, promotions and help when an order goes wrong.'
  where code = 'growth';
+
 update public.plans set
   max_listings    = 10,
   max_stores      = 5,
@@ -96,6 +100,7 @@ update public.plans set
   boost_percent   = 50,
   description     = 'Everything Sync does, with the fastest support.'
  where code = 'pro';
+
 -- The feature bullets the pricing card renders. Stored rather than hardcoded
 -- in the component so changing what a plan offers is a data change.
 update public.plans set features = '[
@@ -103,6 +108,7 @@ update public.plans set features = '[
   "No team members",
   "Basic chat with customers"
 ]'::jsonb where code = 'free';
+
 update public.plans set features = '[
   "Up to 3 stores",
   "Invite your team",
@@ -110,6 +116,7 @@ update public.plans set features = '[
   "Dispute management",
   "30% off promotion boosts"
 ]'::jsonb where code = 'growth';
+
 update public.plans set features = '[
   "Up to 5 stores",
   "Invite your team",
@@ -118,6 +125,7 @@ update public.plans set features = '[
   "50% off promotion boosts",
   "Every feature Sync has"
 ]'::jsonb where code = 'pro';
+
 -- ── 2. Which plan a vendor is actually on ───────────────────────────────────
 -- One definition, so a trigger, an RPC and a screen cannot disagree about
 -- whether somebody is on Growth.
@@ -165,7 +173,9 @@ as $fn$
      limit 1
   );
 $fn$;
+
 grant execute on function private.effective_plan(uuid) to authenticated, service_role;
+
 -- ── 3. Listings ─────────────────────────────────────────────────────────────
 -- Invoker-rights, like the other guards here: a SECURITY DEFINER trigger
 -- reports `current_user` as its owner, so the "is this a client call?" test
@@ -205,10 +215,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists listings_enforce_plan_limit on public.listings;
 create trigger listings_enforce_plan_limit
   before insert on public.listings
   for each row execute function public.enforce_listing_plan_limit();
+
 -- ── 4. Stores ───────────────────────────────────────────────────────────────
 -- Separate from guard_storefront_insert on purpose: that one is about identity
 -- (has this business been reviewed?) and this one is about the plan. They fail
@@ -248,14 +260,16 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists storefronts_enforce_plan_limit on public.storefronts;
 create trigger storefronts_enforce_plan_limit
   before insert on public.storefronts
   for each row execute function public.enforce_store_plan_limit();
+
 -- ── 5. Team ─────────────────────────────────────────────────────────────────
 -- Checked when the INVITE is created, not when it is redeemed. Refusing at
 -- redemption would mean the owner sends a link, the person signs up, and only
--- then finds out they were never allowed in — the failure lands on the wrong
+-- then finds out they were never allowed in   the failure lands on the wrong
 -- person, days late.
 --
 -- Pending invites count against the cap. Otherwise a Starter vendor could
@@ -365,9 +379,11 @@ begin
   return query select v_row.id, v_row.token, v_row.expires_at;
 end;
 $fn$;
+
 revoke all on function public.create_storefront_invite(uuid, text, text, text[]) from public, anon;
 grant execute on function public.create_storefront_invite(uuid, text, text, text[])
   to authenticated, service_role;
+
 -- ── 6. What the app is allowed to show ──────────────────────────────────────
 -- The screens need to say "3 of 5 stores" and grey out Invite BEFORE the
 -- vendor hits a refusal. One RPC so they all read the same numbers the
@@ -414,10 +430,13 @@ as $fn$
     plan.boost_percent
   from plan;
 $fn$;
+
 revoke all on function public.my_plan_usage() from public, anon;
 grant execute on function public.my_plan_usage() to authenticated, service_role;
+
 comment on function public.my_plan_usage() is
-  'The caller''s plan and what they have used of it. The same numbers the triggers enforce — read this rather than counting in the client.';
+  'The caller''s plan and what they have used of it. The same numbers the triggers enforce   read this rather than counting in the client.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

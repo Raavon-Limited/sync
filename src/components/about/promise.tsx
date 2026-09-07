@@ -14,7 +14,7 @@ const PROMISES: { icon: LucideIcon; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         ID, business proof, <em>and an in-person visit by a real person with a camera.</em> No tick
-        from an algorithm. If we couldn&rsquo;t prove it, it&rsquo;s not on Sync.
+        from an algorithm. If we couldn’t prove it, it’s not on Sync.
       </>
     ),
   },
@@ -46,10 +46,7 @@ export function Promise() {
       <div className="mx-auto max-w-7xl">
         <Reveal>
           <p className="eyebrow text-accent-fg">04 · The promise</p>
-          <h2
-            id="promise-heading"
-            className="font-display text-section text-foreground mt-2"
-          >
+          <h2 id="promise-heading" className="font-display text-section text-foreground mt-2">
             Three things we will never trade.
           </h2>
         </Reveal>

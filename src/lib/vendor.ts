@@ -56,7 +56,7 @@ export interface VendorData {
     storeInfo: StoreInfo
 }
 const defaultStoreInfo = (name: string, address: string): StoreInfo => ({
-    description: `${name} — serving fresh, quality food on campus.`,
+    description: `${name}   serving fresh, quality food on campus.`,
     address,
     openingHours: [
         { day: 'Monday', hours: '8:00am – 9:00pm' },

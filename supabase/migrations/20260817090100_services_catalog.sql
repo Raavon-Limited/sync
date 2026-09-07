@@ -6,7 +6,7 @@
 -- WHY THESE ARE NOT `listings`
 --   `listings` (from 0006) models a stocked product: it has `stock` and `sold`
 --   and is bought through `orders`. A haircut, a laundry bag and a plumbing
---   callout have no stock — they are booked for a time, negotiated on price, or
+--   callout have no stock   they are booked for a time, negotiated on price, or
 --   quoted per job. Forcing all four through one table means a `stock` column
 --   that is meaningless for three of them and a status machine that fits none.
 --
@@ -15,9 +15,9 @@
 --   `listings` + `orders`, which already work.
 --
 -- PRICING MODELS
---   fixed      — beauty: ₦3,500 for a haircut.
---   per_unit   — laundry: ₦300 per kg, quantity supplied at request time.
---   quote      — workmanship: price is null until the tradesman responds.
+--   fixed        beauty: ₦3,500 for a haircut.
+--   per_unit     laundry: ₦300 per kg, quantity supplied at request time.
+--   quote        workmanship: price is null until the tradesman responds.
 --   Enforced by a check constraint, not convention.
 --
 -- ROLLBACK
@@ -40,6 +40,7 @@ create table if not exists public.service_categories (
   updated_at timestamptz not null default now(),
   unique (vertical, slug)
 );
+
 insert into public.service_categories (vertical, slug, name, sort_order) values
   ('beauty',      'braiding',    'Braiding',     1),
   ('beauty',      'barbing',     'Barbing',      2),
@@ -55,7 +56,8 @@ insert into public.service_categories (vertical, slug, name, sort_order) values
   ('workmanship', 'mechanic',    'Mechanic',     5),
   ('workmanship', 'painter',     'Painter',      6)
 on conflict (vertical, slug) do nothing;
--- ── 2. Services — what a vendor offers ──────────────────────────────────────
+
+-- ── 2. Services   what a vendor offers ──────────────────────────────────────
 create table if not exists public.services (
   id            uuid primary key default gen_random_uuid(),
   vendor_id     uuid not null references public.vendor_profiles (id) on delete cascade,
@@ -81,10 +83,12 @@ create table if not exists public.services (
     (pricing_model = 'per_unit' and price_kobo is not null and unit_label is not null)
   )
 );
+
 create index if not exists services_vendor_idx   on public.services (vendor_id, is_active);
 create index if not exists services_vertical_idx on public.services (vertical) where archived_at is null;
 create index if not exists services_category_idx on public.services (category_id);
--- ── 3. Service requests — the transaction ───────────────────────────────────
+
+-- ── 3. Service requests   the transaction ───────────────────────────────────
 -- One status machine covering all three verticals. `quoted` only ever appears
 -- for pricing_model='quote'; the rest skip straight from requested to accepted.
 create table if not exists public.service_requests (
@@ -123,12 +127,15 @@ create table if not exists public.service_requests (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+
 create index if not exists service_requests_student_idx on public.service_requests (student_id, created_at desc);
 create index if not exists service_requests_vendor_idx  on public.service_requests (vendor_id, status);
 create index if not exists service_requests_sched_idx   on public.service_requests (scheduled_for)
   where status in ('accepted', 'scheduled');
+
 -- Human-readable code (SRQ-000123) so support can refer to a request by name.
 create sequence if not exists public.service_request_code_seq;
+
 create or replace function public.set_service_request_code()
 returns trigger language plpgsql as $$
 begin
@@ -138,10 +145,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists service_requests_set_code on public.service_requests;
 create trigger service_requests_set_code
   before insert on public.service_requests
   for each row execute function public.set_service_request_code();
+
 -- ── 4. Request event log ────────────────────────────────────────────────────
 -- Every status change, appended. Drives the timeline UI and answers "who
 -- cancelled this and when" without guessing from updated_at.
@@ -154,8 +163,10 @@ create table if not exists public.service_request_events (
   note        text,
   created_at  timestamptz not null default now()
 );
+
 create index if not exists service_request_events_request_idx
   on public.service_request_events (request_id, created_at);
+
 create or replace function public.log_service_request_event()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -169,10 +180,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists service_requests_log_event on public.service_requests;
 create trigger service_requests_log_event
   after insert or update on public.service_requests
   for each row execute function public.log_service_request_event();
+
 -- Money columns are not client-writable: a student must not set agreed_kobo,
 -- and a vendor must not rewrite it after acceptance.
 create or replace function public.guard_service_request_cols()
@@ -190,10 +203,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists service_requests_guard on public.service_requests;
 create trigger service_requests_guard
   before update on public.service_requests
   for each row execute function public.guard_service_request_cols();
+
 -- ── 5. Hotspots ─────────────────────────────────────────────────────────────
 -- Editorial places on the /hotspots map and the /around view. Curated by staff,
 -- not user-generated, so there is no owner column and no write policy.
@@ -216,47 +231,58 @@ create table if not exists public.hotspots (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
 create index if not exists hotspots_geo_idx      on public.hotspots using gist (geo);
 create index if not exists hotspots_category_idx on public.hotspots (category) where is_active;
+
 -- ── 6. RLS ──────────────────────────────────────────────────────────────────
 alter table public.service_categories     enable row level security;
 alter table public.services               enable row level security;
 alter table public.service_requests       enable row level security;
 alter table public.service_request_events enable row level security;
 alter table public.hotspots               enable row level security;
+
 -- Public browse.
 drop policy if exists "service_categories_select" on public.service_categories;
 create policy "service_categories_select" on public.service_categories
   for select to anon, authenticated using (is_active);
+
 drop policy if exists "services_select_active" on public.services;
 create policy "services_select_active" on public.services
   for select to anon, authenticated using (archived_at is null and is_active);
+
 drop policy if exists "hotspots_select_active" on public.hotspots;
 create policy "hotspots_select_active" on public.hotspots
   for select to anon, authenticated using (is_active);
+
 -- A vendor manages their own catalogue.
 drop policy if exists "services_write_own" on public.services;
 create policy "services_write_own" on public.services
   for all to authenticated
   using ((select auth.uid()) = vendor_id)
   with check ((select auth.uid()) = vendor_id);
+
 -- Two-party: separate policies per side, because the two sides may do
 -- different things. A student creates and cancels; a vendor quotes and fulfils.
 drop policy if exists "service_requests_select_party" on public.service_requests;
 create policy "service_requests_select_party" on public.service_requests
   for select to authenticated
   using ((select auth.uid()) in (student_id, vendor_id));
+
 drop policy if exists "service_requests_insert_student" on public.service_requests;
 create policy "service_requests_insert_student" on public.service_requests
   for insert to authenticated with check ((select auth.uid()) = student_id);
+
 drop policy if exists "service_requests_update_party" on public.service_requests;
 create policy "service_requests_update_party" on public.service_requests
   for update to authenticated
   using ((select auth.uid()) in (student_id, vendor_id))
   with check ((select auth.uid()) in (student_id, vendor_id));
+
 drop policy if exists "service_requests_staff" on public.service_requests;
 create policy "service_requests_staff" on public.service_requests
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Events are readable by either party, written only by the trigger.
 drop policy if exists "service_request_events_select" on public.service_request_events;
 create policy "service_request_events_select" on public.service_request_events
@@ -266,18 +292,21 @@ create policy "service_request_events_select" on public.service_request_events
      where r.id = request_id
        and (select auth.uid()) in (r.student_id, r.vendor_id)
   ));
+
 -- ── 7. Grants ───────────────────────────────────────────────────────────────
 revoke all on public.service_categories     from anon, authenticated;
 revoke all on public.services               from anon, authenticated;
 revoke all on public.service_requests       from anon, authenticated;
 revoke all on public.service_request_events from anon, authenticated;
 revoke all on public.hotspots               from anon, authenticated;
+
 grant select                         on public.service_categories to anon, authenticated;
 grant select                         on public.services           to anon, authenticated;
 grant insert, update, delete         on public.services           to authenticated;
 grant select, insert, update         on public.service_requests   to authenticated;
 grant select                         on public.service_request_events to authenticated;
 grant select                         on public.hotspots           to anon, authenticated;
+
 -- No client INSERT on the event log: it is trigger-written only. The trigger is
 -- SECURITY DEFINER, so it does not need the grant.
 

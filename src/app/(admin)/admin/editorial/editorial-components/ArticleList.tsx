@@ -3,12 +3,14 @@
 import { Search } from "lucide-react";
 import { FilterDropdown } from "./FilterDropdown";
 import { ArticleRow } from "./ArticleRow";
-import { STATUS_FILTER_OPTIONS, CATEGORY_FILTER_OPTIONS } from "../admin-editorialConstants";
+import { STATUS_FILTER_OPTIONS } from "../admin-editorialConstants";
 import type { Article, StatusFilterOption, CategoryFilterOption } from "../admin-editorialTypes";
 import { Input } from "@/components/ui";
 
 interface ArticleListProps {
   articles: Article[];
+  /** Built from the categories actually in use   see AdminEditorialPage. */
+  categoryOptions: CategoryFilterOption[];
   searchQuery: string;
   statusFilter: StatusFilterOption;
   categoryFilter: CategoryFilterOption;
@@ -21,7 +23,7 @@ interface ArticleListProps {
 }
 
 export function ArticleList({
-  articles, searchQuery, statusFilter, categoryFilter, onSearchChange, onStatusChange, onCategoryChange, onView, onEdit, onDelete,
+  articles, categoryOptions, searchQuery, statusFilter, categoryFilter, onSearchChange, onStatusChange, onCategoryChange, onView, onEdit, onDelete,
 }: ArticleListProps) {
   return (
     <div className="bg-panel border border-line/15 rounded-xl  transition-all duration-300">
@@ -37,7 +39,7 @@ export function ArticleList({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search articles by title, content, or ID..."
+            placeholder="Search articles by title or excerpt..."
             className="w-full bg-transparent border-none! outline-none! ring-0! text-sm text-content placeholder:text-content-muted/40 py-1 pl-2" />
         </div>
 
@@ -51,7 +53,7 @@ export function ArticleList({
 
           <FilterDropdown<CategoryFilterOption>
             value={categoryFilter}
-            options={CATEGORY_FILTER_OPTIONS}
+            options={categoryOptions}
             onChange={onCategoryChange}
             width="w-40"  />
         </div>

@@ -20,6 +20,7 @@ import { FormField } from '@/components/forms';
 import { toast } from '@/components/ui/toast';
 import { verifyOtpSchema, type VerifyOtpInput } from '@/lib/validations';
 import { resendSignupOtp, verifySignupOtp } from '@/modules/auth/actions';
+import { readAppSurface } from '@/lib/pwa/use-install';
 
 export function VerifyForm({ email, next }: { email: string; next?: string }) {
   const router = useRouter();
@@ -59,9 +60,15 @@ export function VerifyForm({ email, next }: { email: string; next?: string }) {
       toast(res.error);
       return;
     }
-    // Both business roles finish setup in the same onboarding wizard.
+    // Both business roles finish setup in the same onboarding wizard, on every
+    // surface: it is required work, not a preference.
     const needsOnboarding = res.role === 'vendor' || res.role === 'landlord';
-    router.push(needsOnboarding ? '/onboarding' : (next ?? '/me'));
+    // An organiser has their own dashboard and no wizard.
+    const organiser = res.role === 'event_manager';
+    // Everyone else lands where signing in would put them   the feed on a
+    // phone, their dashboard at a desk. See destFor in the login form.
+    const home = readAppSurface() ? '/around' : '/user';
+    router.push(needsOnboarding ? '/onboarding' : organiser ? '/organiser' : (next ?? home));
     router.refresh();
   }
 

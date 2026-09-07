@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, Eye, User } from "lucide-react";
+import { Calendar, User } from "lucide-react";
 import { ArticleStatusBadge } from "./ArticleStatusBadge";
 import { ArticleCategoryBadge } from "./ArticleCategoryBadge";
 import { ArticleRowMenu } from "./ArticleRowMenu";
@@ -69,11 +69,6 @@ export function ArticleRow({ article, onView, onEdit, onDelete }: ArticleRowProp
           <span className="flex items-center gap-1.5 text-xs text-content-muted/80">
             <Calendar size={13} className="text-content-muted/50 shrink-0" />
             {article.date}
-          </span>
-
-          <span className="flex items-center gap-1.5 text-xs text-content-muted/80">
-            <Eye size={13} className="text-content-muted/50 shrink-0" />
-            {article.views.toLocaleString()}
           </span>
 
           <ArticleStatusBadge status={article.status} />

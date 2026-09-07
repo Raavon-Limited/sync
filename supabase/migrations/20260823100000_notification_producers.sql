@@ -2,7 +2,7 @@
 -- notification_producers
 --
 -- public.notifications has existed since 20260817090400 and NOTHING has ever
--- written to it. No trigger, no RPC, no app-side insert — and `authenticated`
+-- written to it. No trigger, no RPC, no app-side insert   and `authenticated`
 -- holds only select+update, which is correct: a notification a client can forge
 -- is not a notification. The result is an inbox that is permanently empty and a
 -- bell that can never light up.
@@ -63,6 +63,7 @@ exception
     raise warning 'notify failed for % (%): %', p_user_id, p_kind, sqlerrm;
 end;
 $fn$;
+
 -- 2. New message -> every other participant -----------------------------------
 create or replace function private.notify_new_message()
 returns trigger
@@ -97,10 +98,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists messages_notify on public.messages;
 create trigger messages_notify
   after insert on public.messages
   for each row execute function private.notify_new_message();
+
 -- 3. Order status -> the student ----------------------------------------------
 create or replace function private.notify_order_status()
 returns trigger
@@ -132,10 +135,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists orders_notify on public.orders;
 create trigger orders_notify
   after update on public.orders
   for each row execute function private.notify_order_status();
+
 -- 4. Booking status -> the student, and the landlord on a new request ---------
 create or replace function private.notify_booking_status()
 returns trigger
@@ -179,10 +184,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists bookings_notify on public.bookings;
 create trigger bookings_notify
   after insert or update on public.bookings
   for each row execute function private.notify_booking_status();
+
 -- 5. Delivery status -> the student -------------------------------------------
 create or replace function private.notify_delivery_status()
 returns trigger
@@ -207,6 +214,7 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists deliveries_notify on public.deliveries;
 create trigger deliveries_notify
   after update on public.deliveries

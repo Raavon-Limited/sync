@@ -5,14 +5,14 @@
 -- not, can point a phone at a card and be told what Sync currently says about
 -- that business.
 --
--- THE CODE ENCODES A URL, NOT A STATUS — AND THAT IS THE ENTIRE DESIGN.
+-- THE CODE ENCODES A URL, NOT A STATUS   AND THAT IS THE ENTIRE DESIGN.
 --   A QR that carried "VERIFIED: Raavon Limited" would be a claim printed by
 --   the person making it. It would still say VERIFIED after the account was
 --   suspended, it would still say VERIFIED on a card photocopied by somebody
 --   else, and nothing about scanning it would be a check. What the code
 --   carries is `/v/<slug>`, and the answer is fetched live from here every
 --   time. Suspend an account at 11:00 and the card scans as suspended at
---   11:00 — with the vendor's printed card unchanged in their hand.
+--   11:00   with the vendor's printed card unchanged in their hand.
 --
 --   That is also why there is no offline mode and no cached answer. A stale
 --   yes is worse than no answer at all.
@@ -20,12 +20,12 @@
 -- WHAT IS RETURNED IS ALREADY PUBLIC. Business name, slug, category, area,
 -- logo, rating and verification state are all on the storefront page a
 -- signed-out visitor can read today. Nothing here adds an email, a phone, a
--- document or an owner id — a credential check answers "is this business real
+-- document or an owner id   a credential check answers "is this business real
 -- and in good standing", not "tell me about the person".
 --
 -- SUSPENDED OUTRANKS VERIFIED. `archived_at` on either the business or the
 -- account means the answer is "suspended", regardless of what
--- `verification_status` still says — a suspended account keeps its old status
+-- `verification_status` still says   a suspended account keeps its old status
 -- column, and reporting that would have the card vouching for somebody who
 -- has been removed.
 --
@@ -98,12 +98,15 @@ as $fn$
          null, null, 0, null, 0, now()
   where not exists (select 1 from target);
 $fn$;
+
 -- anon INCLUDED, deliberately: the entire point is that a stranger with a
 -- phone and no Sync account can check a card.
 revoke all on function public.verify_business(text) from public;
 grant execute on function public.verify_business(text) to anon, authenticated, service_role;
+
 comment on function public.verify_business(text) is
-  'Live verification lookup for the QR code on a vendor ID card. Public by design — returns only what the storefront page already shows. Suspension outranks verification status.';
+  'Live verification lookup for the QR code on a vendor ID card. Public by design   returns only what the storefront page already shows. Suspension outranks verification status.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

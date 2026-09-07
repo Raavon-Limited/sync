@@ -112,11 +112,14 @@ begin
   return v_target;
 end;
 $fn$;
+
 revoke all on function public.set_vendor_category(text, text) from public, anon;
 grant execute on function public.set_vendor_category(text, text) to authenticated;
+
 comment on function public.set_vendor_category(text, text) is
   'Set the caller''s business category, moving their business role with it. '
   'Refuses accounts that hold no business role - use claim_role for that.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

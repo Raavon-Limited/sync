@@ -12,7 +12,7 @@
 --   whichever profile table the subject points at.
 --
 -- ONE REVIEW PER PERSON PER THING PER TRANSACTION
---   Not "per person per vendor" — a regular customer should be able to review
+--   Not "per person per vendor"   a regular customer should be able to review
 --   each order. Not "per person per subject" either, or you can never revise.
 --   The unique index is on (author, subject, source) where source is the order
 --   or booking being reviewed.
@@ -45,10 +45,12 @@ create table if not exists public.reviews (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
 create unique index if not exists reviews_one_per_source_idx
   on public.reviews (author_id, subject_type, subject_id, source_type, source_id);
 create index if not exists reviews_subject_idx
   on public.reviews (subject_type, subject_id, created_at desc) where hidden_at is null;
+
 -- Recompute the cached aggregate on the subject. Cached because every listing
 -- card shows a rating, and aggregating reviews per card is a guaranteed N+1.
 create or replace function public.sync_review_aggregate()
@@ -77,10 +79,12 @@ begin
   return null;
 end;
 $$;
+
 drop trigger if exists reviews_sync_aggregate on public.reviews;
 create trigger reviews_sync_aggregate
   after insert or update or delete on public.reviews
   for each row execute function public.sync_review_aggregate();
+
 -- The author owns the rating and body. Everything else is staff or vendor.
 create or replace function public.guard_review_cols()
 returns trigger language plpgsql as $$
@@ -100,10 +104,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists reviews_guard on public.reviews;
 create trigger reviews_guard
   before update on public.reviews
   for each row execute function public.guard_review_cols();
+
 -- ── 2. Disputes ─────────────────────────────────────────────────────────────
 create table if not exists public.disputes (
   id           uuid primary key default gen_random_uuid(),
@@ -129,9 +135,12 @@ create table if not exists public.disputes (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+
 create index if not exists disputes_status_idx  on public.disputes (status, created_at desc);
 create index if not exists disputes_raised_idx  on public.disputes (raised_by, created_at desc);
+
 create sequence if not exists public.dispute_code_seq;
+
 create or replace function public.set_dispute_code()
 returns trigger language plpgsql as $$
 begin
@@ -141,10 +150,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists disputes_set_code on public.disputes;
 create trigger disputes_set_code
   before insert on public.disputes
   for each row execute function public.set_dispute_code();
+
 create table if not exists public.dispute_messages (
   id         uuid primary key default gen_random_uuid(),
   dispute_id uuid not null references public.disputes (id) on delete cascade,
@@ -154,8 +165,10 @@ create table if not exists public.dispute_messages (
   is_internal boolean not null default false,
   created_at timestamptz not null default now()
 );
+
 create index if not exists dispute_messages_dispute_idx
   on public.dispute_messages (dispute_id, created_at);
+
 -- Only staff decide outcomes.
 create or replace function public.guard_dispute_cols()
 returns trigger language plpgsql as $$
@@ -173,10 +186,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists disputes_guard on public.disputes;
 create trigger disputes_guard
   before update on public.disputes
   for each row execute function public.guard_dispute_cols();
+
 -- ── 3. Reports (user-generated flags) ───────────────────────────────────────
 create table if not exists public.reports (
   id           uuid primary key default gen_random_uuid(),
@@ -192,7 +207,9 @@ create table if not exists public.reports (
   reviewed_at  timestamptz,
   created_at   timestamptz not null default now()
 );
+
 create index if not exists reports_status_idx on public.reports (status, created_at desc);
+
 -- ── 4. Promotions ───────────────────────────────────────────────────────────
 -- Backs /vendor/promotions.
 create table if not exists public.promotions (
@@ -219,9 +236,11 @@ create table if not exists public.promotions (
   constraint promotions_window_sane check (ends_at is null or ends_at > starts_at),
   unique (vendor_id, code)
 );
+
 create index if not exists promotions_vendor_idx on public.promotions (vendor_id, is_active);
 create index if not exists promotions_live_idx   on public.promotions (starts_at, ends_at)
   where is_active;
+
 -- redemption_count is incremented server-side at checkout.
 create or replace function public.guard_promotion_cols()
 returns trigger language plpgsql as $$
@@ -233,10 +252,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists promotions_guard on public.promotions;
 create trigger promotions_guard
   before update on public.promotions
   for each row execute function public.guard_promotion_cols();
+
 -- ── 5. Editorial ────────────────────────────────────────────────────────────
 -- Backs /admin/editorial and the marketing surfaces.
 create table if not exists public.articles (
@@ -253,8 +274,10 @@ create table if not exists public.articles (
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+
 create index if not exists articles_published_idx
   on public.articles (published_at desc) where status = 'published';
+
 create table if not exists public.banners (
   id         uuid primary key default gen_random_uuid(),
   title      text not null,
@@ -270,8 +293,10 @@ create table if not exists public.banners (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 create index if not exists banners_placement_idx
   on public.banners (placement, sort_order) where is_active;
+
 -- ── 6. Analytics events ─────────────────────────────────────────────────────
 -- Feeds /admin/analytics through rollups, never live aggregation over raw rows.
 -- Not partitioned yet: partitioning an empty table is easy, and doing it now
@@ -286,8 +311,10 @@ create table if not exists public.analytics_events (
   campus_id   uuid references public.campuses (id) on delete set null,
   occurred_at timestamptz not null default now()
 );
+
 create index if not exists analytics_events_name_idx on public.analytics_events (name, occurred_at desc);
 create index if not exists analytics_events_user_idx on public.analytics_events (user_id, occurred_at desc);
+
 -- ── 7. RLS ──────────────────────────────────────────────────────────────────
 alter table public.reviews          enable row level security;
 alter table public.disputes         enable row level security;
@@ -297,18 +324,22 @@ alter table public.promotions       enable row level security;
 alter table public.articles         enable row level security;
 alter table public.banners          enable row level security;
 alter table public.analytics_events enable row level security;
--- Reviews are public — that is the point of them.
+
+-- Reviews are public   that is the point of them.
 drop policy if exists "reviews_select_public" on public.reviews;
 create policy "reviews_select_public" on public.reviews
   for select to anon, authenticated using (hidden_at is null);
+
 drop policy if exists "reviews_insert_own" on public.reviews;
 create policy "reviews_insert_own" on public.reviews
   for insert to authenticated with check ((select auth.uid()) = author_id);
+
 drop policy if exists "reviews_update_own" on public.reviews;
 create policy "reviews_update_own" on public.reviews
   for update to authenticated
   using ((select auth.uid()) = author_id)
   with check ((select auth.uid()) = author_id);
+
 -- A vendor may reply to a review about them. The column guard stops the same
 -- policy being used to hide it.
 drop policy if exists "reviews_reply_subject" on public.reviews;
@@ -316,25 +347,31 @@ create policy "reviews_reply_subject" on public.reviews
   for update to authenticated
   using (subject_type in ('vendor', 'rider') and subject_id = (select auth.uid()))
   with check (subject_type in ('vendor', 'rider') and subject_id = (select auth.uid()));
+
 drop policy if exists "reviews_staff" on public.reviews;
 create policy "reviews_staff" on public.reviews
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Disputes: the two parties see the case, staff see everything.
 drop policy if exists "disputes_party" on public.disputes;
 create policy "disputes_party" on public.disputes
   for select to authenticated
   using ((select auth.uid()) in (raised_by, against_id));
+
 drop policy if exists "disputes_raise" on public.disputes;
 create policy "disputes_raise" on public.disputes
   for insert to authenticated with check ((select auth.uid()) = raised_by);
+
 drop policy if exists "disputes_update_party" on public.disputes;
 create policy "disputes_update_party" on public.disputes
   for update to authenticated
   using ((select auth.uid()) in (raised_by, against_id))
   with check ((select auth.uid()) in (raised_by, against_id));
+
 drop policy if exists "disputes_staff" on public.disputes;
 create policy "disputes_staff" on public.disputes
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Internal notes are filtered here, not in the client. A `select *` by a party
 -- must not return the caseworker's thinking.
 drop policy if exists "dispute_messages_party" on public.dispute_messages;
@@ -346,6 +383,7 @@ create policy "dispute_messages_party" on public.dispute_messages
                  where d.id = dispute_id
                    and (select auth.uid()) in (d.raised_by, d.against_id))
   );
+
 drop policy if exists "dispute_messages_post" on public.dispute_messages;
 create policy "dispute_messages_post" on public.dispute_messages
   for insert to authenticated
@@ -356,52 +394,65 @@ create policy "dispute_messages_post" on public.dispute_messages
                  where d.id = dispute_id
                    and (select auth.uid()) in (d.raised_by, d.against_id))
   );
+
 drop policy if exists "dispute_messages_staff" on public.dispute_messages;
 create policy "dispute_messages_staff" on public.dispute_messages
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Reports: you see your own; staff see all. Deliberately no update for the
--- reporter — a report is a statement of record.
+-- reporter   a report is a statement of record.
 drop policy if exists "reports_own" on public.reports;
 create policy "reports_own" on public.reports
   for select to authenticated using ((select auth.uid()) = reporter_id);
+
 drop policy if exists "reports_file" on public.reports;
 create policy "reports_file" on public.reports
   for insert to authenticated with check ((select auth.uid()) = reporter_id);
+
 drop policy if exists "reports_staff" on public.reports;
 create policy "reports_staff" on public.reports
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Promotions: shoppers see live ones, vendors manage their own.
 drop policy if exists "promotions_select_live" on public.promotions;
 create policy "promotions_select_live" on public.promotions
   for select to anon, authenticated
   using (is_active and starts_at <= now() and (ends_at is null or ends_at > now()));
+
 drop policy if exists "promotions_write_own" on public.promotions;
 create policy "promotions_write_own" on public.promotions
   for all to authenticated
   using ((select auth.uid()) = vendor_id)
   with check ((select auth.uid()) = vendor_id);
+
 -- Editorial: published content is public; staff manage it.
 drop policy if exists "articles_select_published" on public.articles;
 create policy "articles_select_published" on public.articles
   for select to anon, authenticated using (status = 'published');
+
 drop policy if exists "articles_staff" on public.articles;
 create policy "articles_staff" on public.articles
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 drop policy if exists "banners_select_live" on public.banners;
 create policy "banners_select_live" on public.banners
   for select to anon, authenticated
   using (is_active and starts_at <= now() and (ends_at is null or ends_at > now()));
+
 drop policy if exists "banners_staff" on public.banners;
 create policy "banners_staff" on public.banners
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Analytics: write-only from the client, readable only by staff. A user must
 -- not be able to read the event stream back out.
 drop policy if exists "analytics_events_insert" on public.analytics_events;
 create policy "analytics_events_insert" on public.analytics_events
   for insert to anon, authenticated with check (true);
+
 drop policy if exists "analytics_events_staff" on public.analytics_events;
 create policy "analytics_events_staff" on public.analytics_events
   for select to authenticated using (public.is_staff());
+
 -- ── 8. Grants ───────────────────────────────────────────────────────────────
 revoke all on public.reviews          from anon, authenticated;
 revoke all on public.disputes         from anon, authenticated;
@@ -411,6 +462,7 @@ revoke all on public.promotions       from anon, authenticated;
 revoke all on public.articles         from anon, authenticated;
 revoke all on public.banners          from anon, authenticated;
 revoke all on public.analytics_events from anon, authenticated;
+
 grant select                 on public.reviews          to anon, authenticated;
 grant insert, update         on public.reviews          to authenticated;
 grant select, insert, update on public.disputes         to authenticated;
@@ -421,6 +473,7 @@ grant insert, update, delete on public.promotions       to authenticated;
 grant select                 on public.articles         to anon, authenticated;
 grant select                 on public.banners          to anon, authenticated;
 grant insert                 on public.analytics_events to anon, authenticated;
+
 -- ── 9. Verify ───────────────────────────────────────────────────────────────
 do $$
 begin

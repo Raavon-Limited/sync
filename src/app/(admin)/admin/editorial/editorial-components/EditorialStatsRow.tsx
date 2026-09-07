@@ -1,7 +1,7 @@
 "use client";
 
 import type { EditorialStats } from "../admin-editorialTypes";
-import { FileText, CheckCircle2, FileEdit, Eye } from "lucide-react";
+import { FileText, CheckCircle2, FileEdit, CalendarClock } from "lucide-react";
 
 interface EditorialStatsProps {
   stats: EditorialStats;
@@ -50,16 +50,16 @@ export function EditorialStatsRow({ stats }: EditorialStatsProps) {
         </p>
       </div>
 
-      {/* Total Views */}
+      {/* Scheduled   published, but not yet */}
       <div className="bg-panel px-6 py-5 flex flex-col justify-between gap-3 group transition-colors hover:bg-surface-deep/30">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-wider font-bold text-content-muted/80">
-            Total Views
+            Scheduled
           </p>
-          <Eye size={16} className="text-content-muted/40 group-hover:text-content transition-colors" />
+          <CalendarClock size={16} className="text-content-muted/40 group-hover:text-content transition-colors" />
         </div>
         <p className="text-3xl font-display font-medium text-content tracking-tight">
-          {stats.totalViews.toLocaleString()}
+          {stats.scheduled}
         </p>
       </div>
 

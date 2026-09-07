@@ -1,39 +1,37 @@
-import { notFound } from 'next/navigation'
-import type { Metadata } from 'next'
-import VendorClient from '@/components/food-comps/VendorClient'
-import { getVendorBySlug } from '@/lib/vendor'
+/**
+ * ROUTE: /food/[vendorSlug]
+ * ACCESS: public
+ *
+ * The shell stays a server component so metadata renders on the server; the
+ * storefront itself is a client island reading vendor_profiles + listings.
+ */
+import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { resolveStorefrontBySlug, fetchFoodVendors } from '@/modules/food/queries';
+import { VendorContainer } from './vendor-container';
 
 interface Props {
-  params: Promise<{ vendorSlug: string }>
+  params: Promise<{ vendorSlug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { vendorSlug } = await params
-  const vendor = getVendorBySlug(vendorSlug)
-  return { title: vendor?.vendorName ?? 'Vendor' }
+  const { vendorSlug } = await params;
+  const db = await createClient();
+  const resolved = await resolveStorefrontBySlug(db, vendorSlug);
+  if (!resolved) return { title: 'Vendor' };
+  // Title names the branch, because the page is a branch.
+  const brands = await fetchFoodVendors(db, { pageSize: 100 });
+  const brand = brands.find((b) => b.id === resolved.vendorId);
+  return {
+    title: brand ? `${brand.businessName}   ${resolved.branchName}` : resolved.branchName,
+  };
 }
 
 export default async function Page({ params }: Props) {
-  const { vendorSlug } = await params
-  const vendor = getVendorBySlug(vendorSlug)
-
-  if (!vendor) notFound()
-
+  const { vendorSlug } = await params;
   return (
     <section className="flex flex-col gap-3">
-      <VendorClient
-        vendorName={vendor.vendorName}
-        tagline={vendor.tagline}
-        location={vendor.location}
-        rating={vendor.rating}
-        reviews={vendor.reviews}
-        deliveryTime={vendor.deliveryTime}
-        deliveryFee={vendor.deliveryFee}
-        time={vendor.time}          // ← add this
-        heroImage={vendor.heroImage}
-        menu={vendor.menu}
-        storeInfo={vendor.storeInfo}
-      />
+      <VendorContainer slug={vendorSlug} />
     </section>
-  )
+  );
 }

@@ -23,8 +23,8 @@
 --   manual        the vendor or their staff taps "Pause 10 minutes".
 --   auto_backlog  the store has more unfinished orders than it said it can
 --                 hold, so it pauses itself.
---   Both write the same column, so everything downstream — checkout, the
---   storefront page, the store switcher — asks one question and does not care
+--   Both write the same column, so everything downstream   checkout, the
+--   storefront page, the store switcher   asks one question and does not care
 --   which happened.
 --
 -- BACKLOG, NOT RATE
@@ -41,7 +41,7 @@
 --
 -- WHAT THIS DOES NOT DO
 --   A pause stops NEW orders. It does not touch orders already placed, it does
---   not empty carts, and it does not hide the store — students can still see
+--   not empty carts, and it does not hide the store   students can still see
 --   it, read the menu and message the vendor. Hiding it would lose the vendor
 --   the customer entirely for the sake of ten minutes.
 --
@@ -69,10 +69,12 @@ alter table public.storefronts
     check (auto_pause_after is null or auto_pause_after > 0),
   add column if not exists auto_pause_minutes integer not null default 10
     check (auto_pause_minutes between 1 and 120);
+
 -- Finding the stores that are open right now is the single most common read on
 -- this table, and it is a partial index because paused stores are the rare case.
 create index if not exists storefronts_paused_idx
   on public.storefronts (paused_until) where paused_until is not null;
+
 -- ── One definition of "open" ────────────────────────────────────────────────
 -- Checkout, the storefront page, discovery and the vendor's own switcher all
 -- ask this. Three implementations of "is it open" is three chances for the
@@ -92,9 +94,12 @@ as $$
     from public.storefronts s
    where s.id = p_storefront_id;
 $$;
+
 grant execute on function public.store_accepting_orders(uuid) to anon, authenticated, service_role;
+
 comment on function public.store_accepting_orders(uuid) is
-  'Whether a store takes orders right now: switched on, not archived, and not inside a cooldown. The only definition — do not re-implement it in a query.';
+  'Whether a store takes orders right now: switched on, not archived, and not inside a cooldown. The only definition   do not re-implement it in a query.';
+
 -- ── Manual pause and resume ─────────────────────────────────────────────────
 -- Staff can pause. They are the ones being buried, and a manager who has to
 -- phone the owner to stop the tickets will simply not stop them.
@@ -128,6 +133,7 @@ begin
   return v_until;
 end;
 $fn$;
+
 create or replace function public.resume_store(p_storefront_id uuid)
 returns void
 language plpgsql
@@ -148,10 +154,12 @@ begin
    where id = p_storefront_id;
 end;
 $fn$;
+
 revoke all on function public.pause_store(uuid, integer)  from public, anon;
 revoke all on function public.resume_store(uuid)          from public, anon;
 grant execute on function public.pause_store(uuid, integer) to authenticated, service_role;
 grant execute on function public.resume_store(uuid)         to authenticated, service_role;
+
 -- ── Auto-pause on backlog ───────────────────────────────────────────────────
 create or replace function public.auto_pause_busy_store()
 returns trigger
@@ -200,12 +208,14 @@ exception
     return new;
 end;
 $fn$;
+
 drop trigger if exists orders_auto_pause_busy_store on public.orders;
 -- AFTER insert: the order that tips the store over its limit is still accepted.
 -- The cooldown applies to the NEXT one.
 create trigger orders_auto_pause_busy_store
   after insert on public.orders
   for each row execute function public.auto_pause_busy_store();
+
 -- ── Let a manager set their own limit ───────────────────────────────────────
 -- `guard_storefront_privileged_cols` freezes structural columns for non-owners.
 -- Capacity is an operational setting, like trading hours, so it is deliberately

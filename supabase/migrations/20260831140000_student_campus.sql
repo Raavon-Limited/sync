@@ -60,6 +60,7 @@
 -- ---------------------------------------------------------------------------
 alter table public.profiles drop column if exists school_id;
 drop table if exists public.schools;
+
 alter table public.campuses
   -- The campus address, stored ONCE. A student picks a campus and the address
   -- follows, rather than being asked for and mistyped.
@@ -75,6 +76,7 @@ alter table public.campuses
   -- Do we operate here? Defaults FALSE: adding a university to this list is not
   -- a claim that Sync runs there, and the default must never quietly say it is.
   add column if not exists is_serviced boolean not null default false;
+
 -- Locate and switch on the launch market. Coordinates match the KWASU Gate area
 -- anchor from 0007_areas, which was geocoded against OSM.
 update public.campuses
@@ -85,6 +87,7 @@ update public.campuses
        sort_order  = 1,
        is_serviced = true
  where code = 'KWASU';
+
 -- ---------------------------------------------------------------------------
 -- Nigerian universities.
 --
@@ -208,10 +211,12 @@ insert into public.campuses (code, name, state, is_active, is_serviced) values
   ('KWARAPOLY', 'Kwara State Polytechnic, Ilorin',                     'Kwara',      true, false),
   ('FEDPOFFA',  'Federal Polytechnic, Offa',                           'Kwara',      true, false)
 on conflict (code) do nothing;
+
 -- Serviced campuses first, then by sort order, then alphabetically. The picker
 -- shows where we operate before everywhere else.
 create index if not exists campuses_picker_idx
   on public.campuses (is_active, is_serviced desc, sort_order, name);
+
 -- ---------------------------------------------------------------------------
 -- The student's campus.
 --
@@ -225,7 +230,9 @@ create index if not exists campuses_picker_idx
 alter table public.profiles
   add column if not exists campus_id    uuid references public.campuses (id) on delete set null,
   add column if not exists campus_other text;
+
 create index if not exists profiles_campus_idx on public.profiles (campus_id);
+
 -- ---------------------------------------------------------------------------
 -- Carry the campus through signup.
 --
@@ -294,11 +301,14 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
 comment on column public.campuses.is_serviced is
   'Does Sync operate at this campus? Distinct from is_active, which only means the row is selectable. Adding a university here is not a claim that we run there - the app reads THIS to decide between browsing and "we are not here yet".';
+
 comment on column public.profiles.campus_other is
   'A university the student typed that is not in `campuses`. Kept deliberately: it is the demand signal for where to expand, and it means a gap in the seed never blocks a signup.';

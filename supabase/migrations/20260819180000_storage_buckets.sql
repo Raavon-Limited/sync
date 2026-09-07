@@ -49,6 +49,7 @@ values
 on conflict (id) do update
   set file_size_limit   = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
+
 -- The 25MB ceiling on attachments is a deliberate DoS bound: a voice note is
 -- tens of KB and a photo a couple of MB. Storage is billed by the gigabyte.
 
@@ -61,6 +62,7 @@ create policy "attachments_insert_own" on storage.objects
     bucket_id = 'message-attachments'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 drop policy if exists "attachments_update_own" on storage.objects;
 create policy "attachments_update_own" on storage.objects
   for update to authenticated
@@ -68,6 +70,7 @@ create policy "attachments_update_own" on storage.objects
     bucket_id = 'message-attachments'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 drop policy if exists "attachments_delete_own" on storage.objects;
 create policy "attachments_delete_own" on storage.objects
   for delete to authenticated
@@ -75,6 +78,7 @@ create policy "attachments_delete_own" on storage.objects
     bucket_id = 'message-attachments'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 -- Read: your own files, OR a file attached to a message in a conversation you
 -- participate in. The second arm is what lets the other party see what you sent.
 --
@@ -97,6 +101,7 @@ create policy "attachments_read_participants" on storage.objects
       )
     )
   );
+
 -- ── verification-docs ───────────────────────────────────────────────────────
 -- Owner writes; owner and staff read. Nobody deletes but the owner - a rejected
 -- document is replaced, and staff must not be able to destroy evidence.
@@ -107,6 +112,7 @@ create policy "vdocs_insert_own" on storage.objects
     bucket_id = 'verification-docs'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 drop policy if exists "vdocs_read_own_or_staff" on storage.objects;
 create policy "vdocs_read_own_or_staff" on storage.objects
   for select to authenticated
@@ -117,6 +123,7 @@ create policy "vdocs_read_own_or_staff" on storage.objects
       or public.is_staff()
     )
   );
+
 drop policy if exists "vdocs_delete_own" on storage.objects;
 create policy "vdocs_delete_own" on storage.objects
   for delete to authenticated
@@ -124,6 +131,7 @@ create policy "vdocs_delete_own" on storage.objects
     bucket_id = 'verification-docs'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 -- ── public-media ────────────────────────────────────────────────────────────
 -- World-readable by design: these are the images on pages a signed-out visitor
 -- can already see. Writes are still scoped to the uploader's own folder, so a
@@ -132,6 +140,7 @@ drop policy if exists "public_media_read" on storage.objects;
 create policy "public_media_read" on storage.objects
   for select to anon, authenticated
   using (bucket_id = 'public-media');
+
 drop policy if exists "public_media_insert_own" on storage.objects;
 create policy "public_media_insert_own" on storage.objects
   for insert to authenticated
@@ -139,6 +148,7 @@ create policy "public_media_insert_own" on storage.objects
     bucket_id = 'public-media'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 drop policy if exists "public_media_update_own" on storage.objects;
 create policy "public_media_update_own" on storage.objects
   for update to authenticated
@@ -146,6 +156,7 @@ create policy "public_media_update_own" on storage.objects
     bucket_id = 'public-media'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 drop policy if exists "public_media_delete_own" on storage.objects;
 create policy "public_media_delete_own" on storage.objects
   for delete to authenticated
@@ -153,6 +164,7 @@ create policy "public_media_delete_own" on storage.objects
     bucket_id = 'public-media'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

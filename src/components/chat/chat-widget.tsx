@@ -7,8 +7,9 @@
  * Open/close, hover and new messages animate with framer-motion (respecting
  * reduced-motion).
  *
- * Mock-driven (src/mock/chat). When Supabase is the backend, swap the contact
- * list + thread for a realtime query/subscription - the shell stays the same.
+ * Backed by the messaging module: the conversation list and the open thread are
+ * both live over Supabase Realtime. The widget mounts once in the root
+ * Providers, so its channels are one per session rather than one per page.
  */
 'use client';
 
@@ -17,9 +18,17 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, MessageCircle, Send, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { mockContacts, mockMessages } from '@/mock/chat';
-import { OPEN_CHAT_EVENT } from '@/mock/student';
-import type { ChatMessage } from '@/modules/vendor/types';
+import { OPEN_CHAT_EVENT, type OpenChatDetail } from '@/lib/chat-events';
+import { formatRelative } from '@/lib/utils';
+import {
+  useConversations,
+  useConversationsRealtime,
+  useConversationRealtime,
+  useMessages,
+  useSendMessage,
+  useMarkConversationRead,
+  useUnreadCounts,
+} from '@/modules/messaging/hooks';
 
 const DRAG_THRESHOLD = 4; // px before a press counts as a drag, not a click
 const DEFAULT_SIZE = { w: 420, h: 600 };
@@ -58,14 +67,27 @@ export function ChatWidget() {
   } | null>(null);
 
   // Open the chat when a "message" notification (or anything) fires the event.
+  // A caller that already knows its thread (the "Message vendor" button, which
+  // just created one) passes an id and lands directly in it; the bell passes
+  // nothing and the last selected thread stays put.
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<OpenChatDetail>).detail?.conversationId;
+      if (id) setActiveId(id);
+      setOpen(true);
+    };
     window.addEventListener(OPEN_CHAT_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
   }, []);
 
-  const totalUnread = mockContacts.reduce((n, c) => n + (c.unreadCount ?? 0), 0);
-  const activeContact = mockContacts.find((c) => c.id === activeId) ?? null;
+  // The list drives the panel; the count comes from the RPC so it stays right
+  // even when the widget is holding only the first page of threads.
+  useConversationsRealtime();
+  const { data: conversations = [] } = useConversations({ pageSize: 30 });
+  const { data: counts } = useUnreadCounts();
+
+  const totalUnread = counts?.messages ?? 0;
+  const activeContact = conversations.find((c) => c.id === activeId) ?? null;
   const spring = reduce
     ? { duration: 0 }
     : { type: 'spring' as const, stiffness: 380, damping: 32 };
@@ -163,7 +185,15 @@ export function ChatWidget() {
   return (
     <div
       ref={containerRef}
-      className={cn('fixed z-60 touch-none', anchored && 'right-6 bottom-6')}
+      className={cn(
+        'fixed z-60 touch-none',
+        // Anchored = the user has never dragged it, so we choose the corner.
+        // On mobile that corner is occupied by the ServicesDock tab bar (fixed,
+        // h-16, 1rem from the bottom plus the safe-area inset), so the launcher
+        // is lifted clear of it rather than landing on the "You" tab. Once
+        // dragged it is positioned absolutely and this no longer applies.
+        anchored && 'right-6 bottom-[calc(6rem+env(safe-area-inset-bottom))] md:bottom-6',
+      )}
       style={open ? styleFor(panelPos, panelW, panelH) : styleFor(launcherPos, 56, 56)}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -198,7 +228,7 @@ export function ChatWidget() {
                 <MessageCircle className="text-accent-fg size-4" />
               )}
               <p className="text-content flex-1 truncate text-sm font-medium">
-                {activeContact ? activeContact.name : 'Messages'}
+                {activeContact ? activeContact.title : 'Messages'}
               </p>
               <button
                 type="button"
@@ -271,9 +301,29 @@ export function ChatWidget() {
 }
 
 function ConversationList({ onSelect }: { onSelect: (id: string) => void }) {
+  const { data: conversations = [], isLoading } = useConversations({ pageSize: 30 });
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-2 p-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="bg-ink/5 h-14 animate-pulse rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (conversations.length === 0) {
+    return (
+      <div className="text-content-muted flex-1 px-6 py-10 text-center text-sm">
+        No conversations yet. Messages about your orders and bookings show up here.
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
-      {mockContacts.map((c) => (
+      {conversations.map((c) => (
         <button
           key={c.id}
           type="button"
@@ -283,18 +333,17 @@ function ConversationList({ onSelect }: { onSelect: (id: string) => void }) {
           <div className="relative shrink-0">
             <Avatar className="size-10">
               {c.avatarUrl && <AvatarImage src={c.avatarUrl} alt="" />}
-              <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{c.title.charAt(0)}</AvatarFallback>
             </Avatar>
-            {c.isOnline && (
-              <span className="bg-lime border-panel absolute right-0 bottom-0 size-2.5 rounded-full border-2" />
-            )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-content truncate text-sm font-medium">{c.name}</p>
-              <span className="text-content-muted shrink-0 text-[11px]">{c.timeAgo}</span>
+              <p className="text-content truncate text-sm font-medium">{c.title}</p>
+              <span className="text-content-muted shrink-0 text-[11px]">
+                {formatRelative(c.lastMessageAt)}
+              </span>
             </div>
-            <p className="text-content-muted truncate text-xs">{c.lastMessage}</p>
+            <p className="text-content-muted truncate text-xs">{c.lastMessagePreview ?? ''}</p>
           </div>
           {!!c.unreadCount && (
             <span className="bg-coral text-cream flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
@@ -308,24 +357,44 @@ function ConversationList({ onSelect }: { onSelect: (id: string) => void }) {
 }
 
 function Thread({ contactId, reduce }: { contactId: string; reduce: boolean }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(mockMessages[contactId] ?? []);
   const [draft, setDraft] = useState('');
 
-  function send(e: React.FormEvent) {
+  useConversationRealtime(contactId);
+  const { data: messages = [], isLoading } = useMessages(contactId);
+  const send = useSendMessage(contactId);
+  const markRead = useMarkConversationRead();
+
+  // Opening a thread clears its unread count. Keyed on the id so switching
+  // threads re-runs it.
+  useEffect(() => {
+    markRead.mutate(contactId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactId]);
+
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     const content = draft.trim();
+
     if (!content) return;
-    // Local echo so the float feels live pre-Supabase. `isVendor: false` = me.
-    setMessages((prev) => [
-      ...prev,
-      { id: `local-${prev.length}`, content, timestamp: 'now', isVendor: false },
-    ]);
+
+    // Clear immediately: the mutation is optimistic, so the bubble is already
+    // on screen and a lingering draft would read as "not sent".
     setDraft('');
+    send.mutate({ body: content });
   }
 
   return (
     <>
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
+        {isLoading && <p className="text-content-muted p-4 text-center text-xs">Loading...</p>}
+
+        {!isLoading && messages.length === 0 && (
+          <p className="text-content-muted p-4 text-center text-xs">
+            No messages yet. Say hello.
+          </p>
+        )}
+
         {messages.map((m) => (
           <motion.div
             key={m.id}
@@ -334,20 +403,27 @@ function Thread({ contactId, reduce }: { contactId: string; reduce: boolean }) {
             transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 34 }}
             className={cn(
               'max-w-[80%] rounded-2xl px-3 py-2 text-sm',
-              m.isVendor
-                ? 'bg-ink/5 text-content self-start rounded-bl-sm'
-                : 'bg-ink text-cream self-end rounded-br-sm',
+              // `isMine` is resolved against the viewer, so this widget works
+              // unchanged for students, vendors, landlords and riders alike.
+              m.isMine
+                ? 'bg-ink text-cream self-end rounded-br-sm'
+                : 'bg-ink/5 text-content self-start rounded-bl-sm',
+              m.id.startsWith('pending-') && 'opacity-60',
             )}
           >
-            {m.content}
+            {m.isDeleted ? (
+              <span className="italic opacity-70">Message deleted</span>
+            ) : (
+              (m.body ?? '')
+            )}
           </motion.div>
         ))}
       </div>
-      <form onSubmit={send} className="border-line/10 flex items-center gap-2 border-t p-2">
+      <form onSubmit={onSubmit} className="border-line/10 flex items-center gap-2 border-t p-2">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Type a message…"
+          placeholder="Type a message..."
           className="text-content placeholder:text-content-muted h-9 flex-1 rounded-full bg-transparent px-3 text-sm focus:outline-none"
         />
         <button

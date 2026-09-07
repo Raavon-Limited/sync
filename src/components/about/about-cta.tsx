@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Highlight } from '@/components/shared/highlight';
+import { SyncTagline } from '@/components/shared/sync-tagline';
 import { Reveal } from '@/components/shared/reveal';
 
 export function AboutCta() {
@@ -14,13 +14,9 @@ export function AboutCta() {
       <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
         <h2
           id="about-cta-heading"
-          className="font-display text-foreground text-[44px] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
+          className="font-display text-foreground text-[clamp(2rem,9.5vw,44px)] font-bold leading-[0.98] tracking-[-0.035em] md:text-[60px] md:leading-[0.96] md:tracking-[-0.04em] lg:text-[68px]"
         >
-          Stop walking.
-          <br />
-          <span className="italic">
-            Start <Highlight>Syncing.</Highlight>
-          </span>
+          <SyncTagline />
         </h2>
 
         <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">

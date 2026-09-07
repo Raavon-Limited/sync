@@ -1,7 +1,7 @@
 -- ============================================================================
 -- storefronts
 --
--- One business, many branches. `vendor_profiles` remains the BRAND — one row
+-- One business, many branches. `vendor_profiles` remains the BRAND   one row
 -- per vendor account, holding the name, logo, verification, rating, wallet and
 -- subscription. `storefronts` holds the physical locations that brand trades
 -- from, each with its own address, hours and open/closed switch.
@@ -76,15 +76,18 @@ create table if not exists public.storefronts (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
 create index if not exists storefronts_vendor_idx on public.storefronts (vendor_id)
   where archived_at is null;
 create index if not exists storefronts_area_idx   on public.storefronts (area)
   where archived_at is null;
 -- The shape "find open branches near me" probes.
 create index if not exists storefronts_geo_idx    on public.storefronts using gist (geo);
+
 -- One primary per brand, enforced rather than hoped for.
 create unique index if not exists storefronts_one_primary_idx
   on public.storefronts (vendor_id) where is_primary and archived_at is null;
+
 -- 2. Backfill: every existing brand becomes its own first branch -------------
 -- Existing vendors already have exactly one location's worth of data sitting on
 -- vendor_profiles. Move it, do not invent it.
@@ -109,6 +112,7 @@ from public.vendor_profiles vp
 where not exists (
   select 1 from public.storefronts s where s.vendor_id = vp.id
 );
+
 -- 3. Point the transactional tables at a branch ------------------------------
 -- Nullable on arrival so the backfill can run; tightened at the end.
 alter table public.listings add column if not exists storefront_id uuid
@@ -117,23 +121,28 @@ alter table public.orders   add column if not exists storefront_id uuid
   references public.storefronts (id) on delete restrict;
 alter table public.carts    add column if not exists storefront_id uuid
   references public.storefronts (id) on delete cascade;
+
 -- Existing rows predate branches, so they belong to the primary one. The join
 -- is via profiles.id = vendor_profiles.id, which still holds.
 update public.listings l
    set storefront_id = s.id
   from public.storefronts s
  where s.vendor_id = l.vendor_id and s.is_primary and l.storefront_id is null;
+
 update public.orders o
    set storefront_id = s.id
   from public.storefronts s
  where s.vendor_id = o.vendor_id and s.is_primary and o.storefront_id is null;
+
 update public.carts c
    set storefront_id = s.id
   from public.storefronts s
  where s.vendor_id = c.vendor_id and s.is_primary and c.storefront_id is null;
+
 create index if not exists listings_storefront_idx on public.listings (storefront_id);
 create index if not exists orders_storefront_idx   on public.orders   (storefront_id, status);
 create index if not exists carts_storefront_idx    on public.carts    (storefront_id);
+
 -- 4. A cart belongs to a branch, not a brand ---------------------------------
 -- Ordering from the Tanke branch and the Gaa Akanbi branch are two carts. The
 -- old index would have silently merged them into one.
@@ -141,6 +150,7 @@ drop index if exists public.carts_one_open_per_vendor_idx;
 create unique index if not exists carts_one_open_per_storefront_idx
   on public.carts (student_id, storefront_id)
   where status = 'open';
+
 -- 5. Ownership helper --------------------------------------------------------
 -- SECURITY DEFINER so a policy can ask "is this branch mine" without the caller
 -- needing read access to storefronts rows they do not own. When per-branch
@@ -157,15 +167,19 @@ as $fn$
      where s.id = p_storefront and s.vendor_id = p_user
   );
 $fn$;
+
 grant execute on function private.owns_storefront(uuid, uuid) to authenticated, service_role;
+
 -- 6. RLS ---------------------------------------------------------------------
 alter table public.storefronts enable row level security;
+
 -- Public read: students browse branches before signing in, exactly as they
 -- browse vendor_profiles today.
 drop policy if exists "storefronts_select_public" on public.storefronts;
 create policy "storefronts_select_public" on public.storefronts
   for select to anon, authenticated
   using (archived_at is null);
+
 -- The owner writes their own branches. vendor_id IS the owner's uid, because
 -- vendor_profiles.id = profiles.id - the identity this migration preserves.
 drop policy if exists "storefronts_write_own" on public.storefronts;
@@ -173,13 +187,16 @@ create policy "storefronts_write_own" on public.storefronts
   for all to authenticated
   using       ((select auth.uid()) = vendor_id)
   with check  ((select auth.uid()) = vendor_id);
+
 drop policy if exists "storefronts_staff" on public.storefronts;
 create policy "storefronts_staff" on public.storefronts
   for all to authenticated
   using (public.is_staff()) with check (public.is_staff());
+
 revoke all on public.storefronts from anon, authenticated;
 grant select                 on public.storefronts to anon, authenticated;
 grant insert, update, delete on public.storefronts to authenticated;
+
 -- 7. Tighten -----------------------------------------------------------------
 -- Only after the backfill. A listing or cart with no branch is not a state the
 -- application should be able to reach.
@@ -208,6 +225,7 @@ begin
   end if;
 end;
 $guard$;
+
 alter table public.listings alter column storefront_id set not null;
 alter table public.carts    alter column storefront_id set not null;
 -- orders stays nullable: `on delete restrict` protects live branches, but an
@@ -223,7 +241,7 @@ alter table public.carts    alter column storefront_id set not null;
 -- distance degrades gracefully and needs no correct boundaries. Pass
 -- p_radius_m only when a genuine cutoff is wanted.
 --
--- Branches with no pin (geo is null) sort last rather than vanishing — a vendor
+-- Branches with no pin (geo is null) sort last rather than vanishing   a vendor
 -- who never dropped a pin should still be findable.
 create or replace function public.nearby_storefronts(
   p_lat      double precision,
@@ -283,9 +301,11 @@ as $fn$
     vp.rating_avg desc
   limit greatest(1, least(coalesce(p_limit, 50), 200));
 $fn$;
+
 grant execute on function
   public.nearby_storefronts(double precision, double precision, double precision, text, integer)
   to anon, authenticated, service_role;
+
 -- 9. Promoting a branch to primary -------------------------------------------
 -- Two statements (clear the old, set the new) can interleave under
 -- storefronts_one_primary_idx and leave a brand with NO primary, which is worse
@@ -327,4 +347,5 @@ begin
      and archived_at is null;
 end;
 $fn$;
+
 grant execute on function public.set_primary_storefront(uuid) to authenticated, service_role;

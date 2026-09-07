@@ -9,19 +9,19 @@
 --   Realtime applies the subscriber's RLS to each change before sending it, and
 --   `postgres_changes` filters (`vendor_id=eq.…`) are evaluated against the row
 --   in the WAL record. With Postgres's default replica identity, an UPDATE or
---   DELETE only writes the PRIMARY KEY of the old row — every other column is
+--   DELETE only writes the PRIMARY KEY of the old row   every other column is
 --   absent. That has two consequences worth stating plainly:
 --
 --     1. A filter on a non-PK column cannot be evaluated for those events, so
 --        subscribers either miss updates or receive ones meant for someone else
 --        to discard client-side.
 --     2. RLS cannot be checked against columns that are not in the record, so
---        Realtime errs toward not sending — silent missing updates.
+--        Realtime errs toward not sending   silent missing updates.
 --
 --   `replica identity full` writes the whole old row, which fixes both. It costs
 --   WAL volume proportional to row width. These tables are narrow and low-churn
 --   relative to, say, an analytics firehose, so the trade is clearly worth it
---   here — but it is a trade, and it should NOT be applied blanket-wide.
+--   here   but it is a trade, and it should NOT be applied blanket-wide.
 --
 -- WHAT IS DELIBERATELY NOT PUBLISHED
 --   `wallets`, `ledger_entries`, `escrow_holds`, `payouts`. Money must not
@@ -57,10 +57,12 @@ begin
     end if;
   end loop;
 end $$;
+
 -- Filtered subscriptions need the full old row (see header).
 alter table public.orders          replica identity full;
 alter table public.deliveries      replica identity full;
 alter table public.delivery_offers replica identity full;
+
 -- order_events is append-only: there are no UPDATEs or DELETEs to reconstruct,
 -- so the default identity is sufficient and cheaper.
 

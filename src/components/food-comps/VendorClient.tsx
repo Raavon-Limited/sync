@@ -24,6 +24,8 @@ interface MenuItem {
 interface MenuSection { title: string; items: MenuItem[] }
 
 interface Props {
+    /** vendor_profiles.id   the cart is keyed by it, not by the display name. */
+    vendorId: string
     vendorName: string
     tagline: string
     location: string
@@ -45,7 +47,7 @@ const NAV_H = 63
 type MobileView = "menu" | "cart"
 
 export default function VendorClient({
-    vendorName, tagline, location, rating, reviews,
+    vendorId, vendorName, tagline, location, rating, reviews,
     deliveryTime, deliveryFee, time, heroImage, menu, storeInfo
 }: Props) {
 
@@ -133,6 +135,7 @@ export default function VendorClient({
         for (let i = 0; i < itemQty; i++) {
             addItem(
                 {
+                    id: vendorId,
                     slug: vendorName.toLowerCase().replace(/\s+/g, "-"),
                     name: vendorName,
                     image: typeof heroImage === "string" ? heroImage : (heroImage as { src: string }).src,
@@ -149,7 +152,7 @@ export default function VendorClient({
         setItemSheetOpen(false)
     }
 
-    // ── Checkout — saves to sessionStorage, navigates to checkout page ────
+    // ── Checkout   saves to sessionStorage, navigates to checkout page ────
     function handleCheckout() {
         if (!open) { setClosedModalOpen(true); return }
         sessionStorage.setItem('sync_checkout', JSON.stringify({
@@ -695,7 +698,7 @@ export default function VendorClient({
                 </div>
             </div>
 
-            {/* ── Mobile floating cart bar — hidden when closed ── */}
+            {/* ── Mobile floating cart bar   hidden when closed ── */}
             {items.length > 0 && mobileView === "menu" && open && (
                 <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-panel/95 backdrop-blur-sm border-t border-content-muted/20 px-4 py-3">
                     <button

@@ -8,7 +8,7 @@
 -- Both numbers are the same. `amount_kobo / 100` is integer division on two
 -- bigints, so the kobo are truncated away and any two amounts less than ₦1
 -- apart print identically. The refusal was correct; the sentence explaining it
--- was self-contradictory, which is worse than no sentence — it reads as broken
+-- was self-contradictory, which is worse than no sentence   it reads as broken
 -- software at the exact moment somebody is trying to take their money out.
 --
 -- Amounts are now formatted to two decimal places with thousands separators,
@@ -32,9 +32,12 @@ set search_path = ''
 as $$
   select '₦' || to_char(coalesce(p_kobo, 0) / 100.0, 'FM999,999,999,990.00');
 $$;
+
 grant execute on function public.naira(bigint) to anon, authenticated, service_role;
+
 comment on function public.naira(bigint) is
   'Kobo as a naira string, two decimals. Exists because bigint/100 silently truncates the kobo and made two different amounts print identically.';
+
 create or replace function public.request_withdrawal(
   p_amount_kobo     bigint,
   p_bank_account_id uuid
@@ -106,4 +109,5 @@ begin
   return v_request;
 end;
 $fn$;
+
 grant execute on function public.request_withdrawal(bigint, uuid) to authenticated;

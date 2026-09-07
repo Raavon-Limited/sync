@@ -1,7 +1,7 @@
 -- ============================================================================
 -- admin_overview
 --
--- /admin — the page every staff member lands on — was four hardcoded stat
+-- /admin   the page every staff member lands on   was four hardcoded stat
 -- cards (1248 vendors, 8542 users, 47 verifications, 23 disputes), six months
 -- of invented revenue, six months of invented signups, four fictional activity
 -- lines, and a vendor status split of 1024/147/77. Every number on the
@@ -21,8 +21,8 @@
 --
 -- THE ACTIVITY FEED IS A UNION, NOT AN EVENT TABLE
 --   There is no platform-wide event log. The feed is the most recent rows from
---   the four things staff care about — vendors joining, disputes resolving,
---   vendors being verified, students signing up — merged and cut to ten. It is
+--   the four things staff care about   vendors joining, disputes resolving,
+--   vendors being verified, students signing up   merged and cut to ten. It is
 --   honest about being a derived view: nothing is invented, but nothing is
 --   guaranteed to be there either, and a quiet week shows a short list.
 --
@@ -186,7 +186,9 @@ begin
   return v_out;
 end;
 $fn$;
+
 revoke all on function public.admin_overview() from public, anon;
 grant execute on function public.admin_overview() to authenticated, service_role;
+
 comment on function public.admin_overview() is
   'Front-page counts, six-month revenue and signup series, vendor status split and a merged activity feed. Staff or service_role only.';

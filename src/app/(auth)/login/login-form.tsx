@@ -2,39 +2,173 @@
  * LoginForm - email-first, adaptive sign-in.
  *
  * Step 1: enter email. We detect the account type (getLoginMethod):
+ *   - no account at all → say so and offer signup, with the address carried
  *   - students / vendors  → reveal a PASSWORD field (signIn)
  *   - admins / super_admins (passwordless) → email a code + show OTP boxes
  *
- * Detection defaults to "password" for unknown emails (and when the backend
- * isn't reachable), and there's still a manual "use an email code" fallback.
- * Both paths route by the trusted role. `next` resumes the requested page.
+ * Detection falls back to "password" whenever the backend cannot answer, so a
+ * bad moment never tells a real account holder to go and sign up, and there's
+ * still a manual "use an email code" fallback. Both paths route by the trusted
+ * role. `next` resumes the requested page.
  */
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ArrowRight, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { readAppSurface } from '@/lib/pwa/use-install';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { FormField } from '@/components/forms';
+import { EmailInput } from '@/components/forms/email-input';
 import { toast } from '@/components/ui/toast';
+import { forgetEmail, rememberEmail, rememberedEmails } from '@/lib/remembered-emails';
 import { BrandLoader } from '@/components/ui/brand-loader';
-import { getLoginMethod, sendLoginOtp, signIn, verifyLoginOtp } from '@/modules/auth/actions';
+import { FullScreenOverlay } from '@/components/ui/full-screen-overlay';
+import {
+  getLoginMethod,
+  sendLoginOtp,
+  signIn,
+  switchRole,
+  verifyLoginOtp,
+} from '@/modules/auth/actions';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Matches Supabase's default OTP resend window, so resends never hit its limit.
 const RESEND_COOLDOWN = 60;
 
+/**
+ * Where signing in lands you.
+ *
+ * Everyone has a dashboard and it is reachable everywhere - the header's user
+ * menu on desktop, the hamburger drawer inside the dashboard itself, and the
+ * bottom bar's "You" tab on mobile. What differs is only the DEFAULT landing
+ * spot, and it differs by surface rather than by role:
+ *
+ *   desktop -> your dashboard. Signing in at a desk is an administrative act;
+ *              you came to do something with your account.
+ *   phone   -> /around. Home on a phone is the feed, the same place the bottom
+ *              bar's Home tab and signing out both go. Opening the app and
+ *              landing on a settings surface reads as the wrong screen.
+ *
+ * THE TEST IS THE SURFACE, NOT WHETHER THE APP IS INSTALLED. This asked
+ * `readStandalone()`, which is true only when launched from the home screen
+ * so signing in from Safari on a phone counted as desktop and got the
+ * dashboard. Installing is a step most people never take, and the ones who have
+ * not are still holding a phone. See readAppSurface.
+ *
+ * Admins are exempt: /admin is their only surface, so there is no second
+ * destination to choose between.
+ */
+/**
+ * The dashboards that belong to exactly one hat.
+ *
+ * Mirrors PROTECTED_PREFIXES in proxy.ts   the same list, read for the opposite
+ * purpose: the proxy uses it to refuse, this uses it to avoid sending somebody
+ * somewhere they will be refused.
+ */
+const ROLE_ROOT: Record<string, string> = {
+  student: '/user',
+  vendor: '/vendor',
+  landlord: '/landlord',
+  rider: '/rider',
+  event_manager: '/organiser',
+  creator: '/organiser',
+  admin: '/admin',
+  super_admin: '/admin',
+};
+
+/**
+ * Paths that are inside one dashboard's tree but admitted to several roles.
+ * /user/verify is the role-driven verification screen and the proxy lets a
+ * student, a creator and an event manager all reach it, so it must not be
+ * discarded as "somebody else's dashboard".
+ */
+const SHARED_PATHS = ['/user/verify'];
+
+/**
+ * The ?next= they arrived with   IF the hat they just chose can open it.
+ *
+ * "An explicit ?next= always wins" was true right up until the account had two
+ * hats. Somebody hits /vendor signed out, gets bounced to /login?next=/vendor,
+ * and picks LANDLORD at the chooser: the next= is a leftover from before that
+ * choice, and honouring it lands them on a 403 at the end of a successful
+ * login. Choosing a hat is a statement about which account is being opened, and
+ * it is newer information than the URL they started with.
+ *
+ * Anything that is not a role-owned dashboard   /food, /hostels, a listing   is
+ * returned untouched: those belong to every signed-in account, and dropping
+ * them would break the ordinary "sign in to carry on where you were" case that
+ * next= exists for.
+ */
+function nextFor(role: string | undefined, next?: string): string | undefined {
+  if (!next) return undefined;
+  if (SHARED_PATHS.some((p) => next === p || next.startsWith(p + '/'))) return next;
+
+  const owner = Object.values(ROLE_ROOT).find(
+    (root) => next === root || next.startsWith(root + '/'),
+  );
+  if (!owner) return next;
+
+  return ROLE_ROOT[role ?? ''] === owner ? next : undefined;
+}
+
 function destFor(role: string | undefined, handle?: string, next?: string) {
-  if (next) return next;
-  // Vendors land on their personalised handle root (/<business-name>); the proxy
-  // rewrites it to the right per-type dashboard - generic /vendor or /landlord -
-  // so we never hardcode the wrong one. Falls back to /vendor if no handle.
-  if (role === 'vendor') return handle ? `/${handle}` : '/vendor';
+  // An explicit ?next= wins, but only when this hat can actually open it.
+  const asked = nextFor(role, next);
+  if (asked) return asked;
   if (role === 'admin' || role === 'super_admin') return '/admin';
-  return '/around';
+
+  // The personalised handle root (/<name>). The proxy rewrites it to the right
+  // per-type dashboard - /user, /vendor, /landlord - so we never hardcode the
+  // wrong one.
+  //
+  // The fallback, for an account with no handle yet, has to name the role's own
+  // root EXPLICITLY. The proxy gates each dashboard prefix by role
+  // (`/user` -> student, `/vendor` -> vendor, `/landlord` -> landlord), so a
+  // catch-all of '/user' would bounce a landlord straight back out of the page we
+  // had just sent them to.
+  const roots: Record<string, string> = {
+    vendor: '/vendor',
+    landlord: '/landlord',
+    rider: '/rider',
+    event_manager: '/organiser',
+  };
+  const dashboard = handle ? `/${handle}` : (roots[role ?? ''] ?? '/user');
+
+  return readAppSurface() ? '/around' : dashboard;
+}
+
+/** What each hat is called, and where it lives. Mirrors RoleSwitcher. */
+const ROLE_HOME: Record<string, { label: string; blurb: string; href: string }> = {
+  student: { label: 'Student', blurb: 'Book rooms, order food, browse campus', href: '/user' },
+  vendor: { label: 'Business', blurb: 'Your listings, orders and earnings', href: '/vendor' },
+  landlord: { label: 'Landlord', blurb: 'Your properties, tenants and rent', href: '/landlord' },
+  rider: { label: 'Rider', blurb: 'Your delivery queue and earnings', href: '/rider' },
+  event_manager: {
+    label: 'Organiser',
+    blurb: 'Your events, tickets and door',
+    href: '/organiser',
+  },
+};
+
+/**
+ * Should we ask which account they want?
+ *
+ * Only when the account genuinely holds more than one hat we can land on.
+ * Signing in wearing whichever role happened to be worn last is a coin flip for
+ * a multi-role account, and lands half of them on the wrong dashboard - which
+ * is what happened here: a landlord signed in and got the vendor handle.
+ *
+ * One role means no question to ask, so it never appears for the overwhelming
+ * majority of accounts. Staff are excluded: /admin is their only surface.
+ */
+function offerRoleChoice(roles?: string[]): boolean {
+  return (roles ?? []).filter((r) => ROLE_HOME[r]).length > 1;
 }
 
 type Step = 'email' | 'password' | 'otp';
@@ -49,10 +183,55 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
   // Stays true from a successful auth until this page is replaced - keeps the
   // full-screen "Signing you in…" loader up through router.push + refresh, so
   // it never flashes back to an idle form (which reads as "nothing happened").
-  const [redirecting, setRedirecting] = useState(false);
+  /* What the full-screen loader says, or null when it is not up. A string
+     rather than a boolean because this form now sends people two places: into
+     their dashboard, and out to signup. 'Signing you in…' over a redirect to a
+     signup form would be the wrong sentence at the worst moment. */
+  const [redirecting, setRedirecting] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  /**
+   * The hats to choose between, when the account holds more than one.
+   *
+   * The session is ALREADY established by this point - authentication has
+   * succeeded and only the destination is open. So this is a routing question,
+   * not a second auth step, and picking simply decides which dashboard to open.
+   */
+  const [choices, setChoices] = useState<string[] | null>(null);
 
-  const signupHref = next ? `/signup?next=${encodeURIComponent(next)}` : '/signup';
+  /**
+   * /signup, carrying whatever we already know. The email is the point: this
+   * link is offered right after someone typed an address we have no account
+   * for, and making them retype it there is the whole complaint in miniature.
+   */
+  const signupHref = (() => {
+    const q = new URLSearchParams();
+    if (next) q.set('next', next);
+    const value = email.trim();
+    if (value) q.set('email', value);
+    const qs = q.toString();
+    return qs ? `/signup?${qs}` : '/signup';
+  })();
+
+  /**
+   * Where an address with no account goes.
+   *
+   * Same as `signupHref` plus `noaccount`, which is what makes the signup page
+   * say WHY somebody arrived there. Without it the redirect is silent and the
+   * person is left on a form they did not ask for, working out for themselves
+   * that their email was not recognised   which is the confusion this whole
+   * path exists to remove.
+   *
+   * The address is passed explicitly rather than read from state: this is
+   * called from inside the submit handler, and `email` there is the value that
+   * was validated a few lines above.
+   */
+  function noAccountHref(value: string): string {
+    const q = new URLSearchParams();
+    if (next) q.set('next', next);
+    q.set('email', value);
+    q.set('noaccount', '1');
+    return `/signup?${q.toString()}`;
+  }
 
   // Tick the resend cooldown down to 0.
   useEffect(() => {
@@ -60,6 +239,33 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     const id = setTimeout(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => clearTimeout(id);
   }, [cooldown]);
+
+  /*
+   * Remembered addresses, read AFTER mount.
+   *
+   * localStorage does not exist on the server, so seeding state from it during
+   * render would make the first client paint disagree with the HTML and React
+   * would throw a hydration mismatch. The list appearing a frame late costs
+   * nothing   nobody has focused the field yet.
+   */
+  const [known, setKnown] = useState<string[]>([]);
+  const [remember, setRemember] = useState(true);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKnown(rememberedEmails());
+  }, []);
+
+  /** Called on every successful sign-in, whichever way they got in. */
+  function keepEmail(value: string) {
+    if (remember) rememberEmail(value);
+    else forgetEmail(value);
+  }
+
+  function dropEmail(value: string) {
+    forgetEmail(value);
+    setKnown((list) => list.filter((e) => e !== value));
+  }
 
   async function continueFromEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -71,12 +277,30 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     setBusy(true);
     try {
       const { method } = await getLoginMethod(value);
+      if (method === 'none') {
+        /*
+         * Straight to signup, not a panel on this screen offering to go there.
+         *
+         * The interstitial version told them the account did not exist and
+         * then asked them to click a button to act on it   which is a screen
+         * whose only purpose is to be left. There is exactly one useful thing
+         * to do with "no account for this address", so do it.
+         *
+         * `redirecting` stays set through the push: the loader covers the
+         * navigation rather than letting the email form flash back to idle,
+         * which reads as "nothing happened". Nothing sets it false, because
+         * this page is being replaced.
+         */
+        setRedirecting('Taking you to sign up…');
+        router.push(noAccountHref(value));
+        return;
+      }
       if (method === 'otp') {
         // Show the OTP boxes regardless; still attempt to send the code.
         setStep('otp');
         const res = await sendLoginOtp(value);
         if (res.ok) setCooldown(RESEND_COOLDOWN);
-        toast(res.ok ? 'Sign-in code sent — check your email.' : res.error);
+        toast(res.ok ? 'Sign-in code sent   check your email.' : res.error);
       } else {
         setStep('password');
       }
@@ -98,7 +322,13 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       toast(res.error);
       return;
     }
-    setRedirecting(true);
+    if (offerRoleChoice(res.roles)) {
+      setBusy(false);
+      setChoices(res.roles as string[]);
+      return;
+    }
+    keepEmail(email.trim());
+    setRedirecting('Signing you in…');
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
   }
@@ -114,7 +344,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
     }
     setStep('otp');
     setCooldown(RESEND_COOLDOWN);
-    toast('Sign-in code sent — check your email.');
+    toast('Sign-in code sent   check your email.');
   }
 
   async function verify(e: React.FormEvent) {
@@ -130,9 +360,42 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
       toast(res.error);
       return;
     }
-    setRedirecting(true);
+    if (offerRoleChoice(res.roles)) {
+      setBusy(false);
+      setChoices(res.roles as string[]);
+      return;
+    }
+    setRedirecting('Signing you in…');
+    keepEmail(email.trim());
     router.push(destFor(res.role, res.handle, next));
     router.refresh();
+  }
+
+  /**
+   * They picked which account to open.
+   *
+   * switch_role makes it the WORN role, not just the destination, so the proxy
+   * gate, RLS and every server render agree with where we are sending them. A
+   * push without the switch would land a landlord on /landlord while
+   * profiles.role still said vendor, and the gate would bounce them to /403.
+   */
+  async function chooseRole(role: string) {
+    setChoices(null);
+    setRedirecting('Signing you in…');
+    try {
+      await switchRole(role);
+    } catch (e) {
+      setRedirecting(null);
+      toast(e instanceof Error ? e.message : 'Could not open that account');
+      return;
+    }
+    // The role root, not the handle: the handle is derived and the switch has
+    // only just changed the role it derives from.
+    //
+    // And nextFor, not next: this is the branch where somebody explicitly
+    // picked a hat, so a ?next= pointing into a different hat's dashboard is
+    // exactly the case that ends in a 403 after a successful sign-in.
+    router.replace(nextFor(role, next) ?? ROLE_HOME[role].href);
   }
 
   function changeEmail() {
@@ -157,32 +420,123 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
 
   return (
     <>
+      {/* Portalled, and it stays that way. This form renders inside the auth
+          card, which used to carry a backdrop-blur - and a filtered element is
+          a containing block for fixed positioning, so a plain `fixed inset-0`
+          here covered the CARD rather than the screen.
+
+          The blur is gone now (see auth-layout: it was flashing a lime seam),
+          so `fixed` would happen to work again. The portal stays regardless:
+          it does not depend on an ancestor's filter, transform or perspective,
+          any of which would silently reintroduce the bug. */}
       {redirecting && (
-        <div className="fixed inset-0 z-[100]">
-          <BrandLoader label="Signing you in…" />
-        </div>
+        <FullScreenOverlay>
+          <BrandLoader label={redirecting} />
+        </FullScreenOverlay>
       )}
       <div className="flex flex-col gap-6">
-        {step === 'email' && (
+        {/* Which account? Replaces the form entirely rather than sitting beside
+            it: authentication is already done at this point, so there is
+            nothing left to fill in and a form underneath would just be noise. */}
+        {choices && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-content text-sm font-medium">Which account?</p>
+              <p className="text-content-muted mt-1 text-xs">
+                This login holds more than one. You can switch at any time from the menu under your
+                avatar.
+              </p>
+            </div>
+            {choices
+              .filter((r) => ROLE_HOME[r])
+              .map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => void chooseRole(r)}
+                  className="border-line/15 hover:border-accent-fg/50 hover:bg-ink/5 flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors"
+                >
+                  <span className="min-w-0">
+                    <span className="text-content block text-sm font-medium">
+                      {ROLE_HOME[r].label}
+                    </span>
+                    <span className="text-content-muted block text-xs">{ROLE_HOME[r].blurb}</span>
+                  </span>
+                  <ArrowRight className="text-content-muted h-4 w-4 shrink-0" />
+                </button>
+              ))}
+          </div>
+        )}
+
+        {!choices && step === 'email' && (
           <form onSubmit={continueFromEmail} className="flex flex-col gap-4" noValidate>
             <FormField label="Email" htmlFor="email">
-              <Input
+              {/* Neutral placeholder: login is shared by students, vendors,
+                  landlords and admins, so a "@student.edu.ng" example is wrong
+                  for most of the people who see it. */}
+              <EmailInput
                 id="email"
-                type="email"
-                autoComplete="email"
                 autoFocus
-                placeholder="you@student.edu.ng"
+                placeholder="you@gmail.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
               />
             </FormField>
+
+            {/* ONE TAP INSTEAD OF TWENTY-FIVE CHARACTERS.
+                Shown only when this device has signed somebody in before, and
+                each row can be removed on its own   a phone that gets handed
+                round should not accumulate a list nobody can clear. */}
+            {known.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-content-muted font-mono text-[11px] tracking-wide uppercase">
+                  Used on this device
+                </p>
+                {known.map((address) => (
+                  <div
+                    key={address}
+                    className="border-line/10 hover:border-lime-deep/40 flex items-center gap-2 rounded-lg border transition-colors"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setEmail(address)}
+                      className="text-content min-w-0 flex-1 truncate px-3 py-2 text-left text-sm"
+                    >
+                      {address}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropEmail(address)}
+                      aria-label={`Forget ${address}`}
+                      className="text-content-muted hover:text-coral shrink-0 px-3 py-2"
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ticked by default, because the common case is a personal phone.
+                Unticking FORGETS rather than merely stopping   somebody turning
+                this off on a shared machine means "not here", and leaving the
+                address behind would be the opposite of what they just asked
+                for. See lib/remembered-emails. */}
+            <label className="text-content-muted flex cursor-pointer items-center gap-2 text-sm">
+              <Checkbox
+                checked={remember}
+                onCheckedChange={(value) => setRemember(value === true)}
+              />
+              Remember my email on this device
+            </label>
+
             <Button type="submit" size="lg" disabled={busy} className="w-full">
               {busy ? 'Checking…' : 'Continue'}
             </Button>
           </form>
         )}
 
-        {step === 'password' && (
+        {!choices && step === 'password' && (
           <form onSubmit={submitPassword} className="flex flex-col gap-4" noValidate>
             {emailRow}
             <FormField label="Password" htmlFor="password">
@@ -195,6 +549,17 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
                 onChange={setPassword}
               />
             </FormField>
+            {/* Here, not on the email step. Somebody only discovers they have
+                forgotten their password once they are looking at the password
+                box   offering the escape hatch a screen earlier is offering it
+                before anyone needs it. The address is carried across so they
+                do not type it twice. */}
+            <Link
+              href={`/forgot-password?email=${encodeURIComponent(email)}`}
+              className="text-content-muted hover:text-content -mt-2 self-end text-sm"
+            >
+              Forgot password?
+            </Link>
             <Button type="submit" size="lg" disabled={busy} className="w-full">
               {busy ? 'Logging in…' : 'Log in'}
             </Button>
@@ -209,7 +574,7 @@ export function LoginForm({ next, email: initialEmail }: { next?: string; email?
           </form>
         )}
 
-        {step === 'otp' && (
+        {!choices && step === 'otp' && (
           <form onSubmit={verify} className="flex flex-col gap-4" noValidate>
             {emailRow}
             <FormField label="Sign-in code" htmlFor="otp">

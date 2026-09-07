@@ -27,6 +27,7 @@ import { AttachmentViewer } from './attachments/attachment-viewer';
 import { Attachment } from './attachments/attachment';
 import { ChatTheme, ConversationPrefs } from '@/store/use-chat-store';
 import { CHAT_THEMES } from './chat-theme';
+import { ORDER_STATUS_PILL } from './order-status';
 
 interface ChatWindowProps {
   contact: ChatContact;
@@ -51,13 +52,6 @@ interface ChatWindowProps {
   onDelete: () => void;
 }
 
-const statusVariant: Record<ChatOrder['status'], string> = {
-  Processing: 'bg-amber-100 text-amber-700',
-  Completed: 'bg-green-100 text-green-700',
-  Cancelled: 'bg-red-100 text-red-700',
-  Pending: 'bg-ink/8 text-ink',
-};
-
 const MAX_IMAGES = 10;
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -77,7 +71,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
     <>
       {parts.map((part, index) =>
         part.toLowerCase() === trimmed.toLowerCase() ? (
-          <mark key={index} className="rounded bg-yellow-300 px-0.5 text-inherit">
+          <mark key={index} className="text-ink bg-accent rounded px-0.5">
             {part}
           </mark>
         ) : (
@@ -112,7 +106,13 @@ export function ChatWindow({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMatch, setActiveMatch] = useState(0);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  /*
+   * The composer's pending list. Every entry here was just picked from the file
+   * input or recorded, so the File is guaranteed - unlike a RECEIVED attachment,
+   * which lives in Storage and has only a signed URL. Encoding that at the
+   * source means AttachmentPreview needs no cast.
+   */
+  const [attachments, setAttachments] = useState<(Attachment & { file: File })[]>([]);
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
   const [previewAttachments, setPreviewAttachments] = useState<Attachment[]>([]);
 
@@ -265,7 +265,7 @@ export function ChatWindow({
       filesToAdd = filesToAdd.slice(0, remainingSlots);
     }
 
-    const newAttachments: Attachment[] = filesToAdd.map((file) => ({
+    const newAttachments: (Attachment & { file: File })[] = filesToAdd.map((file) => ({
       id: crypto.randomUUID(),
       file,
       type,
@@ -318,7 +318,7 @@ export function ChatWindow({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-ink/5 flex items-center justify-between border-b px-4 py-3">
+      <div className="border-line/10 flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
           {/* Mobile Back Button */}
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={onBack}>
@@ -332,14 +332,14 @@ export function ChatWindow({
             </Avatar>
 
             {contact.isOnline && (
-              <span className="absolute right-0 bottom-0 size-2.5 rounded-full bg-green-500 ring-2 ring-white" />
+              <span className="bg-accent-fg ring-panel absolute right-0 bottom-0 size-2.5 rounded-full ring-2" />
             )}
           </div>
 
           <div>
-            <p className="text-ink text-sm font-semibold">{contact.name}</p>
+            <p className="text-content text-sm font-semibold">{contact.name}</p>
 
-            <p className="text-xs text-green-500">{contact.isOnline ? 'Online' : 'Offline'}</p>
+            <p className="text-accent-fg text-xs">{contact.isOnline ? 'Online' : 'Offline'}</p>
           </div>
         </div>
 
@@ -377,8 +377,8 @@ export function ChatWindow({
 
       {/* In-chat search */}
       {searchOpen && (
-        <div className="border-ink/5 flex items-center gap-2 border-b bg-white px-4 py-2">
-          <Search className="text-muted size-4 shrink-0" />
+        <div className="border-line/10 bg-panel flex items-center gap-2 border-b px-4 py-2">
+          <Search className="text-content-muted size-4 shrink-0" />
 
           <Input
             ref={searchInputRef}
@@ -395,7 +395,7 @@ export function ChatWindow({
             className="h-8 flex-1 border-0 text-xs shadow-none focus-visible:ring-0"
           />
 
-          <span className="text-muted shrink-0 text-xs tabular-nums">
+          <span className="text-content-muted shrink-0 text-xs tabular-nums">
             {matchIds.length > 0 ? `${activeMatch + 1} / ${matchIds.length}` : '0 / 0'}
           </span>
 
@@ -441,21 +441,21 @@ export function ChatWindow({
             <button
               type="button"
               onClick={onOrderDetails}
-              className="border-ink/10 mx-auto flex items-center gap-3 rounded-xl border bg-white px-4 py-2.5 shadow-sm transition hover:shadow-md"
+              className="border-line/15 bg-panel mx-auto flex items-center gap-3 rounded-xl border px-4 py-2.5 shadow-sm transition hover:shadow-md"
             >
-              <div className="bg-ink/5 flex size-8 items-center justify-center rounded-lg">
-                <Send className="text-muted size-3.5" />
+              <div className="bg-surface-deep flex size-8 items-center justify-center rounded-lg">
+                <Send className="text-content-muted size-3.5" />
               </div>
 
               <div className="text-left">
-                <p className="text-ink text-xs font-semibold">{linkedOrder.orderId}</p>
-                <p className="text-muted text-xs">{linkedOrder.items}</p>
+                <p className="text-content text-xs font-semibold">{linkedOrder.orderId}</p>
+                <p className="text-content-muted text-xs">{linkedOrder.items}</p>
               </div>
 
               <span
                 className={cn(
                   'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  statusVariant[linkedOrder.status],
+                  ORDER_STATUS_PILL[linkedOrder.status],
                 )}
               >
                 {linkedOrder.status}
@@ -464,7 +464,7 @@ export function ChatWindow({
           )}
 
           {messages.length === 0 && (
-            <p className="text-muted my-auto text-center text-xs">
+            <p className="text-content-muted my-auto text-center text-xs">
               No messages in this conversation yet.
             </p>
           )}
@@ -478,7 +478,10 @@ export function ChatWindow({
                 ref={(node) => {
                   messageRefs.current[message.id] = node;
                 }}
-                className={cn('flex flex-col gap-1', message.isVendor ? 'items-end' : 'items-start')}
+                className={cn(
+                  'flex flex-col gap-1',
+                  message.isVendor ? 'items-end' : 'items-start',
+                )}
               >
                 {!message.isVendor && (
                   <Avatar className="size-6">
@@ -515,11 +518,11 @@ export function ChatWindow({
                           <button
                             type="button"
                             onClick={() => openPreview(image, imageAttachments)}
-                            className="group relative max-w-[320px] overflow-hidden rounded-2xl border border-black/5 bg-gray-100"
+                            className="group border-line/10 bg-surface-deep relative max-w-[320px] overflow-hidden rounded-2xl border"
                           >
                             <img
                               src={image.url}
-                              alt={image.file.name}
+                              alt={image.name}
                               className="block max-h-[380px] max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                             />
                           </button>
@@ -552,11 +555,11 @@ export function ChatWindow({
                                     openPreview(image, imageAttachments);
                                   }
                                 }}
-                                className="group relative aspect-square w-full overflow-hidden bg-gray-100"
+                                className="group bg-surface-deep relative aspect-square w-full overflow-hidden"
                               >
                                 <img
                                   src={image.url}
-                                  alt={image.file.name}
+                                  alt={image.name}
                                   className="block h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                                 />
 
@@ -583,24 +586,24 @@ export function ChatWindow({
                           key={attachment.id}
                           type="button"
                           onClick={() => openPreview(attachment, [attachment])}
-                          className="border-ink/10 overflow-hidden rounded-xl border bg-white"
+                          className="border-line/15 bg-panel overflow-hidden rounded-xl border"
                         >
                           {attachment.type === 'video' && (
-                            <div className="flex size-32 flex-col items-center justify-center gap-2 bg-slate-100">
-                              <Video className="size-8 text-slate-700" />
+                            <div className="bg-surface-deep flex size-32 flex-col items-center justify-center gap-2">
+                              <Video className="text-content-muted size-8" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}
 
                           {attachment.type === 'audio' && (
-                            <div className="flex size-32 flex-col items-center justify-center gap-2 bg-violet-50">
-                              <Music className="size-8 text-violet-600" />
+                            <div className="bg-accent/15 flex size-32 flex-col items-center justify-center gap-2">
+                              <Music className="text-accent-fg size-8" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}
@@ -610,7 +613,7 @@ export function ChatWindow({
                               <FileText className="size-8 text-orange-600" />
 
                               <span className="max-w-[110px] truncate px-2 text-xs">
-                                {attachment.file.name}
+                                {attachment.name}
                               </span>
                             </div>
                           )}
@@ -626,15 +629,15 @@ export function ChatWindow({
                       'max-w-xs rounded-2xl px-4 py-2.5 text-sm transition-shadow',
                       message.isVendor
                         ? cn('rounded-tr-sm', theme.bubble)
-                        : 'text-ink border-ink/5 rounded-tl-sm border bg-white',
-                      isActiveMatch && 'ring-2 ring-yellow-400 ring-offset-2',
+                        : 'text-content border-line/10 bg-panel rounded-tl-sm border',
+                      isActiveMatch && 'ring-accent ring-2 ring-offset-2',
                     )}
                   >
                     <Highlight text={message.content} query={searchOpen ? searchQuery : ''} />
                   </div>
                 )}
 
-                <span className="text-muted text-[11px]">{message.timestamp}</span>
+                <span className="text-content-muted text-[11px]">{message.timestamp}</span>
               </div>
             );
           })}
@@ -645,7 +648,7 @@ export function ChatWindow({
       </div>
 
       {attachments.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto bg-white px-4 py-3">
+        <div className="bg-panel flex gap-3 overflow-x-auto px-4 py-3">
           {attachments.map((attachment) => (
             <AttachmentPreview
               key={attachment.id}
@@ -680,11 +683,11 @@ export function ChatWindow({
       <Input ref={audioInputRef} hidden type="file" accept="audio/*" onChange={handleAudioSelect} />
 
       {/* Input */}
-      <div className="border-ink/5 shrink-0 border-t bg-white px-4 py-3">
+      <div className="border-line/10 bg-panel shrink-0 border-t px-4 py-3">
         {prefs.blocked ? (
-          <div className="border-ink/10 flex flex-wrap items-center justify-center gap-3 rounded-xl border bg-red-50/60 px-4 py-3 text-center">
-            <span className="text-ink flex items-center gap-2 text-sm">
-              <Ban className="size-4 text-red-500" />
+          <div className="border-line/15 bg-coral/10 flex flex-wrap items-center justify-center gap-3 rounded-xl border px-4 py-3 text-center">
+            <span className="text-content flex items-center gap-2 text-sm">
+              <Ban className="text-coral size-4" />
               You blocked {contact.name}. You can&apos;t send messages.
             </span>
 
@@ -693,7 +696,7 @@ export function ChatWindow({
             </Button>
           </div>
         ) : (
-          <div className="border-ink/10 flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
+          <div className="border-line/15 bg-panel flex items-center gap-2 rounded-xl border px-3 py-2">
             <Popover.Root>
               <Popover.Trigger asChild>
                 <Button variant="ghost" size="icon" className="size-8 shrink-0">
@@ -707,7 +710,7 @@ export function ChatWindow({
                   align="start"
                   sideOffset={12}
                   collisionPadding={12}
-                  className="border-ink/5 z-50 w-[285px] rounded-3xl border bg-white p-3 shadow-2xl"
+                  className="border-line/10 bg-panel z-50 w-[285px] rounded-3xl border p-3 shadow-2xl"
                 >
                   <div className="grid grid-cols-2 gap-2">
                     {/* Photos */}
@@ -715,15 +718,15 @@ export function ChatWindow({
                       variant="ghost"
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      className="group flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors hover:bg-blue-50"
+                      className="group hover:bg-accent/10 flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors"
                     >
-                      <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-blue-100">
-                        <Images className="size-5 text-blue-500" />
+                      <div className="bg-accent/15 mb-2 flex size-11 items-center justify-center rounded-full">
+                        <Images className="text-accent-fg size-5" />
                       </div>
 
-                      <span className="text-ink text-sm font-medium">Photos</span>
+                      <span className="text-content text-sm font-medium">Photos</span>
 
-                      <span className="text-muted mt-0.5 text-[11px]">JPG, PNG</span>
+                      <span className="text-content-muted mt-0.5 text-[11px]">JPG, PNG</span>
                     </Button>
 
                     {/* Documents */}
@@ -737,9 +740,9 @@ export function ChatWindow({
                         <FileText className="size-5 text-orange-500" />
                       </div>
 
-                      <span className="text-ink text-sm font-medium">Documents</span>
+                      <span className="text-content text-sm font-medium">Documents</span>
 
-                      <span className="text-muted mt-0.5 text-[11px]">PDF, DOCX</span>
+                      <span className="text-content-muted mt-0.5 text-[11px]">PDF, DOCX</span>
                     </Button>
 
                     {/* Videos */}
@@ -747,15 +750,15 @@ export function ChatWindow({
                       variant="ghost"
                       type="button"
                       onClick={() => videoInputRef.current?.click()}
-                      className="group flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors hover:bg-violet-50"
+                      className="group hover:bg-accent/10 flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors"
                     >
-                      <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-violet-100">
-                        <Video className="size-5 text-violet-500" />
+                      <div className="bg-accent/15 mb-2 flex size-11 items-center justify-center rounded-full">
+                        <Video className="text-accent-fg size-5" />
                       </div>
 
-                      <span className="text-ink text-sm font-medium">Videos</span>
+                      <span className="text-content text-sm font-medium">Videos</span>
 
-                      <span className="text-muted mt-0.5 text-[11px]">MP4, MOV</span>
+                      <span className="text-content-muted mt-0.5 text-[11px]">MP4, MOV</span>
                     </Button>
 
                     {/* Audio */}
@@ -763,19 +766,19 @@ export function ChatWindow({
                       variant="ghost"
                       type="button"
                       onClick={() => audioInputRef.current?.click()}
-                      className="group flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors hover:bg-green-50"
+                      className="group hover:bg-accent/10 flex min-h-[112px] flex-col items-center justify-center rounded-2xl p-3 transition-colors"
                     >
-                      <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-green-100">
-                        <Mic className="size-5 text-green-500" />
+                      <div className="bg-accent/15 mb-2 flex size-11 items-center justify-center rounded-full">
+                        <Mic className="text-accent-fg size-5" />
                       </div>
 
-                      <span className="text-ink text-sm font-medium">Audio</span>
+                      <span className="text-content text-sm font-medium">Audio</span>
 
-                      <span className="text-muted mt-0.5 text-[11px]">MP3, WAV</span>
+                      <span className="text-content-muted mt-0.5 text-[11px]">MP3, WAV</span>
                     </Button>
                   </div>
 
-                  <Popover.Arrow className="fill-white" />
+                  <Popover.Arrow className="fill-panel" />
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
@@ -786,7 +789,7 @@ export function ChatWindow({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
               rows={1}
-              className="text-ink placeholder:text-muted max-h-32 flex-1 resize-none border-0 bg-transparent text-sm shadow-none outline-none! focus-visible:ring-0! focus-visible:ring-offset-0 focus-visible:outline-none"
+              className="text-content placeholder:text-content-muted max-h-32 flex-1 resize-none border-0 bg-transparent text-sm shadow-none outline-none! focus-visible:ring-0! focus-visible:ring-offset-0 focus-visible:outline-none"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -798,7 +801,7 @@ export function ChatWindow({
             <Button
               size="icon"
               variant="ghost"
-              className="size-8 shrink-0 text-violet-500"
+              className="text-accent-fg size-8 shrink-0"
               onClick={sendMessage}
             >
               <Send className="size-4" />

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120" role="img" aria-label="Loading">
+  <style>
+    .cell { transform-box: fill-box; transform-origin: center; animation: sync-pop 1.15s ease-in-out infinite; }
+    .c0{animation-delay:0.00s}
+    .c1{animation-delay:0.09s}
+    .c2{animation-delay:0.18s}
+    .c3{animation-delay:0.27s}
+    .c4{animation-delay:0.36s}
+    .c5{animation-delay:0.45s}
+    .c6{animation-delay:0.54s}
+    .c7{animation-delay:0.63s}
+    .core { transform-box: fill-box; transform-origin: center; animation: sync-core 1.15s ease-in-out infinite; }
+    @keyframes sync-pop { 0%,60%,100% { transform: scale(.72); opacity:.35 } 22% { transform: scale(1); opacity:1 } }
+    @keyframes sync-core { 0%,100% { transform: scale(.88) } 50% { transform: scale(1.08) } }
+    @media (prefers-reduced-motion: reduce) { .cell,.core { animation: none; opacity:1 } }
+  </style>
+  <rect class="cell c0" x="4.0" y="4.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c1" x="38.0" y="4.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c2" x="72.0" y="4.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c3" x="72.0" y="38.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c4" x="72.0" y="72.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c5" x="38.0" y="72.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c6" x="4.0" y="72.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><rect class="cell c7" x="4.0" y="38.0" width="24.0" height="24.0" rx="7.5" fill="#0E0E12"/><circle class="core" cx="50.0" cy="50.0" r="13.0" fill="#C5FF4A"/>
+</svg>

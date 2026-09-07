@@ -21,6 +21,10 @@
   --color-white: #ffffff;
   --color-muted: #6a6a72;
   --color-coral: #ff8b5c;
+  /* Coral is defined for a DARK ground. On cream it is a pastel that fails
+     contrast as small text, so the ramp has a deep end for exactly the reason
+     lime does - see --color-warning-fg below. */
+  --color-coral-deep: #b4451a;
 
   /* Semantic, THEME-AWARE tokens - these flip under dark mode (values defined
      in the :root / dark layer below). Convert page surfaces to these
@@ -32,7 +36,7 @@
   --color-surface-deep: var(--sf-2);
   /* hover / sunken panel */
   --color-panel: var(--sf-card);
-  /* card surface (was bg-white) — NOT "card": text-card is a font-size */
+  /* card surface (was bg-white)   NOT "card": text-card is a font-size */
   --color-content: var(--ct);
   /* primary text (was text-ink) */
   --color-content-muted: var(--ct-muted);
@@ -44,6 +48,11 @@
   --color-accent-fg: var(--ac-fg);
   /* accent text: lime-deep ↔ lime */
   --color-warning: var(--color-coral);
+  /* warning TEXT: coral-deep ↔ coral. The twin of --color-accent-fg, and the
+     token that was missing: there was a coral to FILL with and nothing to
+     write in. Anything that put `text-coral` on the light theme was drawing a
+     pastel on cream, which is how "Cancelled" ended up quieter than "Pending". */
+  --color-warning-fg: var(--wn-fg);
   /* Back-compat alias - `text-foreground` still works, maps to content. */
   --color-foreground: var(--ct);
 
@@ -117,8 +126,15 @@
   /* muted */
   --ac-fg: #4a8500;
   /* lime-deep */
+  --wn-fg: #b4451a;
+  /* coral-deep: coral itself is a pastel on cream */
   --ln: #0e0e12;
   /* ink (borders use /opacity) */
+  --sb: #0e0e12;
+  /* scrollbar thumb: ink on cream, lime on ink. Not the same hue in both
+     themes on purpose - lime is a fill colour for dark ground, and on the
+     cream page even a deepened lime sits too close to the background to
+     find. Each theme takes whichever of the two carries the contrast. */
   color-scheme: light;
 }
 
@@ -131,7 +147,10 @@
     --ct-muted: #9b9ba3;
     --ac-fg: #c5ff4a;
     /* bright lime for contrast on dark */
+    --wn-fg: #ff8b5c;
+    /* coral reads as intended on ink */
     --ln: #f4f1e8;
+    --sb: #a8db3c;
     /* Deeper lime for fills on dark - less glare than the bright brand lime.
        Drives every bg-lime/accent in dark mode. Tune this one value. */
     --color-lime: #a8db3c;
@@ -146,7 +165,9 @@
   --ct: #f4f1e8;
   --ct-muted: #9b9ba3;
   --ac-fg: #c5ff4a;
+  --wn-fg: #ff8b5c;
   --ln: #f4f1e8;
+  --sb: #a8db3c;
   /* Deeper lime for fills on dark (see note above). */
   --color-lime: #a8db3c;
   color-scheme: dark;
@@ -155,6 +176,119 @@
 html {
   background: var(--color-surface);
   color: var(--color-content);
+}
+
+/* Nothing may scroll the page sideways.
+ *
+ * `clip` rather than `hidden`: `overflow-x: hidden` here makes the element a
+ * scroll container, which silently kills `position: sticky` on every header,
+ * sidebar rail and map control inside it. `clip` cuts the overflow without
+ * creating that container, so sticky keeps working.
+ *
+ * ON `body` ONLY - NOT ON `html`. The root's overflow is propagated to the
+ * viewport only while `html`'s own overflow is `visible`; give `html` a
+ * non-visible overflow and that propagation stops, and `body`'s overflow
+ * starts applying to the body box instead. That is what shifted the page
+ * under every Radix popup: react-remove-scroll locks scrolling by setting
+ * `overflow: hidden` on `body` plus a `margin-right` equal to the scrollbar
+ * width, to compensate for the bar it expects to disappear. With the clip on
+ * `html`, the `hidden` never reached the viewport - the page scrollbar stayed
+ * - while the margin still applied, so opening the account menu (or any
+ * dialog) shunted the whole page sideways by the scrollbar's width and left
+ * it scrollable behind the overlay. Clipping on `body` alone propagates to
+ * the viewport exactly as the old rule intended, `body` is still not a scroll
+ * container, and the lock's compensation now cancels a bar that really goes.
+ *
+ * This is a BACKSTOP, not a fix - it hides a too-wide element rather than
+ * making it fit, and a clipped element is still unreachable. Anything found
+ * overflowing gets fixed at the source as well.
+ */
+html {
+  max-width: 100%;
+}
+
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+/* Thin lime scrollbars, everywhere.
+ *
+ * `scrollbar-width` / `scrollbar-color` are INHERITED, so setting them on the
+ * root reaches every scroll container in the app - the sidebar rail, the
+ * dashboard drawer, a code block - without a class on each. Anything that
+ * wants no bar at all overrides with `.no-scrollbar` below.
+ *
+ * The `::-webkit-scrollbar` block underneath is for Safari, which still has
+ * no support for the standard properties. Chrome ignores those pseudo-
+ * elements on any element that sets `scrollbar-color`, so the two do not
+ * fight - each engine takes the one it understands.
+ */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) var(--color-surface-deep);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: var(--color-surface-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  background-color: color-mix(in oklab, var(--sb) 70%, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb);
+}
+
+/* The dashboard rail takes a hairline instead of the app's 8px bar.
+ *
+ * It is a fixed 16rem column sitting a few hundred pixels from the page's own
+ * scrollbar, and two bars that width next to each other read as a second
+ * border rather than as controls. 0.2px is deliberately far below one CSS
+ * pixel: the engine rounds it up to the thinnest line it can actually draw,
+ * which is one device pixel   a hairline on any display.
+ *
+ * THE TRADE-OFF, STATED: at this width the thumb is not a drag target at all.
+ * The rail is short and scrolls by wheel, trackpad and keyboard; the bar is
+ * only a position indicator. If it ever has to be draggable, this is the rule
+ * to raise.
+ *
+ * Firefox has no sub-pixel setting, so `thin` is as close as it gets there.
+ * The transparent track keeps it reading as a thread rather than a stripe. */
+.rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) transparent;
+}
+
+.rail-scroll::-webkit-scrollbar {
+  width: 0.2px;
+  height: 0.2px;
+}
+
+.rail-scroll::-webkit-scrollbar-track,
+.rail-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Carousels and chip rails scroll by drag/swipe and by their own arrows; a
+   bar under them is noise. Used in a handful of places that had been writing
+   `no-scrollbar` without it ever being defined - so those rails were showing
+   a scrollbar, and now that scrollbars are lime it would have been a loud
+   one. Firefox and Safari take different halves of this. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -228,63 +362,6 @@ input:-webkit-autofill:focus {
   text-transform: uppercase;
 }
 
-/* ─── Brand loader: two dots orbiting, swapping colours, glitching ── */
-@keyframes sync-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Hard colour cut at the half-cycle so the two dots trade colours. */
-@keyframes sync-color-a {
-  0%,
-  49.9% {
-    background-color: var(--color-lime-deep);
-  }
-
-  50%,
-  100% {
-    background-color: var(--color-lime);
-  }
-}
-
-@keyframes sync-color-b {
-  0%,
-  49.9% {
-    background-color: var(--color-lime);
-  }
-
-  50%,
-  100% {
-    background-color: var(--color-lime-deep);
-  }
-}
-
-/* Occasional glitch jitter on the whole dot group. */
-@keyframes sync-glitch {
-  0%,
-  86%,
-  100% {
-    transform: translate(0, 0) skewX(0deg);
-  }
-
-  88% {
-    transform: translate(-3px, 1px) skewX(5deg);
-  }
-
-  90% {
-    transform: translate(3px, -2px) skewX(-4deg);
-  }
-
-  93% {
-    transform: translate(-2px, -1px) skewX(2deg);
-  }
-
-  96% {
-    transform: translate(2px, 1px) skewX(0deg);
-  }
-}
-
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -302,43 +379,9 @@ input:-webkit-autofill:focus {
 }
 
 /* Breathing glow behind the orbiting dots (own element, no transform clash). */
-@keyframes sync-glow {
-  0%,
-  100% {
-    transform: scale(0.8);
-    opacity: 0.3;
-  }
-
-  50% {
-    transform: scale(1.15);
-    opacity: 0.65;
-  }
-}
-
 /* Wordmark types out left-to-right by revealing width 0 → 100% of an
    invisible sizer (exact text width), so the caret hugs the real edge. */
-@keyframes sync-typing {
-  from {
-    width: 0;
-  }
-
-  to {
-    width: 100%;
-  }
-}
-
 /* Blinking caret beside the wordmark. */
-@keyframes sync-caret {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0;
-  }
-}
-
 /* Activity ticker marquee - the list is duplicated, so -50% loops seamlessly. */
 @keyframes marquee {
   from {
@@ -387,35 +430,63 @@ input:-webkit-autofill:focus {
   border-radius: var(--radius-lg);
 }
 
-/* ─── AroundMap (Leaflet) custom markers ──────────────────────────── */
-.leaflet-container {
-  font: inherit;
-  background: var(--color-cream-deep);
-}
+/* ─── AroundMap (Google Maps) custom markers ──────────────────────────
+   These are the contents of <AdvancedMarker>. Centring on the coordinate is
+   done by the marker's `anchorPoint` (AdvancedMarkerAnchorPoint.CENTER), NOT by
+   a transform here - under Leaflet's divIcon it was the other way round, and
+   leaving both in place offsets every pin by half its own size. */
+/*
+  A PIN IS A DOT UNTIL IT IS ASKED ABOUT.
 
-/* Strip Leaflet's default white box around divIcons. */
-.leaflet-div-icon.amap-pin-wrap {
-  background: transparent;
-  border: 0;
-}
+  Every pin used to render its name and distance permanently, so a handful of
+  neighbours around the campus gate covered the streets they were describing -
+  the map became unreadable exactly where it mattered most. The label now opens
+  on hover or tap, one at a time (see `openPin` in around-map-google).
 
+  Collapsed is a dot with padding, not `display:none` on the text: the pill has
+  to keep its shape so opening it grows rather than pops into existence, and the
+  text stays in the DOM so `title` and screen readers still have it.
+*/
 .amap-pin {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transform: translate(-50%, -50%);
+  gap: 0;
   background: #fff;
   color: #0e0e12;
-  padding: 4px 10px;
-  border-radius: 14px;
+  padding: 4px;
+  border-radius: 9999px;
   white-space: nowrap;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition:
+    gap 140ms ease,
+    padding 140ms ease,
+    border-radius 140ms ease;
+}
+
+.amap-pin--open {
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
 }
 
 .amap-pin__text {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+  /* Collapsed: zero width, clipped, and unreadable to nobody - the marker's
+     own `title` carries the name for hover tooltips and assistive tech. */
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-width 160ms ease,
+    opacity 120ms ease;
+}
+
+.amap-pin--open .amap-pin__text {
+  max-width: 160px;
+  opacity: 1;
 }
 
 .amap-pin__name {
@@ -441,8 +512,10 @@ input:-webkit-autofill:focus {
 }
 
 .amap-pin__dot {
-  width: 7px;
-  height: 7px;
+  /* Big enough to hit with a thumb once the label is gone. */
+  width: 10px;
+  height: 10px;
+  flex: none;
   border-radius: 9999px;
 }
 
@@ -451,7 +524,6 @@ input:-webkit-autofill:focus {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  transform: translate(-50%, -50%);
 }
 
 .amap-you__dot {
@@ -473,7 +545,6 @@ input:-webkit-autofill:focus {
 }
 
 .amap-campus {
-  transform: translate(-50%, -50%);
   background: rgba(197, 255, 74, 0.18);
   border: 1px dashed rgba(90, 120, 20, 0.7);
   color: #0e0e12;
@@ -496,12 +567,20 @@ input:-webkit-autofill:focus {
   outline: none;
 }
 
-.menu-item:hover {
-  background: rgb(243 244 246);
-}
-
+/* Hover/keyboard highlight for menu rows.
+ *
+ * These were both a hardcoded `rgb(243 244 246)` - Tailwind's gray-100 - with
+ * no dark counterpart. On a dark panel that is a near-white bar behind
+ * near-white text, so the hovered row became the one row you could not read.
+ *
+ * `currentColor` at low alpha instead: the tint is derived from the text colour
+ * of whatever surface the menu is on, so it darkens on light panels and
+ * lightens on dark ones without either being written down. Nothing to keep in
+ * step when a theme changes.
+ */
+.menu-item:hover,
 .menu-item[data-highlighted] {
-  background: rgb(243 244 246);
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 @keyframes amap-pulse {
@@ -522,4 +601,27 @@ input:-webkit-autofill:focus {
   .amap-you__dot {
     animation: none;
   }
+}
+
+/* Landing headline: the blobby lime band wipes across "Sync" left to right.
+   Applied to a WRAPPER, not the band itself - the band already carries the
+   blob clip-path, and one element cannot hold two. */
+@keyframes band-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Custom pointer. The class is added by <Cursor> only after its rAF loop is
+   running and only on fine-pointer, non-reduced-motion devices - so a touch
+   user, or anyone who prefers reduced motion, keeps the system cursor. It is
+   set here rather than inline so it also covers interactive children, which
+   carry their own cursor values. */
+.has-custom-cursor,
+.has-custom-cursor * {
+  cursor: none !important;
 }

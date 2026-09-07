@@ -31,7 +31,6 @@ begin
   return 'password';
 end;
 $$;
-
 -- Lock it down: only the service role (which bypasses these grants) should call it.
 revoke all on function public.login_method(text) from public;
 revoke all on function public.login_method(text) from anon, authenticated;

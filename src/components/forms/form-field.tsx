@@ -17,6 +17,17 @@ interface FormFieldProps {
   label: string;
   /** Must match the rendered control's `id`. */
   htmlFor: string;
+  /**
+   * Marks the field compulsory: the same coral asterisk the verification
+   * document list uses, so one convention covers a form whose two halves are
+   * fields and file pickers. Screen readers get the word, not the glyph.
+   *
+   * It is a LABEL, not enforcement   the schema and the database are that.
+   * Its job is to say so BEFORE somebody is refused, which is the half that
+   * was missing: a student filled in what looked optional and met a disabled
+   * Submit button with no explanation on it.
+   */
+  required?: boolean;
   /** Optional helper copy shown below the label. */
   hint?: string;
   /** Error message from zod / react-hook-form. */
@@ -25,37 +36,66 @@ interface FormFieldProps {
   children: ReactNode;
   /** Hide the label visually but keep it for screen readers. */
   srOnlyLabel?: boolean;
+  /**
+   * Trailing indicator under the control - a <CharCount>, a "checking…" note.
+   * Shares the footer row with the error rather than adding a line, so a field
+   * does not change height the moment it goes invalid.
+   */
+  counter?: ReactNode;
   className?: string;
 }
 
 export function FormField({
   label,
   htmlFor,
+  required,
   hint,
   error,
   children,
   srOnlyLabel,
+  counter,
   className,
 }: FormFieldProps) {
   const errorId = error ? `${htmlFor}-error` : undefined;
   const hintId = hint ? `${htmlFor}-hint` : undefined;
+  // Described-by rather than a live region: announcing a new count on every
+  // keystroke is unusable. This way a screen reader reads the remaining
+  // budget when the field is focused, and on demand after that.
+  const counterId = counter ? `${htmlFor}-counter` : undefined;
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <Label
         htmlFor={htmlFor}
         className={cn('text-content text-sm font-medium', srOnlyLabel && 'sr-only')}
       >
+        {required && (
+          <>
+            <span className="text-coral" aria-hidden="true">
+              *
+            </span>{' '}
+          </>
+        )}
         {label}
+        {required && <span className="sr-only"> (required)</span>}
       </Label>
       {hint && (
         <p id={hintId} className="text-content-muted text-xs">
           {hint}
         </p>
       )}
-      <div aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}>
+      <div aria-describedby={[errorId, hintId, counterId].filter(Boolean).join(' ') || undefined}>
         {children}
       </div>
-      {error && <FormError id={errorId}>{error}</FormError>}
+      {(error || counter) && (
+        <div className={cn('flex items-start gap-3', error ? 'justify-between' : 'justify-end')}>
+          {error && <FormError id={errorId}>{error}</FormError>}
+          {counter && (
+            <span id={counterId} className="shrink-0 text-xs">
+              {counter}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

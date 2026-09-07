@@ -8,12 +8,12 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import type { Database } from '@/types/database.types';
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -38,21 +38,57 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Trusted role for the gate: the env admin allowlist wins for founding admins
-  // (so they're recognised even if profiles.role is still the clamped default),
-  // then the server-controlled `profiles.role`, then editable user_metadata.
+  // Trusted role for the gate: `profiles.role`, then editable user_metadata as
+  // a fallback for the moment between signup and the profile trigger landing.
+  //
+  // THE ENV ALLOWLIST USED TO WIN HERE, AND THAT WAS THE BUG. This resolved
+  // `adminRoleForEmail(email) ?? profile?.role` while every admin PAGE resolved
+  // the opposite way round, so the same person could be staff to the router and
+  // a student to the page they were routed to. There is one source now, and it
+  // is the row   see modules/admin/guard.
   let role: string | undefined;
+  // EVERY hat held, not just the one being worn. Gating a dashboard on the
+  // active role alone means a landlord invited as staff loses /landlord, with
+  // no way back: their active role is now `admin`, and switching it is a
+  // separate act they cannot perform from a page they cannot open.
+  //
+  // Safe to trust only because `roles` is frozen against client writes by
+  // guard_profile_privileged_cols (20260910210000). Before that migration it
+  // was self-assignable, and reading it here would have turned a latent
+  // escalation into an immediate one.
+  let roles: string[] = [];
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, roles')
       .eq('id', user.id)
       .maybeSingle();
     role =
-      adminRoleForEmail(user.email) ??
-      (profile?.role as string | undefined) ??
-      (user.user_metadata?.role as string | undefined);
+      (profile?.role as string | undefined) ?? (user.user_metadata?.role as string | undefined);
+    // user_metadata is NOT consulted for this. It is editable by its owner,
+    // and the whole point of the array is that it decides access.
+    roles = (profile?.roles as string[] | null) ?? [];
   }
 
-  return { response, user, role };
+  // MANAGING A STORE IS NOT THE SAME AS BEING A VENDOR.
+  // Someone invited to run a branch keeps their own role - usually 'student' -
+  // so the `/vendor` gate would bounce them off the dashboard they were just
+  // given access to. Ask the membership table instead of the role.
+  //
+  // Deliberately conditional: only for /vendor requests, and only when the role
+  // gate has already failed. Every other request pays nothing for this.
+  let isStorefrontStaff = false;
+  if (user && role !== 'vendor' && request.nextUrl.pathname.startsWith('/vendor')) {
+    // Runs as the user: storefront_staff_read lets them see their own rows.
+    const { data: membership } = await supabase
+      .from('storefront_staff')
+      .select('id')
+      .eq('user_id', user.id)
+      .is('revoked_at', null)
+      .limit(1)
+      .maybeSingle();
+    isStorefrontStaff = !!membership;
+  }
+
+  return { response, user, role, roles, isStorefrontStaff };
 }

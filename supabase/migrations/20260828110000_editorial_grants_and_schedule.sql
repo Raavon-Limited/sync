@@ -41,7 +41,7 @@
 --
 --   with no reference to `published_at`. There is no separate 'scheduled'
 --   status in the check constraint, so the only way to express "goes live on
---   Friday" is a published row with a future published_at — and that row was
+--   Friday" is a published row with a future published_at   and that row was
 --   world-readable the moment it was saved. The scheduling in /admin/editorial
 --   would have been a label on an article anyone could already read.
 --
@@ -61,10 +61,12 @@
 
 grant insert, update, delete on public.articles to authenticated;
 grant insert, update, delete on public.banners  to authenticated;
+
 drop policy if exists "articles_select_published" on public.articles;
 create policy "articles_select_published" on public.articles
   for select to anon, authenticated
   using (status = 'published' and (published_at is null or published_at <= now()));
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

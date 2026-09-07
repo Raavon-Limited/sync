@@ -5,13 +5,13 @@
 -- schema, one shared updated_at trigger, the RLS helper functions, and the ops
 -- tables. Nothing here is a domain table.
 --
--- Everything after this migration depends on `private` existing — the ledger,
+-- Everything after this migration depends on `private` existing   the ledger,
 -- the messaging membership helper, the webhook log. It must stay first.
 --
 -- ORDER NOTE
 --   The blueprint says "decide these once, before any domain table exists".
 --   That ship sailed: 0006 created fourteen domain tables first. This migration
---   adapts rather than dictates — it attaches the shared trigger to tables that
+--   adapts rather than dictates   it attaches the shared trigger to tables that
 --   already exist, and does NOT convert their check constraints to enums.
 --
 -- ENUMS ARE DELIBERATELY NOT CREATED
@@ -41,21 +41,25 @@
 -- through the Data API at any privilege level.
 --
 -- Two separate settings control this and both must stay clear of `private`:
---   • supabase/config.toml → [api] schemas — local dev only.
---   • Dashboard → Project Settings → API → Exposed schemas — governs the live
+--   • supabase/config.toml → [api] schemas   local dev only.
+--   • Dashboard → Project Settings → API → Exposed schemas   governs the live
 --     project. config.toml does NOT push to it.
 -- The grants below mean that even if `private` were exposed by mistake, anon
 -- and authenticated would still hold nothing in it.
 create schema if not exists private;
+
 revoke all on schema private from anon, authenticated;
 grant  usage on schema private to service_role;
+
 -- Anything created in `private` later inherits this posture rather than relying
 -- on whoever writes the next migration to remember.
 alter default privileges in schema private revoke all on tables    from anon, authenticated;
 alter default privileges in schema private revoke all on sequences from anon, authenticated;
 alter default privileges in schema private revoke all on functions from anon, authenticated;
+
 comment on schema private is
   'Hidden schema. Never added to the PostgREST exposed list. Service role only.';
+
 -- ── 2. Shared updated_at trigger ────────────────────────────────────────────
 create or replace function public.set_updated_at()
 returns trigger
@@ -67,8 +71,10 @@ begin
   return new;
 end;
 $$;
+
 comment on function public.set_updated_at() is
   'BEFORE UPDATE trigger: stamps updated_at. Attach to every table with the column.';
+
 -- Attach to every public table that has an updated_at column and no trigger of
 -- its own. Idempotent, and skips tables whose guard_*_privileged_cols() trigger
 -- already stamps the column.
@@ -101,13 +107,14 @@ begin
   end loop;
   raise notice 'set_updated_at attached to % table(s)', n;
 end $$;
+
 -- ── 3. RLS helper functions ─────────────────────────────────────────────────
 -- STABLE so the planner evaluates them once per statement, not once per row.
 -- `set search_path = ''` is mandatory on anything a policy calls: without it a
 -- caller-controlled search_path can shadow the objects the function resolves.
 --
--- auth_role() reads the app_role JWT claim, which does not exist yet — the
--- custom access token hook is still to be built (§15) — so it returns 'anon'
+-- auth_role() reads the app_role JWT claim, which does not exist yet   the
+-- custom access token hook is still to be built (§15)   so it returns 'anon'
 -- for everyone today. That is the safe direction to fail. The identity_roles
 -- migration replaces is_admin() with a version that also consults profiles,
 -- which is what actually works before the hook ships.
@@ -117,14 +124,17 @@ language sql
 stable
 set search_path = ''
 as $$ select coalesce(auth.jwt() ->> 'app_role', 'anon') $$;
+
 create or replace function public.is_admin()
 returns boolean
 language sql
 stable
 set search_path = ''
 as $$ select public.auth_role() in ('admin', 'super_admin') $$;
+
 comment on function public.auth_role() is
   'The app_role JWT claim, or ''anon''. Superseded for role checks by public.current_app_role().';
+
 -- ── 4. private.webhook_events ───────────────────────────────────────────────
 -- Insert BEFORE processing. The unique constraint on (provider,
 -- provider_event_id) is the replay defence: a duplicate delivery collides
@@ -143,11 +153,13 @@ create table if not exists private.webhook_events (
   last_error         text,
   constraint webhook_events_provider_event_uniq unique (provider, provider_event_id)
 );
+
 create index if not exists webhook_events_unprocessed_idx
   on private.webhook_events (received_at) where processed_at is null;
+
 -- ── 5. private.idempotency_keys ─────────────────────────────────────────────
 -- Same key + same request_hash replays the stored response; same key +
--- different hash is a 409. Guards client-initiated POSTs — checkout, top-up,
+-- different hash is a 409. Guards client-initiated POSTs   checkout, top-up,
 -- payout request.
 create table if not exists private.idempotency_keys (
   key           text        primary key,
@@ -160,8 +172,10 @@ create table if not exists private.idempotency_keys (
   created_at    timestamptz not null default now(),
   expires_at    timestamptz not null default now() + interval '24 hours'
 );
+
 create index if not exists idempotency_keys_expiry_idx
   on private.idempotency_keys (expires_at);
+
 -- ── 6. private.audit_log ────────────────────────────────────────────────────
 create table if not exists private.audit_log (
   id           bigint generated always as identity primary key,
@@ -176,19 +190,22 @@ create table if not exists private.audit_log (
   user_agent   text,
   occurred_at  timestamptz not null default now()
 );
+
 create index if not exists audit_log_entity_idx
   on private.audit_log (entity_type, entity_id, occurred_at desc);
 create index if not exists audit_log_actor_idx
   on private.audit_log (actor_id, occurred_at desc);
+
 -- Append-only for real, not by convention. Even the service role cannot rewrite
 -- history through the Data API; correcting a bad row needs a superuser session.
 revoke update, delete, truncate on private.audit_log
   from public, anon, authenticated, service_role;
+
 -- ── 7. public.feature_flags ─────────────────────────────────────────────────
 -- Per-campus module launches, and the kill switch when a payment integration
 -- misbehaves. Readable by everyone: a flag gates public pages too, so an
 -- anonymous request must be able to resolve it. Flag KEYS are therefore not
--- secret — do not name one after an unannounced feature.
+-- secret   do not name one after an unannounced feature.
 create table if not exists public.feature_flags (
   key         text primary key,
   enabled     boolean     not null default false,
@@ -197,9 +214,10 @@ create table if not exists public.feature_flags (
   updated_by  uuid references public.profiles (id) on delete set null,
   updated_at  timestamptz not null default now()
 );
+
 -- ── 8. public.app_settings ──────────────────────────────────────────────────
 -- Service fee, minimum payout, escrow windows, support email. Config ops can
--- change without a deploy. NOT publicly readable — some values are commercial
+-- change without a deploy. NOT publicly readable   some values are commercial
 -- terms. The server reads it with the service-role client.
 create table if not exists public.app_settings (
   key         text primary key,
@@ -207,12 +225,14 @@ create table if not exists public.app_settings (
   updated_by  uuid references public.profiles (id) on delete set null,
   updated_at  timestamptz not null default now()
 );
+
 insert into public.app_settings (key, value) values
   ('commission_pct',      '10'::jsonb),
   ('min_payout_kobo',     '100000'::jsonb),
   ('escrow_hold_hours',   '24'::jsonb),
   ('support_email',       '"support@syncng.app"'::jsonb)
 on conflict (key) do nothing;
+
 -- ── 9. RLS on the new public tables ─────────────────────────────────────────
 -- §15's rule applied without exception: enable AND force. FORCE is safe here
 -- because service_role holds BYPASSRLS and nothing writes to these through a
@@ -221,15 +241,18 @@ alter table public.feature_flags enable row level security;
 alter table public.feature_flags force  row level security;
 alter table public.app_settings  enable row level security;
 alter table public.app_settings  force  row level security;
+
 drop policy if exists "feature_flags_read" on public.feature_flags;
 create policy "feature_flags_read"
   on public.feature_flags for select to anon, authenticated using (true);
+
 -- No policy at all on app_settings: reads go through the service role, which
 -- bypasses RLS. An empty policy set is the strongest possible statement.
 
 revoke all on public.feature_flags from anon, authenticated;
 revoke all on public.app_settings  from anon, authenticated;
 grant  select on public.feature_flags to anon, authenticated;
+
 -- ── 10. Verify ──────────────────────────────────────────────────────────────
 do $$
 declare

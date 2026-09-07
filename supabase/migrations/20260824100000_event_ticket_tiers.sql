@@ -3,18 +3,18 @@
 --
 -- WHAT WAS MISSING
 --   `events` holds a name, venue and start time. `tickets` holds what somebody
---   ALREADY BOUGHT — its `tier` and `price_kobo` are snapshots on an issued
+--   ALREADY BOUGHT   its `tier` and `price_kobo` are snapshots on an issued
 --   ticket. Nothing described what an event SELLS: no tier names, no prices, no
 --   capacity. So an event page could show when and where, and nothing about how
 --   to attend or what it costs.
 --
---   The UI already assumed this existed — src/lib/event.ts carries a
+--   The UI already assumed this existed   src/lib/event.ts carries a
 --   `tickets: Ticket[]` array of tiers with names and prices, entirely
 --   hardcoded, because there was nowhere to read it from.
 --
 -- WHAT THIS DELIBERATELY DOES NOT ADD
 --   A purchase RPC. Issuing a ticket means taking money, and payment
---   verification lives in the Paystack webhook — the same pattern bookings use,
+--   verification lives in the Paystack webhook   the same pattern bookings use,
 --   where `paid_at` is set by the webhook and never by a client. An RPC that
 --   inserted a ticket on request would hand out free tickets to anyone who
 --   could call it, so `tickets` keeps its read-only-to-clients posture and
@@ -24,7 +24,7 @@
 --   DISPLAY, and displaying a price is not selling one.
 --
 -- CAPACITY IS NULLABLE ON PURPOSE
---   `quantity is null` means uncapped — a free campus talk with no door limit
+--   `quantity is null` means uncapped   a free campus talk with no door limit
 --   is a real case, and forcing a number there would make somebody invent one.
 --
 -- ROLLBACK
@@ -38,6 +38,7 @@ alter table public.events
   add column if not exists cover_url   text,
   add column if not exists category    text,
   add column if not exists description text;
+
 -- 2. What an event sells ------------------------------------------------------
 create table if not exists public.event_ticket_tiers (
   id          uuid primary key default gen_random_uuid(),
@@ -57,8 +58,10 @@ create table if not exists public.event_ticket_tiers (
   -- feature.
   unique (event_id, name)
 );
+
 create index if not exists event_ticket_tiers_event_idx
   on public.event_ticket_tiers (event_id, sort_order) where is_active;
+
 -- 3. Keep `sold` honest -------------------------------------------------------
 -- Derived from the tickets actually issued rather than incremented by whoever
 -- remembers to. A refunded ticket frees its seat again.
@@ -91,17 +94,21 @@ begin
   return coalesce(new, old);
 end;
 $fn$;
+
 drop trigger if exists tickets_sync_tier_sold on public.tickets;
 create trigger tickets_sync_tier_sold
   after insert or update of status or delete on public.tickets
   for each row execute function public.sync_tier_sold();
+
 -- 4. RLS ----------------------------------------------------------------------
 alter table public.event_ticket_tiers enable row level security;
+
 -- Anyone may see what an event sells; that is the point of a listing.
 drop policy if exists "event_tiers_select_public" on public.event_ticket_tiers;
 create policy "event_tiers_select_public" on public.event_ticket_tiers
   for select to anon, authenticated
   using (is_active);
+
 -- Only the organiser edits their own tiers.
 drop policy if exists "event_tiers_write_organizer" on public.event_ticket_tiers;
 create policy "event_tiers_write_organizer" on public.event_ticket_tiers
@@ -114,13 +121,16 @@ create policy "event_tiers_write_organizer" on public.event_ticket_tiers
     exists (select 1 from public.events e
              where e.id = event_id and e.organizer_id = (select auth.uid()))
   );
+
 drop policy if exists "event_tiers_staff" on public.event_ticket_tiers;
 create policy "event_tiers_staff" on public.event_ticket_tiers
   for all to authenticated
   using (public.is_staff()) with check (public.is_staff());
+
 revoke all on public.event_ticket_tiers from anon, authenticated;
 grant select                 on public.event_ticket_tiers to anon, authenticated;
 grant insert, update, delete on public.event_ticket_tiers to authenticated;
+
 -- 5. `sold` is derived, so refuse client writes to it -------------------------
 -- Loud rather than silent: a client trying to set it has a bug worth surfacing.
 create or replace function public.guard_tier_cols()
@@ -133,6 +143,7 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists event_tiers_guard on public.event_ticket_tiers;
 create trigger event_tiers_guard
   before update on public.event_ticket_tiers

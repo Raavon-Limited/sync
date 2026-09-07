@@ -1,11 +1,24 @@
 /**
  * UserMenu - the signed-in avatar + dropdown. Replaces the "Sign in / Sign up"
- * buttons once a user is authenticated. Profile → /me, a role-aware dashboard
+ * buttons once a user is authenticated. Profile → /user, a role-aware dashboard
  * link, and Sign out (which clears the session and refreshes so the server
  * components re-render in the signed-out state).
  *
  * Receives a plain user summary from a server component (no client auth store
  * needed - the proxy keeps the session fresh and router.refresh() re-reads it).
+ *
+ * IT CARRIES THE ROLE SWITCHER, AND IT HAS TO.
+ *   Switching hats writes `profiles.role`, so it persists across sessions - it
+ *   is not a per-tab view. This menu had no switcher while the dashboard one
+ *   did, which made "Student" a one-way door for a multi-role account: a super
+ *   admin who put on their student hat landed on the public site, where the
+ *   only menu could no longer take it off. /admin then refused them, because
+ *   `requireStaff` and `is_staff()` read the worn role. The account still HELD
+ *   super_admin the whole time; nothing on screen could act on it.
+ *
+ *   That happened to admin@letsyncyou.com. Anywhere a hat can be put on, it
+ *   must be possible to take off - so the switcher belongs in every account
+ *   menu, not just the one behind a gate you may have just locked.
  */
 'use client';
 
@@ -22,12 +35,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/components/ui/toast';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
+import { RoleSwitcher } from './role-switcher';
 
+// Every role that can be worn, so the badge never falls through to the raw
+// column value - an admin's badge read "super_admin" before these were added.
 const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
   vendor: 'Vendor',
   landlord: 'Landlord',
+  rider: 'Rider',
+  agent: 'Agent',
+  event_manager: 'Organiser',
+  admin: 'Admin',
+  super_admin: 'Admin',
 };
 const CATEGORY_LABELS: Record<string, string> = {
   landlord: 'Landlord',
@@ -42,26 +64,39 @@ export interface UserMenuProps {
   email: string;
   initial: string;
   role?: string;
+  /** Every hat the account holds. The switcher renders nothing below two. */
+  roles?: string[];
   category?: string;
   /** Name-based dashboard handle for students/vendors (e.g. "muiz-owolabi"). */
   handle?: string;
 }
 
-export function UserMenu({ name, email, initial, role, category, handle }: UserMenuProps) {
+export function UserMenu({ name, email, initial, role, roles, category, handle }: UserMenuProps) {
   const router = useRouter();
   // Everyone gets a "Dashboard" link. Students/vendors/landlords go to their
   // name-based handle URL (/muiz-owolabi) which the proxy rewrites to the right
   // dashboard; admins to /admin; fall back to the static base per role.
   const isAdmin = role === 'admin' || role === 'super_admin';
+
+  // The no-handle fallback. It ended at '/user' for every role it did not name,
+  // so an agent without a handle was sent to a student dashboard   and WITH a
+  // handle they were sent to /<handle>, which 404'd until the proxy learned the
+  // agent rewrite (see HANDLE_DASHBOARD in proxy.ts). This is the half that
+  // does not depend on a handle existing.
+  const DASHBOARD_BY_ROLE: Record<string, string> = {
+    landlord: '/landlord',
+    vendor: '/vendor',
+    rider: '/rider',
+    agent: '/agent',
+    event_manager: '/organiser',
+    student: '/user',
+  };
+
   const dashboardHref = isAdmin
     ? '/admin'
     : handle
       ? `/${handle}`
-      : role === 'landlord'
-        ? '/landlord'
-        : role === 'vendor'
-          ? '/vendor'
-          : '/me';
+      : (role && DASHBOARD_BY_ROLE[role]) || '/user';
 
   const roleLabel = role ? (ROLE_LABELS[role] ?? role) : null;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : null;
@@ -75,7 +110,7 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
       toast(res.error);
       return;
     }
-    router.push('/');
+    router.push(AFTER_SIGN_OUT);
     router.refresh();
   }
 
@@ -104,6 +139,15 @@ export function UserMenu({ name, email, initial, role, category, handle }: UserM
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
+        {/* Renders nothing for the single-hat accounts that are the vast
+            majority, so this costs them no menu space. */}
+        {role && roles && roles.length > 0 && (
+          <>
+            <RoleSwitcher role={role} roles={roles} />
+            <DropdownMenuSeparator />
+          </>
+        )}
 
         <DropdownMenuItem asChild>
           <Link href={dashboardHref}>

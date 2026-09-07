@@ -17,12 +17,48 @@ export const email = z
  * Password: 8+ chars, must mix letters and numbers. Strength rules are
  * pragmatic for Nigerian student users - too strict and we lose signups.
  */
+/**
+ * The password rules, as DATA rather than a chain of `.regex()` calls.
+ *
+ * The signup form shows a live checklist that ticks each rule as you type. If
+ * the checklist were its own list of regexes it would drift from the schema the
+ * first time either changed, and the form would tick a rule the server then
+ * rejects. One array drives both: `password` below is built from it, and the
+ * checklist maps over the same export.
+ *
+ * Special characters INCLUDE the full stop - people reach for it first, and a
+ * rule that silently excludes it reads as broken.
+ */
+export const PASSWORD_RULES = [
+  { id: 'length', label: 'At least 8 characters', test: (v: string) => v.length >= 8 },
+  { id: 'upper', label: 'One capital letter', test: (v: string) => /[A-Z]/.test(v) },
+  { id: 'number', label: 'One number', test: (v: string) => /\d/.test(v) },
+  {
+    id: 'special',
+    label: 'One special character (. ! @ # …)',
+    test: (v: string) => /[^A-Za-z0-9]/.test(v),
+  },
+] as const;
+
+export type PasswordRule = (typeof PASSWORD_RULES)[number];
+
+/**
+ * superRefine rather than a chain of `.refine()` calls: reducing over refines
+ * needs a `z.ZodType<string>` accumulator, and that cast erases the inferred
+ * input type - `SignupInput['password']` became `unknown` and every consumer
+ * broke. This reports every unmet rule at once, which also matches the
+ * checklist: failing three rules should not surface one message.
+ */
 export const password = z
   .string()
-  .min(8, 'Use at least 8 characters')
   .max(128, 'Password is too long')
-  .regex(/[A-Za-z]/, 'Include at least one letter')
-  .regex(/\d/, 'Include at least one number');
+  .superRefine((value, ctx) => {
+    for (const rule of PASSWORD_RULES) {
+      if (!rule.test(value)) {
+        ctx.addIssue({ code: 'custom', message: rule.label });
+      }
+    }
+  });
 
 /** Nigerian phone - accepts +2348012345678 / 08012345678 / 8012345678. */
 export const nigerianPhone = z

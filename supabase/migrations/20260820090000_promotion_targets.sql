@@ -28,10 +28,13 @@
 
 alter table public.promotions
   add column if not exists listing_id uuid references public.listings (id) on delete cascade;
+
 comment on column public.promotions.listing_id is
   'Listing this campaign promotes. NULL = store-wide. Ownership enforced by trigger.';
+
 create index if not exists promotions_listing_idx
   on public.promotions (listing_id) where listing_id is not null;
+
 -- ── A vendor may only promote their own listing ─────────────────────────────
 create or replace function public.guard_promotion_listing_owner()
 returns trigger
@@ -62,10 +65,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists promotions_guard_listing_owner on public.promotions;
 create trigger promotions_guard_listing_owner
   before insert or update on public.promotions
   for each row execute function public.guard_promotion_listing_owner();
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

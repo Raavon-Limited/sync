@@ -29,25 +29,72 @@ export type Trade = (typeof TRADES)[number];
 
 export const signupSchema = z
   .object({
-    role: z.enum(['student', 'vendor'], { message: 'Choose an account type' }),
+    /**
+     * `rider` is a first-class signup choice, not a role you upgrade into.
+     *
+     * The database has accepted it since 20260901210000   handle_new_user
+     * clamps the metadata role against a list that already includes it   and
+     * the proxy has gated /rider since before those screens existed. Only this
+     * enum and the form above it were still saying student-or-vendor, which is
+     * why the sole way to become a rider was to sign up as something else
+     * first.
+     */
+    // 'creator' is deliberately absent: it is still shown as "Not yet" on the
+    // form, and a role the form will not offer must not be a role the schema
+    // will accept - the enum is the last line of defence if a disabled card
+    // ever becomes clickable.
+    role: z.enum(['student', 'vendor', 'rider', 'event_manager'], {
+      message: 'Choose an account type',
+    }),
     fullName: displayName,
     email,
     phone: nigerianPhone,
     password,
     confirmPassword: z.string(),
-    acceptedTerms: z
-      .boolean()
-      .refine((v) => v === true, 'You must accept the terms to continue'),
+    acceptedTerms: z.boolean().refine((v) => v === true, 'You must accept the terms to continue'),
     // Vendor-only. Required when role === 'vendor' (see superRefine); `trade` is
     // required only when the chosen category is 'tradesman'.
     vendorCategory: z.enum(VENDOR_CATEGORIES).optional(),
     trade: z.enum(TRADES).optional(),
+    /**
+     * Student-only: which campus they are at, as a `campuses.id`.
+     *
+     * A school id rather than a typed name, because the campus ADDRESS and
+     * coordinates hang off the school row - see the student-campus migration. Asking
+     * students to type it would produce four spellings of KWASU and no address
+     * at all.
+     *
+     * Deliberately NOT asked of vendors. Their business address is collected
+     * properly in the onboarding wizard (step 2), and asking twice in two
+     * places is how the two answers end up disagreeing.
+     */
+    campusId: z.string().uuid().optional(),
+    /**
+     * The university as TYPED, when it is not one we have a row for.
+     *
+     * The seeded list is broad but explicitly not the complete NUC register, so
+     * a gap in our data must never be the reason someone cannot sign up. This
+     * is kept and becomes the demand signal for where to expand.
+     */
+    campusOther: z.string().trim().min(2).max(160).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
   .superRefine((d, ctx) => {
+    if (d.role === 'student') {
+      // EITHER is enough: a picked campus, or one they typed that we do not
+      // have. Requiring the id would make an incomplete seed a hard blocker.
+      if (!d.campusId && !d.campusOther) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Tell us your university',
+          path: ['campusOther'],
+        });
+      }
+      return;
+    }
     if (d.role !== 'vendor') return;
     if (!d.vendorCategory) {
       ctx.addIssue({ code: 'custom', message: 'Select what you offer', path: ['vendorCategory'] });

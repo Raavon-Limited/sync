@@ -5,21 +5,21 @@
 --
 -- WHY THIS IS ITS OWN MIGRATION AND NOT AN EDIT TO 20260901090000
 --   That file had already run. A migration is a record of what happened to a
---   database, so editing an applied one changes the repo and nothing else —
+--   database, so editing an applied one changes the repo and nothing else  
 --   the scope list in `private.storefront_scope_names()` would still have four
 --   entries in every environment that ran it, and `create_storefront_invite`
 --   would keep refusing with "Unknown section: promotions" while the code said
 --   it was supported. Which is exactly what it did.
 --
 -- 'promotions' IS THE ONE SCOPE THAT IS NOT PER STORE
---   `promotions.vendor_id` references `vendor_profiles` — a campaign belongs to
+--   `promotions.vendor_id` references `vendor_profiles`   a campaign belongs to
 --   the BUSINESS, not to a location, so there is no such thing as a Tanke-only
 --   discount today. Granting this at one store therefore lets that person
 --   create a discount every store honours. That is a real consequence and the
 --   picker says "all your stores" on the row because of it.
 --
 --   Making it per store instead would mean a `storefront_id` on `promotions`
---   and a checkout that knows which campaigns a store honours — a different
+--   and a checkout that knows which campaigns a store honours   a different
 --   migration, and the README already lists it as not in scope yet.
 --
 -- WHAT IT STILL CANNOT REACH
@@ -32,7 +32,7 @@
 -- EXISTING STAFF DO NOT GET IT.
 --   The column default set in 20260901090000 was the four store scopes, which
 --   is what everyone already hired holds. Adding 'promotions' to that default
---   now would silently widen every current manager's access on deploy — a
+--   now would silently widen every current manager's access on deploy   a
 --   widening dressed up as a migration. The owner grants it deliberately or
 --   not at all.
 --
@@ -54,6 +54,7 @@ language sql
 immutable
 set search_path = ''
 as $fn$ select array['orders', 'listings', 'inbox', 'store', 'promotions']::text[] $fn$;
+
 -- The CHECKs are spelled out rather than calling the function above: a CHECK
 -- that depends on a function has to be dropped to be changed, and pg_dump has
 -- to reload the two in the right order. The function stays the one definition
@@ -63,11 +64,13 @@ alter table public.storefront_staff
   add  constraint storefront_staff_scopes_check
        check (cardinality(scopes) > 0
               and scopes <@ array['orders', 'listings', 'inbox', 'store', 'promotions']::text[]);
+
 alter table public.storefront_invites
   drop constraint if exists storefront_invites_scopes_check,
   add  constraint storefront_invites_scopes_check
        check (cardinality(scopes) > 0
               and scopes <@ array['orders', 'listings', 'inbox', 'store', 'promotions']::text[]);
+
 -- ── 2. The brand-level permission question ──────────────────────────────────
 -- The sibling of private.storefront_scope(): "may you do this ANYWHERE for
 -- this business?" It exists because a campaign has no store to belong to, so
@@ -101,9 +104,12 @@ as $fn$
               and p_scope = any (st.scopes)
          );
 $fn$;
+
 grant execute on function private.business_scope(uuid, uuid, text) to authenticated, service_role;
+
 comment on function private.business_scope(uuid, uuid, text) is
-  'Whether a user may do something brand-wide for a business: the owner, or staff granted that scope at any of its stores. For promotions only — money tables must never consult it.';
+  'Whether a user may do something brand-wide for a business: the owner, or staff granted that scope at any of its stores. For promotions only   money tables must never consult it.';
+
 -- ── 3. Let the grant actually open something ────────────────────────────────
 -- The public read policy (live campaigns, visible to shoppers) is untouched.
 drop policy if exists "promotions_write_own" on public.promotions;
@@ -111,6 +117,7 @@ create policy "promotions_write_own" on public.promotions
   for all to authenticated
   using       (private.business_scope(vendor_id, (select auth.uid()), 'promotions'))
   with check  (private.business_scope(vendor_id, (select auth.uid()), 'promotions'));
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

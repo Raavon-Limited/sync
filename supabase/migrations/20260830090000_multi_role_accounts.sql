@@ -10,8 +10,8 @@
 --   actively removes your vendor role when you become a landlord.
 --
 -- THE SHAPE OF THE FIX
---   `roles`  — every hat you HOLD.
---   `role`   — the hat you are WEARING right now.
+--   `roles`    every hat you HOLD.
+--   `role`     the hat you are WEARING right now.
 --
 --   Keeping `role` as the active hat is the whole trick. `current_app_role()`,
 --   `has_role()`, `is_staff()`, every RLS policy and the proxy all read `role`
@@ -34,7 +34,7 @@
 -- STUDENT + ONE BUSINESS
 --   Deliberately constrained. You may hold any number of roles but at most one
 --   BUSINESS role, because a business role owns a `vendor_profiles` row and
---   that table is keyed `id primary key references profiles(id)` — one
+--   that table is keyed `id primary key references profiles(id)`   one
 --   business per person. Allowing {vendor, landlord} here would let someone
 --   into a state the business table cannot represent.
 --
@@ -51,13 +51,16 @@
 
 alter table public.profiles
   add column if not exists roles text[] not null default '{}';
+
 -- Everyone currently holds exactly the hat they are wearing.
 update public.profiles set roles = array[role] where roles = '{}';
+
 -- The active role must be one you hold. Without this, `role` and `roles` can
 -- drift and the switcher offers hats that the gate then refuses.
 alter table public.profiles drop constraint if exists profiles_active_role_is_held;
 alter table public.profiles add constraint profiles_active_role_is_held
   check (role = any (roles));
+
 -- The business roles, in one place, so the constraint, the trigger and
 -- claim_role cannot disagree about what counts as one.
 create or replace function public.business_role_count(p_roles text[])
@@ -71,6 +74,7 @@ as $$
                   where r in ('vendor', 'landlord', 'rider'))
          );
 $$;
+
 -- At most one business role. See the header for why, and for what has to
 -- change before this can be loosened.
 --
@@ -80,7 +84,9 @@ $$;
 alter table public.profiles drop constraint if exists profiles_one_business_role;
 alter table public.profiles add constraint profiles_one_business_role
   check (public.business_role_count(roles) <= 1);
+
 create index if not exists profiles_roles_idx on public.profiles using gin (roles);
+
 -- ── Wearing a different hat ─────────────────────────────────────────────────
 create or replace function public.switch_role(p_role text)
 returns text
@@ -109,11 +115,12 @@ begin
   return p_role;
 end;
 $fn$;
+
 -- ── Taking on a new hat ─────────────────────────────────────────────────────
 -- Self-service, because signing up as a vendor already is: onboarding creates
 -- the vendor_profiles row and the role that goes with it. Being a vendor grants
--- no access to anyone else's data — every vendor policy is `auth.uid() =
--- vendor_id` — so this widens nothing.
+-- no access to anyone else's data   every vendor policy is `auth.uid() =
+-- vendor_id`   so this widens nothing.
 --
 -- Staff roles are excluded outright. `create_admin` exists for those and is
 -- service-role only.
@@ -157,14 +164,17 @@ begin
   return v_roles;
 end;
 $fn$;
+
 revoke all on function public.switch_role(text) from public, anon;
 revoke all on function public.claim_role(text)  from public, anon;
 grant execute on function public.switch_role(text) to authenticated;
 grant execute on function public.claim_role(text)  to authenticated;
+
 comment on function public.switch_role(text) is
   'Set the caller''s ACTIVE role to one they already hold. Refuses anything not in profiles.roles, which is what stops it being a self-service escalation.';
 comment on function public.claim_role(text) is
   'Add a role to the caller''s own set. Student/vendor/landlord/rider only, at most one business role. Idempotent.';
+
 -- ── The landlord trigger has to stop clobbering the active role ─────────────
 -- 20260828090000 flipped `role` between vendor and landlord to match
 -- vendor_category. With a role SET that is wrong twice over: it would rewrite
@@ -216,10 +226,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists profiles_sync_landlord_role on public.profiles;
 create trigger profiles_sync_landlord_role
   before insert or update of role, vendor_category, roles on public.profiles
   for each row execute function public.sync_landlord_role();
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare

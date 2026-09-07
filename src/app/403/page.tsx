@@ -18,7 +18,7 @@ export default function ForbiddenPage() {
         This page isn&rsquo;t for your account type.
       </h1>
       <p className="text-content-muted max-w-md text-sm">
-        Vendors, landlords, students, and admins each have their own space. Head back to yours.
+        Vendors, landlords, students, riders, organisers and admins each have their own space. Head back to yours.
       </p>
       <Button asChild>
         <Link href="/">Take me home</Link>

@@ -82,4 +82,5 @@ begin
    where id = p_storefront_id;
 end;
 $fn$;
+
 grant execute on function public.set_primary_storefront(uuid) to authenticated, service_role;

@@ -10,6 +10,7 @@
  */
 import { MarketingHeader } from './marketing-header';
 import { ServicesDock } from './services-dock';
+import { AppFooter } from './app-footer';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 
@@ -26,11 +27,16 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <MarketingHeader dockMode />
       <ServicesDock role={role} />
 
-      <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-6 pb-24 md:px-6 md:pb-12">
+      <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-6 pb-10 md:px-6 md:pb-12">
         {children}
       </main>
 
-      {/* Chat float - signed-in users only. */}
+      {/* Site + legal links, unreachable from the signed-in shell until now.
+          dockOffset clears the fixed mobile ServicesDock. */}
+      <AppFooter dockOffset />
+
+      {/* Live messaging, signed-in only. Mounted per shell rather than in root
+          Providers so a signed-out visitor never opens a Realtime channel. */}
       {user && <ChatWidget />}
     </div>
   );

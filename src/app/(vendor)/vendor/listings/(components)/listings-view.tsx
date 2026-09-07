@@ -15,7 +15,7 @@ import { Listing } from '@/modules/vendor/types';
 
 const statusStyle: Record<Listing['status'], string> = {
   Active: 'bg-green-100 text-green-700',
-  Archived: 'bg-ink/8 text-ink',
+  Archived: 'bg-ink/8 text-content',
   'Out of Stock': 'bg-red-100 text-red-600',
 };
 
@@ -55,7 +55,7 @@ export function ListingListView({
         <TableBody>
           {listings.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-muted h-24 text-center">
+              <TableCell colSpan={7} className="text-content-muted h-24 text-center">
                 No listings found.
               </TableCell>
             </TableRow>
@@ -85,22 +85,22 @@ export function ListingListView({
                       </svg>
                     )}
                   </div>
-                  <p className="text-ink text-sm font-medium">{listing.name}</p>
+                  <p className="text-content text-sm font-medium">{listing.name}</p>
                 </div>
               </TableCell>
-              <TableCell className="text-muted text-sm">{listing.category}</TableCell>
-              <TableCell className="text-ink text-sm font-semibold">
+              <TableCell className="text-content-muted text-sm">{listing.category}</TableCell>
+              <TableCell className="text-content text-sm font-semibold">
                 ₦{listing.price.toLocaleString()}
               </TableCell>
               <TableCell
                 className={cn(
                   'text-sm font-medium',
-                  listing.stock === 0 ? 'text-red-500' : 'text-ink',
+                  listing.stock === 0 ? 'text-red-500' : 'text-content',
                 )}
               >
                 {listing.stock}
               </TableCell>
-              <TableCell className="text-muted text-sm">{listing.sold}</TableCell>
+              <TableCell className="text-content-muted text-sm">{listing.sold}</TableCell>
               <TableCell>
                 <span
                   className={cn(
@@ -115,21 +115,21 @@ export function ListingListView({
                 <div className="flex items-center justify-end gap-3">
                   <button
                     onClick={() => onEdit(listing)}
-                    className="text-muted hover:text-ink transition-colors"
+                    className="text-content-muted hover:text-content transition-colors"
                     title="Edit"
                   >
                     <Pencil className="size-4" />
                   </button>
                   <button
                     onClick={() => onDuplicate(listing)}
-                    className="text-muted hover:text-ink transition-colors"
+                    className="text-content-muted hover:text-content transition-colors"
                     title="Duplicate"
                   >
                     <Copy className="size-4" />
                   </button>
                   <button
                     onClick={() => onDelete(listing)}
-                    className="text-muted transition-colors hover:text-red-500"
+                    className="text-content-muted transition-colors hover:text-red-500"
                     title="Delete"
                   >
                     <Trash2 className="size-4" />

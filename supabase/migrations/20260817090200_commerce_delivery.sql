@@ -14,7 +14,7 @@
 --
 -- THE LOCATION PRIVACY PROBLEM
 --   A student must see their rider's position, but only while that rider is
---   carrying their order — not before, not after, and never for other riders.
+--   carrying their order   not before, not after, and never for other riders.
 --   A standing read grant on rider_profiles.current_geo would leak every rider's
 --   live position to everyone. Solved below with `active_delivery_positions`, a
 --   security_invoker view whose predicate ties visibility to an in-flight
@@ -39,9 +39,11 @@ create table if not exists public.carts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 create unique index if not exists carts_one_open_per_vendor_idx
   on public.carts (student_id, vendor_id)
   where status = 'open';
+
 create table if not exists public.cart_items (
   id         uuid primary key default gen_random_uuid(),
   cart_id    uuid not null references public.carts (id) on delete cascade,
@@ -56,10 +58,12 @@ create table if not exists public.cart_items (
   updated_at timestamptz not null default now(),
   unique (cart_id, listing_id)
 );
+
 create index if not exists cart_items_cart_idx on public.cart_items (cart_id);
+
 -- ── 2. Favorites ────────────────────────────────────────────────────────────
 -- Polymorphic by design: /food/favorites saves vendors AND dishes, and the same
--- table serves events later. `saved_hostels` (0006) stays as-is — it predates
+-- table serves events later. `saved_hostels` (0006) stays as-is   it predates
 -- this and rewriting it would be churn for no gain.
 create table if not exists public.favorites (
   id           uuid primary key default gen_random_uuid(),
@@ -69,7 +73,9 @@ create table if not exists public.favorites (
   created_at   timestamptz not null default now(),
   unique (user_id, entity_type, entity_id)
 );
+
 create index if not exists favorites_user_idx on public.favorites (user_id, entity_type);
+
 -- ── 3. Order event log ──────────────────────────────────────────────────────
 -- Same reasoning as service_request_events: the tracking screen needs an
 -- ordered history, not a single mutable status.
@@ -82,7 +88,9 @@ create table if not exists public.order_events (
   note        text,
   created_at  timestamptz not null default now()
 );
+
 create index if not exists order_events_order_idx on public.order_events (order_id, created_at);
+
 create or replace function public.log_order_event()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -96,10 +104,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists orders_log_event on public.orders;
 create trigger orders_log_event
   after insert or update on public.orders
   for each row execute function public.log_order_event();
+
 -- ── 4. Deliveries ───────────────────────────────────────────────────────────
 create table if not exists public.deliveries (
   id            uuid primary key default gen_random_uuid(),
@@ -125,7 +135,7 @@ create table if not exists public.deliveries (
   fee_kobo         bigint  not null default 0 check (fee_kobo >= 0),
 
   -- §24: a delivery is confirmed by a code the student reads out, with a manual
-  -- fallback. Stored hashed — a leaked table must not let anyone close out
+  -- fallback. Stored hashed   a leaked table must not let anyone close out
   -- deliveries they never made.
   confirmation_code_hash text,
   confirmed_by           text check (confirmed_by in ('code', 'manual', 'auto')),
@@ -137,10 +147,12 @@ create table if not exists public.deliveries (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
 create index if not exists deliveries_rider_idx on public.deliveries (rider_id, status);
 create index if not exists deliveries_open_idx  on public.deliveries (created_at)
   where status in ('pending', 'offered');
--- ── 5. Delivery offers — the acceptance race ────────────────────────────────
+
+-- ── 5. Delivery offers   the acceptance race ────────────────────────────────
 -- §24 warns about two riders accepting the same job. The unique index on
 -- (delivery_id) where accepted is the fix: the second accept violates the
 -- constraint and loses, deterministically, in the database rather than in a
@@ -156,11 +168,14 @@ create table if not exists public.delivery_offers (
   expires_at  timestamptz not null default now() + interval '60 seconds',
   unique (delivery_id, rider_id)
 );
+
 create unique index if not exists delivery_offers_one_accepted_idx
   on public.delivery_offers (delivery_id)
   where status = 'accepted';
+
 create index if not exists delivery_offers_rider_open_idx
   on public.delivery_offers (rider_id, status) where status = 'offered';
+
 -- ── 6. Live rider position, scoped to an active delivery ────────────────────
 -- security_invoker so the caller's own RLS applies to the underlying tables,
 -- and the predicate limits rows to deliveries the caller is party to and that
@@ -177,8 +192,10 @@ select
 from public.deliveries d
 join public.rider_profiles rp on rp.id = d.rider_id
 where d.status in ('assigned', 'picked_up', 'delivering');
+
 comment on view public.active_delivery_positions is
   'Rider location, visible only while a delivery is in flight. Never expose rider_profiles.current_geo directly.';
+
 -- ── 7. Guards ───────────────────────────────────────────────────────────────
 -- A rider must not set their own fee, and neither party may rewrite the code
 -- hash or backdate a delivery.
@@ -193,10 +210,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists deliveries_guard on public.deliveries;
 create trigger deliveries_guard
   before update on public.deliveries
   for each row execute function public.guard_delivery_cols();
+
 -- Cart items must not be repriced by the client after the fact.
 create or replace function public.guard_cart_item_cols()
 returns trigger language plpgsql as $$
@@ -208,10 +227,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists cart_items_guard on public.cart_items;
 create trigger cart_items_guard
   before update on public.cart_items
   for each row execute function public.guard_cart_item_cols();
+
 -- ── 8. RLS ──────────────────────────────────────────────────────────────────
 alter table public.carts           enable row level security;
 alter table public.cart_items      enable row level security;
@@ -219,11 +240,13 @@ alter table public.favorites       enable row level security;
 alter table public.order_events    enable row level security;
 alter table public.deliveries      enable row level security;
 alter table public.delivery_offers enable row level security;
+
 drop policy if exists "carts_own" on public.carts;
 create policy "carts_own" on public.carts
   for all to authenticated
   using ((select auth.uid()) = student_id)
   with check ((select auth.uid()) = student_id);
+
 drop policy if exists "cart_items_own" on public.cart_items;
 create policy "cart_items_own" on public.cart_items
   for all to authenticated
@@ -231,11 +254,13 @@ create policy "cart_items_own" on public.cart_items
                   where c.id = cart_id and c.student_id = (select auth.uid())))
   with check (exists (select 1 from public.carts c
                        where c.id = cart_id and c.student_id = (select auth.uid())));
+
 drop policy if exists "favorites_own" on public.favorites;
 create policy "favorites_own" on public.favorites
   for all to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
 -- Order history: both parties, plus the assigned rider (who needs to see the
 -- order progress to know when to collect).
 drop policy if exists "order_events_select" on public.order_events;
@@ -247,6 +272,7 @@ create policy "order_events_select" on public.order_events
      where o.id = order_id
        and (select auth.uid()) in (o.student_id, o.vendor_id, d.rider_id)
   ));
+
 -- Deliveries: student and vendor of the order, plus the assigned rider.
 drop policy if exists "deliveries_select_party" on public.deliveries;
 create policy "deliveries_select_party" on public.deliveries
@@ -257,6 +283,7 @@ create policy "deliveries_select_party" on public.deliveries
                 where o.id = order_id
                   and (select auth.uid()) in (o.student_id, o.vendor_id))
   );
+
 -- Only the assigned rider advances a delivery. The vendor does not mark it
 -- delivered, and the student certainly does not.
 drop policy if exists "deliveries_update_rider" on public.deliveries;
@@ -264,19 +291,23 @@ create policy "deliveries_update_rider" on public.deliveries
   for update to authenticated
   using ((select auth.uid()) = rider_id)
   with check ((select auth.uid()) = rider_id);
+
 drop policy if exists "deliveries_staff" on public.deliveries;
 create policy "deliveries_staff" on public.deliveries
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
--- A rider sees only their own offers — never the pool, which would leak demand
+
+-- A rider sees only their own offers   never the pool, which would leak demand
 -- patterns and let a rider enumerate other riders' work.
 drop policy if exists "delivery_offers_own" on public.delivery_offers;
 create policy "delivery_offers_own" on public.delivery_offers
   for select to authenticated using ((select auth.uid()) = rider_id);
+
 drop policy if exists "delivery_offers_respond" on public.delivery_offers;
 create policy "delivery_offers_respond" on public.delivery_offers
   for update to authenticated
   using ((select auth.uid()) = rider_id and status = 'offered')
   with check ((select auth.uid()) = rider_id);
+
 -- ── 9. Grants ───────────────────────────────────────────────────────────────
 revoke all on public.carts           from anon, authenticated;
 revoke all on public.cart_items      from anon, authenticated;
@@ -284,6 +315,7 @@ revoke all on public.favorites       from anon, authenticated;
 revoke all on public.order_events    from anon, authenticated;
 revoke all on public.deliveries      from anon, authenticated;
 revoke all on public.delivery_offers from anon, authenticated;
+
 grant select, insert, update, delete on public.carts      to authenticated;
 grant select, insert, update, delete on public.cart_items to authenticated;
 grant select, insert, delete         on public.favorites  to authenticated;
@@ -291,6 +323,7 @@ grant select                         on public.order_events    to authenticated;
 grant select, update                 on public.deliveries      to authenticated;
 grant select, update                 on public.delivery_offers to authenticated;
 grant select                         on public.active_delivery_positions to authenticated;
+
 -- ── 10. Verify ──────────────────────────────────────────────────────────────
 do $$
 begin

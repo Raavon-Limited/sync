@@ -68,7 +68,7 @@ export function UserCard({ user: u, isSuperAdmin, onView, onPatch, onRemove }: P
               {initials(u.full_name)}
             </div>
             <div>
-              <p className="font-display text-content text-[0.9375rem] font-bold leading-tight">{u.full_name ?? '—'}</p>
+              <p className="font-display text-content text-[0.9375rem] font-bold leading-tight">{u.full_name ?? ' '}</p>
               <p className="text-content-muted text-xs mt-0.5">USR-{u.id.slice(-4).toUpperCase()}</p>
             </div>
           </div>

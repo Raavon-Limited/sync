@@ -66,7 +66,7 @@ export function ListingFilters({
 
           {/* Search */}
           <div className="relative w-full lg:max-w-md">
-            <Search className="text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-content-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 
             <Input
               value={searchValue}

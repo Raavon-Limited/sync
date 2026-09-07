@@ -85,6 +85,7 @@ insert into public.listing_categories (vendor_category, name, slug, sort_order) 
   ('electronics', 'Gaming',     'gaming',     102),
   ('electronics', 'Storage',    'storage',    103)
 on conflict do nothing;
+
 -- ── Verify: every ACTIVE vendor type has somewhere to file a listing ────────
 do $$
 declare

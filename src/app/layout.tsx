@@ -9,11 +9,17 @@
  * - Every route group ((marketing) / (auth) / (app) / (vendor) / (admin))
  *   gets its own nested layout that adds its specific shell on top of this.
  */
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/providers';
+import { listAreas } from '@/modules/areas/queries';
+import { getCurrentUser } from '@/modules/auth/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
+import { SmoothScroll } from '@/components/layouts/smooth-scroll';
+import { RegisterSW } from '@/components/pwa/register-sw';
+import { InstallGate } from '@/components/pwa/install-gate';
+import { Cursor } from '@/components/ui/cursor';
 
 const bricolage = Bricolage_Grotesque({
   variable: '--font-bricolage',
@@ -40,13 +46,54 @@ export const metadata: Metadata = {
   },
   description:
     'Sync is the verified marketplace for Nigerian student life - hostels, food, events, beauty, trades, laundry and more, all in one place.',
+
+  // iOS ignores the manifest's icons for the home screen and reads this instead.
+  icons: { apple: '/apple-touch-icon.png' },
+  appleWebApp: {
+    // Makes an iOS home-screen launch open without Safari chrome, the same way
+    // display:'standalone' does on Android.
+    capable: true,
+    title: 'Sync',
+    // 'default' keeps the status bar readable on the dark shell. 'black-translucent'
+    // would let content slide under the notch.
+    statusBarStyle: 'default',
+  },
 };
 
-export default function RootLayout({
+/**
+ * Viewport is a SEPARATE export in the App Router - a themeColor set inside
+ * the `metadata` export is ignored (and warns at build time).
+ *
+ * themeColor tints the Android status bar and the iOS home-screen splash to
+ * match --color-ink, so launching the installed app doesn't flash white.
+ * viewportFit:'cover' plus the safe-area insets the layout already uses is what
+ * keeps the bottom tab bar clear of the iPhone home indicator.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4f1e8' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e0e12' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetched here, not in each shell, so the single root LocationProvider has the
+  // real list on first paint. listAreas() is React-cached (one query per
+  // request) and falls back to the built-in list if Supabase is unreachable.
+  // Both reads are independent, so fire them together. `user` MUST come from
+  // the server: the browser's Supabase client does not learn about a
+  // server-action sign-in, so anything asking the client first paints as
+  // signed-out. It seeds SessionProvider (so no screen contradicts the header)
+  // and decides whether the InstallGate renders.
+  const [areas, user] = await Promise.all([listAreas(), getCurrentUser()]);
+
   return (
     <html
       lang="en"
@@ -64,7 +111,27 @@ export default function RootLayout({
       </head>
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
-        <Providers>{children}</Providers>
+        <RegisterSW />
+        {/* Wraps the page content only. BootSplash, InstallGate and the rest
+            below are fixed overlays that must not be inside the scroll
+            container Lenis drives. */}
+        <SmoothScroll>
+          <Providers areas={areas} user={user}>
+            {children}
+          </Providers>
+        </SmoothScroll>
+        {/* Renders only in a browser tab, only when signed out, and only on a
+            route outside WEB_ROUTES.
+
+            `signedIn` is resolved HERE, on the server. The gate briefly read it
+            from useSession() instead, which made it cover the dashboard of a
+            user who had just logged in: `signIn` is a server action, so the
+            cookies are written server-side and the browser client never fires
+            onAuthStateChange - the client session stayed null until a reload.
+            The server has the answer before any of this renders. */}
+        <InstallGate signedIn={!!user} />
+        {/* Renders nothing on touch devices or under reduced motion. */}
+        <Cursor />
       </body>
     </html>
   );

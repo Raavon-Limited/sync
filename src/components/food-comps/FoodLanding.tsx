@@ -16,6 +16,7 @@ import DrinkOne from '@/assets/images/Food-Pics/Drinks/DrinkOne.avif'
 import BreakFastOne from '@/assets/images/Food-Pics/BreakFast/BreakFastOne.webp'
 import PremiumOne from '@/assets/images/BBQ and cravings.webp'
 import PremiumTwo from '@/assets/images/See lagos.webp'
+import { DoodleBackdrop } from '@/components/shared/doodle-backdrop'
 
 interface Props {
     onExplore: () => void
@@ -74,7 +75,14 @@ export default function FoodLanding({ onExplore, userName = 'Abdulmuiz' }: Props
             </div>
 
             {/* ── Scrollable bottom sheet ── */}
-            <div className="bg-panel rounded-t-3xl flex-1 overflow-y-auto">
+            <div className="bg-panel rounded-t-3xl flex-1 overflow-y-auto relative isolate">
+                {/* This screen is a `fixed inset-0` overlay, so it sits outside
+                    the food layout's wrapper and needs its own copy. */}
+                <DoodleBackdrop
+                    art="food"
+                    tile={520}
+                    className="text-ink/4 dark:text-cream/4"
+                />
                 <div className="px-5 pt-6 pb-10 flex flex-col gap-6">
 
                     {/* Heading */}
@@ -84,7 +92,7 @@ export default function FoodLanding({ onExplore, userName = 'Abdulmuiz' }: Props
                             <span className="text-lime-deep dark:text-lime">delicacies</span>
                         </h1>
                         <p className="text-sm text-content-muted leading-relaxed">
-                            Campus food, ordered fast. From jollof to burgers —
+                            Campus food, ordered fast. From jollof to burgers  
                             everything you crave, delivered to your door.
                         </p>
                     </div>

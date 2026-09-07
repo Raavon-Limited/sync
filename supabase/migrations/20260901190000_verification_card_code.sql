@@ -2,19 +2,19 @@
 -- verification_card_code
 --
 -- The ID card stops being addressed by slug and starts being addressed by an
--- unguessable code — because the page it opens now shows a photograph of a
+-- unguessable code   because the page it opens now shows a photograph of a
 -- person.
 --
--- "ONLY REACHABLE BY SCANNING" — WHAT THAT CAN AND CANNOT MEAN
+-- "ONLY REACHABLE BY SCANNING"   WHAT THAT CAN AND CANNOT MEAN
 --   A QR code is a picture of a URL. Nothing in an HTTP request distinguishes
 --   "a camera decoded this" from "somebody typed it", and every signal that
---   looks like it might — Referer, User-Agent — is absent on a camera open and
+--   looks like it might   Referer, User-Agent   is absent on a camera open and
 --   trivially forged everywhere else. Trying to enforce arrival-by-camera
 --   produces a check that blocks real users and stops nobody.
 --
 --   What genuinely delivers the property is making the URL impossible to
 --   arrive at any other way. `/v/raavon-limited` is guessable from a business
---   name — anyone could walk the slug list and harvest faces. `/v/<32 random
+--   name   anyone could walk the slug list and harvest faces. `/v/<32 random
 --   hex>` cannot be guessed, is not indexed, and appears nowhere but on the
 --   card itself. Possession of the card becomes the thing that grants access,
 --   which is exactly what "only by scanning" is asking for.
@@ -24,7 +24,7 @@
 --   already public. An agent's card answers "is the stranger asking to be let
 --   into my flat the person the platform sent", and it is checked by someone
 --   alone with them at a door. That is a safety check, and the photograph is
---   the part doing the work — a name and a tick could belong to anybody
+--   the part doing the work   a name and a tick could belong to anybody
 --   holding the card.
 --
 -- THE CODE IS ROTATABLE, AND THAT IS NOT OPTIONAL
@@ -34,7 +34,7 @@
 --   card stops resolving, immediately.
 --
 -- WHAT THE PAGE DISCLOSES, AND WHAT IT DOES NOT
---   Name, photo, category, area, verification state, and WHICH checks passed —
+--   Name, photo, category, area, verification state, and WHICH checks passed  
 --   by requirement name only ('Government ID', 'Proof of address'). Never the
 --   documents, never a storage path, never the document titles, which are
 --   user-supplied filenames and routinely contain a full legal name. The
@@ -52,7 +52,7 @@
 -- ============================================================================
 
 -- ── 1. The code ─────────────────────────────────────────────────────────────
--- 32 hex characters — 128 bits, the same construction as storefront_invites'
+-- 32 hex characters   128 bits, the same construction as storefront_invites'
 -- token, using gen_random_uuid() because pgcrypto is never declared by this
 -- schema. Short enough that the QR stays a low, dense-free version.
 -- IT LIVES IN `private`, NOT ON `vendor_profiles`. This began as a column plus
@@ -62,7 +62,7 @@
 --   1. 20260817090000 granted SELECT on the whole TABLE to anon. Postgres is
 --      explicit that a column-level revoke does not claw back a table-level
 --      grant, so the revoke was a no-op and anon could read every code. This
---      migration's own assertion caught it — correctly.
+--      migration's own assertion caught it   correctly.
 --
 --   2. Narrowing it properly means revoking the table grant and granting an
 --      explicit column list instead. That breaks `select('*')`, which three
@@ -75,7 +75,7 @@
 -- schema at all, and the SECURITY DEFINER functions below reach it regardless.
 --
 -- IT ALSO FIXES A SILENT NO-OP. `rotate_verification_code` is SECURITY DEFINER
--- and used to UPDATE vendor_profiles — where guard_vendor_profile_cols reverts
+-- and used to UPDATE vendor_profiles   where guard_vendor_profile_cols reverts
 -- the column whenever `current_user` is 'authenticated'. As 20260830100000
 -- documents at length, current_user IS 'authenticated' for every PostgREST
 -- request, definer RPCs included. Rotation therefore returned a fresh code and
@@ -86,12 +86,15 @@ create table if not exists private.vendor_card_codes (
   code       text not null unique default replace(gen_random_uuid()::text, '-', ''),
   rotated_at timestamptz not null default now()
 );
+
 comment on table private.vendor_card_codes is
   'Opaque address of each account''s public verification card. A capability: possession of the code opens the card page, so it never travels with a profile read. Rotate to invalidate printed cards.';
+
 -- Everyone who already has a profile gets a card.
 insert into private.vendor_card_codes (vendor_id)
 select vp.id from public.vendor_profiles vp
 on conflict (vendor_id) do nothing;
+
 -- And everyone who gets one from here on.
 create or replace function private.issue_vendor_card_code()
 returns trigger language plpgsql security definer set search_path = '' as $fn$
@@ -102,13 +105,15 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists vendor_profiles_issue_card_code on public.vendor_profiles;
 create trigger vendor_profiles_issue_card_code
   after insert on public.vendor_profiles
   for each row execute function private.issue_vendor_card_code();
+
 -- ── 2. Keeping the client off it ────────────────────────────────────────────
 -- Same guard as the other server-controlled columns. Without this a vendor
--- could set their own code — to a guessable string, or to one that collides
+-- could set their own code   to a guessable string, or to one that collides
 -- with the card they are trying to impersonate.
 create or replace function public.guard_vendor_profile_cols()
 returns trigger language plpgsql as $$
@@ -126,10 +131,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists vendor_profiles_guard on public.vendor_profiles;
 create trigger vendor_profiles_guard
   before update on public.vendor_profiles
   for each row execute function public.guard_vendor_profile_cols();
+
 -- ── 3. Reading your own code, to put it on your card ────────────────────────
 create or replace function public.my_verification_code()
 returns text
@@ -142,8 +149,10 @@ as $fn$
     from private.vendor_card_codes c
    where c.vendor_id = (select auth.uid());
 $fn$;
+
 revoke all on function public.my_verification_code() from public, anon;
 grant execute on function public.my_verification_code() to authenticated, service_role;
+
 -- ── 4. Invalidating every card already printed ──────────────────────────────
 create or replace function public.rotate_verification_code()
 returns text
@@ -178,14 +187,18 @@ begin
   return v_new;
 end;
 $fn$;
+
 revoke all on function public.rotate_verification_code() from public, anon;
 grant execute on function public.rotate_verification_code() to authenticated, service_role;
+
 comment on function public.rotate_verification_code() is
-  'Issue a new card code. Every previously printed card stops resolving immediately — this is the "my card was lost" button.';
+  'Issue a new card code. Every previously printed card stops resolving immediately   this is the "my card was lost" button.';
+
 -- ── 5. The public lookup ────────────────────────────────────────────────────
 -- Replaces verify_business(slug) from 20260901170000: the slug is guessable
 -- and this page now shows a face.
 drop function if exists public.verify_business(text);
+
 create or replace function public.verify_card(p_code text)
 returns table (
   found          boolean,
@@ -201,7 +214,7 @@ returns table (
   store_count    integer,
   rating_avg     numeric,
   rating_count   integer,
-  -- [{ key, label, met }] — which checks the platform actually ran. Never the
+  -- [{ key, label, met }]   which checks the platform actually ran. Never the
   -- documents themselves.
   requirements   jsonb,
   checked_at     timestamptz
@@ -279,12 +292,15 @@ as $fn$
          '[]'::jsonb, now()
   where not exists (select 1 from target);
 $fn$;
+
 -- anon INCLUDED, deliberately: the person checking an agent at their door has
 -- no Sync account and should not need one.
 revoke all on function public.verify_card(text) from public;
 grant execute on function public.verify_card(text) to anon, authenticated, service_role;
+
 comment on function public.verify_card(text) is
-  'Live card lookup, addressed by an unguessable code. Public by design — the checker is a stranger at a door. Shows the holder''s photo and which requirements passed, never the documents.';
+  'Live card lookup, addressed by an unguessable code. Public by design   the checker is a stranger at a door. Shows the holder''s photo and which requirements passed, never the documents.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 declare
@@ -328,6 +344,6 @@ begin
   end if;
   if has_table_privilege('anon', 'private.vendor_card_codes', 'select')
      or has_table_privilege('authenticated', 'private.vendor_card_codes', 'select') then
-    raise exception 'a client role can read vendor_card_codes — it is a capability';
+    raise exception 'a client role can read vendor_card_codes   it is a capability';
   end if;
 end $$;

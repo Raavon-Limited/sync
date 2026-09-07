@@ -5,7 +5,7 @@
 -- policy and there was no purchase path. This adds one, paid from wallet like
 -- orders and subscriptions.
 --
--- MONEY GOES TO PLATFORM REVENUE, NOT THE ORGANISER — AND THAT IS A GAP
+-- MONEY GOES TO PLATFORM REVENUE, NOT THE ORGANISER   AND THAT IS A GAP
 --   `escrow_holds` can reference an order, a booking or a service request, and
 --   a check constraint requires exactly one of the three. There is no event
 --   column, so a ticket sale cannot be escrowed and released to an organiser
@@ -23,7 +23,7 @@
 --   so 'ticket_purchase' is added to the check constraint.
 --
 -- IDEMPOTENCY IS CALLER-SUPPLIED
---   Unlike a top-up, buying tickets twice is legitimate — a student may come
+--   Unlike a top-up, buying tickets twice is legitimate   a student may come
 --   back for a friend. So there is no natural key. The caller passes a
 --   reference (one uuid per attempt); replaying it returns the same tickets
 --   instead of buying more, which is what protects a double-tapped button.
@@ -40,6 +40,7 @@ alter table private.ledger_transactions add constraint ledger_transactions_kind_
     'order_payment', 'order_refund', 'escrow_hold', 'escrow_release',
     'wallet_topup', 'wallet_withdrawal', 'payout', 'commission',
     'delivery_fee', 'subscription_charge', 'ticket_purchase', 'adjustment'));
+
 -- 2. Buy ----------------------------------------------------------------------
 create or replace function public.purchase_tickets(
   p_tier_id   uuid,
@@ -140,6 +141,8 @@ begin
   return;
 end;
 $fn$;
+
 grant execute on function public.purchase_tickets(uuid, integer, text) to authenticated, service_role;
+
 comment on function public.purchase_tickets is
   'Buys tickets from wallet balance. Idempotent by caller-supplied reference. Money goes to platform_revenue: organiser payout is not modelled, see the migration header.';

@@ -29,8 +29,10 @@
 
 alter table public.orders add column if not exists customer_name  text;
 alter table public.orders add column if not exists customer_phone text;
+
 comment on column public.orders.customer_name is
   'Snapshot taken at checkout. Vendors cannot read profiles; this is how they know who ordered.';
+
 -- Freeze the snapshot against client writes. Extends the EXISTING guard rather
 -- than adding a second BEFORE UPDATE trigger: two triggers on one table fire in
 -- name order and the interaction is easy to get wrong.
@@ -49,6 +51,7 @@ begin
   return new;
 end;
 $$;
+
 -- ── Populate it at checkout ─────────────────────────────────────────────────
 -- Only the orders INSERT changes; the rest is the function as it already was.
 create or replace function public.checkout_cart(
@@ -174,8 +177,10 @@ begin
   return query select v_order_id, (v_subtotal - v_discount), v_repriced;
 end;
 $$;
+
 revoke all on function public.checkout_cart(uuid, text, text, text) from public, anon;
 grant execute on function public.checkout_cart(uuid, text, text, text) to authenticated, service_role;
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

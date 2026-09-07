@@ -106,21 +106,26 @@ begin
   return coalesce(new, old);
 end;
 $fn$;
+
 drop trigger if exists listings_audit on public.listings;
 create trigger listings_audit
   after insert or update or delete on public.listings
   for each row execute function private.audit_storefront_change('listing');
+
 drop trigger if exists orders_audit on public.orders;
 create trigger orders_audit
   after insert or update on public.orders
   for each row execute function private.audit_storefront_change('order');
+
 drop trigger if exists storefronts_audit on public.storefronts;
 create trigger storefronts_audit
   after insert or update on public.storefronts
   for each row execute function private.audit_storefront_change('storefront');
+
 -- The filter storefront_activity() probes.
 create index if not exists audit_log_storefront_idx
   on private.audit_log ((coalesce(after ->> 'storefront_id', before ->> 'storefront_id')), occurred_at desc);
+
 -- 2. The owner's window on it -------------------------------------------------
 -- Scoped to branches the caller OWNS. Staff deliberately cannot read the
 -- activity log: it is the owner's oversight of them, and a manager who can read
@@ -180,4 +185,5 @@ as $fn$
   order by al.occurred_at desc
   limit greatest(1, least(coalesce(p_limit, 100), 500));
 $fn$;
+
 grant execute on function public.storefront_activity(uuid, integer) to authenticated, service_role;

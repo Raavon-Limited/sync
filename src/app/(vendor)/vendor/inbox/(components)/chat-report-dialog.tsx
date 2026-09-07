@@ -69,12 +69,14 @@ export function ChatReportDialog({
           {REPORT_REASONS.map((item) => (
             <label
               key={item}
-              className="hover:bg-ink/3 -mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors"
+              className="hover:bg-surface-deep -mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors"
             >
               {/*
-                The shared RadioGroupItem paints its dot with the lime brand
-                accent, which reads oddly here and is low contrast on white.
-                Match the violet the rest of the inbox uses.
+                The shared RadioGroupItem paints its dot with the bright brand
+                lime, which is a FILL colour and vanishes against cream. This is
+                the same accent at the theme-aware end of the ramp   lime-deep on
+                light, bright lime on dark   which is what the rest of the inbox
+                now uses too.
 
                 Radix renders its Indicator as a <span> wrapping our dot <span>,
                 so the selector must be `span span` - plain `span` also hits the
@@ -84,7 +86,7 @@ export function ChatReportDialog({
               */}
               <RadioGroupItem
                 value={item}
-                className="border-ink/30 data-[state=checked]:border-violet-600 [&_span_span]:bg-violet-600!"
+                className="border-line/30 data-[state=checked]:border-accent-fg [&_span_span]:bg-accent-fg!"
               />
               {item}
             </label>

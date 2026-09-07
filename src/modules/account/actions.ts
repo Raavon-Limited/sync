@@ -13,6 +13,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { userMessage } from '@/lib/errors';
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -40,7 +41,7 @@ export async function archiveAccount(reason?: string): Promise<Result> {
     .from('profiles')
     .update({ archived_at: new Date().toISOString(), archived_reason: reason ?? null })
     .eq('id', c.id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not close your account.') };
 
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -57,7 +58,9 @@ export async function restoreAccount(userId: string): Promise<Result> {
     .from('profiles')
     .update({ archived_at: null, archived_reason: null })
     .eq('id', userId);
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    return { ok: false, error: userMessage(error, 'We could not restore that account.') };
+  }
   return { ok: true };
 }
 
@@ -71,6 +74,6 @@ export async function purgeAccount(userId: string): Promise<Result> {
 
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.deleteUser(userId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: userMessage(error, 'We could not purge that account.') };
   return { ok: true };
 }

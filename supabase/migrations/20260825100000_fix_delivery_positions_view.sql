@@ -3,7 +3,7 @@
 --
 -- WHAT WAS BROKEN
 --   public.active_delivery_positions returned ZERO rows for the student whose
---   delivery it describes. No error — the join simply produced nothing.
+--   delivery it describes. No error   the join simply produced nothing.
 --
 -- WHY
 --   The view is `security_invoker = true`, so it runs as the CALLER, and it
@@ -18,12 +18,12 @@
 --   directly." Correct intent; the mechanism contradicted it.
 --
 --   Identical in shape to the wallet_transactions bug fixed in
---   20260823090000 — an invoker view over a table the caller cannot read.
+--   20260823090000   an invoker view over a table the caller cannot read.
 --
 -- THE FIX
 --   Owner's rights, with the authorisation restated INSIDE the view: you may
 --   see a rider's position only if you are the student on that order, or the
---   rider yourself. Same discipline as every SECURITY DEFINER function here —
+--   rider yourself. Same discipline as every SECURITY DEFINER function here  
 --   when RLS is off, spell the rule out.
 --
 -- WHAT THIS DOES NOT WIDEN
@@ -37,6 +37,7 @@
 -- ============================================================================
 
 drop view if exists public.active_delivery_positions;
+
 create view public.active_delivery_positions
 with (security_invoker = false) as
 select
@@ -56,6 +57,8 @@ where d.status in ('assigned', 'picked_up', 'delivering')
   -- deliberately excluded: they need the order status, not the rider's
   -- live position.
   and ((select auth.uid()) = o.student_id or (select auth.uid()) = d.rider_id);
+
 comment on view public.active_delivery_positions is
   'Rider location while a delivery is in flight, visible to the student on the order and the rider only. Owner rights plus an explicit auth.uid() predicate: rider_profiles is own-row-only, so an invoker view returns nothing to the student it exists for.';
+
 grant select on public.active_delivery_positions to authenticated;

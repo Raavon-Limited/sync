@@ -5,7 +5,7 @@
  * centered logo, with the auth/CTA cluster pinned to the far right.
  * Mobile (<md): logo on the left, hamburger (MobileMenu) on the right.
  *
- * Logo: two stacked dots (ink + lime-deep) + Sync wordmark.
+ * Logo: the brand kit's mark + Sync wordmark (<SyncLogo>), following currentColor.
  */
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
@@ -17,24 +17,19 @@ import { SearchBar } from '@/components/shared/search-bar';
 import { getCurrentUser, getFirstName, getProfile } from '@/modules/auth/queries';
 import { resolveHandle } from '@/lib/handle';
 import { SITE } from '@/config/site';
+import { SyncLogo } from '@/components/brand/sync-logo';
 
 // Module nav from the hi-fi guide, split around the centered logo. These are
 // hidden in `dockMode` (e.g. /around) since the ServicesDock already lists them.
-const LEFT_LINKS = [
-  { href: '/around', label: 'Around you' },
-  { href: '/hostels', label: 'Hostels' },
-  { href: '/events', label: 'Events' },
-  { href: '/food', label: 'Food' },
-  { href: '/beauty', label: 'Beauty' },
-];
-
-const RIGHT_MODULE_LINKS = [
-  { href: '/workmanship', label: 'Workmanship' },
-  { href: '/hotspots', label: 'Hot spots' },
-];
-
-// Non-module links that stay in the header even in dockMode (not on the dock).
-const EXTRA_LINKS = [{ href: '/about', label: 'About' }];
+/**
+ * The landing header carries ONE nav item. The modules used to be split
+ * across a left and a right nav plus an About link, putting eight
+ * destinations in front of someone who has not signed up yet. Around you is
+ * the front door; everything else lives behind it.
+ *
+ * About is still reachable from the mobile menu.
+ */
+const LEFT_LINKS = [{ href: '/around', label: 'Around you' }];
 
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
@@ -80,24 +75,21 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
       email: user?.email,
     }) ?? undefined;
 
+  // The brand kit's mark, not a hand-drawn stand-in. It follows `currentColor`,
+  // so the mark and wordmark invert with the theme - the kit's own guidance is
+  // to prefer the component over the SVG files for exactly this reason.
   const logo = (
-    <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Sync home">
-      <span aria-hidden="true" className="flex items-center gap-1">
-        <span className="bg-foreground block h-2 w-2 rounded-full" />
-        <span className="bg-accent-fg block h-1.5 w-1.5 rounded-full" />
-      </span>
-      <span className="font-display text-card text-foreground">{SITE.name}</span>
+    <Link
+      href="/"
+      className="text-foreground flex shrink-0 items-center"
+      aria-label={`${SITE.name} home`}
+    >
+      <SyncLogo height={20} />
     </Link>
   );
 
   const rightCluster = (
     <div className="flex items-center justify-end gap-6">
-      <nav aria-label="Primary right" className="hidden items-center gap-5 text-sm md:flex">
-        {!dockMode && RIGHT_MODULE_LINKS.map((l) => <NavLink key={l.href} {...l} />)}
-        {EXTRA_LINKS.map((l) => (
-          <NavLink key={l.href} {...l} />
-        ))}
-      </nav>
       <ThemeToggle className="hidden md:inline-flex" />
       {user ? (
         <UserMenu
@@ -105,6 +97,9 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
           email={user.email ?? ''}
           initial={initial}
           role={role}
+          // Free: getProfile() is already resolved above. Without it this menu
+          // cannot take a hat off - see the note at the top of UserMenu.
+          roles={profile?.roles ?? undefined}
           category={category}
           handle={handle}
         />
@@ -135,9 +130,18 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
       {dockMode ? (
         // App pages: logo · general search · cluster. The ServicesDock already
         // shows the active module, so the header carries the search instead.
-        <div className="mx-auto flex h-16 items-center gap-3 px-6 md:gap-5">
+        // `justify-between` is what pins the avatar + hamburger to the right
+        // edge on mobile. The search below is hidden at that width, and it was
+        // the `flex-1` spacer doing that job - without it the cluster bunched up
+        // against the logo. Padding matches the dock row (px-4) so the search
+        // and the logo share a left edge.
+        <div className="mx-auto flex h-16 items-center justify-between gap-3 px-4 md:gap-5 md:px-6">
           {logo}
-          <div className="flex-1">
+          {/* Desktop only. On mobile the search sits in the ServicesDock row
+              beside the location pill instead: the header already carries the
+              logo, avatar and hamburger, and the dock row was holding nothing
+              but a right-aligned pill, so pairing them reclaims a whole row. */}
+          <div className="hidden flex-1 md:block">
             <SearchBar className="mx-auto w-full max-w-lg" />
           </div>
           {rightCluster}

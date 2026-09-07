@@ -3,7 +3,7 @@
 --
 -- PROBLEM
 --   `profiles_select_active` (from the archived 0001_profiles.sql) was created
---   without a `to <role>` clause, so Postgres attached it to PUBLIC — every
+--   without a `to <role>` clause, so Postgres attached it to PUBLIC   every
 --   role, including `anon`. Combined with Supabase's default grants, that made
 --   the whole table readable by anyone holding the publishable key, which ships
 --   in the browser bundle:
@@ -11,7 +11,7 @@
 --     curl "$SUPABASE_URL/rest/v1/profiles?select=full_name,phone" -H "apikey: <publishable>"
 --
 --   That exposed full_name, phone, business_address and business_name for every
---   account. Confirmed live via `select ... from pg_policies` — the policy shows
+--   account. Confirmed live via `select ... from pg_policies`   the policy shows
 --   roles={public}, and `anon` holds DELETE/INSERT/REFERENCES/SELECT/TRIGGER/…
 --   on public.profiles.
 --
@@ -22,9 +22,9 @@
 -- WHY THIS IS SAFE TO APPLY NOW
 --   Every profiles access in the app is either service-role (bypasses RLS) or
 --   scoped to the caller's own id. Verified across all 14 call sites:
---     • service-role  — admin/users/page, cron/purge-archived, account/actions,
+--     • service-role    admin/users/page, cron/purge-archived, account/actions,
 --                       auth/actions
---     • own row only  — api/profile (GET + PATCH), lib/supabase/middleware,
+--     • own row only    api/profile (GET + PATCH), lib/supabase/middleware,
 --                       modules/auth/queries
 --   Nothing reads another user's profile through RLS, and nothing reads
 --   profiles anonymously. Removing public read therefore breaks no code path.
@@ -36,7 +36,7 @@
 -- DELIBERATELY NOT DONE HERE (each would break production today)
 --   • No admin read policy. A policy that checks `profiles.role` from within a
 --     policy ON profiles recurses infinitely. It needs the SECURITY DEFINER
---     `is_admin()` helper or the app_role JWT claim — both land in the next
+--     `is_admin()` helper or the app_role JWT claim   both land in the next
 --     migration. Admin screens use the service-role client, so they are
 --     unaffected meanwhile.
 --   • No `force row level security`. FORCE applies RLS to the table owner too,
@@ -75,7 +75,7 @@ create policy "profiles_select_own"
   using ((select auth.uid()) = id);
 -- ── 3. Re-scope the UPDATE policy to authenticated ──────────────────────────
 -- 0001 created `profiles_update_own` with no `to` clause either, so it is also
--- attached to PUBLIC. Unlike the select policy this was never exploitable —
+-- attached to PUBLIC. Unlike the select policy this was never exploitable  
 -- for anon, auth.uid() is null, so `null = id` yields NULL and no row ever
 -- matches. It is rescoped anyway: the step-5 assertion demands zero PUBLIC
 -- policies, and "not exploitable today" is a weaker guarantee than "not
@@ -91,13 +91,13 @@ create policy "profiles_update_own"
 -- RLS already denies anon (no policy now applies to it), but the grants are
 -- what decide whether a column can be named in a query at all. Defence in
 -- depth: a future permissive policy added by mistake still finds no privileges
--- behind it. Nothing in the app touches profiles as anon — signup writes via
+-- behind it. Nothing in the app touches profiles as anon   signup writes via
 -- the SECURITY DEFINER handle_new_user() trigger, which is unaffected.
 revoke all on public.profiles from anon;
 -- ── 5. Narrow authenticated to what it actually uses ────────────────────────
 -- The app only ever SELECTs and UPDATEs profiles as a signed-in user; rows are
 -- created by the signup trigger and removed by the service-role purge job.
--- No INSERT or DELETE policy exists, so RLS already denied these — this just
+-- No INSERT or DELETE policy exists, so RLS already denied these   this just
 -- removes the privilege behind the denial.
 revoke insert, delete, truncate on public.profiles from authenticated;
 -- ── 6. Verify ───────────────────────────────────────────────────────────────

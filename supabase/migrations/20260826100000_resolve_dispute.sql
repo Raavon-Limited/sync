@@ -16,7 +16,7 @@
 --   so neither side decides it. is_staff() is the gate.
 --
 -- COMMISSION IS TAKEN ONLY ON WHAT THE VENDOR ACTUALLY KEEPS
---   A full refund earns the platform nothing — charging commission on an order
+--   A full refund earns the platform nothing   charging commission on an order
 --   that was never delivered would mean profiting from the failure. On a
 --   partial refund the commission is capped at the vendor's remaining share.
 --
@@ -166,6 +166,8 @@ begin
   return v_txn;
 end;
 $fn$;
+
 grant execute on function public.resolve_dispute(uuid, text, bigint, text) to authenticated, service_role;
+
 comment on function public.resolve_dispute is
   'Staff-only dispute resolution. Empties the escrow hold to the student, the vendor, or both. Idempotent by DISPUTE_<id>.';

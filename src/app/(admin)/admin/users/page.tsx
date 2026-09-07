@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { getCurrentUser, getProfile } from '@/modules/auth/queries';
-import { adminRoleForEmail } from '@/lib/admin-emails';
+import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { UsersClient } from './user-componenets/UsersClient';
 
-export const metadata: Metadata = { title: 'Users — Admin' };
+export const metadata: Metadata = { title: 'Users   Admin' };
 
 export type ProfileRow = {
   id: string;
@@ -18,13 +16,7 @@ export type ProfileRow = {
 };
 
 export default async function Page() {
-  const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  const role = profile?.role ?? adminRoleForEmail(user?.email);
-
-  if (role !== 'admin' && role !== 'super_admin') {
-    redirect('/403');
-  }
-
+  const role = await requireStaffArea('users');
   const isSuperAdmin = role === 'super_admin';
 
   const admin = createAdminClient();
@@ -34,11 +26,11 @@ export default async function Page() {
     .order('created_at', { ascending: false });
 
   const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const emailById = new Map((list?.users ?? []).map((u) => [u.id, u.email ?? '—']));
+  const emailById = new Map((list?.users ?? []).map((u) => [u.id, u.email ?? ' ']));
 
   const rows = ((profiles ?? []) as ProfileRow[]).map((r) => ({
     ...r,
-    email: emailById.get(r.id) ?? '—',
+    email: emailById.get(r.id) ?? ' ',
   }));
 
   return <UsersClient rows={rows} isSuperAdmin={isSuperAdmin} />;

@@ -38,7 +38,6 @@ begin
   return uid;
 end;
 $$;
-
 -- Create a passwordless, email-confirmed auth user (if missing) and set the role.
 -- NOTE: writes auth.users + auth.identities directly - verify column names match
 -- your Supabase version if it errors.
@@ -86,10 +85,8 @@ begin
   return uid;
 end;
 $$;
-
 revoke all on function public.promote_to_admin(text, text) from public, anon, authenticated;
 revoke all on function public.create_admin(text, text) from public, anon, authenticated;
-
 -- ── Seed the admin accounts ─────────────────────────────────────────────────
 -- PREFERRED: `npm run seed:admins` (Supabase Admin API) - reliable across
 -- Supabase versions. The SQL below writes auth.users/auth.identities directly,
@@ -97,4 +94,4 @@ revoke all on function public.create_admin(text, text) from public, anon, authen
 -- commented. Uncomment only if you can't run the script:
 --
 --   select public.create_admin('hello@raavon.com', 'super_admin');
---   select public.create_admin('muiz@raavon.com', 'admin');
+--   select public.create_admin('muiz@raavon.com', 'admin');;

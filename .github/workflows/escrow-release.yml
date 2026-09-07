@@ -1,0 +1,192 @@
+name: Hourly sweeps
+
+# Two hourly sweeps: matured escrow holds, and inspections whose agent never
+# turned up. They share this file because they share every reason for being
+# here - the Vercel Hobby cron cap explained below, the bearer-secret endpoint
+# shape, and the idempotency that makes a late or missed run harmless. Splitting
+# them would mean maintaining two copies of that reasoning.
+#
+# WHY THIS IS NOT VERCEL CRON
+# ---------------------------
+# It was, as a `crons` entry in vercel.json. Vercel's Hobby plan caps cron jobs
+# at once per DAY, and it does not quietly downgrade an hourly expression - it
+# rejects the whole deployment before the deployment row is even created, so
+# the failure shows up as a commit status rather than a failed build. That
+# stopped every deploy on this project the moment vercel.json landed.
+#
+# Daily was the obvious alternative and the wrong one: a vendor waiting on
+# money notices a day. So the schedule moved instead of slowing down.
+#
+# The endpoint itself is unchanged - it authenticates on a bearer CRON_SECRET,
+# so any scheduler can drive it. If this project moves to a Vercel plan that
+# allows hourly crons, add a release-escrow entry back to vercel.json and delete
+# this file. vercel.json exists again but deliberately does NOT schedule this
+# route - it holds only the DAILY purge-archived cron, which is inside the Hobby
+# limit. Adding an hourly entry there is what broke every deploy before.
+#
+# REQUIRED REPOSITORY SECRETS  (Settings -> Secrets and variables -> Actions)
+#   CRON_SECRET  - must match the CRON_SECRET env var set on Vercel. The route
+#                  401s on any mismatch, so a wrong value fails loudly here.
+#   SITE_URL     - production origin, no trailing slash, e.g.
+#                  https://www.letsyncyou.com
+#
+# CAVEAT worth knowing: GitHub's scheduled triggers are best-effort. Runs are
+# frequently late by 5-15 minutes and can be skipped entirely when the platform
+# is busy. That is acceptable here and only here, because the sweep is
+# idempotent and driven by `escrow_holds.release_after`: a late or missed run
+# releases the same holds next time, and never releases anything early. Do not
+# reuse this pattern for anything that must fire exactly on time.
+
+on:
+  schedule:
+    # Top of every hour, UTC. GitHub cron is always UTC - it does not follow
+    # the repository's or anyone's local timezone.
+    - cron: "0 * * * *"
+  # Lets you settle matured holds immediately without waiting for the hour.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never let two sweeps overlap. The RPC is idempotent and refuses to release
+# anything unmatured, so an overlap is not dangerous - but it is wasted work
+# and it makes the logs harder to read.
+concurrency:
+  group: escrow-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sweep matured holds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the release endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          # Deliberately NOT `set -e`. Every failure below is handled explicitly
+          # so the log says what actually went wrong; with -e, a curl failure
+          # would abort the step before the error message could be printed.
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            echo "Without them this job would silently do nothing every hour."
+            exit 1
+          fi
+
+          # -w appends the status on its own final line, so one call gives us
+          # both the body (for the log) and a code we can assert on. Retries
+          # cover a cold start or a blip; the endpoint is idempotent, so a
+          # retried call cannot double-release.
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/release-escrow" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          # The body names the orders released, which is the only record of what
+          # this run actually did.
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Escrow release returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi
+
+          echo "Escrow sweep completed."
+
+  # Independent of the escrow job on purpose: no `needs:`. A failing escrow
+  # sweep must not stop a student who was stood up an hour ago from getting
+  # another agent, and the two touch nothing in common.
+  inspections:
+    name: Release missed inspections
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the inspection sweep endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/release-inspections" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Inspection sweep returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi
+
+          echo "Inspection sweep completed."
+
+  # Also independent: a hostel room whose hold lapsed must go back on the market
+  # even if escrow or inspections are failing. Nothing here is shared with them.
+  #
+  # This one is pure catch-up rather than a promise to a waiting person, because
+  # `hostel_room_state` already reads lapsed holds as `free`. What it fixes is
+  # the WRITE path - `bookings_one_hold_per_room_idx` cannot test a timestamp,
+  # so until the row is swept the room is un-requestable while displaying as
+  # available. See the route's own header.
+  holds:
+    name: Expire lapsed room holds
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the hold expiry endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/expire-holds" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Hold expiry returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi
+
+          echo "Hold expiry completed."

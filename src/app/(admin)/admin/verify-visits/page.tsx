@@ -1,178 +1,137 @@
-"use client";
+/**
+ * ROUTE: /admin/verify-visits
+ * ACCESS: admin / super_admin only, enforced here and again in every action.
+ * PURPOSE: Hostel verification visits   review an ambassador's evidence and
+ *          decide whether a hostel is real.
+ */
+import type { Metadata } from 'next';
+import { requireStaffArea } from '@/modules/admin/guard';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { displayName, emailsByAccount } from '@/modules/admin/emails';
+import { hostelFactsFromRow } from '@/components/shared/hostel-facts';
+import {
+  VisitsQueue,
+  type AdminVisit,
+  type UnvisitedHostel,
+  type AgentOption,
+} from './(components)/visits-queue';
 
-import { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, Plus, ClipboardList } from "lucide-react";
-import { StatsRow } from "./components/StatsRow";
-import { VisitCard } from "./components/VisitCard";
-import { VisitDetailsModal } from "./components/VisitDetailsModal";
-import { ScheduleVisitModal, type NewVisitForm } from "./components/ScheduleVisitModal";
-import { VISITS, computeStats, STATUS_FILTER_OPTIONS,
-  type VerificationVisit, type VisitStatus, type StatusFilter } from "./data";
-import { Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui";
+export const metadata: Metadata = { title: 'Verification visits   Admin' };
 
-export default function VerificationVisitsPage() {
-  const [visits, setVisits] = useState<VerificationVisit[]>(VISITS);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Visits");
-  const [selectedVisit, setSelected] = useState<VerificationVisit | null>(null);
-  const [scheduleOpen, setSchedule] = useState(false);
+import type { Row } from '@/lib/supabase/row';
 
-  // ── Live stats derived from current visits array 
-  const stats = useMemo(() => computeStats(visits), [visits]);
+const HOSTEL_COLUMNS =
+  'id, name, area, verified, address, landmark, room_type, price_per_session_kobo, inspection_fee_kobo, amenities, house_rules, description, lat, lng, hostel_images(url, position, kind)';
 
-  // ── Filter + search 
-  const filtered = useMemo(() => {
-    return visits.filter(v => {
-      const matchesStatus = statusFilter === "All Visits" || v.status === statusFilter;
-      const q = search.toLowerCase();
-      const matchesSearch = !q ||
-        v.vendor.toLowerCase().includes(q) ||
-        v.id.toLowerCase().includes(q) ||
-        v.vendorId.toLowerCase().includes(q) ||
-        v.inspector.toLowerCase().includes(q) ||
-        v.location.toLowerCase().includes(q);
-      return matchesStatus && matchesSearch;
-    });
-  }, [visits, search, statusFilter]);
+export default async function Page() {
+  await requireStaffArea('verify_visits');
 
-  // ── Update a visit's status after inspector action ──
-  function handleUpdateStatus(id: string, status: VisitStatus, notes: string) {
-    setVisits(prev =>
-      prev.map(v =>
-        v.id === id
-          ? {
-              ...v,
-              status,
-              notes,
-              result: status === "Completed" ? "Passed" : "Failed",
-            }
-          : v,
-      ),
-    );
-  }
+  const admin = createAdminClient();
 
-  // ── Add a new scheduled visit ──
-  function handleScheduleVisit(data: NewVisitForm) {
-    const newVisit: VerificationVisit = {
-      id: `VIS-${1000 + visits.length + 1}`,
-      vendorId: data.vendorId || `VEN-${2800 + visits.length}`,
-      vendor: data.vendor,
-      date: data.date,
-      time: data.time,
-      location: data.location,
-      inspector: data.inspector,
-      status: "Scheduled",
-      notes: data.notes,
-      category: data.category || "General",
-    };
-    setVisits(prev => [newVisit, ...prev]);
-  }
+  const [{ data: visits }, { data: hostels }, { data: profiles }] = await Promise.all([
+    admin
+      .from('verification_visits')
+      .select(
+        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, selfie_url, notes, submitted_at, decided_at, decided_by',
+      )
+      .order('updated_at', { ascending: false }),
+    // THE WHOLE LISTING, because this is the screen where somebody decides
+    // whether it is real. It used to select four columns, so a reviewer saw a
+    // name and an area and none of the claims the agent's photographs are
+    // supposed to corroborate.
+    admin.from('hostels').select(HOSTEL_COLUMNS).is('archived_at', null),
+    // Ambassador names: `profiles` is own-row-only under RLS, so the service
+    // role is the only way to resolve them, and only here.
+    admin
+      .from('profiles')
+      .select('id, full_name, role, roles, suspended_at')
+      .is('archived_at', null),
+  ]);
 
-  return (
-    <div className="min-h-screen bg-surface ">
-      <div className=" mx-auto">
-
-        {/* ── Page Header ── */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-           <p className="text-sm text-content-muted mt-1">
-              Schedule and track vendor verification visits.
-           </p>
-          <button
-            onClick={() => setSchedule(true)}
-            className="flex items-center justify-center gap-2 bg-accent text-sm text-black font-semibold h-10 px-4 rounded-lg cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all shadow-card whitespace-nowrap" >
-            <Plus size={16} />
-            Schedule New Visit
-          </button>
-        </div>
-
-        {/* Live Stats */}
-        <StatsRow stats={stats} />
-
-        {/* ── Search + Filter Toolbar ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-          <div className="flex items-center gap-2 bg-panel border border-line/15 rounded-lg px-3 flex-1 h-10">
-            <Search size={15} className="text-content-muted/50 shrink-0" />
-            <Input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by vendor name, visit ID, inspector..."
-              className="text-sm text-content bg-transparent border-none! outline-none! ring-0! w-full placeholder:text-content-muted/40 py-1" />
-          </div>
-
-          <div className="w-full sm:w-56">
-            <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as StatusFilter)}>
-              <SelectTrigger className="w-full h-10 bg-panel border-line/15">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal size={14} className="text-content-muted/50 shrink-0" />
-                  <SelectValue placeholder="Filter status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTER_OPTIONS.map(o => (
-                  <SelectItem key={o} value={o}>
-                    {o}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* ── Results Sub-Header Count Meta ── */}
-        <p className="text-eyebrow font-mono text-content-muted mb-3">
-          {filtered.length} {filtered.length === 1 ? "visit" : "visits"} found
-          {statusFilter !== "All Visits" && ` · ${statusFilter}`}
-          {search && ` · "${search}"`}
-        </p>
-
-        {/* ── Visit Cards Layout ── */}
-        {filtered.length === 0 ? (
-          <EmptyState onReset={() => { setSearch(""); setStatusFilter("All Visits"); }} />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filtered.map((visit, i) => (
-              <VisitCard
-                key={visit.id}
-                visit={visit}
-                onViewDetails={setSelected}
-                style={{ animationDelay: `${i * 40}ms` }} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Overlays and Modals ── */}
-      <VisitDetailsModal
-        visit={selectedVisit}
-        onClose={() => setSelected(null)}
-        onUpdateStatus={handleUpdateStatus} />
-      
-      <ScheduleVisitModal
-        open={scheduleOpen}
-        onClose={() => setSchedule(false)}
-        onSave={handleScheduleVisit} />
-    </div>
+  // SAME FIX AS /admin/agents. `full_name` is null for anyone who accepted an
+  // invite and only set a password, so every such agent rendered as the literal
+  // "No name set"   including inside the "Send an agent" dropdown, where two of
+  // them would have been indistinguishable.
+  const emailById = await emailsByAccount();
+  const nameById = new Map(
+    ((profiles ?? []) as Row[]).map((p) => [
+      p.id as string,
+      displayName(p.full_name as string | null, emailById.get(p.id as string)),
+    ]),
   );
-}
+  const hostelById = new Map(((hostels ?? []) as Row[]).map((h) => [h.id, h]));
 
-// ── Empty State ────────────────────────────────────────────────────────────────
+  const rows: AdminVisit[] = ((visits ?? []) as Row[]).map((v) => {
+    const h = hostelById.get(v.hostel_id);
+    return {
+      id: v.id,
+      hostelId: v.hostel_id,
+      hostelName: h?.name ?? 'Unknown hostel',
+      hostelArea: h?.area ?? null,
+      hostelVerified: !!h?.verified,
+      hostel: h ? hostelFactsFromRow(h) : null,
+      ambassadorId: v.ambassador_id ?? null,
+      ambassadorName: nameById.get(v.ambassador_id) ?? null,
+      status: v.status,
+      scheduledFor: v.scheduled_for ?? null,
+      submittedAt: v.submitted_at ?? null,
+      decidedAt: v.decided_at ?? null,
+      // Resolved from the same map the ambassador uses   staff are profiles too.
+      decidedByName: v.decided_by ? (nameById.get(v.decided_by) ?? null) : null,
+      photos: (v.photos ?? []) as string[],
+      videoUrl: v.video_url ?? null,
+      // Collected since 20260909180000 and never rendered, which is why the
+      // review panel only ever showed one picture.
+      selfieUrl: v.selfie_url ?? null,
+      notes: v.notes ?? null,
+    };
+  });
 
-function EmptyState({ onReset }: { onReset: () => void }) {
+  // Hostels with no open or completed visit at all   nobody has been sent.
+  const visitedIds = new Set(rows.map((r) => r.hostelId));
+  const unvisited: UnvisitedHostel[] = ((hostels ?? []) as Row[])
+    .filter((h) => !visitedIds.has(h.id))
+    .map((h) => ({
+      id: h.id,
+      name: h.name,
+      area: h.area ?? null,
+      // Same shape the visit cards use, so the panel is identical whichever
+      // list you opened it from.
+      hostel: hostelFactsFromRow(h),
+    }));
+
+  // An agent is anyone HOLDING the role, not only anyone currently wearing it
+  // — an admin who also does visits is both, and leaving them out would make
+  // them unassignable. Same rule as /admin/agents, deliberately.
+  const openByAgent = new Map<string, number>();
+  for (const v of rows) {
+    if (!v.ambassadorId) continue;
+    // Fraud is a decision too   a flagged visit is not still on the agent's plate.
+    if (v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud') continue;
+    openByAgent.set(v.ambassadorId, (openByAgent.get(v.ambassadorId) ?? 0) + 1);
+  }
+
+  const agents: AgentOption[] = ((profiles ?? []) as Row[])
+    .filter((p) => p.role === 'agent' || (p.roles as string[] | null)?.includes('agent'))
+    .map((p) => ({
+      id: p.id as string,
+      name: displayName(p.full_name as string | null, emailById.get(p.id as string)),
+      suspended: !!p.suspended_at,
+      open: openByAgent.get(p.id as string) ?? 0,
+    }))
+    .sort((a, b) => a.open - b.open || a.name.localeCompare(b.name));
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-line/20 rounded-xl bg-panel/30">
-      <div className="w-12 h-12 rounded-lg bg-surface-deep border border-line/15 flex items-center justify-center mb-4 shadow-card">
-        <ClipboardList size={22} className="text-content-muted/70" />
+    <section className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-content-muted font-mono text-sm tracking-wide">
+          ADMIN / VERIFICATION VISITS
+        </h1>
+        <h2 className="font-display text-content mt-2 text-3xl font-medium">
+          Is it <span className="text-lime-deep">really there?</span>
+        </h2>
       </div>
-      <h3 className="text-base font-bold text-content mb-1">No visits found</h3>
-      <p className="text-sm text-content-muted mb-5 max-w-xs leading-relaxed">
-        Try adjusting your search query parameters or shifting active status filters.
-      </p>
-      <button
-        onClick={onReset}
-        className="text-xs font-bold uppercase tracking-wider text-accent-fg hover:text-accent-fg/80 underline underline-offset-4 transition cursor-pointer" >
-        Clear dynamic filters
-      </button>
-    </div>
+      <VisitsQueue visits={rows} unvisited={unvisited} agents={agents} />
+    </section>
   );
 }

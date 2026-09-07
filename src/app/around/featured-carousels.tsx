@@ -178,7 +178,7 @@ export function FeaturedEventCarousel({ className }: { className?: string }) {
         <Image
           key={idx}
           src={ev.image}
-          alt={idx === i ? `${ev.title} — ${ev.performer}` : ''}
+          alt={idx === i ? `${ev.title}   ${ev.performer}` : ''}
           fill
           sizes="(max-width: 768px) 100vw, 40vw"
           priority={idx === 0}

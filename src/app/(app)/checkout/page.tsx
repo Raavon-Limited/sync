@@ -1,22 +1,15 @@
 /**
  * ROUTE: /checkout
  * ACCESS: authenticated student
- * PURPOSE: Cart checkout - line items, fees breakdown, Paystack inline payment. Triggers escrow lock on success.
- * BUILT HERE: Line items, totals, delivery address, <Button>Pay with Paystack.
- * TODO: implement the full screen once dependent modules + data are wired.
+ *
+ * REDIRECT, NOT A SECOND IMPLEMENTATION
+ *   Checkout is per-vertical because a cart is per-vertical: /food/checkout
+ *   consumes a food cart via `checkout_cart` and pays from the wallet. A
+ *   generic /checkout would need its own cart concept, and the schema has none.
+ *   When another vertical grows a cart, it gets its own checkout route.
  */
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = { title: 'Checkout' };
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return (
-    <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/checkout</p>
-      <h1 className="font-display text-section text-content">Checkout</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
-    </section>
-  );
+  redirect('/food/checkout');
 }

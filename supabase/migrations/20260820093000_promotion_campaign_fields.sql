@@ -30,13 +30,16 @@ alter table public.promotions
       'Featured Listing', 'Sponsored Product', 'Discount Campaign',
       'Coupon Campaign', 'Flash Sale'
     ));
+
 alter table public.promotions
   add column if not exists daily_budget_kobo bigint
     check (daily_budget_kobo is null or daily_budget_kobo >= 0);
+
 comment on column public.promotions.promotion_type is
   'Campaign kind shown in the vendor UI. Distinct from discount_type, which is the discount maths.';
 comment on column public.promotions.daily_budget_kobo is
   'Vendor-set daily spend cap, in kobo. Enforcement lives with billing, not here.';
+
 -- The budget is vendor-set, so unlike redemption_count it is intentionally NOT
 -- added to guard_promotion_cols - a vendor may raise or lower their own spend.
 

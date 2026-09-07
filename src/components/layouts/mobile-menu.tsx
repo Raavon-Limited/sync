@@ -17,7 +17,9 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { toast } from '@/components/ui/toast';
 import { MODULES } from '@/config/modules';
-import { SITE } from '@/config/site';
+import SyncIcon from '@/components/brand/SyncIcon';
+import { SyncLogo } from '@/components/brand/sync-logo';
+import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
 // silently drift out of sync with the proxy gate.
@@ -49,7 +51,7 @@ export function MobileMenu({
         ? '/landlord'
         : role === 'vendor'
           ? '/vendor'
-          : '/me';
+          : '/user';
 
   async function handleSignOut() {
     close();
@@ -58,7 +60,7 @@ export function MobileMenu({
       toast(res.error);
       return;
     }
-    router.push('/');
+    router.push(AFTER_SIGN_OUT);
     router.refresh();
   }
 
@@ -75,7 +77,15 @@ export function MobileMenu({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-screen w-screen flex-col md:hidden">
+        {/* h-dvh, NOT h-screen.
+            `h-screen` is 100vh, which on iOS Safari means the height with the
+            browser toolbars HIDDEN - taller than what you can actually see. The
+            overlay therefore ran off the bottom of the screen and took the
+            sticky CTA footer with it: the nav scrolled fine, but the buttons
+            were never reachable because they were below the fold, outside the
+            one element that scrolls. `dvh` tracks the visible viewport as the
+            toolbars collapse, so the footer stays on screen. */}
+        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-dvh w-full flex-col md:hidden">
           <Dialog.Title className="sr-only">Menu</Dialog.Title>
           <Dialog.Description className="sr-only">
             Sync navigation, account actions, and theme toggle.
@@ -89,11 +99,7 @@ export function MobileMenu({
               className="flex items-center gap-2"
               aria-label="Sync home"
             >
-              <span aria-hidden="true" className="flex items-center gap-1">
-                <span className="bg-foreground block h-2 w-2 rounded-full" />
-                <span className="bg-accent-fg block h-1.5 w-1.5 rounded-full" />
-              </span>
-              <span className="font-display text-card text-foreground">{SITE.name}</span>
+              <SyncLogo height={20} className="text-foreground" />
             </Link>
             <div className="flex items-center gap-1">
               <ThemeToggle />
@@ -112,14 +118,18 @@ export function MobileMenu({
           {/* Nav links - large, tappable, every module */}
           <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-6 py-8">
             <ul className="flex flex-col">
-              {MODULES.map(({ slug, label, tagline, icon: Icon }) => (
+              {MODULES.map(({ slug, label, tagline, iconName }) => (
                 <li key={slug} className="border-line/5 border-b last:border-b-0">
                   <Link
                     href={`/${slug}`}
                     onClick={close}
                     className="hover:text-accent-fg flex items-center gap-4 py-4 transition-colors"
                   >
-                    <Icon className="text-accent-fg h-5 w-5 shrink-0" aria-hidden="true" />
+                    {/* Brand-kit section icon: follows currentColor, so it
+                        inverts with the theme and never needs a colour picked. */}
+                    <span className="text-accent-fg shrink-0">
+                      <SyncIcon name={iconName} size={20} />
+                    </span>
                     <span className="flex-1">
                       <span className="font-display text-card block leading-tight">{label}</span>
                       <span className="text-content-muted text-xs">{tagline}</span>
@@ -142,8 +152,13 @@ export function MobileMenu({
             </Link>
           </nav>
 
-          {/* Sticky auth/CTA footer */}
-          <div className="border-line/5 bg-surface flex shrink-0 flex-col gap-2 border-t px-6 py-5">
+          {/* Sticky auth/CTA footer.
+              pb clears the iOS home indicator, which otherwise sits on top of
+              the bottom button. */}
+          <div
+            className="border-line/5 bg-surface flex shrink-0 flex-col gap-2 border-t px-6 pt-5"
+            style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+          >
             {signedIn ? (
               <>
                 <div className="flex items-center gap-3 pb-1">
@@ -155,32 +170,39 @@ export function MobileMenu({
                     <p className="text-content-muted truncate text-xs">{email}</p>
                   </div>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  onClick={close}
-                  className="text-foreground border-foreground/20 hover:bg-foreground/10"
-                >
-                  <Link href={dashboardHref}>
-                    <LayoutDashboard />
-                    {role === 'admin' ? 'Admin' : 'Dashboard'}
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleSignOut}
-                  className="text-coral border-coral/30 hover:bg-coral/10"
-                >
-                  <LogOut /> Sign out
-                </Button>
+                {/* Two actions, so they share one row instead of stacking -
+                    half the footer height, and nothing gets pushed off. */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    onClick={close}
+                    className="text-foreground border-foreground/20 hover:bg-foreground/10 min-w-0 flex-1"
+                  >
+                    <Link href={dashboardHref}>
+                      <LayoutDashboard />
+                      <span className="truncate">
+                        {role === 'admin' ? 'Admin' : 'Dashboard'}
+                      </span>
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handleSignOut}
+                    className="text-coral border-coral/30 hover:bg-coral/10 min-w-0 flex-1"
+                  >
+                    <LogOut /> <span className="truncate">Sign out</span>
+                  </Button>
+                </div>
               </>
             ) : (
-              <>
-                <Button asChild size="lg" onClick={close}>
+              <div className="flex items-center gap-2">
+                <Button asChild size="lg" onClick={close} className="min-w-0 flex-1">
                   <Link href="/signup?role=vendor&category=landlord">
-                    List a property <ArrowRight />
+                    <span className="truncate">List a property</span>
+                    <ArrowRight />
                   </Link>
                 </Button>
                 <Button
@@ -188,11 +210,13 @@ export function MobileMenu({
                   variant="outline"
                   size="lg"
                   onClick={close}
-                  className="text-foreground border-foreground/20 hover:bg-foreground/10"
+                  className="text-foreground border-foreground/20 hover:bg-foreground/10 min-w-0 flex-1"
                 >
-                  <Link href="/login">Sign in / Sign up</Link>
+                  <Link href="/login">
+                    <span className="truncate">Sign in</span>
+                  </Link>
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </Dialog.Content>

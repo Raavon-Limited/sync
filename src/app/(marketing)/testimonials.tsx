@@ -1,13 +1,30 @@
 /**
  * Testimonials - social-proof rail of student quotes with avatars + ratings.
- * The trust layer the landing was missing. Static for now; could later pull
- * from a curated reviews table.
+ *
+ * Now reads APPROVED rows from public.testimonials. Nothing here has been
+ * seen by the public until a superadmin approved it - see the moderation
+ * queue at /admin/reviews.
+ *
+ * SEEDED falls back in when there are no approved rows yet, so a fresh
+ * database does not ship a landing page with an empty trust section. Once
+ * real reviews exist they replace it entirely.
  */
 import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Reveal } from './reveal';
+import { Reveal, Stagger, StaggerItem } from './reveal';
+import { TestimonialForm } from '@/components/shared/testimonial-form';
+import {
+  listApprovedTestimonials,
+  type PendingTestimonial,
+} from '@/modules/testimonials/queries';
 
-const TESTIMONIALS = [
+interface TestimonialsProps {
+  signedIn: boolean;
+  /** The viewer's own submission, so the form can show its state. */
+  mine: PendingTestimonial | null;
+}
+
+const SEEDED = [
   {
     quote:
       'Booked my room from my phone without a single agent. Paid into escrow, moved in, money released. That easy.',
@@ -31,7 +48,17 @@ const TESTIMONIALS = [
   },
 ];
 
-export function Testimonials() {
+export async function Testimonials({ signedIn, mine }: TestimonialsProps) {
+  const approved = await listApprovedTestimonials(3);
+  const items = approved.length
+    ? approved.map((t) => ({
+        quote: t.body,
+        name: t.name,
+        detail: t.detail ?? '',
+        rating: t.rating,
+      }))
+    : SEEDED;
+
   return (
     <section className="px-6 pt-12">
       <div className="mx-auto max-w-7xl">
@@ -39,9 +66,9 @@ export function Testimonials() {
           <p className="eyebrow text-accent-fg">Loved by students</p>
           <h2 className="font-display text-section text-foreground mt-2 capitalize">Don&rsquo;t take our word for it.</h2>
         </Reveal>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 0.08}>
+        <Stagger className="mt-10 grid gap-5 md:grid-cols-3">
+          {items.map((t) => (
+            <StaggerItem key={t.name}>
               <figure className="bg-panel shadow-card flex h-full flex-col gap-4 rounded-2xl p-6">
                 <div className="flex items-center justify-between gap-3">
                   <figcaption className="flex items-center gap-3">
@@ -71,9 +98,22 @@ export function Testimonials() {
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
               </figure>
-            </Reveal>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
+
+        {/* Leave your own. Sits directly under the wall of quotes rather than
+            on a separate page - the moment someone is convinced by these is
+            the moment they might add one. */}
+        <Reveal delay={0.24}>
+          <div className="border-line/10 bg-surface-deep mt-10 rounded-2xl border p-6 md:p-8">
+            <h3 className="font-display text-card text-foreground">Been through Sync?</h3>
+            <p className="text-content-muted mt-1 mb-5 text-sm">
+              Tell the next student what it was actually like.
+            </p>
+            <TestimonialForm signedIn={signedIn} existing={mine} />
+          </div>
+        </Reveal>
       </div>
     </section>
   );

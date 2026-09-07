@@ -14,7 +14,7 @@
 --   2. AN AUTOMATIC PAUSE ENDS WHEN THE KITCHEN CATCHES UP, not when a timer
 --      says so. Clearing the backlog reopens the store immediately; still
 --      being buried when an order moves rolls the deadline forward. The
---      deadline survives as the one thing that cannot fail — see below.
+--      deadline survives as the one thing that cannot fail   see below.
 --
 --   3. ARCHIVING IS A SUPPORTED, REVERSIBLE STATE with the two guards it
 --      needs: you cannot archive a store that still owes somebody food, and
@@ -28,7 +28,7 @@
 --
 -- WHY THE PAUSE DEADLINE STAYS EVEN THOUGH DRAINING CLEARS IT
 --   "Pause until the orders are sent out" is right up until the orders are
---   never sent out — a vendor who closes their laptop with four tickets open
+--   never sent out   a vendor who closes their laptop with four tickets open
 --   would have a store that is shut forever and no way to notice. Postgres has
 --   no timer, so nothing would ever run to reopen it. The deadline is the
 --   floor under that: the store reopens on its own, and if the backlog is
@@ -74,14 +74,18 @@ begin
     execute format('alter table public.storefronts drop constraint %I', v_con);
   end loop;
 end $$;
+
 update public.storefronts set auto_pause_after = 5 where auto_pause_after is null;
+
 alter table public.storefronts
   alter column auto_pause_after set default 5,
   alter column auto_pause_after set not null,
   add constraint storefronts_auto_pause_after_check
     check (auto_pause_after >= 0);
+
 comment on column public.storefronts.auto_pause_after is
   'Pause the store once this many orders are accepted and unfinished. 0 = never. Defaults to 5; the vendor owns the number.';
+
 -- ── 2. Auto-pause, and the drain that ends it ───────────────────────────────
 -- Same body as 20260829090500 except the opt-out test, which moved from
 -- `is null` to `= 0` along with the default above.
@@ -131,13 +135,13 @@ exception
     return new;
 end;
 $fn$;
-/**
- * The other half: an automatic pause lasts as long as the backlog does.
- *
- * ONLY TOUCHES 'auto_backlog' PAUSES. A vendor who tapped "15 minutes" is
- * having a break, and finishing an order is not them asking to be reopened.
- * Clearing a manual pause here would make the button lie.
- */
+
+--
+-- The other half: an automatic pause lasts as long as the backlog does.
+--
+-- ONLY TOUCHES 'auto_backlog' PAUSES. A vendor who tapped "15 minutes" is
+-- having a break, and finishing an order is not them asking to be reopened.
+-- Clearing a manual pause here would make the button lie.
 create or replace function public.sync_store_backlog_pause()
 returns trigger
 language plpgsql
@@ -189,17 +193,19 @@ exception
     return new;
 end;
 $fn$;
+
 drop trigger if exists orders_sync_backlog_pause on public.orders;
 create trigger orders_sync_backlog_pause
   after update of status on public.orders
   for each row execute function public.sync_store_backlog_pause();
+
 -- ── 3. Staff scopes ─────────────────────────────────────────────────────────
 -- Membership said WHICH store. It never said which part of it, so inviting
 -- someone to work the Saturday rush also handed them the menu and the prices.
 --
 -- WHAT IS DELIBERATELY NOT A SCOPE: money. Wallet, payouts, bank accounts and
 -- the subscription live on vendor_profiles (the business), and nothing here
--- reaches that table. That boundary is structural and stays that way — see
+-- reaches that table. That boundary is structural and stays that way   see
 -- modules/storefronts/README.
 --
 -- 'inbox' IS A UI SCOPE TODAY, NOT AN ENFORCED ONE. Conversations resolve
@@ -207,12 +213,17 @@ create trigger orders_sync_backlog_pause
 -- and there is no storefront_id on a conversation to scope against. The scope
 -- is recorded now so the grant exists when messaging becomes store-routed;
 -- until then granting it opens nothing, and the UI says so.
+--
+-- 'promotions' is added by 20260901120000, not here   this file was already
+-- applied by the time it was asked for, and editing a migration that has run
+-- changes the repo without changing any database.
 create or replace function private.storefront_scope_names()
 returns text[]
 language sql
 immutable
 set search_path = ''
 as $fn$ select array['orders', 'listings', 'inbox', 'store']::text[] $fn$;
+
 -- Added with the FULL set as the column default, not the invite default.
 -- Anyone already hired had the run of their store, and a deploy that silently
 -- narrowed a working manager's access would look like a bug to both of them.
@@ -223,6 +234,7 @@ alter table public.storefront_staff
 alter table public.storefront_invites
   add column if not exists scopes text[] not null
       default array['orders', 'listings', 'inbox', 'store'];
+
 -- Spelled out rather than calling storefront_scope_names(): a CHECK that
 -- depends on a function cannot be altered without dropping the constraint, and
 -- pg_dump has to reload it in the right order. The function stays as the one
@@ -237,17 +249,17 @@ alter table public.storefront_invites
   add  constraint storefront_invites_scopes_check
        check (cardinality(scopes) > 0
               and scopes <@ array['orders', 'listings', 'inbox', 'store']::text[]);
-/**
- * "May you do THIS at this store?" — the scoped sibling of
- * private.can_manage_storefront().
- *
- * The owner passes every scope; there is no way to grant yourself less than
- * everything, and no reason to. Staff pass only what they were handed.
- *
- * SECURITY DEFINER for the same two reasons can_manage_storefront is: a policy
- * has to ask without the caller being able to read the rows, and the policy on
- * storefront_staff would otherwise recurse into storefront_staff.
- */
+
+--
+-- "May you do THIS at this store?"   the scoped sibling of
+-- private.can_manage_storefront().
+--
+-- The owner passes every scope; there is no way to grant yourself less than
+-- everything, and no reason to. Staff pass only what they were handed.
+--
+-- SECURITY DEFINER for the same two reasons can_manage_storefront is: a policy
+-- has to ask without the caller being able to read the rows, and the policy on
+-- storefront_staff would otherwise recurse into storefront_staff.
 create or replace function private.storefront_scope(
   p_storefront uuid,
   p_user       uuid,
@@ -272,10 +284,13 @@ as $fn$
        and p_scope = any (st.scopes)
   );
 $fn$;
+
 grant execute on function private.storefront_scope(uuid, uuid, text) to authenticated, service_role;
 grant execute on function private.storefront_scope_names() to authenticated, service_role;
+
 comment on function private.storefront_scope(uuid, uuid, text) is
   'Whether a user may act on one part of a store. Widen permissions here, never by editing individual policies.';
+
 -- Narrow the four policies that used to ask the unscoped question.
 drop policy if exists "listings_write_own" on public.listings;
 create policy "listings_write_own" on public.listings
@@ -284,6 +299,7 @@ create policy "listings_write_own" on public.listings
                or private.storefront_scope(storefront_id, (select auth.uid()), 'listings'))
   with check  ((select auth.uid()) = vendor_id
                or private.storefront_scope(storefront_id, (select auth.uid()), 'listings'));
+
 drop policy if exists "orders_update_vendor" on public.orders;
 create policy "orders_update_vendor" on public.orders
   for update to authenticated
@@ -291,13 +307,15 @@ create policy "orders_update_vendor" on public.orders
                or private.storefront_scope(storefront_id, (select auth.uid()), 'orders'))
   with check  ((select auth.uid()) = vendor_id
                or private.storefront_scope(storefront_id, (select auth.uid()), 'orders'));
+
 drop policy if exists "orders_select_own" on public.orders;
 create policy "orders_select_own" on public.orders
   for select to authenticated
   using ((select auth.uid()) = student_id
          or (select auth.uid()) = vendor_id
          or private.storefront_scope(storefront_id, (select auth.uid()), 'orders'));
--- Trading details — hours, area, the map pin, the capacity limit. The column
+
+-- Trading details   hours, area, the map pin, the capacity limit. The column
 -- guard already stops staff touching anything structural; this decides whether
 -- they may touch the rest at all.
 drop policy if exists "storefronts_update_staff" on public.storefronts;
@@ -305,6 +323,7 @@ create policy "storefronts_update_staff" on public.storefronts
   for update to authenticated
   using       (private.storefront_scope(id, (select auth.uid()), 'store'))
   with check  (private.storefront_scope(id, (select auth.uid()), 'store'));
+
 -- Pausing is an order-queue act: the person watching the tickets pile up is
 -- the person who needs to stop them.
 create or replace function public.pause_store(p_storefront_id uuid, p_minutes integer default 10)
@@ -337,6 +356,7 @@ begin
   return v_until;
 end;
 $fn$;
+
 create or replace function public.resume_store(p_storefront_id uuid)
 returns void
 language plpgsql
@@ -355,12 +375,14 @@ begin
    where id = p_storefront_id;
 end;
 $fn$;
+
 -- ── 4. Handing out and changing scopes ──────────────────────────────────────
 -- Superseding the 3-argument invite rather than adding a 4th with a default:
 -- two overloads that differ only by an optional trailing argument are
 -- ambiguous to PostgREST, which resolves by argument NAMES and would have to
 -- guess.
 drop function if exists public.create_storefront_invite(uuid, text, text);
+
 create or replace function public.create_storefront_invite(
   p_storefront_id uuid,
   p_email         text,
@@ -435,13 +457,14 @@ begin
   return query select v_row.id, v_row.token, v_row.expires_at;
 end;
 $fn$;
+
 revoke all on function public.create_storefront_invite(uuid, text, text, text[]) from public, anon;
 grant execute on function public.create_storefront_invite(uuid, text, text, text[])
   to authenticated, service_role;
-/**
- * Change what an existing manager may reach, without making the owner revoke
- * and re-invite them — which loses the invite trail and their history.
- */
+
+--
+-- Change what an existing manager may reach, without making the owner revoke
+-- and re-invite them   which loses the invite trail and their history.
 create or replace function public.set_storefront_staff_scopes(
   p_staff_id uuid,
   p_scopes   text[]
@@ -492,9 +515,11 @@ begin
                              'storefront_id', v_st.storefront_id::text));
 end;
 $fn$;
+
 revoke all on function public.set_storefront_staff_scopes(uuid, text[]) from public, anon;
 grant execute on function public.set_storefront_staff_scopes(uuid, text[])
   to authenticated, service_role;
+
 -- The roster and the pending list both gain a scopes column, so the owner can
 -- see what they granted without opening an edit form.
 drop function if exists public.storefront_roster(uuid);
@@ -537,7 +562,9 @@ as $fn$
     and (p_storefront_id is null or st.storefront_id = p_storefront_id)
   order by (st.revoked_at is null) desc, st.joined_at desc;
 $fn$;
+
 grant execute on function public.storefront_roster(uuid) to authenticated, service_role;
+
 drop function if exists public.storefront_invites_pending(uuid);
 create function public.storefront_invites_pending(p_storefront_id uuid default null)
 returns table (
@@ -567,13 +594,14 @@ as $fn$
     and (p_storefront_id is null or i.storefront_id = p_storefront_id)
   order by i.created_at desc;
 $fn$;
+
 grant execute on function public.storefront_invites_pending(uuid) to authenticated, service_role;
-/**
- * Cancel an invitation that has not been redeemed.
- *
- * Without this the only way to undo a mistyped address was to wait seven days,
- * and the token is live that whole time.
- */
+
+--
+-- Cancel an invitation that has not been redeemed.
+--
+-- Without this the only way to undo a mistyped address was to wait seven days,
+-- and the token is live that whole time.
 create or replace function public.revoke_storefront_invite(p_invite_id uuid)
 returns void
 language plpgsql
@@ -603,8 +631,10 @@ begin
                              'storefront_id', v_inv.storefront_id::text));
 end;
 $fn$;
+
 revoke all on function public.revoke_storefront_invite(uuid) from public, anon;
 grant execute on function public.revoke_storefront_invite(uuid) to authenticated, service_role;
+
 -- Redemption has to carry the scopes across, or every invite would land as the
 -- table default no matter what the owner ticked.
 create or replace function public.accept_storefront_invite(p_token text)
@@ -669,31 +699,32 @@ begin
   return v_inv.storefront_id;
 end;
 $fn$;
+
 grant execute on function public.accept_storefront_invite(text) to authenticated, service_role;
+
 -- ── 5. Archive and restore, with the guards that make it safe ───────────────
-/**
- * Take a store out of circulation, or put it back.
- *
- * ARCHIVING IS ALREADY INVISIBLE TO STUDENTS — storefronts_select_public is
- * `using (archived_at is null)`, so an archived store drops out of discovery,
- * out of nearby_storefronts and out of its own page with no extra filtering.
- * The owner still sees it, because their own policy has no such clause. That
- * is exactly the toggle the product wants; what was missing was a safe way to
- * flip it.
- *
- * TWO REFUSALS, BOTH ABOUT SOMEBODY ELSE'S EXPECTATIONS
- *   - A store with orders in flight owes food to a student who has paid. The
- *     order would survive (orders.storefront_id is ON DELETE RESTRICT and this
- *     is a soft delete anyway), but the queue it is worked from would vanish
- *     from the vendor's app. Finish them first.
- *   - The last active store cannot go. A business with zero stores has nowhere
- *     to put a listing, nowhere for a cart to belong and no primary for a link
- *     to resolve to — resolvePrimaryStorefrontId throws, and checkout with it.
- *
- * IT MOVES THE PRIMARY FLAG RATHER THAN DROPPING IT. storefronts_one_primary_idx
- * allows zero primaries, so nothing would have complained — a link to the
- * business would just have stopped resolving.
- */
+--
+-- Take a store out of circulation, or put it back.
+--
+-- ARCHIVING IS ALREADY INVISIBLE TO STUDENTS   storefronts_select_public is
+-- `using (archived_at is null)`, so an archived store drops out of discovery,
+-- out of nearby_storefronts and out of its own page with no extra filtering.
+-- The owner still sees it, because their own policy has no such clause. That
+-- is exactly the toggle the product wants; what was missing was a safe way to
+-- flip it.
+--
+-- TWO REFUSALS, BOTH ABOUT SOMEBODY ELSE'S EXPECTATIONS
+--   - A store with orders in flight owes food to a student who has paid. The
+--     order would survive (orders.storefront_id is ON DELETE RESTRICT and this
+--     is a soft delete anyway), but the queue it is worked from would vanish
+--     from the vendor's app. Finish them first.
+--   - The last active store cannot go. A business with zero stores has nowhere
+--     to put a listing, nowhere for a cart to belong and no primary for a link
+--     to resolve to   resolvePrimaryStorefrontId throws, and checkout with it.
+--
+-- IT MOVES THE PRIMARY FLAG RATHER THAN DROPPING IT. storefronts_one_primary_idx
+-- allows zero primaries, so nothing would have complained   a link to the
+-- business would just have stopped resolving.
 create or replace function public.set_storefront_archived(
   p_storefront_id uuid,
   p_archived      boolean
@@ -753,8 +784,12 @@ begin
         using errcode = 'P0001';
     end if;
 
-    -- Hand the primary flag on before leaving, so a link to the business still
-    -- resolves somewhere.
+    -- Chosen before the update, used after it. ORDER MATTERS AND IT IS NOT
+    -- COSMETIC: storefronts_one_primary_idx is
+    -- `unique (vendor_id) where is_primary and archived_at is null`, and it is
+    -- not deferrable. Promoting the heir first means two rows briefly satisfy
+    -- that predicate, and the statement fails with a unique violation   so the
+    -- outgoing store has to leave the index before the new one enters it.
     if v_store.is_primary then
       select s.id into v_heir
         from public.storefronts s
@@ -763,8 +798,6 @@ begin
          and s.archived_at is null
        order by s.created_at
        limit 1;
-
-      update public.storefronts set is_primary = true, updated_at = now() where id = v_heir;
     end if;
 
     update public.storefronts
@@ -777,6 +810,12 @@ begin
            updated_at  = now()
      where id = p_storefront_id
     returning * into v_result;
+
+    -- Now that the flag is free, hand it on, so a link to the business still
+    -- resolves somewhere.
+    if v_heir is not null then
+      update public.storefronts set is_primary = true, updated_at = now() where id = v_heir;
+    end if;
   else
     if v_store.archived_at is null then
       return v_store;                                   -- idempotent
@@ -810,31 +849,40 @@ begin
   return v_result;
 end;
 $fn$;
+
 revoke all on function public.set_storefront_archived(uuid, boolean) from public, anon;
 grant execute on function public.set_storefront_archived(uuid, boolean)
   to authenticated, service_role;
+
 comment on function public.set_storefront_archived(uuid, boolean) is
   'Archive or restore a store. Refuses while orders are unfinished or it is the last open store, and carries the primary flag with it.';
+
 -- ── 6. A second store requires a verified business ──────────────────────────
-/**
- * WHY THE FIRST ONE IS FREE
- *   Every account gets a store the moment it becomes a vendor — the backfill
- *   in 20260822090000 gave one to every existing business, and a new one needs
- *   somewhere to put its first listing before anybody has reviewed it.
- *   Blocking that would mean onboarding could not complete. What verification
- *   gates is EXPANSION: a second address on the campus map, claimed by an
- *   account nobody has checked, is the thing worth stopping.
- *
- *   Counting non-archived stores rather than all of them on purpose: a vendor
- *   who archived their only store is back to zero and can open one again.
- *
- * ONLY FOR CLIENT-SIDE CALLERS, like the other guards in this schema. Migrations
- * and service-role backfills run as a different role and are not subject to it.
- */
+--
+-- WHY THE FIRST ONE IS FREE
+--   Every account gets a store the moment it becomes a vendor   the backfill
+--   in 20260822090000 gave one to every existing business, and a new one needs
+--   somewhere to put its first listing before anybody has reviewed it.
+--   Blocking that would mean onboarding could not complete. What verification
+--   gates is EXPANSION: a second address on the campus map, claimed by an
+--   account nobody has checked, is the thing worth stopping.
+--
+--   Counting non-archived stores rather than all of them on purpose: a vendor
+--   who archived their only store is back to zero and can open one again.
+--
+-- ONLY FOR CLIENT-SIDE CALLERS, like the other guards in this schema. Migrations
+-- and service-role backfills run as a different role and are not subject to it.
+--
+-- DELIBERATELY NOT `security definer`, which is what makes that possible: a
+-- SECURITY DEFINER trigger reports `current_user` as the function's OWNER, so
+-- the role test would never match 'authenticated' and the guard would silently
+-- pass everything. `guard_storefront_privileged_cols` is invoker-rights for
+-- exactly the same reason. Both reads below are permitted to the caller  
+-- `storefronts` is publicly readable while not archived, and so is
+-- `vendor_profiles`.
 create or replace function public.guard_storefront_insert()
 returns trigger
 language plpgsql
-security definer
 set search_path = ''
 as $fn$
 declare
@@ -868,10 +916,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists storefronts_require_verification on public.storefronts;
 create trigger storefronts_require_verification
   before insert on public.storefronts
   for each row execute function public.guard_storefront_insert();
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

@@ -23,7 +23,7 @@
 --   manual correction is a payout system that loses money quietly.
 --
 -- THE BANK ACCOUNT MUST BE VERIFIED
---   `bank_accounts.is_verified` is set by the Paystack resolve call — the
+--   `bank_accounts.is_verified` is set by the Paystack resolve call   the
 --   account holder's real name, not a name somebody typed. Paying out to an
 --   unverified destination is how money reaches the wrong person and cannot be
 --   recalled.
@@ -32,7 +32,7 @@
 --   A transfer is an external side effect and belongs in a route handler that
 --   can retry, not in a function holding a row lock. This creates the request
 --   and reserves the money; the transfer and its webhook settle it. A pending
---   request with no transfer is visible and recoverable — a transfer with no
+--   request with no transfer is visible and recoverable   a transfer with no
 --   request is not.
 --
 -- ROLLBACK
@@ -64,20 +64,25 @@ create table if not exists public.payout_requests (
   settled_at      timestamptz,
   updated_at      timestamptz not null default now()
 );
+
 create index if not exists payout_requests_owner_idx
   on public.payout_requests (owner_id, requested_at desc);
 -- The queue a human or a cron works.
 create index if not exists payout_requests_open_idx
   on public.payout_requests (requested_at) where status in ('pending', 'processing');
+
 alter table public.payout_requests enable row level security;
+
 drop policy if exists "payout_requests_own" on public.payout_requests;
 create policy "payout_requests_own" on public.payout_requests
   for select to authenticated using (owner_id = (select auth.uid()) or public.is_staff());
+
 -- No insert/update policy on purpose. Requests are created by
 -- request_withdrawal and settled by settle_payout, both of which check things
--- a policy cannot express — a balance, a verified destination, a reversal.
+-- a policy cannot express   a balance, a verified destination, a reversal.
 revoke all on public.payout_requests from anon, authenticated;
 grant select on public.payout_requests to authenticated;
+
 -- ── Requesting ──────────────────────────────────────────────────────────────
 create or replace function public.request_withdrawal(
   p_amount_kobo     bigint,
@@ -156,6 +161,7 @@ begin
   return v_request;
 end;
 $fn$;
+
 -- ── Settling ────────────────────────────────────────────────────────────────
 -- Staff or the service role: this is where an external transfer's outcome is
 -- recorded, and a vendor must not be able to mark their own payout paid.
@@ -224,6 +230,7 @@ begin
   return p_status;
 end;
 $fn$;
+
 -- ── Cancelling your own pending request ─────────────────────────────────────
 create or replace function public.cancel_withdrawal(p_request_id uuid)
 returns void
@@ -271,17 +278,21 @@ begin
    where id = p_request_id;
 end;
 $fn$;
+
 revoke all on function public.request_withdrawal(bigint, uuid) from public, anon;
 revoke all on function public.settle_payout(uuid, text, text, text) from public, anon;
 revoke all on function public.cancel_withdrawal(uuid) from public, anon;
 grant execute on function public.request_withdrawal(bigint, uuid) to authenticated;
 grant execute on function public.settle_payout(uuid, text, text, text) to authenticated, service_role;
 grant execute on function public.cancel_withdrawal(uuid) to authenticated;
+
 insert into public.app_settings (key, value)
 values ('min_withdrawal_kobo', '100000'::jsonb)
 on conflict (key) do nothing;
+
 comment on table public.payout_requests is
   'Vendor withdrawals. The wallet is debited when a request is created, not when the transfer settles, so money in flight cannot be spent twice.';
+
 -- ── Verify ──────────────────────────────────────────────────────────────────
 do $$
 begin

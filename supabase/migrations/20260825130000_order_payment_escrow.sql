@@ -15,7 +15,7 @@
 -- WHY ESCROW AND NOT STRAIGHT TO THE VENDOR
 --   The vendor is paid on DELIVERY, not on order. Until then the money is the
 --   platform's to return. `escrow_holds` already models this and checkout
---   already writes the row — it just never had funds behind it.
+--   already writes the row   it just never had funds behind it.
 --
 -- WHO MAY RELEASE
 --   The student (confirming they got it), or the service role (a cron, once
@@ -101,7 +101,9 @@ begin
   return v_txn;
 end;
 $fn$;
+
 grant execute on function public.pay_order_from_wallet(uuid) to authenticated, service_role;
+
 -- 2. Release -------------------------------------------------------------------
 create or replace function public.release_order_escrow(p_order_id uuid)
 returns uuid
@@ -132,7 +134,7 @@ begin
 
   -- Authorisation, restated because SECURITY DEFINER turned RLS off.
   -- v_uid is null for the service role (a cron), which may release once the
-  -- hold has matured. The vendor is deliberately absent — see the header.
+  -- hold has matured. The vendor is deliberately absent   see the header.
   if v_uid is not null and v_uid <> v_hold.payer_id then
     raise exception 'only the payer or the platform can release escrow'
       using errcode = '42501';
@@ -189,7 +191,9 @@ begin
   return v_txn;
 end;
 $fn$;
+
 grant execute on function public.release_order_escrow(uuid) to authenticated, service_role;
+
 comment on function public.pay_order_from_wallet is
   'Moves an order total from the student wallet into platform_escrow. Idempotent by ORDER_<id>.';
 comment on function public.release_order_escrow is

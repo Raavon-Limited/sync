@@ -9,7 +9,7 @@
 --
 -- 0005_landlord_role added 'landlord' to the role check and backfilled every
 -- account that had `vendor_category = 'landlord'` at that moment. It was a
--- one-off, and nothing has kept the two columns in step since — so every
+-- one-off, and nothing has kept the two columns in step since   so every
 -- landlord who signed up afterwards is stranded on a role that cannot open
 -- their own dashboard.
 --
@@ -58,10 +58,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists profiles_sync_landlord_role on public.profiles;
 create trigger profiles_sync_landlord_role
   before insert or update of role, vendor_category on public.profiles
   for each row execute function public.sync_landlord_role();
+
 -- Repair the accounts already stranded. The trigger handles everything after
 -- this; this is the ones it was written too late for.
 update public.profiles

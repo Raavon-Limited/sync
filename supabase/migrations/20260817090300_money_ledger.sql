@@ -8,7 +8,7 @@
 --   anywhere updates a balance directly. `wallets.balance_kobo` is a CACHE,
 --   maintained by trigger from the ledger and re-derivable at any time by
 --   `private.recompute_wallet(uuid)`. If the cache and the ledger disagree, the
---   ledger is right — that is the entire point of keeping one.
+--   ledger is right   that is the entire point of keeping one.
 --
 -- WHY DOUBLE ENTRY
 --   Single-entry balance updates cannot answer "where did this ₦2,000 come
@@ -50,6 +50,7 @@ create table if not exists public.wallets (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+
 -- ── 2. The ledger ───────────────────────────────────────────────────────────
 create table if not exists private.ledger_transactions (
   id          uuid primary key default gen_random_uuid(),
@@ -65,8 +66,10 @@ create table if not exists private.ledger_transactions (
   created_by  uuid references public.profiles (id) on delete set null,
   created_at  timestamptz not null default now()
 );
+
 create index if not exists ledger_transactions_order_idx on private.ledger_transactions (order_id);
 create index if not exists ledger_transactions_kind_idx  on private.ledger_transactions (kind, created_at desc);
+
 -- One line of a transaction. `amount_kobo` is signed: positive credits the
 -- account, negative debits it. Sum over a transaction must be zero.
 create table if not exists private.ledger_entries (
@@ -86,8 +89,10 @@ create table if not exists private.ledger_entries (
     (account <> 'user_wallet' and wallet_id is null)
   )
 );
+
 create index if not exists ledger_entries_txn_idx    on private.ledger_entries (transaction_id);
 create index if not exists ledger_entries_wallet_idx on private.ledger_entries (wallet_id, created_at desc);
+
 -- ── 3. Balance enforcement ──────────────────────────────────────────────────
 -- DEFERRABLE so a transaction can be built line by line and is only checked at
 -- COMMIT. A non-deferred check would reject the first line of every legitimate
@@ -109,11 +114,13 @@ begin
   return null;
 end;
 $$;
+
 drop trigger if exists ledger_entries_balanced on private.ledger_entries;
 create constraint trigger ledger_entries_balanced
   after insert or update or delete on private.ledger_entries
   deferrable initially deferred
   for each row execute function private.assert_ledger_balanced();
+
 -- ── 4. Wallet cache maintenance ─────────────────────────────────────────────
 create or replace function private.recompute_wallet(p_wallet_id uuid)
 returns bigint language plpgsql security definer set search_path = '' as $$
@@ -130,8 +137,10 @@ begin
   return total;
 end;
 $$;
+
 comment on function private.recompute_wallet(uuid) is
   'Rebuilds wallets.balance_kobo from the ledger. The ledger is the source of truth; this is reconciliation.';
+
 create or replace function private.sync_wallet_balance()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
@@ -145,10 +154,12 @@ begin
   return null;
 end;
 $$;
+
 drop trigger if exists ledger_entries_sync_wallet on private.ledger_entries;
 create trigger ledger_entries_sync_wallet
   after insert or update or delete on private.ledger_entries
   for each row execute function private.sync_wallet_balance();
+
 -- ── 5. The only sanctioned way to move money ────────────────────────────────
 -- Takes a whole transaction at once so it can never be half-written. Entries
 -- arrive as jsonb: [{"account":"user_wallet","wallet_id":"…","amount_kobo":-5000}, …]
@@ -194,8 +205,10 @@ begin
   return txn_id;
 end;
 $$;
+
 comment on function private.post_transaction is
   'The ONLY sanctioned way to move money. Balanced or it raises. Service role only.';
+
 -- ── 6. Escrow ───────────────────────────────────────────────────────────────
 -- Student pays -> funds sit in platform_escrow -> released to the vendor on
 -- delivery, or refunded on dispute. §10.
@@ -221,9 +234,11 @@ create table if not exists public.escrow_holds (
     (order_id is not null)::int + (booking_id is not null)::int + (request_id is not null)::int = 1
   )
 );
+
 create index if not exists escrow_holds_payee_idx  on public.escrow_holds (payee_id, status);
 create index if not exists escrow_holds_due_idx    on public.escrow_holds (release_after)
   where status = 'held';
+
 -- ── 7. Bank accounts & payouts ──────────────────────────────────────────────
 create table if not exists public.bank_accounts (
   id             uuid primary key default gen_random_uuid(),
@@ -240,8 +255,10 @@ create table if not exists public.bank_accounts (
   updated_at     timestamptz not null default now(),
   unique (owner_id, bank_code, account_number)
 );
+
 create unique index if not exists bank_accounts_one_default_idx
   on public.bank_accounts (owner_id) where is_default;
+
 create table if not exists public.payouts (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null references public.profiles (id) on delete restrict,
@@ -257,7 +274,9 @@ create table if not exists public.payouts (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
 create index if not exists payouts_owner_idx on public.payouts (owner_id, status, requested_at desc);
+
 -- ── 8. Plans & subscriptions ────────────────────────────────────────────────
 -- Backs /vendor/plan.
 create table if not exists public.plans (
@@ -274,11 +293,13 @@ create table if not exists public.plans (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+
 insert into public.plans (code, name, price_kobo, interval, max_listings, sort_order, description) values
   ('free',    'Starter', 0,      'monthly', 10,   1, 'Get listed and start selling.'),
   ('growth',  'Growth',  250000, 'monthly', 100,  2, 'More listings, promotions and analytics.'),
   ('pro',     'Pro',     600000, 'monthly', null, 3, 'Unlimited listings and priority placement.')
 on conflict (code) do nothing;
+
 create table if not exists public.subscriptions (
   id              uuid primary key default gen_random_uuid(),
   vendor_id       uuid not null references public.vendor_profiles (id) on delete cascade,
@@ -292,8 +313,10 @@ create table if not exists public.subscriptions (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
 create unique index if not exists subscriptions_one_active_idx
   on public.subscriptions (vendor_id) where status in ('active', 'past_due');
+
 -- ── 9. Client-facing wallet transaction view ────────────────────────────────
 -- Students and vendors need a statement. They must not read private.* directly,
 -- so this view projects only their own lines. security_invoker keeps wallets'
@@ -313,8 +336,10 @@ select
 from private.ledger_entries e
 join public.wallets w on w.id = e.wallet_id
 join private.ledger_transactions t on t.id = e.transaction_id;
+
 comment on view public.wallet_transactions is
   'Per-user statement projected from the ledger. Mirrors WalletTxn in src/mock/student.ts.';
+
 -- ── 10. Guards ──────────────────────────────────────────────────────────────
 -- The balance cache is trigger-maintained. Reject any client attempt to write
 -- it outright rather than silently reverting, so a bug surfaces loudly.
@@ -332,10 +357,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists wallets_guard on public.wallets;
 create trigger wallets_guard
   before update on public.wallets
   for each row execute function public.guard_wallet_cols();
+
 create or replace function public.guard_payout_cols()
 returns trigger language plpgsql as $$
 begin
@@ -349,10 +376,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists payouts_guard on public.payouts;
 create trigger payouts_guard
   before update on public.payouts
   for each row execute function public.guard_payout_cols();
+
 create or replace function public.guard_bank_account_cols()
 returns trigger language plpgsql as $$
 begin
@@ -363,10 +392,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists bank_accounts_guard on public.bank_accounts;
 create trigger bank_accounts_guard
   before update on public.bank_accounts
   for each row execute function public.guard_bank_account_cols();
+
 -- Auto-create a wallet on signup so no code path has to check for its absence.
 create or replace function public.ensure_wallet()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -375,13 +406,16 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists profiles_ensure_wallet on public.profiles;
 create trigger profiles_ensure_wallet
   after insert on public.profiles
   for each row execute function public.ensure_wallet();
+
 insert into public.wallets (owner_id)
 select p.id from public.profiles p
 on conflict (owner_id) do nothing;
+
 -- ── 11. RLS ─────────────────────────────────────────────────────────────────
 alter table public.wallets       enable row level security;
 alter table public.escrow_holds  enable row level security;
@@ -389,6 +423,7 @@ alter table public.bank_accounts enable row level security;
 alter table public.payouts       enable row level security;
 alter table public.plans         enable row level security;
 alter table public.subscriptions enable row level security;
+
 alter table private.ledger_transactions enable row level security;
 alter table private.ledger_entries      enable row level security;
 alter table private.ledger_transactions force row level security;
@@ -398,34 +433,43 @@ alter table private.ledger_entries      force row level security;
 drop policy if exists "wallets_own" on public.wallets;
 create policy "wallets_own" on public.wallets
   for select to authenticated using ((select auth.uid()) = owner_id);
+
 drop policy if exists "escrow_holds_party" on public.escrow_holds;
 create policy "escrow_holds_party" on public.escrow_holds
   for select to authenticated using ((select auth.uid()) in (payer_id, payee_id));
+
 drop policy if exists "bank_accounts_own" on public.bank_accounts;
 create policy "bank_accounts_own" on public.bank_accounts
   for all to authenticated
   using ((select auth.uid()) = owner_id)
   with check ((select auth.uid()) = owner_id);
+
 drop policy if exists "payouts_own" on public.payouts;
 create policy "payouts_own" on public.payouts
   for select to authenticated using ((select auth.uid()) = owner_id);
+
 -- A vendor requests a payout; the server decides whether it can be paid.
 drop policy if exists "payouts_request_own" on public.payouts;
 create policy "payouts_request_own" on public.payouts
   for insert to authenticated
   with check ((select auth.uid()) = owner_id and status = 'requested');
+
 drop policy if exists "plans_select" on public.plans;
 create policy "plans_select" on public.plans
   for select to anon, authenticated using (is_active);
+
 drop policy if exists "subscriptions_own" on public.subscriptions;
 create policy "subscriptions_own" on public.subscriptions
   for select to authenticated using ((select auth.uid()) = vendor_id);
+
 drop policy if exists "escrow_holds_staff" on public.escrow_holds;
 create policy "escrow_holds_staff" on public.escrow_holds
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 drop policy if exists "payouts_staff" on public.payouts;
 create policy "payouts_staff" on public.payouts
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- ── 12. Grants ──────────────────────────────────────────────────────────────
 revoke all on public.wallets       from anon, authenticated;
 revoke all on public.escrow_holds  from anon, authenticated;
@@ -433,21 +477,23 @@ revoke all on public.bank_accounts from anon, authenticated;
 revoke all on public.payouts       from anon, authenticated;
 revoke all on public.plans         from anon, authenticated;
 revoke all on public.subscriptions from anon, authenticated;
+
 grant select                         on public.wallets       to authenticated;
-grant update                         on public.wallets       to authenticated;
--- guarded; balances rejected
+grant update                         on public.wallets       to authenticated; -- guarded; balances rejected
 grant select                         on public.escrow_holds  to authenticated;
 grant select, insert, update, delete on public.bank_accounts to authenticated;
 grant select, insert                 on public.payouts       to authenticated;
 grant select                         on public.plans         to anon, authenticated;
 grant select                         on public.subscriptions to authenticated;
 grant select                         on public.wallet_transactions to authenticated;
+
 -- post_transaction and recompute_wallet are service-role only. A client that
 -- could call post_transaction could mint money.
 revoke all on function private.post_transaction(text, text, jsonb, text, uuid) from public, anon, authenticated;
 revoke all on function private.recompute_wallet(uuid) from public, anon, authenticated;
 grant execute on function private.post_transaction(text, text, jsonb, text, uuid) to service_role;
 grant execute on function private.recompute_wallet(uuid) to service_role;
+
 -- ── 13. Verify ──────────────────────────────────────────────────────────────
 -- Structural assertions only. An earlier draft of this block posted a real
 -- unbalanced transaction to prove the trigger fires, then relied on catching
@@ -474,7 +520,7 @@ begin
        and t.tginitdeferred
   ) then
     raise exception
-      'ledger_entries_balanced is missing or not deferrable — the ledger is unguarded';
+      'ledger_entries_balanced is missing or not deferrable   the ledger is unguarded';
   end if;
 
   -- No client role can reach the ledger.

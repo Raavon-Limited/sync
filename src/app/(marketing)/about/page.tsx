@@ -4,7 +4,7 @@
  * PURPOSE: The Sync brand essay - who built it, why, and the verified-vendor
  *          moat. Reads like a magazine spread, not a SaaS landing page.
  * BUILT HERE: 9 stacked sections, composed from `components/about/`:
- *   1. AboutHero        - "Stop walking. Start Syncing." opener
+ *   1. AboutHero        - "Connect. Search. Sync." opener
  *   2. OriginStory      - 01 the week-of-walking problem
  *   3. WhatWeBuilt      - 02 one platform, 7 module chips
  *   4. NumbersStrip     - the 4 headline stats
@@ -30,11 +30,11 @@ import { AboutCta } from '@/components/about/about-cta';
 import { SITE } from '@/config/site';
 
 export const metadata: Metadata = {
-  title: 'About Sync — Stop walking. Start Syncing.',
+  title: 'About Sync   Connect. Search. Sync.',
   // Brand summary / tagline doubles as the meta + OG description.
   description: SITE.summary,
   openGraph: {
-    title: 'About Sync — Stop walking. Start Syncing.',
+    title: 'About Sync   Connect. Search. Sync.',
     description: SITE.summary,
     // TODO: add the OG asset at /public/og/about.png (does not exist yet).
     images: ['/og/about.png'],

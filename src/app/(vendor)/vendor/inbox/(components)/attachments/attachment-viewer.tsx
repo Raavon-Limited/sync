@@ -66,9 +66,7 @@ export function AttachmentViewer({
    * from. -1 when the gallery does not contain it, which disables
    * navigation instead of jumping to an unrelated attachment.
    */
-  const currentIndex = attachment
-    ? attachments.findIndex((item) => item.id === attachment.id)
-    : -1;
+  const currentIndex = attachment ? attachments.findIndex((item) => item.id === attachment.id) : -1;
 
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex !== -1 && currentIndex < attachments.length - 1;
@@ -128,7 +126,7 @@ export function AttachmentViewer({
     const link = document.createElement('a');
 
     link.href = attachment.url;
-    link.download = attachment.file.name;
+    link.download = attachment.name;
 
     document.body.appendChild(link);
     link.click();
@@ -167,18 +165,18 @@ export function AttachmentViewer({
    * for the current audio/video MIME type.
    */
   const canPlayMedia = () => {
-    if (!attachment.file.type) return true;
+    if (!attachment.mimeType) return true;
 
     if (attachment.type === 'audio') {
       const audio = document.createElement('audio');
 
-      return audio.canPlayType(attachment.file.type) !== '';
+      return audio.canPlayType(attachment.mimeType) !== '';
     }
 
     if (attachment.type === 'video') {
       const video = document.createElement('video');
 
-      return video.canPlayType(attachment.file.type) !== '';
+      return video.canPlayType(attachment.mimeType) !== '';
     }
 
     return true;
@@ -191,7 +189,7 @@ export function AttachmentViewer({
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview ${attachment.file.name}`}
+      aria-label={`Preview ${attachment.name}`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -201,11 +199,9 @@ export function AttachmentViewer({
       {/* Header */}
       <div className="absolute top-0 right-0 left-0 z-20 flex items-center justify-between px-4 py-3 sm:px-6">
         <div className="min-w-0">
-          <p className="max-w-[60vw] truncate text-sm font-medium text-white">
-            {attachment.file.name}
-          </p>
+          <p className="max-w-[60vw] truncate text-sm font-medium text-white">{attachment.name}</p>
 
-          <p className="mt-0.5 text-xs text-white/60">{attachment.file.type || 'File'}</p>
+          <p className="mt-0.5 text-xs text-white/60">{attachment.mimeType || 'File'}</p>
         </div>
 
         <div className="flex items-center gap-1">
@@ -258,7 +254,7 @@ export function AttachmentViewer({
         <div className="flex max-h-[85vh] max-w-[90vw] items-center justify-center">
           <img
             src={attachment.url}
-            alt={attachment.file.name}
+            alt={attachment.name}
             className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
           />
         </div>
@@ -270,7 +266,7 @@ export function AttachmentViewer({
           {!mediaSupported || mediaError ? (
             <UnsupportedMedia
               type="video"
-              fileName={attachment.file.name}
+              fileName={attachment.name}
               onOpen={openAttachment}
               onDownload={downloadAttachment}
             />
@@ -299,21 +295,23 @@ export function AttachmentViewer({
           {!mediaSupported || mediaError ? (
             <UnsupportedMedia
               type="audio"
-              fileName={attachment.file.name}
+              fileName={attachment.name}
               onOpen={openAttachment}
               onDownload={downloadAttachment}
             />
           ) : (
-            <div className="w-full max-w-md rounded-3xl bg-white p-7 text-center shadow-2xl">
-              <div className="mx-auto mb-5 flex size-20 items-center justify-center rounded-full bg-violet-100">
-                <Music className="size-9 text-violet-600" />
+            <div className="bg-panel w-full max-w-md rounded-3xl p-7 text-center shadow-2xl">
+              <div className="bg-accent/15 mx-auto mb-5 flex size-20 items-center justify-center rounded-full">
+                <Music className="text-accent-fg size-9" />
               </div>
 
-              <h3 className="text-ink max-w-full truncate text-base font-semibold">
-                {attachment.file.name}
+              <h3 className="text-content max-w-full truncate text-base font-semibold">
+                {attachment.name}
               </h3>
 
-              <p className="text-muted mt-1 text-xs">{attachment.file.type || 'Audio file'}</p>
+              <p className="text-content-muted mt-1 text-xs">
+                {attachment.mimeType || 'Audio file'}
+              </p>
 
               <audio
                 key={attachment.id}
@@ -330,7 +328,7 @@ export function AttachmentViewer({
               <button
                 type="button"
                 onClick={toggleAudio}
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700"
+                className="bg-accent text-ink hover:bg-accent/85 mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition"
               >
                 {isPlaying ? (
                   <>
@@ -352,31 +350,31 @@ export function AttachmentViewer({
       {/* DOCUMENT */}
       {attachment.type === 'document' && (
         <div className="flex max-h-[90vh] w-full max-w-4xl flex-col items-center">
-          {attachment.file.type === 'application/pdf' ? (
-            <div className="h-[75vh] w-full overflow-hidden rounded-xl bg-white shadow-2xl">
+          {attachment.mimeType === 'application/pdf' ? (
+            <div className="bg-panel h-[75vh] w-full overflow-hidden rounded-xl shadow-2xl">
               <iframe
                 src={attachment.url}
-                title={attachment.file.name}
+                title={attachment.name}
                 className="h-full w-full border-0"
               />
             </div>
           ) : (
-            <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
+            <div className="bg-panel w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
               <div className="mx-auto mb-5 flex size-20 items-center justify-center rounded-2xl bg-orange-100">
                 <FileText className="size-9 text-orange-600" />
               </div>
 
-              <h3 className="text-ink max-w-full truncate text-base font-semibold">
-                {attachment.file.name}
+              <h3 className="text-content max-w-full truncate text-base font-semibold">
+                {attachment.name}
               </h3>
 
-              <p className="text-muted mt-1 text-xs">{attachment.file.type || 'Document'}</p>
+              <p className="text-content-muted mt-1 text-xs">{attachment.mimeType || 'Document'}</p>
 
               <div className="mt-6 flex justify-center gap-2">
                 <button
                   type="button"
                   onClick={openAttachment}
-                  className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700"
+                  className="bg-accent text-ink hover:bg-accent/85 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition"
                 >
                   <ExternalLink className="size-4" />
                   Open
@@ -385,7 +383,7 @@ export function AttachmentViewer({
                 <button
                   type="button"
                   onClick={downloadAttachment}
-                  className="border-ink/10 text-ink hover:bg-ink/5 inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition"
+                  className="border-line/15 text-content hover:bg-surface-deep inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition"
                 >
                   <Download className="size-4" />
                   Download
@@ -424,24 +422,26 @@ function UnsupportedMedia({
   const isAudio = type === 'audio';
 
   return (
-    <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
-      <div className="bg-ink/5 mx-auto mb-5 flex size-20 items-center justify-center rounded-full">
+    <div className="bg-panel w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
+      <div className="bg-surface-deep mx-auto mb-5 flex size-20 items-center justify-center rounded-full">
         {isAudio ? (
-          <Music className="size-9 text-violet-600" />
+          <Music className="text-accent-fg size-9" />
         ) : (
-          <Play className="size-9 text-violet-600" />
+          <Play className="text-accent-fg size-9" />
         )}
       </div>
 
-      <h3 className="text-ink truncate text-base font-semibold">{fileName}</h3>
+      <h3 className="text-content truncate text-base font-semibold">{fileName}</h3>
 
-      <p className="text-muted mt-2 text-sm">Your browser cannot preview this {type} format.</p>
+      <p className="text-content-muted mt-2 text-sm">
+        Your browser cannot preview this {type} format.
+      </p>
 
       <div className="mt-6 flex justify-center gap-2">
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700"
+          className="bg-accent text-ink hover:bg-accent/85 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition"
         >
           <ExternalLink className="size-4" />
           Open
@@ -450,7 +450,7 @@ function UnsupportedMedia({
         <button
           type="button"
           onClick={onDownload}
-          className="border-ink/10 text-ink hover:bg-ink/5 inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition"
+          className="border-line/15 text-content hover:bg-surface-deep inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition"
         >
           <Download className="size-4" />
           Download

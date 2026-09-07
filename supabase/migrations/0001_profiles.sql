@@ -38,7 +38,6 @@ create table if not exists public.profiles (
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
-
 -- Make re-runs safe if an earlier version of this table already exists (the
 -- create-if-not-exists above won't add new columns/constraints to it).
 alter table public.profiles add column if not exists archived_at     timestamptz;
@@ -46,7 +45,6 @@ alter table public.profiles add column if not exists archived_reason text;
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check
   check (role in ('student', 'vendor', 'admin', 'super_admin'));
-
 -- Indexes for browse / map / admin queries (and RLS performance).
 create index if not exists profiles_role_idx               on public.profiles (role);
 create index if not exists profiles_vendor_category_idx     on public.profiles (vendor_category);
@@ -54,11 +52,9 @@ create index if not exists profiles_verification_status_idx on public.profiles (
 -- Speeds up the >60-day auto-purge sweep + archived lookups.
 create index if not exists profiles_archived_at_idx         on public.profiles (archived_at)
                                                             where archived_at is not null;
-
 -- ── Row-Level Security ──────────────────────────────────────────────────────
 alter table public.profiles enable row level security;
-
--- Anyone (incl. signed-out) can read ACTIVE profiles — needed to browse vendors
+-- Anyone (incl. signed-out) can read ACTIVE profiles   needed to browse vendors
 -- and power the /around map. Archived (soft-deleted) profiles drop out of public
 -- reads but the row is retained for auditing (server/admin can still read it).
 drop policy if exists "profiles_select_all" on public.profiles;
@@ -66,7 +62,6 @@ drop policy if exists "profiles_select_active" on public.profiles;
 create policy "profiles_select_active"
   on public.profiles for select
   using (archived_at is null);
-
 -- A user may update only their OWN non-privileged fields. role and
 -- verification_status are intentionally NOT updatable from the client (server
 -- controls them); enforced via a column trigger below since RLS is row-level.
@@ -75,7 +70,6 @@ create policy "profiles_update_own"
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
-
 -- Block client changes to privileged columns even on their own row. The server
 -- (service role) bypasses RLS and these triggers, so it can still set them.
 create or replace function public.guard_profile_privileged_cols()
@@ -96,7 +90,6 @@ drop trigger if exists profiles_guard_privileged on public.profiles;
 create trigger profiles_guard_privileged
   before update on public.profiles
   for each row execute function public.guard_profile_privileged_cols();
-
 -- ── Auto-create a profile on signup ─────────────────────────────────────────
 -- Reads signup metadata, but role is clamped to student/vendor so a malicious
 -- client can never self-assign admin. verification_status always starts clean.
@@ -126,12 +119,10 @@ begin
   return new;
 end;
 $$;
-
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
 -- ── Backfill existing users ─────────────────────────────────────────────────
 insert into public.profiles (
   id, role, full_name, phone, vendor_category, trade,

@@ -7,14 +7,16 @@
  *          authenticated app.
  * BUILT HERE:
  *   1. Hero with verified-count eyebrow, two-line headline with lime
- *      underline on the action word, smart-search row (Area / Budget /
- *      Room type → Search), and a 1-big-image + 3-thumbnail preview block.
+ *      underline on the action word, and a 1-big-image + 3-thumbnail
+ *      preview block. (The smart-search row was removed - the landing page
+ *      sends people to Around you rather than filtering hostels inline.)
  *   1b. <LandingAboutTeaser> - condensed brand essay linking into /about.
  *   2. "Hostels students love" - featured rail of 3 <ListingCard>s.
  *   3. "How it works" - 3-step explainer.
  *   4. Verification trust band + landlord CTA.
  *
- * DATA: mock from `@/mock/hostels` until Supabase + RLS are wired.
+ * DATA: real, from ./landing-data. Cards hide when there is nothing to show
+ *       rather than advertising something that does not exist.
  */
 import Link from 'next/link';
 import Image from 'next/image';
@@ -22,11 +24,11 @@ import {
   ArrowRight,
   BadgeCheck,
   ChevronDown,
-  Search,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ListingCard } from '@/components/shared/listing-card';
 import {
   Accordion,
@@ -34,6 +36,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { getCurrentUser } from '@/modules/auth/queries';
+import { getMyTestimonial } from '@/modules/testimonials/queries';
 import { HeroHeadline } from './hero-headline';
 import { HeroHighlights } from './hero-highlights';
 import { Newsletter } from './newsletter';
@@ -42,8 +46,8 @@ import { Testimonials } from './testimonials';
 import { Comparison } from './comparison';
 import { HowItWorks } from './how-it-works';
 import { LandingAboutTeaser } from '@/components/landing/landing-about-teaser';
-import { FEATURED_HOSTELS, HOSTEL_STATS } from '@/mock/hostels';
-import { FEATURED_EVENT, FEATURED_FOOD, HOTSPOTS_TRENDING } from '@/mock/around';
+
+import { getLandingShowcase } from './landing-data';
 import { SITE } from '@/config/site';
 
 const FAQS = [
@@ -65,7 +69,23 @@ const FAQS = [
   },
 ];
 
-export default function LandingPage() {
+// NOTE: this page carried `export const revalidate = 3600` on the branch, to
+// cache the public shop window for an hour. It cannot survive the merge: the
+// testimonial block reads the signed-in user, and a page that reads cookies is
+// rendered dynamically no matter what `revalidate` says - so the directive
+// would have been a comment that looked like a cache. If the showcase read
+// becomes expensive, cache THAT call (unstable_cache) rather than the page.
+
+export default async function LandingPage() {
+  // All three reads are independent, so fire them together. getMyTestimonial
+  // returns null for a signed-out visitor, which the form handles.
+  const [user, mine, showcase] = await Promise.all([
+    getCurrentUser(),
+    getMyTestimonial(),
+    getLandingShowcase(),
+  ]);
+
+
   return (
     <>
       {/* ─── Hero (static background image + 2-column content) ───────── */}
@@ -80,12 +100,33 @@ export default function LandingPage() {
           className="-z-20 object-cover"
         />
         <div aria-hidden="true" className="bg-surface/55 absolute inset-0 -z-10" />
-        <div className="mx-auto grid min-h-[72vh] max-w-7xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12">
+        {/* `min-w-0` on the grid AND its columns is load-bearing on a phone.
+            A grid track's automatic minimum is its content's MIN-CONTENT width,
+            so one unbreakable child - the pill below, or a nowrap word in the
+            headline - widens the whole track past the viewport. Everything then
+            lays out in that too-wide box, which is why the headline stopped
+            wrapping and the sub-heading ran off the right edge. */}
+        {/* Two columns ONLY when there is something for the second one.
+            HeroHighlights renders nothing when no listing has a photo yet -
+            correct, since a hero card without an image is a grey box - but in a
+            fixed `md:grid-cols-2` that left the headline pinned to the left half
+            with a void beside it. The showcase is real data now, so "empty" is
+            a normal state on a young market and the layout has to hold up in
+            it, not just when the database is full. */}
+        <div
+          className={cn(
+            'mx-auto grid min-h-[72vh] w-full max-w-7xl min-w-0 items-center gap-10 px-6 py-16 md:gap-12',
+            showcase.highlights.length > 0 && 'md:grid-cols-2',
+          )}
+        >
           {/* Left - headline */}
-          <div className="text-center md:text-left">
-            <p className="text-ink bg-lime/90 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium">
-              <span className="bg-lime-deep h-2 w-2 rounded-full" />
-              {HOSTEL_STATS.verifiedCount} verified hostels · {HOSTEL_STATS.market}
+          <div className="min-w-0 text-center md:text-left">
+            {/* flex-wrap + wrap-break-word: "412 verified hostels · KWASU,
+                Malete" is wider than a 375px screen and must be allowed to
+                take two lines rather than set the column's width. */}
+            <p className="text-ink bg-lime/90 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full px-3 py-1 text-sm font-medium wrap-break-word">
+              <span className="bg-lime-deep h-2 w-2 shrink-0 rounded-full" />
+              {showcase.verifiedHostelCount} verified hostels · {SITE.launchMarket}
             </p>
             <HeroHeadline />
             <p className="text-foreground text-lead mx-auto mt-5 max-w-lg font-semibold md:mx-0">
@@ -94,30 +135,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right - cross-service highlight (shuffles per load) */}
-          <HeroHighlights />
-        </div>
-      </section>
-
-      {/* ─── Full-width search row (under the hero) ──────────────────── */}
-      <section className="border-line/5 bg-panel/70 border-b backdrop-blur">
-        <div className="mx-auto w-full max-w-7xl px-6 py-5">
-          <form
-            action="/hostels"
-            method="get"
-            className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center"
-          >
-            <div className="shadow-card divide-line/5 bg-panel grid w-full flex-1 grid-cols-1 divide-y overflow-hidden rounded-2xl sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              <SearchCell label="Area / Campus" name="campus" defaultValue="Safari, Malete" />
-              <SearchCell label="Budget" name="budget" defaultValue="₦100k–₦150k" />
-              <SearchCell label="Room type" name="type" defaultValue="Self-contain" />
-            </div>
-            <Button type="submit" size="lg" className="w-full shrink-0 sm:w-auto sm:px-7">
-              Search <Search className="h-4 w-4" />
-            </Button>
-          </form>
-          <p className="text-content-muted mt-2 text-xs">
-            ↓ Single search · instant filtered results
-          </p>
+          <HeroHighlights pool={showcase.highlights} />
         </div>
       </section>
 
@@ -133,7 +151,7 @@ export default function LandingPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="eyebrow text-accent-fg">Featured · This week</p>
-              <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">
+              <h2 className="font-display text-section text-foreground mt-2 capitalize">
                 Hostels students love
               </h2>
             </div>
@@ -141,11 +159,11 @@ export default function LandingPage() {
               href="/hostels"
               className="text-foreground hover:text-accent-fg inline-flex shrink-0 items-center gap-1 self-end text-xs whitespace-nowrap sm:self-auto sm:text-sm"
             >
-              See all {HOSTEL_STATS.verifiedCount} <ArrowRight className="h-4 w-4" />
+              See all {showcase.verifiedHostelCount} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURED_HOSTELS.map((h) => (
+            {showcase.hostels.map((h) => (
               <ListingCard
                 key={h.slug}
                 href={`/hostels/${h.slug}`}
@@ -153,9 +171,10 @@ export default function LandingPage() {
                 location={h.location}
                 image={h.image}
                 price={{ amount: h.pricePerSession, unit: '/ session' }}
-                rating={{ value: h.rating, count: h.reviewCount }}
+                /* No `rating` prop: see landing-data. Zero stars is not the
+                   same as no reviews. */
                 verified={h.verified}
-                ribbon={h.ribbon}
+                ribbon={h.ribbon ?? undefined}
                 amenities={h.amenities}
               />
             ))}
@@ -169,7 +188,7 @@ export default function LandingPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="eyebrow text-accent-fg">Around you · right now</p>
-              <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">
+              <h2 className="font-display text-section text-foreground mt-2 capitalize">
                 More than just a room.
               </h2>
             </div>
@@ -181,67 +200,78 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {/* Event */}
+            {/* Event. Hidden when nothing is scheduled   an empty slot is
+                better than advertising a party that is not happening. */}
+            {showcase.event && (
             <Link
-              href={`/events/${FEATURED_EVENT.slug}`}
+              href={`/events/${showcase.event.slug}`}
               className="bg-ink text-cream group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5 dark:border dark:border-dotted dark:border-cream/30"
             >
               <span className="bg-lime text-ink inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
                 <span className="bg-ink h-1.5 w-1.5 rounded-full" />
-                {FEATURED_EVENT.when}
+                {showcase.event.when}
               </span>
               <div>
                 <p className="text-cream/50 font-mono text-[10px] tracking-wider uppercase">
                   Event
                 </p>
-                <p className="font-display mt-1 text-xl leading-tight">
-                  {FEATURED_EVENT.title}{' '}
-                  <span className="text-lime italic">{FEATURED_EVENT.performer}</span>
-                </p>
-                <p className="text-cream/70 mt-1 text-xs">{FEATURED_EVENT.venue}</p>
+                {/* The mock split a title from a "performer" to italicise the
+                    act. `events` has no performer column, so the name carries
+                    itself rather than being cut at an arbitrary word. */}
+                <p className="font-display mt-1 text-xl leading-tight">{showcase.event.title}</p>
+                <p className="text-cream/70 mt-1 text-xs">{showcase.event.venue}</p>
               </div>
             </Link>
+            )}
 
             {/* Food */}
+            {showcase.food && (
             <Link
-              href={`/food/${FEATURED_FOOD.slug}`}
+              href={`/food/${showcase.food.slug}`}
               className="bg-panel shadow-card group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5"
             >
               <span className="border-line/15 text-foreground inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs">
-                {FEATURED_FOOD.etaMinutes} min delivery
+                {/* Was "28 min delivery". Nothing computes an ETA, so the
+                    card says what is true: it is open. */}
+                Taking orders
               </span>
               <div>
                 <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
                   Food
                 </p>
                 <p className="font-display text-foreground mt-1 text-xl leading-tight">
-                  {FEATURED_FOOD.name}
+                  {showcase.food.name}
                 </p>
                 <p className="text-content-muted mt-1 text-xs">
-                  ★ {FEATURED_FOOD.rating} · {FEATURED_FOOD.cuisine}
+                  {showcase.food.rating !== null && `★ ${showcase.food.rating.toFixed(1)} · `}
+                  {showcase.food.meta}
                 </p>
               </div>
             </Link>
+            )}
 
             {/* Hot spot */}
+            {showcase.hotspot && (
             <Link
-              href={`/hotspots/${HOTSPOTS_TRENDING[0].slug}`}
+              href={`/hotspots/${showcase.hotspot.slug}`}
               className="bg-surface-deep group flex flex-col justify-between gap-6 rounded-2xl p-6 transition-transform hover:-translate-y-0.5"
             >
               <span className="bg-lime text-ink inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
                 <span className="bg-lime-deep h-1.5 w-1.5 rounded-full" />
-                {HOTSPOTS_TRENDING[0].hereCount} here
+                {/* "84 here" needed check-ins, which nothing records. */}
+                Trending
               </span>
               <div>
                 <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
                   Hot spot
                 </p>
                 <p className="font-display text-foreground mt-1 text-xl leading-tight">
-                  {HOTSPOTS_TRENDING[0].name}
+                  {showcase.hotspot.name}
                 </p>
-                <p className="text-content-muted mt-1 text-xs">{HOTSPOTS_TRENDING[0].meta}</p>
+                <p className="text-content-muted mt-1 text-xs">{showcase.hotspot.meta}</p>
               </div>
             </Link>
+            )}
           </div>
         </div>
       </section>
@@ -253,14 +283,14 @@ export default function LandingPage() {
       <Comparison />
 
       {/* ─── Testimonials ────────────────────────────────────────────── */}
-      <Testimonials />
+      <Testimonials signedIn={Boolean(user)} mine={mine} />
 
       {/* ─── FAQ ─────────────────────────────────────────────────────── */}
       <section className="px-6 pt-12">
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-[1fr_1.2fr] md:gap-16">
           <div>
             <p className="eyebrow text-accent-fg">FAQ</p>
-            <h2 className="font-display text-section text-foreground mt-2 whitespace-nowrap capitalize">Good questions.</h2>
+            <h2 className="font-display text-section text-foreground mt-2 capitalize">Good questions.</h2>
           </div>
           <Accordion type="single" collapsible className="w-full">
             {FAQS.map((f, i) => (
@@ -343,34 +373,5 @@ export default function LandingPage() {
         </div>
       </section>
     </>
-  );
-}
-
-/** Single cell in the segmented search row. Eyebrow label above, value below. */
-function SearchCell({
-  label,
-  name,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  defaultValue: string;
-}) {
-  const id = `search-${name}`;
-  return (
-    <label
-      htmlFor={id}
-      className="focus-within:bg-surface/40 bg-panel flex cursor-text flex-col gap-0.5 px-5 py-3 transition-colors"
-    >
-      <span className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
-        {label}
-      </span>
-      <input
-        id={id}
-        name={name}
-        defaultValue={defaultValue}
-        className="text-foreground placeholder:text-content-muted bg-transparent text-sm font-medium outline-none"
-      />
-    </label>
   );
 }

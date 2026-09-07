@@ -1,9 +1,12 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCart } from "@/app/(app)/food/cart-context"
-import { saveDemoOrder } from "@/lib/demo-order"
+import { useCart, useCartId } from "@/app/(app)/food/cart-context"
+import { useCheckout } from "@/modules/food/hooks"
+import { usePayOrderFromWallet } from "@/modules/payments/hooks"
+import { useWallet } from "@/modules/payments/hooks"
 
 import CheckoutHeader from "./components/checkoutHeader"
 import OrderItems from "./components/OrderItems"
@@ -20,7 +23,12 @@ const PACKAGING_FEE = 100
 export default function CheckoutClient() {
     const router = useRouter()
 
-    const { vendor, items, subtotal, clearCart } = useCart()
+    const { vendor, items, subtotal } = useCart()
+    const cartId = useCartId()
+    const checkout = useCheckout(vendor?.id ?? "")
+    const payOrder = usePayOrderFromWallet()
+    const { data: wallet } = useWallet()
+    const [error, setError] = useState<string | null>(null)
 
     const [addressData, setAddressData] = useState<DeliveryAddressData>({
         address: "",
@@ -50,44 +58,85 @@ export default function CheckoutClient() {
 
     async function placeOrder() {
         if (items.length === 0 || placingRef.current) return
+        if (!cartId) {
+            setError("Your cart is still loading. Try again in a moment.")
+            return
+        }
         placingRef.current = true
         setLoading(true)
+        setError(null)
 
+        try {
+            // checkout_cart is one transaction: it re-prices every line against
+            // the live listing, creates the order, and consumes the cart. The
+            // fees shown above are display-only   the RPC returns the total
+            // that was actually charged, which is the one that counts.
+            const result = await checkout.mutateAsync({
+                cartId,
+                deliveryAddress: addressData.address || "Tanke Crescent, Behind Tanke Lodge, Ilorin",
+                note: allergies || undefined,
+            })
 
-        await new Promise(resolve => setTimeout(resolve, 2000))
+            // `repriced` means a listing's price moved between adding to cart
+            // and paying. The order is correct; the student should know why the
+            // number differs from what they saw.
+            if (result.repriced) {
+                console.warn(`Order ${result.orderId} was repriced at checkout`)
+            }
 
-        const order = saveDemoOrder({
-            vendorName: vendor?.name ?? "Unknown vendor",
-            vendorLogo: typeof vendor?.image === "string"
-                ? vendor.image
-                : (vendor?.image as { src: string } | undefined)?.src ?? "",
-            items: items.map(i => ({
-                id: i.id,
-                name: i.name,
-                description: i.description ?? "",
-                price: i.price,
-                qty: i.qty,
-                image: typeof i.image === "string" ? i.image : "",
-            })),
-            subtotal,
-            deliveryFee: DELIVERY_FEE,
-            packagingFee: PACKAGING_FEE,
-            syncFee: SYNC_FEE,
-            total,
-            deliveryAddress: addressData.address || "Tanke Crescent, Behind Tanke Lodge, Ilorin",
-            status: "preparing",
-            etaMinutes: 25,
-        })
+            // PAY IS A SECOND STEP, ON PURPOSE.
+            // checkout_cart creates the order and consumes the cart; paying is
+            // a separate transaction so a payment failure leaves a real,
+            // recoverable order rather than losing the cart AND the money.
+            try {
+                await payOrder.mutateAsync(result.orderId)
+            } catch (payErr) {
+                // The order exists and is unpaid. Send them to it rather than
+                // stranding them on a checkout page with an emptied cart  
+                // insufficient balance is the common case and is fixable.
+                const reason = payErr instanceof Error ? payErr.message : "Payment failed"
+                router.push(
+                    `/food/orders/${result.orderId}/track?unpaid=1&reason=${encodeURIComponent(reason)}`,
+                )
+                return
+            }
 
-        router.push(`/food/orders/${order.id}/track`)
-        // clearCart()
-        // no need to reset placingRef — we're navigating away
+            router.push(`/food/orders/${result.orderId}/track`)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Could not place your order")
+            placingRef.current = false
+            setLoading(false)
+        }
     }
 
     return (
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
 
             <CheckoutHeader />
+
+            {error && (
+                <p className="text-coral border-coral/30 bg-coral/5 mt-3 rounded-lg border px-3 py-2 text-sm">
+                    {error}
+                </p>
+            )}
+
+            {/* Orders are paid from wallet balance, so a shortfall is worth
+                showing BEFORE they tap pay   afterwards the cart is gone and
+                the order is sitting unpaid. */}
+            {wallet && total * 100 > wallet.balanceKobo && (
+                <p className="border-line/10 bg-panel mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
+                    <span className="text-content-muted">
+                        Wallet balance ₦{(wallet.balanceKobo / 100).toLocaleString()}   you need{' '}
+                        <span className="text-content font-medium">
+                            ₦{(total - wallet.balanceKobo / 100).toLocaleString()}
+                        </span>{' '}
+                        more.
+                    </span>
+                    <Link href="/user/wallet" className="text-lime-deep font-medium underline underline-offset-2">
+                        Top up
+                    </Link>
+                </p>
+            )}
 
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
 

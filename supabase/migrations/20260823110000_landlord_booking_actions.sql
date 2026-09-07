@@ -4,7 +4,7 @@
 -- A landlord can READ bookings on their hostels (bookings_select_own covers
 -- them) but cannot UPDATE any: bookings_update_own is `auth.uid() = student_id`
 -- alone. So a request lands and nothing the landlord does can move it. The
--- update returns no error and changes no rows — RLS filters it silently, which
+-- update returns no error and changes no rows   RLS filters it silently, which
 -- is why this went unnoticed.
 --
 -- WHAT IS *NOT* WRONG HERE
@@ -15,7 +15,7 @@
 --   not be able to mark a booking paid.
 --
 --   The gap is narrower: the landlord cannot reach the two statuses that ARE
---   allowed — approving a request into 'awaiting_payment', or declining it as
+--   allowed   approving a request into 'awaiting_payment', or declining it as
 --   'cancelled'. Those are exactly the landlord's decisions to make.
 --
 -- WHY THE GUARD GROWS TOO
@@ -41,6 +41,7 @@ create policy "bookings_update_landlord" on public.bookings
     exists (select 1 from public.hostels h
              where h.id = hostel_id and h.landlord_id = (select auth.uid()))
   );
+
 -- 2. Whoever is acting, they may only change what is theirs -------------------
 create or replace function public.guard_booking_privileged_cols()
 returns trigger language plpgsql as $$

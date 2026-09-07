@@ -169,7 +169,9 @@ begin
   return query select v_order_id, (v_subtotal - v_discount), v_repriced;
 end;
 $$;
+
 grant execute on function public.checkout_cart(uuid, text, text, text) to authenticated, service_role;
+
 -- Backfill orders placed after the storefronts migration but before this fix.
 update public.orders o
    set storefront_id = s.id

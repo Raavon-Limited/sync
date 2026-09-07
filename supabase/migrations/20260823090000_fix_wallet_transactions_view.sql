@@ -10,7 +10,7 @@
 --
 -- WHY
 --   The view was declared `with (security_invoker = true)`, which runs it as
---   the CALLER. The caller then needs privileges on the base tables — and the
+--   the CALLER. The caller then needs privileges on the base tables   and the
 --   base tables are `private.ledger_entries` and `private.ledger_transactions`,
 --   which `authenticated` deliberately cannot read. That is the entire reason
 --   they live in `private`.
@@ -21,21 +21,21 @@
 --   contradicted the goal.
 --
 --   (The other invoker view in this schema, public.active_delivery_positions,
---   is fine — it reads only public.* tables the caller is granted, so the
+--   is fine   it reads only public.* tables the caller is granted, so the
 --   caller's own RLS is exactly what should apply there. This is not a
 --   blanket problem with security_invoker.)
 --
 -- THE FIX
 --   Run the view with its OWNER's rights (the default) so it can read the
 --   ledger, and scope it with an EXPLICIT predicate instead of relying on
---   `wallets` RLS — which no longer applies once the view is not invoker.
+--   `wallets` RLS   which no longer applies once the view is not invoker.
 --   Same discipline as every SECURITY DEFINER function here: when RLS is off,
 --   restate the authorisation by hand.
 --
 -- WHY THE PREDICATE IS WRITTEN THIS WAY
 --   `auth.uid() is not null and w.owner_id = auth.uid()` and not
 --   `w.owner_id = auth.uid()` alone: if auth.uid() is null the comparison is
---   NULL, which filters everything out today — but the explicit guard makes an
+--   NULL, which filters everything out today   but the explicit guard makes an
 --   anonymous or service-role caller returning ZERO rows an intended property
 --   rather than an accident of three-valued logic.
 --
@@ -50,6 +50,7 @@
 -- ============================================================================
 
 drop view if exists public.wallet_transactions;
+
 create view public.wallet_transactions
 with (security_invoker = false) as
 select
@@ -68,6 +69,8 @@ join private.ledger_transactions t on t.id = e.transaction_id
 -- Scoping now lives here, because the view no longer runs as the caller.
 where (select auth.uid()) is not null
   and w.owner_id = (select auth.uid());
+
 comment on view public.wallet_transactions is
   'Per-user statement projected from the ledger. Owner rights + an explicit auth.uid() predicate: the base tables are in private and authenticated cannot read them.';
+
 grant select on public.wallet_transactions to authenticated;

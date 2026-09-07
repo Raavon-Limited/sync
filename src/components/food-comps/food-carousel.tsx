@@ -70,7 +70,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
         startTimer()
     }
 
-    // 👇 SWIPE HANDLERS — now on the whole card, not just the image
+    // 👇 SWIPE HANDLERS   now on the whole card, not just the image
     function onTouchStart(e: React.TouchEvent) {
         startX.current = e.touches[0].clientX
         startY.current = e.touches[0].clientY
@@ -190,7 +190,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
                         <div key={i} className="min-w-full flex flex-col gap-3 px-4 py-4 sm:px-5 sm:py-5 text-white">
                             <h2 className="font-mono text-base sm:text-xl font-medium leading-snug">
                                 {item.name}{" "}
-                                <i className="text-lime not-italic">— {item.tagline}</i>
+                                <i className="text-lime not-italic">  {item.tagline}</i>
                             </h2>
 
                             <p className="flex items-center flex-wrap text-[11px] sm:text-sm text-white/60 gap-0.5">

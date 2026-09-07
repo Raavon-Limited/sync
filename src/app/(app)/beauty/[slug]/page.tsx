@@ -1,22 +1,31 @@
 /**
  * ROUTE: /beauty/[slug]
- * ACCESS: authenticated student
- * PURPOSE: Beauty pro detail + appointment booking. Portfolio, services + prices, calendar slot picker, deposit via Paystack.
- * BUILT HERE: <ImageGallery> portfolio, service list with <PriceTag>, slot picker, booking action.
- * TODO: implement the full screen once dependent modules + data are wired.
+ * ACCESS: public to browse; signing in is required to request.
+ * PURPOSE: A beauty pro   who they are and what they offer.
+ *
+ * All three verticals share one detail component; see
+ * components/services/service-vendor-detail.
  */
 import type { Metadata } from 'next';
+import { createClient } from '@/lib/supabase/server';
+import { fetchServiceVendorBySlug } from '@/modules/services/queries';
+import { ServiceVendorDetail } from '@/components/services/service-vendor-detail';
 
-export const metadata: Metadata = { title: 'Beauty pro' };
+interface Props {
+  params: Promise<{ slug: string }>;
+}
 
-export default function Page() {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const v = await fetchServiceVendorBySlug(await createClient(), slug);
+  return { title: v?.businessName ?? 'Beauty' };
+}
+
+export default async function Page({ params }: Props) {
+  const { slug } = await params;
   return (
     <section className="flex flex-col gap-3">
-      <p className="eyebrow text-accent-fg">/beauty/[slug]</p>
-      <h1 className="font-display text-section text-content">Beauty pro</h1>
-      <p className="text-content-muted max-w-xl text-sm">
-        Placeholder - see the route header above for what gets built here.
-      </p>
+      <ServiceVendorDetail slug={slug} vertical="beauty" />
     </section>
   );
 }

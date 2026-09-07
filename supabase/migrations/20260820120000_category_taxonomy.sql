@@ -46,6 +46,7 @@ create table if not exists public.vendor_categories (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
 insert into public.vendor_categories (slug, name, description, sort_order) values
   ('food',        'Food',            'Meals, snacks and drinks',            1),
   ('clothing',    'Clothing',        'Fashion, thrift and accessories',     2),
@@ -56,6 +57,7 @@ insert into public.vendor_categories (slug, name, description, sort_order) value
   ('electronics', 'Electronics',     'Phones, accessories and repairs',     7),
   ('landlord',    'Hostels',         'Student accommodation',               8)
 on conflict (slug) do nothing;
+
 -- ── 2. Swap the CHECK constraints for foreign keys ──────────────────────────
 -- A FK means adding a vendor type is an INSERT, and means a typo is rejected
 -- with a referential error instead of silently sitting in a text column.
@@ -65,14 +67,17 @@ on conflict (slug) do nothing;
 -- match, this must fail loudly now rather than at some later write.
 alter table public.profiles        drop constraint if exists profiles_vendor_category_check;
 alter table public.vendor_profiles drop constraint if exists vendor_profiles_category_check;
+
 alter table public.profiles
   add constraint profiles_vendor_category_fkey
   foreign key (vendor_category) references public.vendor_categories (slug)
   on update cascade on delete restrict;
+
 alter table public.vendor_profiles
   add constraint vendor_profiles_category_fkey
   foreign key (category) references public.vendor_categories (slug)
   on update cascade on delete restrict;
+
 -- ── 3. Listing categories ───────────────────────────────────────────────────
 create table if not exists public.listing_categories (
   id              uuid primary key default gen_random_uuid(),
@@ -87,18 +92,22 @@ create table if not exists public.listing_categories (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
 -- Two partial uniques rather than one composite: a NULL vendor_id would make a
 -- plain UNIQUE useless, because NULL never equals NULL in SQL and every
 -- platform category would be free to duplicate.
 create unique index if not exists listing_categories_platform_uniq
   on public.listing_categories (vendor_category, slug)
   where vendor_id is null;
+
 create unique index if not exists listing_categories_vendor_uniq
   on public.listing_categories (vendor_id, slug)
   where vendor_id is not null;
+
 create index if not exists listing_categories_lookup_idx
   on public.listing_categories (vendor_category, sort_order)
   where is_active;
+
 -- A vendor may only create categories under their OWN vendor category. RLS
 -- checks ownership; it cannot check that the type matches, so this does.
 create or replace function public.guard_listing_category_type()
@@ -124,10 +133,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists listing_categories_guard_type on public.listing_categories;
 create trigger listing_categories_guard_type
   before insert or update on public.listing_categories
   for each row execute function public.guard_listing_category_type();
+
 -- ── 4. Seed the platform taxonomy ───────────────────────────────────────────
 -- The food set is exactly what the front end hardcoded, so nothing shifts under
 -- existing listings. The rest are starting points an admin can edit.
@@ -167,13 +178,16 @@ insert into public.listing_categories (vendor_category, name, slug, sort_order) 
   ('laundry',   'Dry Cleaning', 'dry-clean',  2),
   ('laundry',   'Ironing',      'ironing',    3)
 on conflict do nothing;
+
 -- ── 5. Link listings to the taxonomy ────────────────────────────────────────
 -- `category` (text) stays as a display SNAPSHOT so existing filters and the
 -- category index keep working, and so a listing still renders correctly if its
 -- category is later renamed or retired. `category_id` is the real link.
 alter table public.listings
   add column if not exists category_id uuid references public.listing_categories (id) on delete set null;
+
 create index if not exists listings_category_id_idx on public.listings (category_id);
+
 -- Backfill: match existing free-text categories to the seeded food taxonomy.
 update public.listings l
    set category_id = c.id
@@ -182,18 +196,22 @@ update public.listings l
    and c.vendor_category = 'food'
    and lower(c.name) = lower(l.category)
    and l.category_id is null;
+
 -- ── 6. RLS ──────────────────────────────────────────────────────────────────
 alter table public.vendor_categories  enable row level security;
 alter table public.listing_categories enable row level security;
+
 -- Reference data: world-readable. Shoppers filter by it before signing in.
 drop policy if exists "vendor_categories_select" on public.vendor_categories;
 create policy "vendor_categories_select" on public.vendor_categories
   for select to anon, authenticated using (is_active);
+
 -- Both platform and vendor categories are publicly readable: a vendor's custom
 -- category appears on their storefront, so hiding it would break browsing.
 drop policy if exists "listing_categories_select" on public.listing_categories;
 create policy "listing_categories_select" on public.listing_categories
   for select to anon, authenticated using (is_active);
+
 -- A vendor manages only their OWN categories. The platform set is staff-only,
 -- which is what stops one vendor renaming a category every other vendor filters
 -- by.
@@ -202,17 +220,21 @@ create policy "listing_categories_write_own" on public.listing_categories
   for all to authenticated
   using (vendor_id is not null and vendor_id = (select auth.uid()))
   with check (vendor_id is not null and vendor_id = (select auth.uid()));
+
 drop policy if exists "listing_categories_staff" on public.listing_categories;
 create policy "listing_categories_staff" on public.listing_categories
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 drop policy if exists "vendor_categories_staff" on public.vendor_categories;
 create policy "vendor_categories_staff" on public.vendor_categories
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 revoke all on public.vendor_categories  from anon, authenticated;
 revoke all on public.listing_categories from anon, authenticated;
 grant select on public.vendor_categories  to anon, authenticated;
 grant select on public.listing_categories to anon, authenticated;
 grant insert, update, delete on public.listing_categories to authenticated;
+
 -- ── 7. Verify ───────────────────────────────────────────────────────────────
 do $$
 declare

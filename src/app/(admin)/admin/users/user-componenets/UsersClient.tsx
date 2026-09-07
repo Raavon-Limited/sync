@@ -4,7 +4,13 @@ import { useState, useMemo, useTransition, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/components/ui/toast';
 import { UserCard } from './Usercard';
@@ -14,8 +20,15 @@ import { StatCard } from './Stats-card';
 import { cn } from '@/lib/utils';
 import type { ProfileRow } from '../page';
 import {
-  Search, Download, UserPlus, LayoutGrid, List,
-  Users, UserCheck, Store, CalendarPlus,
+  Search,
+  Download,
+  UserPlus,
+  LayoutGrid,
+  List,
+  Users,
+  UserCheck,
+  Store,
+  CalendarPlus,
 } from 'lucide-react';
 
 export type EnrichedUser = ProfileRow & { email: string };
@@ -23,13 +36,23 @@ export type EnrichedUser = ProfileRow & { email: string };
 type Props = {
   rows: EnrichedUser[];
   isSuperAdmin: boolean;
+  /**
+   * Hide the role tab strip.
+   *
+   * /admin/students renders this same console with the rows already narrowed
+   * to students, where a "Vendors" tab that can only ever be empty is a
+   * control that lies about what is on the screen. Everything else   search,
+   * status filter, the detail modal, suspend and archive   is identical, which
+   * is the reason that page reuses this rather than growing a second one.
+   */
+  hideRoleTabs?: boolean;
 };
 
 const PER_PAGE = 10;
 const TABS = ['all', 'student', 'vendor', 'landlord', 'archived'] as const;
-type Tab = typeof TABS[number];
+type Tab = (typeof TABS)[number];
 
-export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
+export function UsersClient({ rows: initialRows, isSuperAdmin, hideRoleTabs = false }: Props) {
   const router = useRouter();
   const [users, setUsers] = useState<EnrichedUser[]>(initialRows);
   const [search, setSearch] = useState('');
@@ -50,12 +73,19 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
   }, [router]);
 
   // Keep local state in sync when SSR re-runs (router.refresh triggers prop change)
-  useEffect(() => { setUsers(initialRows); }, [initialRows]);
+  useEffect(() => {
+    setUsers(initialRows);
+  }, [initialRows]);
 
   // ─── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total = users.length;
-    const active = users.filter((u) => !u.archived_at && u.verification_status === 'active').length;
+    // 'active' is not a value verification_status can hold (0001 permits
+    // unverified/pending/verified/rejected), so this tile read 0 on a platform
+    // full of verified accounts. "Verified" is the state it was reaching for.
+    const active = users.filter(
+      (u) => !u.archived_at && u.verification_status === 'verified',
+    ).length;
     const vendors = users.filter((u) => u.role === 'vendor' || u.role === 'landlord').length;
     const now = new Date();
     const newThisMonth = users.filter((u) => {
@@ -72,8 +102,12 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
     if (tab === 'archived') result = result.filter((u) => u.archived_at);
     else if (tab !== 'all') result = result.filter((u) => u.role === tab && !u.archived_at);
 
-    if (statusFilter === 'active') result = result.filter((u) => !u.archived_at && u.verification_status === 'active');
-    else if (statusFilter === 'pending') result = result.filter((u) => !u.archived_at && u.verification_status === 'pending');
+    // Same correction as the tile above: the option labelled Active is asking
+    // for verified accounts, and was matching a value that does not exist.
+    if (statusFilter === 'active')
+      result = result.filter((u) => !u.archived_at && u.verification_status === 'verified');
+    else if (statusFilter === 'pending')
+      result = result.filter((u) => !u.archived_at && u.verification_status === 'pending');
     else if (statusFilter === 'archived') result = result.filter((u) => Boolean(u.archived_at));
 
     if (roleFilter) result = result.filter((u) => u.role === roleFilter);
@@ -98,15 +132,21 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
   const resetPage = () => setPage(1);
 
   // ─── Optimistic helpers ───────────────────────────────────────────────────
-  const patchUser = useCallback((id: string, patch: Partial<EnrichedUser>) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
-    if (selectedUser?.id === id) setSelectedUser((s) => (s ? { ...s, ...patch } : s));
-  }, [selectedUser]);
+  const patchUser = useCallback(
+    (id: string, patch: Partial<EnrichedUser>) => {
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+      if (selectedUser?.id === id) setSelectedUser((s) => (s ? { ...s, ...patch } : s));
+    },
+    [selectedUser],
+  );
 
-  const removeUser = useCallback((id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (selectedUser?.id === id) setSelectedUser(null);
-  }, [selectedUser]);
+  const removeUser = useCallback(
+    (id: string) => {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      if (selectedUser?.id === id) setSelectedUser(null);
+    },
+    [selectedUser],
+  );
 
   // ─── CSV export ───────────────────────────────────────────────────────────
   function exportCSV() {
@@ -147,29 +187,61 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Users} label="Total Users" value={stats.total.toLocaleString()} sub="+12%" subColour="green" />
-        <StatCard icon={UserCheck} label="Active" value={stats.active.toLocaleString()} sub={stats.total ? `${Math.round((stats.active / stats.total) * 100)}% of total` : '—'} />
-        <StatCard icon={Store} label="Vendors & Landlords" value={stats.vendors.toLocaleString()} sub={stats.total ? `${Math.round((stats.vendors / stats.total) * 100)}% of total` : '—'} valueColour="purple" />
-        <StatCard icon={CalendarPlus} label="New This Month" value={stats.newThisMonth.toLocaleString()} sub="+5.4%" subColour="green" />
+        <StatCard
+          icon={Users}
+          label="Total Users"
+          value={stats.total.toLocaleString()}
+          sub="+12%"
+          subColour="green"
+        />
+        <StatCard
+          icon={UserCheck}
+          label="Active"
+          value={stats.active.toLocaleString()}
+          sub={stats.total ? `${Math.round((stats.active / stats.total) * 100)}% of total` : ' '}
+        />
+        <StatCard
+          icon={Store}
+          label="Vendors & Landlords"
+          value={stats.vendors.toLocaleString()}
+          sub={stats.total ? `${Math.round((stats.vendors / stats.total) * 100)}% of total` : ' '}
+          valueColour="purple"
+        />
+        <StatCard
+          icon={CalendarPlus}
+          label="New This Month"
+          value={stats.newThisMonth.toLocaleString()}
+          sub="+5.4%"
+          subColour="green"
+        />
       </div>
 
       {/* ── Filters ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {/* Search — full width on mobile, capped on desktop */}
-        <div className="relative w-full sm:min-w-[180px] sm:flex-1 ">
-          <Search className="text-content-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+        {/* Search   full width on mobile, capped on desktop */}
+        <div className="relative w-full sm:min-w-[180px] sm:flex-1">
+          <Search className="text-content-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             className="pl-9"
             placeholder="Search name, email, role…"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              resetPage();
+            }}
           />
         </div>
 
-        {/* Selects row — side-by-side on mobile, inline on desktop */}
+        {/* Selects row   side-by-side on mobile, inline on desktop */}
         <div className="flex gap-2 sm:contents">
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); resetPage(); }}>
-            <SelectTrigger className="flex-1 sm:flex-none sm:w-auto sm:min-w-[130px]">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v === 'all' ? '' : v);
+              resetPage();
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-auto sm:min-w-[130px] sm:flex-none">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -180,8 +252,14 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
             </SelectContent>
           </Select>
 
-          <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v === 'all' ? '' : v); resetPage(); }}>
-            <SelectTrigger className="flex-1 sm:flex-none sm:w-auto sm:min-w-[130px]">
+          <Select
+            value={roleFilter}
+            onValueChange={(v) => {
+              setRoleFilter(v === 'all' ? '' : v);
+              resetPage();
+            }}
+          >
+            <SelectTrigger className="flex-1 sm:w-auto sm:min-w-[130px] sm:flex-none">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
@@ -195,19 +273,23 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
           </Select>
         </div>
 
-        {/* View toggle — desktop only */}
+        {/* View toggle   desktop only */}
         <div className="hidden sm:ml-auto sm:flex sm:gap-1">
           <Button
-            variant="ghost" size="icon"
+            variant="ghost"
+            size="icon"
             className={cn(view === 'card' && 'bg-ink text-cream hover:bg-ink/85')}
-            onClick={() => setView('card')} title="Card view"
+            onClick={() => setView('card')}
+            title="Card view"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
           <Button
-            variant="ghost" size="icon"
+            variant="ghost"
+            size="icon"
             className={cn(view === 'table' && 'bg-ink text-cream hover:bg-ink/85')}
-            onClick={() => setView('table')} title="Table view"
+            onClick={() => setView('table')}
+            title="Table view"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -215,16 +297,22 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="border-line/10 -mb-1 flex overflow-scroll gap-2 md:gap-0 border-b">
+      <div
+        className="border-line/10 -mb-1 flex gap-2 overflow-scroll border-b md:gap-0"
+        hidden={hideRoleTabs}
+      >
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); resetPage(); }}
+            onClick={() => {
+              setTab(t);
+              resetPage();
+            }}
             className={cn(
-              'border-b-2 md:px-3 pb-2.5 pt-1 text-sm capitalize transition-colors',
+              'border-b-2 pt-1 pb-2.5 text-sm capitalize transition-colors md:px-3',
               tab === t
                 ? 'border-ink text-content font-semibold'
-                : 'border-transparent text-content-muted hover:text-content',
+                : 'text-content-muted hover:text-content border-transparent',
             )}
           >
             {t === 'all' ? 'All Users' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
@@ -257,7 +345,7 @@ export function UsersClient({ rows: initialRows, isSuperAdmin }: Props) {
           {/* Desktop: respects the view toggle */}
           <div className="hidden sm:block">
             {view === 'table' ? (
-              <div className="border-line/10 overflow-x-hidden rounded-2xl border bg-panel shadow-sm md:overflow-x-auto">
+              <div className="border-line/10 bg-panel overflow-x-hidden rounded-2xl border shadow-sm md:overflow-x-auto">
                 <table className="block w-full text-left text-sm md:table">
                   <thead className="text-content-muted border-line/10 hidden border-b text-xs md:table-header-group">
                     <tr>

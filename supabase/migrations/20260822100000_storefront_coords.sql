@@ -11,7 +11,7 @@
 --     * READING it back  -> "0101000020E6100000..." (WKB hex, not GeoJSON)
 --   So any client that writes the natural JSON shape fails, and any client that
 --   reads expecting `geo.coordinates` silently gets null forever. The second
---   half is the dangerous one — it does not throw, it just never renders a pin.
+--   half is the dangerous one   it does not throw, it just never renders a pin.
 --
 --   `src/modules/food/queries.ts` has exactly that reader (`geo?.coordinates`),
 --   which is why vendor coordinates have never resolved anywhere in the app.
@@ -38,6 +38,7 @@
 alter table public.storefronts
   add column if not exists lat double precision,
   add column if not exists lng double precision;
+
 do $chk$
 begin
   if not exists (
@@ -63,11 +64,13 @@ begin
   end if;
 end;
 $chk$;
+
 -- 2. Backfill from any geo that already exists --------------------------------
 update public.storefronts
    set lat = extensions.ST_Y(geo::extensions.geometry),
        lng = extensions.ST_X(geo::extensions.geometry)
  where geo is not null and lat is null;
+
 -- 3. Keep geo in step ---------------------------------------------------------
 -- geo remains the indexed column that nearby_storefronts searches; it is now
 -- maintained rather than supplied.
@@ -87,12 +90,15 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists storefronts_sync_geo on public.storefronts;
 create trigger storefronts_sync_geo
   before insert or update of lat, lng on public.storefronts
   for each row execute function public.storefronts_sync_geo();
+
 -- Re-derive for the rows backfilled above.
 update public.storefronts set lat = lat where lat is not null;
+
 -- 4. Return the pin from discovery -------------------------------------------
 -- The student map needs to place a marker, which means lat/lng must come back
 -- with the row rather than requiring a second read of an unreadable column.
@@ -102,12 +108,13 @@ update public.storefronts set lat = lat where lat is not null;
 --   adding lat/lng to RETURNS TABLE changes the OUT-parameter row type:
 --     ERROR: cannot change return type of existing function (42P13)
 --   Replacing a RETURNS TABLE signature therefore always means dropping it.
---   Safe here because nothing depends on it — no view, no generated column, no
+--   Safe here because nothing depends on it   no view, no generated column, no
 --   other function calls it. If that ever changes, the dependants must be
 --   dropped and recreated in the same transaction.
 drop function if exists public.nearby_storefronts(
   double precision, double precision, double precision, text, integer
 );
+
 create function public.nearby_storefronts(
   p_lat      double precision,
   p_lng      double precision,
@@ -168,6 +175,7 @@ as $fn$
     vp.rating_avg desc
   limit greatest(1, least(coalesce(p_limit, 50), 200));
 $fn$;
+
 grant execute on function
   public.nearby_storefronts(double precision, double precision, double precision, text, integer)
   to anon, authenticated, service_role;

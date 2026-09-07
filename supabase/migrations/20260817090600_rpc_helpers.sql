@@ -4,8 +4,8 @@
 -- The operations that must not be assembled from several client round-trips.
 --
 -- WHAT BELONGS HERE, AND WHAT DOES NOT
---   A function earns its place in the database when it is either (a) atomic —
---   several writes that must all land or none — or (b) a race that only a
+--   A function earns its place in the database when it is either (a) atomic  
+--   several writes that must all land or none   or (b) a race that only a
 --   constraint can settle. Everything else stays in TypeScript, where it is far
 --   easier to read, test and change.
 --
@@ -117,7 +117,7 @@ begin
     end if;
   end if;
 
-  -- 'pending' — NOT 'pending_payment'. 0006's status check admits exactly
+  -- 'pending'   NOT 'pending_payment'. 0006's status check admits exactly
   -- ('pending','preparing','picked_up','on_the_way','delivered','cancelled');
   -- anything else violates the constraint at insert time.
   insert into public.orders (
@@ -130,7 +130,7 @@ begin
 
   -- Column names follow 0006: qty / price_kobo / name, and these are SNAPSHOTS.
   -- listing_id is ON DELETE SET NULL there precisely so order history survives
-  -- a deleted listing — which is why the name and price are copied, not joined.
+  -- a deleted listing   which is why the name and price are copied, not joined.
   insert into public.order_items (order_id, listing_id, qty, price_kobo, name, image_url)
   select v_order_id, ci.listing_id, ci.quantity, l.price_kobo, l.name, l.image_url
     from public.cart_items ci
@@ -155,7 +155,7 @@ begin
    where c.subject_type = 'order' and c.subject_id = v_order_id
   on conflict do nothing;
 
-  -- Queue the delivery. No rider yet — dispatch offers it separately.
+  -- Queue the delivery. No rider yet   dispatch offers it separately.
   insert into public.deliveries (order_id, dropoff_address, status)
   values (v_order_id, p_delivery_address, 'pending');
 
@@ -168,6 +168,7 @@ begin
   return query select v_order_id, (v_subtotal - v_discount), v_repriced;
 end;
 $$;
+
 -- ── 2. accept_delivery_offer ────────────────────────────────────────────────
 -- Two riders tap Accept at the same instant. Exactly one must win, and the
 -- loser must get a clean "taken" rather than a constraint-violation stack
@@ -234,6 +235,7 @@ begin
   return query select true, null::text, v_offer.delivery_id;
 end;
 $$;
+
 -- ── 3. toggle_favorite ──────────────────────────────────────────────────────
 -- Returns the resulting state so the client can render without a second fetch.
 create or replace function public.toggle_favorite(p_entity_type text, p_entity_id uuid)
@@ -265,6 +267,7 @@ begin
   return true;
 end;
 $$;
+
 -- ── 4. Notifications ────────────────────────────────────────────────────────
 create or replace function public.mark_notifications_read(p_ids uuid[] default null)
 returns integer
@@ -290,6 +293,7 @@ begin
   return v_n;
 end;
 $$;
+
 -- One round trip for every badge in the shell.
 create or replace function public.get_unread_counts()
 returns table (notifications integer, messages integer)
@@ -309,6 +313,7 @@ as $$
         and m.deleted_at is null
         and (cp.last_read_at is null or m.created_at > cp.last_read_at))
 $$;
+
 -- ── 5. open_order_conversation ──────────────────────────────────────────────
 -- Idempotent: returns the existing thread if there is one. Called when a
 -- student taps "Message vendor" on an order.
@@ -357,6 +362,7 @@ begin
   return v_convo;
 end;
 $$;
+
 -- ── 6. submit_review ────────────────────────────────────────────────────────
 -- Enforces the rule the UI cannot: you may only review something you actually
 -- transacted, and only once per transaction.
@@ -419,6 +425,7 @@ begin
   return v_id;
 end;
 $$;
+
 -- ── 7. vendor_earnings_summary ──────────────────────────────────────────────
 -- Powers /vendor/earnings. Mirrors EarningsData in src/modules/vendor/types.ts.
 -- Aggregating in the database is the difference between one round trip and one
@@ -450,9 +457,10 @@ as $$
     coalesce((select count(*)::int from public.orders o
                where o.vendor_id = auth.uid()), 0)
 $$;
+
 -- ── 8. Grants ───────────────────────────────────────────────────────────────
 -- Callable by signed-in users only. Every one of them re-derives auth.uid()
--- internally, so `anon` calling them would get an authentication error anyway —
+-- internally, so `anon` calling them would get an authentication error anyway  
 -- but not granting is cheaper than relying on that.
 revoke all on function public.checkout_cart(uuid, text, text, text)                    from public, anon;
 revoke all on function public.accept_delivery_offer(uuid)                              from public, anon;
@@ -462,6 +470,7 @@ revoke all on function public.get_unread_counts()                               
 revoke all on function public.open_order_conversation(uuid)                            from public, anon;
 revoke all on function public.submit_review(text, uuid, text, uuid, integer, text, text) from public, anon;
 revoke all on function public.vendor_earnings_summary()                                from public, anon;
+
 grant execute on function public.checkout_cart(uuid, text, text, text)                    to authenticated, service_role;
 grant execute on function public.accept_delivery_offer(uuid)                              to authenticated, service_role;
 grant execute on function public.toggle_favorite(text, uuid)                              to authenticated, service_role;
@@ -470,6 +479,7 @@ grant execute on function public.get_unread_counts()                            
 grant execute on function public.open_order_conversation(uuid)                            to authenticated, service_role;
 grant execute on function public.submit_review(text, uuid, text, uuid, integer, text, text) to authenticated, service_role;
 grant execute on function public.vendor_earnings_summary()                                to authenticated, service_role;
+
 -- ── 9. Verify ───────────────────────────────────────────────────────────────
 do $$
 declare

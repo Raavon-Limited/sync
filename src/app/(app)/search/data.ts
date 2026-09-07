@@ -1,22 +1,39 @@
+import { ROOM_TYPE_NAMES } from '@/lib/constants/room-types';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type RoomType = "Self-contain" | "Single" | "Shared" | "Bedsitter" | "Mini-flat";
+/**
+ * A `room_types.name`.
+ *
+ * NOT a closed union any more. It was "Self-contain | Single | Shared |
+ * Bedsitter | Mini-flat", of which only ONE value existed in the database, so
+ * four of the five filters returned nothing   silently, because "no matches"
+ * and "impossible filter" look identical in a results list. It was then
+ * narrowed to the four the CHECK constraint allowed.
+ *
+ * 20260907180000_room_types made the set a TABLE so it can grow without a
+ * deploy, which a union in application code cannot express. The guard against
+ * the original bug is now structural: the filter list and the landlord's picker
+ * read the same source, so an offered value always exists.
+ */
+export type RoomType = string;
 
-export type Amenity =
-  | "Wi-Fi"
-  | "24h light"
-  | "Borehole water"
-  | "CCTV"
-  | "Inverter"
-  | "Tiled"
-  | "Kitchen";
+/**
+ * `hostels.amenities` is a free-text array, not an enum, so this list is a
+ * convenience for the sidebar rather than a constraint. Matching is done
+ * case-insensitively on substring (see the results filter) so a hostel that
+ * lists "Water" still matches "Borehole water".
+ */
+export type Amenity = string;
 
 export type VerifiedBy = "Sync team visit" | "Student reviewed";
 
 export type BadgeType = "Top rated" | "Verified" | "Female only" | "Best value" | "New";
 
 export interface Listing {
-  id: number;
+  /** hostels.id   a uuid, not a counter. */
+  id: string;
+  /** Route target for the card. */
+  slug: string;
   name: string;
   distance: string;
   area: string;
@@ -45,7 +62,7 @@ export type ViewMode = "Grid" | "List";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const ROOM_TYPES: RoomType[] = ["Self-contain", "Single", "Shared", "Bedsitter", "Mini-flat"];
+export const ROOM_TYPES: RoomType[] = ROOM_TYPE_NAMES;
 
 export const AMENITIES: Amenity[] = [
   "Wi-Fi", "24h light", "Borehole water", "CCTV", "Inverter", "Tiled", "Kitchen",
@@ -60,7 +77,9 @@ export const SORT_OPTIONS: SortOption[] = [
 export const DEFAULT_FILTERS: SearchFilters = {
   priceMin: 100,
   priceMax: 250,
-  roomTypes: ["Self-contain", "Single"],
+  // No room type pre-selected: starting a search with a filter applied means a
+  // student sees a subset without having asked for one.
+  roomTypes: [],
   amenities: ["Wi-Fi", "24h light", "Borehole water"],
   verifiedBy: ["Sync team visit"],
 };
@@ -75,100 +94,9 @@ export const EMPTY_FILTERS: SearchFilters = {
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
-export const ALL_LISTINGS: Listing[] = [
-  {
-    id: 1,
-    name: "Tanke Crescent Lodge",
-    distance: "4 min walk",
-    area: "UNILORIN PS",
-    price: 180,
-    rating: 4.9,
-    reviewCount: 86,
-    badge: "Top rated",
-    amenities: ["Wi-Fi", "24h light", "Borehole water", "CCTV"],
-    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&h=420&fit=crop",
-    roomType: "Self-contain",
-    verified: true,
-    roomsAvailable: 3,
-    roomsTotal: 20,
-  },
-  {
-    id: 2,
-    name: "Safari Self-Contain",
-    distance: "8 min",
-    area: "UNILORIN main",
-    price: 150,
-    rating: 4.7,
-    reviewCount: 64,
-    badge: "Verified",
-    amenities: ["Wi-Fi", "24h light", "Borehole water", "CCTV"],
-    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=420&fit=crop",
-    roomType: "Self-contain",
-    verified: true,
-    roomsAvailable: 7,
-    roomsTotal: 30,
-  },
-  {
-    id: 3,
-    name: "Oke-Odo Female Hall",
-    distance: "12 min",
-    area: "KWASU shuttle",
-    price: 95,
-    rating: 4.6,
-    reviewCount: 112,
-    badge: "Female only",
-    amenities: ["Wi-Fi", "24h light", "Borehole water", "CCTV"],
-    image: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&h=420&fit=crop",
-    roomType: "Single",
-    verified: true,
-    roomsAvailable: 12,
-    roomsTotal: 50,
-  },
-  {
-    id: 4,
-    name: "Pipeline Court",
-    distance: "15 min",
-    area: "Ilorin Poly",
-    price: 120,
-    rating: 4.5,
-    reviewCount: 49,
-    badge: "Best value",
-    amenities: ["Wi-Fi", "24h light", "Borehole water", "CCTV"],
-    image: "https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?w=600&h=420&fit=crop",
-    roomType: "Single",
-    verified: false,
-    roomsAvailable: 1,
-    roomsTotal: 24,
-  },
-  {
-    id: 5,
-    name: "Basin Heights",
-    distance: "6 min",
-    area: "UNILORIN PS",
-    price: 200,
-    rating: 4.8,
-    reviewCount: 33,
-    badge: "New",
-    amenities: ["Wi-Fi", "24h light", "Inverter", "Tiled", "Kitchen"],
-    image: "https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=600&h=420&fit=crop",
-    roomType: "Self-contain",
-    verified: true,
-    roomsAvailable: 18,
-    roomsTotal: 18,
-  },
-  {
-    id: 6,
-    name: "Oloje Student Lodge",
-    distance: "10 min",
-    area: "KWASU",
-    price: 80,
-    rating: 4.3,
-    reviewCount: 28,
-    amenities: ["24h light", "Borehole water"],
-    image: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&h=420&fit=crop",
-    roomType: "Shared",
-    verified: false,
-    roomsAvailable: 0,
-    roomsTotal: 16,
-  },
-];
+/**
+ * Hostels come from the database now   see the page's `useHostels()` call and
+ * `toListing()`. The hardcoded array that lived here described properties that
+ * do not exist, which meant every search returned results nobody could book.
+ */
+

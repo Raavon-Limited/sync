@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Reveal } from '@/components/shared/reveal';
+import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
 import { SITE } from '@/config/site';
 
 /** The 3 most important stats, mirrored from the About page NumbersStrip. */
@@ -23,8 +24,19 @@ export function LandingAboutTeaser() {
   return (
     <section
       aria-labelledby="landing-about-heading"
-      className="bg-surface-deep mt-20 w-full px-6 py-16 md:py-24"
+      className="bg-surface-deep relative isolate mt-20 w-full overflow-hidden px-6 py-16 md:py-24"
     >
+      {/* The townscape behind the argument for the product - houses being the
+          thing this section is actually about.
+
+          Kept at the same weight as the auth form pane, and for the same
+          reason: this band is dense justified body copy, and a pattern that
+          competes with running text is a legibility problem rather than a
+          texture. The dark: variant flips it to a cream outline, because
+          surface-deep is a dark surface in dark mode and ink on ink is
+          invisible. */}
+      <DoodleBackdrop tile={560} className="text-ink/5 dark:text-cream/5" />
+
       <div className="mx-auto grid max-w-7xl items-start gap-12 md:grid-cols-[1.4fr_1fr] md:gap-16">
         {/* Left - eyebrow, headline, body, CTA */}
         <Reveal>

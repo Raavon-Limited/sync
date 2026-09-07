@@ -1,58 +1,77 @@
 /**
  * ROUTE: /landlord
- * ACCESS: authenticated vendor (category=landlord)
- * PURPOSE: Landlord dashboard overview — KPIs, booking requests, revenue, hostels.
+ * ACCESS: authenticated landlord.
+ * PURPOSE: Landlord dashboard   KPIs, booking requests, revenue, hostels.
  *
- * Same shared design as every other dashboard via <RoleDashboard variant="landlord">.
- * This page only supplies landlord *data* (KPIs, booking requests, chart) and the
- * landlord-specific lower section (hostels).
+ * Was entirely mock: `@/mock/StatsCard` for the KPIs and revenue chart, and
+ * three hardcoded students with Unsplash avatars as "pending requests". All of
+ * it now comes from the landlord's own hostels, their real booking requests,
+ * and the ledger.
  */
 import type { Metadata } from 'next';
-import type { PendingRequestItem } from '@/components/dashboard/pending-request-card';
+import { redirect } from 'next/navigation';
 import { RoleDashboard } from '@/components/dashboard/role-dashboard';
-import { properties, revenueWeekly, stats } from '@/mock/StatsCard';
-import { PropertyCard } from './(components)/HostelCards';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/modules/auth/queries';
+import { PropertyCard, type Property } from './(components)/HostelCards';
+import { getLandlordDashboard } from './(components)/landlord-data';
 
 export const metadata: Metadata = { title: 'Landlord dashboard' };
 
-const pending: PendingRequestItem[] = [
-  {
-    id: 'aisha-o',
-    name: 'Aisha O.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGVvcGxlfGVufDB8fDB8fHww',
-    tags: ['Tanke Crescent', '3B', '2h'],
-  },
-  {
-    id: 'maryam-a',
-    name: 'Maryam A.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YmxhY2slMjBwZW9wbGV8ZW58MHx8MHx8fDA%3D',
-    tags: ['Tanke Crescent', '1A', '2h'],
-  },
-  {
-    id: 'muiz-o',
-    name: 'Muiz O.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1507152832244-10d45c7eda57?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGJsYWNrJTIwcGVvcGxlfGVufDB8fDB8fHww',
-    tags: ['Tanke Crescent', '3B', '2h'],
-  },
-];
+import type { Row } from '@/lib/supabase/row';
 
-export default function Page() {
+export default async function Page() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
+  const db = await createClient();
+  const [dashboard, { data: hostels }, { data: availability }] = await Promise.all([
+    getLandlordDashboard(user.id),
+    db
+      .from('hostels')
+      .select('id, name, slug, archived_at, hostel_images(url)')
+      .eq('landlord_id', user.id)
+      .is('archived_at', null),
+    db.from('hostel_availability').select('*'),
+  ]);
+
+  const availById = new Map(((availability ?? []) as Row[]).map((a) => [a.hostel_id, a]));
+
+  const properties: Property[] = ((hostels ?? []) as Row[]).map((h) => {
+    const a = availById.get(h.id);
+    const total = a?.rooms_total ?? 0;
+    return {
+      id: h.id,
+      name: h.name,
+      roomsTotal: total,
+      // "Booked" is total minus free   the card counts occupancy, the view
+      // counts vacancy, and inverting it in the wrong place is how a full
+      // hostel renders as empty.
+      roomsBooked: Math.max(0, total - (a?.rooms_available ?? 0)),
+      status: 'Active',
+      imageUrl: h.hostel_images?.[0]?.url ?? undefined,
+    };
+  });
+
   return (
     <RoleDashboard
       variant="landlord"
-      count={8}
-      kpis={stats}
-      pending={pending}
-      chart={revenueWeekly}
+      count={dashboard.count}
+      kpis={dashboard.kpis}
+      pending={dashboard.pending}
+      chart={dashboard.chart}
     >
       <section>
         <h2 className="text-content-muted mb-2 max-w-xl font-mono text-sm tracking-wide">
           MY HOSTELS
         </h2>
-        <PropertyCard properties={properties} />
+        {properties.length === 0 ? (
+          <p className="text-content-muted border-line/10 rounded-xl border border-dashed p-6 text-sm">
+            No hostels listed yet.
+          </p>
+        ) : (
+          <PropertyCard properties={properties} />
+        )}
       </section>
     </RoleDashboard>
   );

@@ -24,7 +24,7 @@ export function PropertyCard({ properties, onEdit, onBoost }: PropertyCardProps)
       {properties.map((property) => (
         <Card
           key={property.id}
-          className="border-line group w-full border bg-transparent transition-shadow duration-300 hover:shadow-lg"
+          className="border-line group w-full border transition-shadow duration-300 hover:shadow-lg"
         >
           {/* Image / Placeholder */}
           <div className="border-line/30 mx-4 mt-4 overflow-hidden rounded-lg border border-dashed">
@@ -37,14 +37,28 @@ export function PropertyCard({ properties, onEdit, onBoost }: PropertyCardProps)
                 className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-110"
               />
             ) : (
-              <div className="relative h-40 w-full bg-surface-deep transition-transform duration-300 group-hover:scale-110">
+              <div className="bg-surface-deep relative h-40 w-full transition-transform duration-300 group-hover:scale-110">
                 <svg
                   className="absolute inset-0 h-full w-full"
                   xmlns="http://www.w3.org/2000/svg"
                   preserveAspectRatio="none"
                 >
-                  <line x1="0" y1="0" x2="100%" y2="100%" stroke="var(--color-content-muted)" strokeWidth="1.5" />
-                  <line x1="100%" y1="0" x2="0" y2="100%" stroke="var(--color-content-muted)" strokeWidth="1.5" />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="100%"
+                    y2="100%"
+                    stroke="var(--color-content-muted)"
+                    strokeWidth="1.5"
+                  />
+                  <line
+                    x1="100%"
+                    y1="0"
+                    x2="0"
+                    y2="100%"
+                    stroke="var(--color-content-muted)"
+                    strokeWidth="1.5"
+                  />
                 </svg>
               </div>
             )}

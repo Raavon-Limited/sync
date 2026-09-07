@@ -1,0 +1,102 @@
+/**
+ * "Add a business account" / "Add a student account", in the account menu.
+ *
+ * THE GAP THIS FILLS
+ *   Signing up again with the same email is refused   auth is keyed on email  
+ *   and the form correctly redirects to /login. But there was then no route,
+ *   anywhere, from a student account to a vendor one. The database learned how
+ *   in `claim_role`; this is the only place in the product that asks it.
+ *
+ * A BUSINESS ROLE GOES STRAIGHT TO ONBOARDING
+ *   Claiming vendor grants the right to set a business up, not a business:
+ *   there is no `vendor_profiles` row until onboarding writes one. Landing on
+ *   an empty vendor dashboard instead would look like the account was made
+ *   wrong. The student direction needs no equivalent   students have no
+ *   profile row to create, so holding the role is the whole thing.
+ *
+ * CONFIRMED FIRST
+ *   The one-business-per-account rule means this choice is not freely
+ *   reversible: having claimed vendor, you cannot later claim landlord on the
+ *   same login. Worth a sentence before, rather than an error afterwards.
+ */
+'use client';
+
+import { useState } from 'react';
+import { Briefcase, GraduationCap, Loader2 } from 'lucide-react';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from '@/components/ui/toast';
+import { claimRole } from '@/modules/auth/actions';
+import { useAccountSwitch } from '@/providers/account-switch-provider';
+
+const BUSINESS_ROLES = ['vendor', 'landlord', 'rider'];
+
+export function AddAccountItem({ roles }: { roles: string[] }) {
+  // The whole operation - claim, cache reset, navigation - is one pending
+  // window owned by the provider, so the overlay matches it exactly.
+  const switcher = useAccountSwitch();
+  const pending = switcher?.switching ?? false;
+  const [confirm, setConfirm] = useState<'vendor' | 'student' | null>(null);
+
+  const hasBusiness = roles.some((r) => BUSINESS_ROLES.includes(r));
+  const hasStudent = roles.includes('student');
+
+  // Nothing left to add. Staff accounts land here too and are deliberately
+  // offered nothing   claim_role refuses staff roles anyway.
+  const offer = !hasBusiness ? 'vendor' : !hasStudent ? 'student' : null;
+  if (!offer) return null;
+
+  async function go(role: 'vendor' | 'student') {
+    if (!switcher) return;
+    // Close the dialog FIRST. It used to close in a `finally` after the await,
+    // so the confirm modal sat on screen through the whole server call with a
+    // greyed-out button - and the account only appeared to change once the
+    // dialog went away, which read as "it switches when I cancel".
+    setConfirm(null);
+    try {
+      await switcher.run({
+        label: role === 'vendor' ? 'Setting up your business…' : 'Adding your student account…',
+        // Claiming vendor grants the right to set a business up, not a
+        // business: there is no vendor_profiles row until onboarding writes one.
+        href: role === 'vendor' ? '/onboarding' : '/user',
+        action: () => claimRole(role),
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not add that account');
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenuItem
+        disabled={pending}
+        onSelect={(e) => {
+          e.preventDefault();
+          setConfirm(offer);
+        }}
+      >
+        {pending ? (
+          <Loader2 className="size-4 shrink-0 animate-spin" />
+        ) : offer === 'vendor' ? (
+          <Briefcase className="size-4 shrink-0" />
+        ) : (
+          <GraduationCap className="size-4 shrink-0" />
+        )}
+        {offer === 'vendor' ? 'Add a business account' : 'Add a student account'}
+      </DropdownMenuItem>
+
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title={offer === 'vendor' ? 'Add a business account?' : 'Add a student account?'}
+        description={
+          offer === 'vendor'
+            ? 'This keeps your student account and adds a business one to the same login, so you can switch between them. You will be taken through business setup next. One login can hold one business, so this choice cannot be swapped for a landlord account later.'
+            : 'This adds a student account to the same login, so you can order and book alongside running your business. You can switch between them at any time.'
+        }
+        confirmLabel={pending ? 'Adding…' : 'Continue'}
+        onConfirm={() => confirm && go(confirm)}
+      />
+    </>
+  );
+}

@@ -13,15 +13,15 @@
 --   ONLY publicly-safe columns. Student PII never lives here.
 --
 -- THE ROLE MODEL, END TO END
---   student     — buys. Default for every signup.
---   vendor      — sells food/beauty/laundry/workmanship. Onboards + verifies.
---   landlord    — lists hostels. Onboards + verifies. Added by 0005.
---   rider       — delivers orders. NEW HERE. Was specified in BLUEPRINT §24 but
+--   student       buys. Default for every signup.
+--   vendor        sells food/beauty/laundry/workmanship. Onboards + verifies.
+--   landlord      lists hostels. Onboards + verifies. Added by 0005.
+--   rider         delivers orders. NEW HERE. Was specified in BLUEPRINT §24 but
 --                 existed in neither the database nor src/proxy.ts.
---   admin       — staff. Never self-assignable.
---   super_admin — staff, plus role management.
+--   admin         staff. Never self-assignable.
+--   super_admin   staff, plus role management.
 --
---   `src/proxy.ts` must be updated to match — see the note at the end of this
+--   `src/proxy.ts` must be updated to match   see the note at the end of this
 --   file. The database is the authority; the proxy is UX.
 --
 -- ROLLBACK
@@ -36,9 +36,10 @@
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check
   check (role in ('student', 'vendor', 'landlord', 'rider', 'admin', 'super_admin'));
+
 -- ── 2. Signup may now resolve to rider ──────────────────────────────────────
 -- Still clamped to the three self-serve roles. `admin` and `super_admin` remain
--- unreachable from the client no matter what metadata is claimed — that clamp
+-- unreachable from the client no matter what metadata is claimed   that clamp
 -- is the whole reason this trigger exists.
 create or replace function public.handle_new_user()
 returns trigger
@@ -79,10 +80,11 @@ begin
   return new;
 end;
 $$;
+
 -- ── 3. Role helpers that work TODAY ─────────────────────────────────────────
 -- The conventions migration defined auth_role()/is_admin() against an `app_role`
--- JWT claim. That claim does not exist yet — the custom access token hook is
--- still to be built — so those helpers return 'anon' for everyone.
+-- JWT claim. That claim does not exist yet   the custom access token hook is
+-- still to be built   so those helpers return 'anon' for everyone.
 --
 -- These read `profiles` instead. SECURITY DEFINER is REQUIRED and is not a
 -- shortcut: profiles' RLS is own-row-only, so a policy on another table that
@@ -105,12 +107,14 @@ as $$
     'anon'
   )
 $$;
+
 create or replace function public.has_role(variadic roles text[])
 returns boolean
 language sql
 stable
 set search_path = ''
 as $$ select public.current_app_role() = any (roles) $$;
+
 -- Redefined from the conventions migration so it consults the table too.
 create or replace function public.is_admin()
 returns boolean
@@ -118,19 +122,23 @@ language sql
 stable
 set search_path = ''
 as $$ select public.current_app_role() in ('admin', 'super_admin') $$;
+
 create or replace function public.is_staff()
 returns boolean
 language sql
 stable
 set search_path = ''
 as $$ select public.current_app_role() in ('admin', 'super_admin') $$;
+
 revoke all on function public.current_app_role() from public, anon;
 grant execute on function public.current_app_role() to authenticated, service_role;
 grant execute on function public.has_role(text[])  to authenticated, service_role;
 grant execute on function public.is_admin()        to authenticated, service_role;
 grant execute on function public.is_staff()        to authenticated, service_role;
+
 comment on function public.current_app_role() is
   'Caller''s role from the app_role JWT claim, else public.profiles.role, else ''anon''. SECURITY DEFINER so policies on other tables can read it past profiles'' own-row RLS.';
+
 -- ── 4. Campuses ─────────────────────────────────────────────────────────────
 -- One campus at launch (KWASU), but every geo-scoped table references this
 -- rather than a text literal. Retrofitting multi-campus later is expensive;
@@ -144,10 +152,12 @@ create table if not exists public.campuses (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 insert into public.campuses (code, name, state)
 values ('KWASU', 'Kwara State University, Malete', 'Kwara')
 on conflict (code) do nothing;
--- ── 5. vendor_profiles — the public storefront ──────────────────────────────
+
+-- ── 5. vendor_profiles   the public storefront ──────────────────────────────
 -- One row per vendor/landlord. Anonymous visitors read THIS, never `profiles`.
 -- Deliberately excludes phone and any personal field.
 create table if not exists public.vendor_profiles (
@@ -184,6 +194,7 @@ create table if not exists public.vendor_profiles (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
+
 create index if not exists vendor_profiles_category_idx
   on public.vendor_profiles (category) where archived_at is null;
 create index if not exists vendor_profiles_area_idx
@@ -192,6 +203,7 @@ create index if not exists vendor_profiles_geo_idx
   on public.vendor_profiles using gist (geo);
 create index if not exists vendor_profiles_campus_idx
   on public.vendor_profiles (campus_id);
+
 -- ── 6. rider_profiles ───────────────────────────────────────────────────────
 -- `is_online` and `last_seen_at` drive dispatch. `current_geo` is written
 -- frequently by the rider app; see BLUEPRINT §24 on why live location is
@@ -215,10 +227,12 @@ create table if not exists public.rider_profiles (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
+
 -- Partial index: dispatch only ever queries online, verified riders.
 create index if not exists rider_profiles_dispatch_idx
   on public.rider_profiles using gist (current_geo)
   where is_online and verification_status = 'verified' and archived_at is null;
+
 -- ── 7. verification_documents ───────────────────────────────────────────────
 -- Replaces the `documents[]` array currently living in auth user_metadata,
 -- which the user can PATCH themselves. Mirrors DocumentItem in
@@ -238,8 +252,10 @@ create table if not exists public.verification_documents (
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
+
 create index if not exists verification_documents_owner_idx
   on public.verification_documents (owner_id, status);
+
 -- ── 8. Column guards ────────────────────────────────────────────────────────
 -- RLS is row-level; keeping a client off ONE column needs a trigger. Same
 -- pattern as guard_profile_privileged_cols() in 0001.
@@ -258,10 +274,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists vendor_profiles_guard on public.vendor_profiles;
 create trigger vendor_profiles_guard
   before update on public.vendor_profiles
   for each row execute function public.guard_vendor_profile_cols();
+
 create or replace function public.guard_rider_profile_cols()
 returns trigger language plpgsql as $$
 begin
@@ -274,10 +292,12 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists rider_profiles_guard on public.rider_profiles;
 create trigger rider_profiles_guard
   before update on public.rider_profiles
   for each row execute function public.guard_rider_profile_cols();
+
 -- A document's status is a staff decision. The owner may upload and replace the
 -- file, never mark it approved.
 create or replace function public.guard_verification_document_cols()
@@ -292,33 +312,40 @@ begin
   return new;
 end;
 $$;
+
 drop trigger if exists verification_documents_guard on public.verification_documents;
 create trigger verification_documents_guard
   before update on public.verification_documents
   for each row execute function public.guard_verification_document_cols();
+
 -- ── 9. RLS ──────────────────────────────────────────────────────────────────
 alter table public.campuses               enable row level security;
 alter table public.vendor_profiles        enable row level security;
 alter table public.rider_profiles         enable row level security;
 alter table public.verification_documents enable row level security;
+
 -- Campuses: reference data, world-readable.
 drop policy if exists "campuses_select" on public.campuses;
 create policy "campuses_select" on public.campuses
   for select to anon, authenticated using (is_active);
+
 -- Vendor storefronts: the public browse surface that replaces the old
 -- `profiles` public read. Archived vendors drop out.
 drop policy if exists "vendor_profiles_select_public" on public.vendor_profiles;
 create policy "vendor_profiles_select_public" on public.vendor_profiles
   for select to anon, authenticated using (archived_at is null);
+
 drop policy if exists "vendor_profiles_write_own" on public.vendor_profiles;
 create policy "vendor_profiles_write_own" on public.vendor_profiles
   for all to authenticated
   using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
+
 drop policy if exists "vendor_profiles_staff" on public.vendor_profiles;
 create policy "vendor_profiles_staff" on public.vendor_profiles
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
--- Riders: a rider reads and writes their own row. Live location is NOT public —
+
+-- Riders: a rider reads and writes their own row. Live location is NOT public  
 -- students see a rider's position only through an active delivery, which the
 -- commerce migration exposes as a narrowly-scoped view.
 drop policy if exists "rider_profiles_own" on public.rider_profiles;
@@ -326,34 +353,42 @@ create policy "rider_profiles_own" on public.rider_profiles
   for all to authenticated
   using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
+
 drop policy if exists "rider_profiles_staff" on public.rider_profiles;
 create policy "rider_profiles_staff" on public.rider_profiles
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- Documents: owner reads and uploads their own; staff read everything.
 drop policy if exists "verification_documents_own" on public.verification_documents;
 create policy "verification_documents_own" on public.verification_documents
   for select to authenticated using ((select auth.uid()) = owner_id);
+
 drop policy if exists "verification_documents_insert_own" on public.verification_documents;
 create policy "verification_documents_insert_own" on public.verification_documents
   for insert to authenticated with check ((select auth.uid()) = owner_id);
+
 drop policy if exists "verification_documents_update_own" on public.verification_documents;
 create policy "verification_documents_update_own" on public.verification_documents
   for update to authenticated
   using ((select auth.uid()) = owner_id)
   with check ((select auth.uid()) = owner_id);
+
 drop policy if exists "verification_documents_staff" on public.verification_documents;
 create policy "verification_documents_staff" on public.verification_documents
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
 -- ── 10. Grants ──────────────────────────────────────────────────────────────
 revoke all on public.campuses               from anon, authenticated;
 revoke all on public.vendor_profiles        from anon, authenticated;
 revoke all on public.rider_profiles         from anon, authenticated;
 revoke all on public.verification_documents from anon, authenticated;
+
 grant select                         on public.campuses        to anon, authenticated;
 grant select                         on public.vendor_profiles to anon, authenticated;
 grant insert, update                 on public.vendor_profiles to authenticated;
 grant select, insert, update         on public.rider_profiles  to authenticated;
 grant select, insert, update, delete on public.verification_documents to authenticated;
+
 -- ── 11. Backfill storefronts for existing vendors ───────────────────────────
 -- Slug from business_name, de-duplicated with a counter. Runs once; the
 -- `on conflict` makes re-running a no-op.
@@ -373,6 +408,7 @@ from public.profiles p
 where p.role in ('vendor', 'landlord')
   and p.archived_at is null
 on conflict (id) do nothing;
+
 -- ── 12. Verify ──────────────────────────────────────────────────────────────
 do $$
 declare
@@ -403,10 +439,11 @@ begin
 
   raise notice 'identity layer ready: 6 roles, storefronts backfilled, documents table live.';
 end $$;
+
 -- ============================================================================
 -- FOLLOW-UP REQUIRED IN APPLICATION CODE (not doable from SQL)
---   src/proxy.ts   — add 'rider' to the Role union and ALL[], and add a route
+--   src/proxy.ts     add 'rider' to the Role union and ALL[], and add a route
 --                    rule { prefix: '/rider', roles: ['rider'] }.
---   src/modules/auth/types.ts — add 'rider' to the Role union.
+--   src/modules/auth/types.ts   add 'rider' to the Role union.
 --   The /rider dashboard route group does not exist yet.
--- ============================================================================;
+-- ============================================================================

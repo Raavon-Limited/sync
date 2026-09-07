@@ -54,12 +54,14 @@ create table if not exists public.storefront_staff (
   revoked_at   timestamptz,
   created_at   timestamptz not null default now()
 );
+
 -- One active membership per person per branch.
 create unique index if not exists storefront_staff_unique_active_idx
   on public.storefront_staff (storefront_id, user_id) where revoked_at is null;
 -- The shape the permission check probes.
 create index if not exists storefront_staff_user_idx
   on public.storefront_staff (user_id, storefront_id) where revoked_at is null;
+
 -- 2. Invitations --------------------------------------------------------------
 create table if not exists public.storefront_invites (
   id            uuid primary key default gen_random_uuid(),
@@ -84,9 +86,11 @@ create table if not exists public.storefront_invites (
   revoked_at    timestamptz,
   created_at    timestamptz not null default now()
 );
+
 create unique index if not exists storefront_invites_pending_idx
   on public.storefront_invites (storefront_id, lower(email))
   where accepted_at is null and revoked_at is null;
+
 -- 3. What "may manage" means --------------------------------------------------
 -- SECURITY DEFINER for two reasons. It lets a policy ask the question without
 -- the caller needing read access to storefronts or storefront_staff rows they
@@ -114,7 +118,9 @@ as $fn$
        and s2.archived_at is null
   );
 $fn$;
+
 grant execute on function private.can_manage_storefront(uuid, uuid) to authenticated, service_role;
+
 -- 4. Integrity: a listing's brand must match its branch's brand ---------------
 -- Without this, staff who may write a listing for their branch could set
 -- vendor_id to another brand, and the row would satisfy both the policy and the
@@ -139,10 +145,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists listings_sync_vendor on public.listings;
 create trigger listings_sync_vendor
   before insert or update of storefront_id, vendor_id on public.listings
   for each row execute function public.sync_listing_vendor_to_storefront();
+
 -- 5. Staff may not change what makes a branch theirs --------------------------
 -- Follows guard_order_privileged_cols in 0006: silently restore rather than
 -- raise, so an over-broad client patch degrades instead of failing.
@@ -164,10 +172,12 @@ begin
   return new;
 end;
 $fn$;
+
 drop trigger if exists storefronts_guard_cols on public.storefronts;
 create trigger storefronts_guard_cols
   before update on public.storefronts
   for each row execute function public.guard_storefront_privileged_cols();
+
 -- 6. Widen the write policies -------------------------------------------------
 -- listings: owner OR branch staff.
 drop policy if exists "listings_write_own" on public.listings;
@@ -177,6 +187,7 @@ create policy "listings_write_own" on public.listings
                or private.can_manage_storefront(storefront_id, (select auth.uid())))
   with check  ((select auth.uid()) = vendor_id
                or private.can_manage_storefront(storefront_id, (select auth.uid())));
+
 -- orders: the branch working the queue must be able to advance status. Money
 -- columns on orders stay protected by guard_order_privileged_cols from 0006.
 drop policy if exists "orders_update_vendor" on public.orders;
@@ -186,6 +197,7 @@ create policy "orders_update_vendor" on public.orders
                or private.can_manage_storefront(storefront_id, (select auth.uid())))
   with check  ((select auth.uid()) = vendor_id
                or private.can_manage_storefront(storefront_id, (select auth.uid())));
+
 -- orders select: students, the owner, and now branch staff.
 drop policy if exists "orders_select_own" on public.orders;
 create policy "orders_select_own" on public.orders
@@ -193,6 +205,7 @@ create policy "orders_select_own" on public.orders
   using ((select auth.uid()) = student_id
          or (select auth.uid()) = vendor_id
          or private.can_manage_storefront(storefront_id, (select auth.uid())));
+
 -- storefronts: creating, deleting and re-parenting a branch stay owner-only.
 -- Staff get UPDATE, narrowed to trading columns by the guard above.
 drop policy if exists "storefronts_write_own" on public.storefronts;
@@ -200,20 +213,24 @@ create policy "storefronts_write_own" on public.storefronts
   for all to authenticated
   using       ((select auth.uid()) = vendor_id)
   with check  ((select auth.uid()) = vendor_id);
+
 drop policy if exists "storefronts_update_staff" on public.storefronts;
 create policy "storefronts_update_staff" on public.storefronts
   for update to authenticated
   using       (private.can_manage_storefront(id, (select auth.uid())))
   with check  (private.can_manage_storefront(id, (select auth.uid())));
+
 -- 7. RLS on the new tables ----------------------------------------------------
 alter table public.storefront_staff   enable row level security;
 alter table public.storefront_invites enable row level security;
+
 -- You can see a roster if you can manage the branch, or if it is your own row.
 drop policy if exists "storefront_staff_read" on public.storefront_staff;
 create policy "storefront_staff_read" on public.storefront_staff
   for select to authenticated
   using (user_id = (select auth.uid())
          or private.can_manage_storefront(storefront_id, (select auth.uid())));
+
 -- Only the OWNER hires and fires. A manager inviting other managers is how an
 -- owner loses track of who has access; revisit only if the product asks for it.
 drop policy if exists "storefront_staff_write_owner" on public.storefront_staff;
@@ -223,6 +240,7 @@ create policy "storefront_staff_write_owner" on public.storefront_staff
                         where s.id = storefront_id and s.vendor_id = (select auth.uid())))
   with check  (exists (select 1 from public.storefronts s
                         where s.id = storefront_id and s.vendor_id = (select auth.uid())));
+
 -- Invites are never readable by the invitee: the token IS the credential, and a
 -- SELECT policy that exposed it would let anyone who can list invites join any
 -- branch. Redemption goes through accept_storefront_invite() instead.
@@ -233,10 +251,12 @@ create policy "storefront_invites_owner" on public.storefront_invites
                         where s.id = storefront_id and s.vendor_id = (select auth.uid())))
   with check  (exists (select 1 from public.storefronts s
                         where s.id = storefront_id and s.vendor_id = (select auth.uid())));
+
 revoke all on public.storefront_staff   from anon, authenticated;
 revoke all on public.storefront_invites from anon, authenticated;
 grant select, insert, update, delete on public.storefront_staff   to authenticated;
 grant select, insert, update, delete on public.storefront_invites to authenticated;
+
 -- 8. Invite lifecycle ---------------------------------------------------------
 create or replace function public.create_storefront_invite(
   p_storefront_id uuid,
@@ -291,7 +311,9 @@ begin
   return query select v_row.id, v_row.token, v_row.expires_at;
 end;
 $fn$;
+
 grant execute on function public.create_storefront_invite(uuid, text, text) to authenticated, service_role;
+
 create or replace function public.accept_storefront_invite(p_token text)
 returns uuid
 language plpgsql
@@ -352,7 +374,9 @@ begin
   return v_inv.storefront_id;
 end;
 $fn$;
+
 grant execute on function public.accept_storefront_invite(text) to authenticated, service_role;
+
 create or replace function public.revoke_storefront_staff(p_staff_id uuid)
 returns void
 language plpgsql
@@ -386,4 +410,5 @@ begin
           jsonb_build_object('user_id', v_st.user_id, 'role', v_st.role));
 end;
 $fn$;
+
 grant execute on function public.revoke_storefront_staff(uuid) to authenticated, service_role;

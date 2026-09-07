@@ -2,6 +2,28 @@
  * Site-wide constants - name, description, contact, support, social.
  * Imported by marketing pages, metadata, footer.
  */
+/**
+ * The origin to put INSIDE something that outlives the page that made it.
+ *
+ * WHY NOT `window.location.origin`
+ *   That is right for a link you click now and wrong for anything durable. A
+ *   QR code baked into a downloaded ID card, or an invite link copied and sent
+ *   to somebody else, is read later, elsewhere, on another person's device
+ *   and one generated from a dev machine would carry `http://localhost:3000`
+ *   forever. The card would print, look perfect, and scan to nothing.
+ *
+ *   So durable artifacts use the CONFIGURED origin, which is per-environment
+ *   and always an address a stranger can reach. Navigation inside the app
+ *   still uses relative paths and needs none of this.
+ *
+ * `NEXT_PUBLIC_` so it is inlined for the browser too   the ID card builds its
+ * QR client-side.
+ */
+export function canonicalOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
+  return configured || SITE.url;
+}
+
 export const SITE = {
   name: 'Sync',
   legalName: 'Raavon Limited',
@@ -11,12 +33,64 @@ export const SITE = {
   description:
     'Sync is the verified marketplace for Nigerian student life - hostels, food, events, beauty, trades, laundry and more.',
   launchMarket: 'KWASU, Malete',
-  url: 'https://sync.ng',
+  url: 'https://www.letsyncyou.com',
   support: {
-    email: 'support@sync.ng',
+    /**
+     * The general address. Was support@sync.ng, on a domain the product no
+     * longer uses - it appeared on all four legal pages, so anyone exercising
+     * a data-protection right was writing to a mailbox at the wrong company.
+     *
+     * This is the one on the legal pages, in the footer and on the vendor plan
+     * card: "talk to Sync about Sync". sales@ is deliberately still absent.
+     */
+    email: 'hello@letsyncyou.com',
+    /**
+     * Where somebody is sent when something has gone WRONG for them   a rider
+     * who cannot take deliveries, an account that will not finish setting up,
+     * a reply to a verification decision.
+     *
+     * A separate alias rather than a second inbox to check: it lands in the
+     * same place, and it means the messages that arrive because the product
+     * failed somebody can be told apart from the ones that do not. Those
+     * strings used to be typed out in four files, which is three too many for
+     * an address that appears at the worst possible moment.
+     */
+    help: 'support@letsyncyou.com',
   },
   socials: {
     x: 'https://x.com/syncng',
     instagram: 'https://instagram.com/syncng',
   },
 } as const;
+
+/**
+ * Where a user lands after signing out.
+ *
+ * `/around`, NOT `/`. The marketing landing page is a web-only surface: it
+ * exists to explain the product to someone who has not signed up. Inside the
+ * app - and especially in the installed PWA, which has no address bar and no
+ * way back - the home is Around you, which is public and renders perfectly
+ * signed-out. Dropping someone onto the sales page after they log out of the
+ * PWA reads as being thrown out of the app.
+ *
+ * Same reasoning as the removal of the dashboard sidebar's "Home" link, which
+ * also pointed at `/`. Named rather than inlined because it was four copies of
+ * `router.push('/')` across four sign-out handlers, and they must not drift.
+ */
+export const AFTER_SIGN_OUT = '/around';
+
+/**
+ * The one address Sync sends from, and the one it asks people to reply to.
+ *
+ * WHY IT IS DERIVED AND NOT TYPED OUT AGAIN
+ *   Four separate senders   the auth hook, the console invite, the storefront
+ *   invite and the mail centre   each carried their own literal fallback, and
+ *   they had drifted to `no-reply@`: a mailbox nobody reads, on templates whose
+ *   own footer says "replying to this email reaches our support team". One
+ *   constant, one answer, and the copy stops lying.
+ *
+ * IT IS ONLY THE FALLBACK. EMAIL_FROM is still the real setting, because the
+ * verified sender in Resend is a deployment fact rather than a code fact   but
+ * a deploy that forgets it now sends from an address that exists.
+ */
+export const MAIL_FROM = `${SITE.name} <${SITE.support.email}>`;

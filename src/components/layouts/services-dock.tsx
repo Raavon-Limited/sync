@@ -1,49 +1,38 @@
 // components/ServicesDock.tsx
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Check,
-  ChevronDown,
   ClipboardList,
   Compass,
   Heart,
   LayoutDashboard,
-  LayoutGrid,
   LogIn,
-  MapPin,
   MessageCircle,
   Search,
+  Sparkles,
   User,
   UtensilsCrossed,
 } from 'lucide-react';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { SearchBar } from '@/components/shared/search-bar';
+import { LocationSelector } from '@/components/shared/location-selector';
+import SyncIcon, { type SyncIconName } from '@/components/brand/SyncIcon';
 import { MODULES } from '@/config/modules';
-import { MALETE_AREAS } from '@/mock/around';
-import { useOptionalLocation } from '@/app/around/location-context';
 import { cn } from '@/lib/utils';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
 // silently drift out of sync with the proxy gate.
 import type { Role } from '@/modules/auth/types';
 
 interface ServicesDockProps {
-  location?: string;
   role?: Role;
 }
 
-export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockProps) {
+export function ServicesDock({ role }: ServicesDockProps) {
   const pathname = usePathname();
   const isFood = pathname.startsWith('/food');
-  const [open, setOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const shared = useOptionalLocation();
-  const [localArea, setLocalArea] = useState(location);
-  const selected = shared ? shared.area : localArea;
-  const setSelected = shared ? shared.setArea : setLocalArea;
 
   const isActive = (path: string) => {
     const target = path.startsWith('/') ? path : `/${path}`;
@@ -53,63 +42,118 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
     return pathname === target || pathname?.startsWith(`${target}/`);
   };
 
-  const onModule = MODULES.some((m) => m.slug !== 'around' && m.slug !== 'food' && isActive(m.slug));
-
-  const FOOD_CATEGORIES = [
-    'Jollof',
-    'Swallow',
-    'Fast Food',
-    'Breakfast',
-    'Drinks',
-    'Dessert',
-  ];
-
-  const accountTabs: {
+  // `iconName` is the brand-kit section/role icon. It is OPTIONAL because the
+  // kit only draws sections and roles - there is no kit icon for Saved,
+  // Chats, Orders, Search, Inbox or Admin, which are account actions. Those
+  // fall back to lucide until the kit covers them.
+  interface DockTab {
     href: string;
     label: string;
     icon: LucideIcon;
+    iconName?: SyncIconName;
     badge?: number;
-  }[] =
-    isFood
-      ? [
-          { href: '/food/search',    label: 'Search',    icon: Search },
-          { href: '/food/orders',    label: 'Orders',    icon: ClipboardList },
-          { href: '/food/favorites', label: 'Saved',     icon: Heart },
-          // { href: '/me',             label: 'You',       icon: User },
-        ]
-      : role === 'vendor'
-        ? [
-            { href: '/vendor/orders', label: 'Orders',  icon: ClipboardList },
-            { href: '/vendor/inbox',  label: 'Inbox',   icon: MessageCircle, badge: 2 },
-            { href: '/vendor',        label: 'You',     icon: LayoutDashboard },
-          ]
-        : role === 'landlord'
-          ? [
-              { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
-              { href: '/landlord/inbox',    label: 'Inbox',    icon: MessageCircle, badge: 2 },
-              { href: '/landlord',          label: 'You',      icon: LayoutDashboard },
-            ]
-          : role === 'admin' || role === 'super_admin'
-            ? [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }]
-            : role === 'student'
-              ? [
-                  { href: '/me/saved',    label: 'Saved',  icon: Heart },
-                  { href: '/me/messages', label: 'Chats',  icon: MessageCircle, badge: 3 },
-                  { href: '/me',          label: 'You',    icon: User },
-                ]
-              : [{ href: '/login', label: 'Sign in', icon: LogIn }];
+  }
 
-  const tabCount = (isFood ? 1 : 2) + accountTabs.length;
+  /**
+   * One entry per role, as a RECORD rather than a ternary chain.
+   *
+   * The chain this replaces had branches for vendor, landlord, admin and
+   * student and fell through to a "Sign in" tab for everything else. `agent`,
+   * `rider`, `event_manager` and `creator` all landed in that fallback, so a
+   * signed-in agent was shown the signed-out dock   the bar told them to log in
+   * while the page above it greeted them by name.
+   *
+   * A Record<Role, ...> makes that impossible to repeat: adding a role to the
+   * union without giving it tabs is now a type error, which is what the comment
+   * on that union always claimed to guarantee.
+   */
+  const TABS_BY_ROLE: Record<Role, DockTab[]> = {
+    vendor: [
+      { href: '/vendor/orders', label: 'Orders', icon: ClipboardList },
+      { href: '/vendor/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/vendor', label: 'You', icon: LayoutDashboard },
+    ],
+    landlord: [
+      { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
+      { href: '/landlord/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/landlord', label: 'You', icon: LayoutDashboard, iconName: 'landlord' },
+    ],
+    student: [
+      { href: '/user/saved', label: 'Saved', icon: Heart },
+      { href: '/user/messages', label: 'Chats', icon: MessageCircle, badge: 3 },
+      { href: '/user', label: 'You', icon: User, iconName: 'student' },
+    ],
+    // An agent's whole job is the visits assigned to them, so that IS the
+    // dashboard   there is no separate list worth a second tab yet.
+    agent: [{ href: '/agent', label: 'Visits', icon: ClipboardList }],
+    rider: [
+      { href: '/rider/board', label: 'Board', icon: ClipboardList },
+      { href: '/rider', label: 'You', icon: LayoutDashboard },
+    ],
+    event_manager: [
+      { href: '/organiser/events', label: 'Events', icon: ClipboardList },
+      { href: '/organiser', label: 'You', icon: LayoutDashboard },
+    ],
+    // No dashboard of their own yet   they browse as a student would, and a tab
+    // pointing at a route that does not exist is the 404 this file just caused.
+    creator: [{ href: '/user', label: 'You', icon: User, iconName: 'student' }],
+    admin: [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }],
+    super_admin: [{ href: '/admin', label: 'Admin', icon: LayoutDashboard }],
+  };
+
+  const accountTabs: DockTab[] = isFood
+    ? [
+        { href: '/food/search', label: 'Search', icon: Search },
+        { href: '/food/orders', label: 'Orders', icon: ClipboardList },
+        { href: '/food/favorites', label: 'Saved', icon: Heart },
+      ]
+    : // No role means SIGNED OUT, and only that. It used to also mean "a role
+      // this chain forgot", which is how a signed-in agent was offered a login
+      // tab.
+      (role && TABS_BY_ROLE[role]) || [{ href: '/login', label: 'Sign in', icon: LogIn }];
+
+  // The bar is [ ...left, AI, ...right ]. Home is just the first tab rather
+  // than a special case, so the split stays correct for every role - admins
+  // get two tabs, students four - and the AI button is always the middle.
+  const tabs = [
+    {
+      href: isFood ? '/food' : '/around',
+      label: 'Home',
+      icon: isFood ? UtensilsCrossed : Compass,
+      iconName: (isFood ? 'food' : 'around-you') as SyncIconName,
+      badge: undefined as number | undefined,
+    },
+    ...accountTabs,
+  ];
+  const split = Math.ceil(tabs.length / 2);
+  const leftTabs = tabs.slice(0, split);
+  const rightTabs = tabs.slice(split);
+
   return (
     <>
-      {/* ── Desktop rail (md+) ─────────────────────────────────────── */}
-      <div className="border-line/5 hidden border-b md:block">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-3">
+      {/* ── Service rail ───────────────────────────────────────────────
+          The module links are desktop-only: on mobile the bottom tab bar and
+          the Browse sheet already cover navigation. The LOCATION control is not
+          desktop-only, though. It used to be, which left mobile with no visible
+          way to change area - the only route was Browse -> scroll to "Your
+          area", and on /food the Browse tab is hidden entirely, so there was no
+          route at all. The bar itself therefore renders at every width and only
+          its <nav> collapses. */}
+      <div className="border-line/5 border-b">
+        <div className="mx-auto flex max-w-7xl items-center justify-end gap-2 px-4 py-2 md:gap-3 md:px-6 md:py-3">
+          {/* Mobile-only search. The desktop header keeps its own centred
+              SearchBar; here the pair shares one row as [search][location].
+              `min-w-0` matters - without it the flex child refuses to shrink
+              below its content width and pushes the location pill off screen. */}
+          {/* h-9 overrides SearchBar's default h-12 (twMerge keeps the last
+              conflicting class) so it matches the location pill beside it. */}
+          <SearchBar className="h-9 min-w-0 flex-1 md:hidden" />
+
           <nav
             aria-label="Sync services"
-            className="-mx-1 flex flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-1 hidden flex-1 [scrollbar-width:none] items-center gap-1 overflow-x-auto px-1 md:flex [&::-webkit-scrollbar]:hidden"
           >
-            {MODULES.map(({ slug, label, icon: Icon }) => {
+            {MODULES.map(({ slug, label }) => {
               const active = isActive(slug);
               return (
                 <Link
@@ -117,172 +161,75 @@ export function ServicesDock({ location = MALETE_AREAS[0], role }: ServicesDockP
                   href={`/${slug}`}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm transition-colors',
+                    'inline-flex h-9 shrink-0 items-center rounded-full px-3 text-sm transition-colors',
                     active
                       ? 'bg-lime text-ink font-medium'
                       : 'text-foreground hover:bg-ink/5 border-line/15 border',
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="whitespace-nowrap">{label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-label="Change location"
-              aria-haspopup="listbox"
-              aria-expanded={open}
-              className="border-line/15 hover:bg-ink/5 inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm"
-            >
-              <MapPin className="text-accent-fg h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-medium">{selected}</span>
-              <ChevronDown
-                className={cn('text-content-muted h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
-                aria-hidden="true"
-              />
-            </button>
-
-            {open && (
-              <>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  onClick={() => setOpen(false)}
-                  className="fixed inset-0 z-40 cursor-default"
-                />
-                <ul
-                  role="listbox"
-                  aria-label="Choose your area"
-                  className="border-line/10 bg-panel shadow-pop absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border py-1"
-                >
-                  {MALETE_AREAS.map((area) => {
-                    const isSelected = area === selected;
-                    return (
-                      <li key={area} role="option" aria-selected={isSelected}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelected(area);
-                            setOpen(false);
-                          }}
-                          className={cn(
-                            'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors',
-                            isSelected ? 'text-accent-fg font-medium' : 'text-foreground hover:bg-ink/5',
-                          )}
-                        >
-                          {area}
-                          {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </div>
+          {/* The one location control. Same component, same state, as the one
+              in the sheet below and anywhere else that scopes a feed. */}
+          <LocationSelector />
         </div>
       </div>
 
-      {/* ── Mobile bottom tab bar + module sheet (<md) ─────────────── */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <nav
-          aria-label="Primary"
-          className="bg-panel border-line/10 fixed inset-x-0 bottom-0 z-40 grid h-16 border-t md:hidden"
-          style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}
-        >
-          {/* Home tab */}
+      {/* ── Mobile bottom tab bar (<md) ──────────────────────────────
+          Floating: inset from the edges and rounded, rather than a full-width
+          bar welded to the bottom. `bottom` includes env(safe-area-inset-bottom)
+          so it clears the iPhone home indicator instead of sitting under it.
+
+          The AI button is the centre of the bar by construction: the tabs are
+          split into two halves around it, so it stays centred whatever the
+          role-dependent tab count is. */}
+      <nav
+        aria-label="Primary"
+        className="border-line/10 bg-panel/95 shadow-pop fixed inset-x-4 z-40 flex h-16 items-center justify-around rounded-full border backdrop-blur md:hidden"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      >
+        {leftTabs.map((t) => (
           <TabLink
-            href={isFood ? '/food' : '/around'}
-            label="Home"
-            icon={isFood ? UtensilsCrossed : Compass}
-            active={isFood ? pathname === '/food' : pathname === '/around'}
+            key={t.href}
+            href={t.href}
+            label={t.label}
+            icon={t.icon}
+            iconName={t.iconName}
+            badge={t.badge}
+            active={isActive(t.href)}
           />
+        ))}
 
-          {/* Browse sheet trigger — hidden when in food (food has Search instead) */}
-          {!isFood && (
-            <SheetTrigger asChild>
-              <button type="button" className={tabClass(onModule)}>
-                <TabIcon icon={LayoutGrid} active={onModule} />
-                <span>Browse</span>
-              </button>
-            </SheetTrigger>
+        {/* Ask Sync. Raised out of the bar so it reads as the primary action
+            rather than a fifth tab. */}
+        <Link
+          href="/ai"
+          aria-label="Ask Sync"
+          aria-current={isActive('/ai') ? 'page' : undefined}
+          className={cn(
+            'bg-lime text-ink -mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-lg ring-4 transition-transform active:scale-95',
+            isActive('/ai') ? 'ring-lime/30' : 'ring-surface',
           )}
+        >
+          <Sparkles className="h-6 w-6" aria-hidden="true" />
+        </Link>
 
-          {accountTabs.map((t) => (
-            <TabLink
-              key={t.href}
-              href={t.href}
-              label={t.label}
-              icon={t.icon}
-              badge={t.badge}
-              active={isActive(t.href)}
-            />
-          ))}
-        </nav>
-
-        {/* Browse sheet — only relevant outside food */}
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle className="font-display text-content text-lg">
-              Browse Sync
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="grid grid-cols-3 gap-3 px-4">
-            {MODULES.map(({ slug, label, icon: Icon }) => {
-              const active = isActive(slug);
-              return (
-                <Link
-                  key={slug}
-                  href={`/${slug}`}
-                  onClick={() => setSheetOpen(false)}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex flex-col items-center gap-2 rounded-2xl border p-4 text-center text-sm transition-colors',
-                    active
-                      ? 'bg-lime text-ink border-transparent font-medium'
-                      : 'border-line/10 text-content hover:bg-ink/5',
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 px-4 pb-2">
-            <p className="text-content-muted mb-2 font-mono text-[11px] tracking-wider uppercase">Your area</p>
-            <div className="flex flex-wrap gap-2">
-              {MALETE_AREAS.map((area) => {
-                const isSelected = area === selected;
-                return (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => setSelected(area)}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
-                      isSelected
-                        ? 'bg-lime text-ink border-transparent font-medium'
-                        : 'border-line/15 text-content hover:bg-ink/5',
-                    )}
-                  >
-                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                    {area}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+        {rightTabs.map((t) => (
+          <TabLink
+            key={t.href}
+            href={t.href}
+            label={t.label}
+            icon={t.icon}
+            iconName={t.iconName}
+            badge={t.badge}
+            active={isActive(t.href)}
+          />
+        ))}
+      </nav>
     </>
   );
 }
@@ -294,10 +241,28 @@ function tabClass(active: boolean) {
   );
 }
 
-function TabIcon({ icon: Icon, active, badge }: { icon: LucideIcon; active: boolean; badge?: number }) {
+function TabIcon({
+  icon: Icon,
+  iconName,
+  active,
+  badge,
+}: {
+  icon: LucideIcon;
+  iconName?: SyncIconName;
+  active: boolean;
+  badge?: number;
+}) {
   return (
     <span className="relative">
-      <Icon className={cn('h-5 w-5', active && 'text-lime-deep dark:text-lime')} aria-hidden="true" />
+      {/* Kit icon where one exists - it follows currentColor, so the active
+          colour below applies to it exactly as it does to the lucide one. */}
+      <span className={cn(active && 'text-lime-deep dark:text-lime')}>
+        {iconName ? (
+          <SyncIcon name={iconName} size={20} />
+        ) : (
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        )}
+      </span>
       {badge ? (
         <span className="bg-lime text-ink absolute -top-1.5 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold">
           {badge > 99 ? '99+' : badge}
@@ -311,18 +276,20 @@ function TabLink({
   href,
   label,
   icon,
+  iconName,
   active,
   badge,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
+  iconName?: SyncIconName;
   active: boolean;
   badge?: number;
 }) {
   return (
     <Link href={href} aria-current={active ? 'page' : undefined} className={tabClass(active)}>
-      <TabIcon icon={icon} active={active} badge={badge} />
+      <TabIcon icon={icon} iconName={iconName} active={active} badge={badge} />
       <span>{label}</span>
     </Link>
   );

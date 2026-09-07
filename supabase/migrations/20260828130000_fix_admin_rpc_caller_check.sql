@@ -6,7 +6,7 @@
 --   if not public.is_staff() and current_user <> 'service_role' then
 --
 -- and the second half of that can never be true. Inside a SECURITY DEFINER
--- function `current_user` is the function's OWNER, not the caller — that is
+-- function `current_user` is the function's OWNER, not the caller   that is
 -- the whole point of SECURITY DEFINER. So `current_user` is 'postgres' for
 -- every caller alive, the service-role branch never fires, and both functions
 -- refuse the service role with 42501.
@@ -31,7 +31,7 @@
 --   and never on the success is half a test.
 --
 -- The bodies below are otherwise identical to 20260828100000 and
--- 20260828120000 — Postgres has no way to replace a guard without restating
+-- 20260828120000   Postgres has no way to replace a guard without restating
 -- the function it lives in.
 --
 -- ROLLBACK
@@ -53,10 +53,13 @@ as $reader$
          ) = 'service_role'
       or session_user in ('postgres', 'supabase_admin');
 $reader$;
+
 revoke all on function private.is_platform_reader() from public, anon;
 grant execute on function private.is_platform_reader() to authenticated, service_role;
+
 comment on function private.is_platform_reader() is
   'True for staff, for the service role, and for direct superuser sessions. Reads the JWT role claim because current_user is the owner inside a SECURITY DEFINER function and session_user is always ''authenticator'' behind PostgREST.';
+
 create or replace function public.admin_analytics(p_days integer default 30)
 returns jsonb
 language plpgsql
@@ -203,10 +206,13 @@ begin
   return v_out;
 end;
 $fn$;
+
 revoke all on function public.admin_analytics(integer) from public, anon;
 grant execute on function public.admin_analytics(integer) to authenticated, service_role;
+
 comment on function public.admin_analytics(integer) is
   'Platform analytics for the last p_days (1-365) with the previous equal window for comparison. Staff or service_role only. Aggregates in SQL so no figure can be truncated by a PostgREST page size.';
+
 create or replace function public.admin_overview()
 returns jsonb
 language plpgsql
@@ -363,7 +369,9 @@ begin
   return v_out;
 end;
 $fn$;
+
 revoke all on function public.admin_overview() from public, anon;
 grant execute on function public.admin_overview() to authenticated, service_role;
+
 comment on function public.admin_overview() is
   'Front-page counts, six-month revenue and signup series, vendor status split and a merged activity feed. Staff or service_role only.';

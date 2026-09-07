@@ -58,7 +58,7 @@ export default function EventLocationMap({ location, address }: EventLocationMap
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center pointer-events-none bg-surface-deep">
                         <AlertCircle size={18} className="text-content-muted" />
                         <p className="text-xs text-content-muted">
-                            Map preview loading — if it doesn&apos;t appear, use{" "}
+                            Map preview loading   if it doesn&apos;t appear, use{" "}
                             <span className="font-medium text-content">Open in Maps</span> above.
                         </p>
                     </div>

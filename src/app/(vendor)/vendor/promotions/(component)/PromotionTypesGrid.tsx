@@ -75,10 +75,10 @@ export function PromotionTypesGrid({
 
       {/*
        * Responsive grid:
-       *   mobile  (default) : 1 col  — each card full width
-       *   sm  (≥640px)      : 2 cols — pairs nicely on phones in landscape / small tablets
-       *   md  (≥768px)      : 3 cols — iPad Mini portrait
-       *   lg  (≥1024px)     : 5 cols — desktop, all five side by side
+       *   mobile  (default) : 1 col    each card full width
+       *   sm  (≥640px)      : 2 cols   pairs nicely on phones in landscape / small tablets
+       *   md  (≥768px)      : 3 cols   iPad Mini portrait
+       *   lg  (≥1024px)     : 5 cols   desktop, all five side by side
        *
        * The last item on a 3-col grid with 5 items would be orphaned on the
        * left. `[&>*:last-child]:md:col-span-1` keeps it normal; we center it
