@@ -50,7 +50,7 @@ export default async function Page() {
   const { data: visits } = await loose(admin)
     .from('verification_visits')
     .select(
-      'id, hostel_id, vendor_id, status, scheduled_for, brief, meet_user_id, submitted_at, notes, photos, selfie_url',
+      'id, hostel_id, vendor_id, storefront_id, status, scheduled_for, brief, meet_user_id, submitted_at, notes, photos, selfie_url',
     )
     .eq('ambassador_id', user.id)
     .order('scheduled_for', { ascending: true, nullsFirst: false });
@@ -59,40 +59,60 @@ export default async function Page() {
 
   const hostelIds = rows.map((v) => v.hostel_id).filter(Boolean) as string[];
   const vendorIds = rows.map((v) => v.vendor_id).filter(Boolean) as string[];
+  const storeIds = rows.map((v) => v.storefront_id).filter(Boolean) as string[];
   const meetIds = rows.map((v) => v.meet_user_id).filter(Boolean) as string[];
 
-  const [{ data: hostels }, { data: vendors }, { data: people }] = await Promise.all([
-    hostelIds.length
-      ? admin.from('hostels').select('id, name, area, address').in('id', hostelIds)
-      : Promise.resolve({ data: [] }),
-    vendorIds.length
-      ? admin
-          .from('vendor_profiles')
-          .select('id, business_name, area, business_address')
-          .in('id', vendorIds)
-      : Promise.resolve({ data: [] }),
-    meetIds.length
-      ? admin.from('profiles').select('id, full_name, phone').in('id', meetIds)
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [{ data: hostels }, { data: vendors }, { data: stores }, { data: people }] =
+    await Promise.all([
+      hostelIds.length
+        ? admin.from('hostels').select('id, name, area, address').in('id', hostelIds)
+        : Promise.resolve({ data: [] }),
+      vendorIds.length
+        ? admin
+            .from('vendor_profiles')
+            .select('id, business_name, area, business_address')
+            .in('id', vendorIds)
+        : Promise.resolve({ data: [] }),
+      // The BRAND comes with the branch. "Tanke branch" on a card, with no
+      // business attached, is not somewhere an agent can be told to go.
+      storeIds.length
+        ? admin
+            .from('storefronts')
+            .select('id, name, area, address, vendor_id, vendor_profiles(business_name)')
+            .in('id', storeIds)
+        : Promise.resolve({ data: [] }),
+      meetIds.length
+        ? admin.from('profiles').select('id, full_name, phone').in('id', meetIds)
+        : Promise.resolve({ data: [] }),
+    ]);
 
   const hostelById = new Map(((hostels ?? []) as Row[]).map((h) => [h.id as string, h]));
   const vendorById = new Map(((vendors ?? []) as Row[]).map((v) => [v.id as string, v]));
+  const storeById = new Map(((stores ?? []) as Row[]).map((s) => [s.id as string, s]));
   const personById = new Map(((people ?? []) as Row[]).map((p) => [p.id as string, p]));
 
   const list: AgentVisit[] = rows.map((v) => {
     const h = v.hostel_id ? hostelById.get(v.hostel_id as string) : null;
     const b = v.vendor_id ? vendorById.get(v.vendor_id as string) : null;
+    const s = v.storefront_id ? storeById.get(v.storefront_id as string) : null;
     const meet = v.meet_user_id ? personById.get(v.meet_user_id as string) : null;
+
+    // "Mama Put - Tanke branch". The brand alone is ambiguous across branches
+    // and the branch alone is meaningless, so a store visit needs both.
+    const brand = (s?.vendor_profiles as { business_name?: string } | null)?.business_name;
+    const storePlace = s ? [brand, s.name as string].filter(Boolean).join(' - ') : null;
 
     return {
       id: v.id as string,
-      kind: v.hostel_id ? 'hostel' : 'vendor',
-      place: (h?.name as string) ?? (b?.business_name as string) ?? 'Unnamed listing',
+      kind: v.hostel_id ? 'hostel' : v.storefront_id ? 'store' : 'vendor',
+      place:
+        (h?.name as string) ?? storePlace ?? (b?.business_name as string) ?? 'Unnamed listing',
       address:
         (h?.address as string) ??
+        (s?.address as string) ??
         (b?.business_address as string) ??
         (h?.area as string) ??
+        (s?.area as string) ??
         (b?.area as string) ??
         'No address on the listing',
       status: (v.status as string) ?? 'Not Visited',

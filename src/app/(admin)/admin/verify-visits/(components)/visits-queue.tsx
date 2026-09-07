@@ -60,20 +60,48 @@ import {
 } from '@/components/ui';
 import { HostelFacts, type HostelFactsData } from '@/components/shared/hostel-facts';
 import { PhotoGrid } from '@/components/shared/photo-grid';
-import { decideHostelVisit, flagVisitFraud, scheduleHostelVisit } from '@/modules/admin/actions';
+import {
+  decideHostelVisit,
+  decideStoreVisit,
+  flagVisitFraud,
+  scheduleHostelVisit,
+} from '@/modules/admin/actions';
 import { assignVisit, reassignVisit } from '@/modules/agents/actions';
+
+/** A branch, for the side panel. The store equivalent of HostelFactsData, and
+ *  deliberately much smaller: a shop makes far fewer claims than a listing. */
+export interface StoreFactsData {
+  brand: string | null;
+  address: string | null;
+  phone: string | null;
+  /** When an agent last stood at this address. Null means never. */
+  verifiedAt: string | null;
+}
 
 export interface AdminVisit {
   id: string;
-  hostelId: string;
-  hostelName: string;
-  hostelArea: string | null;
-  hostelVerified: boolean;
   /**
-   * Everything the listing claims, for the side panel. Null only if the hostel
-   * row went missing under a visit that still points at it.
+   * WHAT IS BEING VISITED. Was implicitly always 'hostel'; a visit can now name
+   * a storefront (20260912120000), and the vendor-wide case has been reachable
+   * since 20260905120000 without this screen ever rendering it   such a row
+   * showed as the literal "Unknown hostel".
+   */
+  kind: 'hostel' | 'store' | 'vendor';
+  /** The hostel, storefront or vendor id, depending on `kind`. */
+  subjectId: string;
+  /** What to call it. For a store, "Brand - Branch": neither half stands alone. */
+  subjectName: string;
+  subjectArea: string | null;
+  /** Already carries a verified badge   hostels.verified, storefronts.verified_at. */
+  subjectVerified: boolean;
+  /**
+   * Everything the listing claims, for the side panel. Null for a store visit,
+   * and for a hostel only if the row went missing under a visit still pointing
+   * at it.
    */
   hostel: HostelFactsData | null;
+  /** Set on a store visit, null otherwise. */
+  store: StoreFactsData | null;
   ambassadorId: string | null;
   ambassadorName: string | null;
   status: string;
@@ -151,6 +179,45 @@ const FIELD = 'border-line/15 bg-surface-deep text-content rounded-lg border px-
 
 function whenText(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('en-NG') : 'Not scheduled';
+}
+
+/**
+ * What a branch claims, which is the thing the agent's photographs corroborate.
+ *
+ * Far shorter than HostelFacts on purpose. A hostel advertises a price, rooms,
+ * amenities and house rules, and a visit is checking all of it. A shop is
+ * claiming one thing   that it is trading, here   so the address is most of the
+ * panel and the rest is context for finding it.
+ */
+function StoreFacts({ store }: { store: StoreFactsData }) {
+  const rows: [string, string | null][] = [
+    ['Business', store.brand],
+    ['Address', store.address],
+    ['Phone', store.phone],
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <dl className="flex flex-col gap-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex flex-col gap-0.5">
+            <dt className="text-content-muted font-mono text-xs tracking-wide uppercase">
+              {label}
+            </dt>
+            <dd className="text-content text-sm">{value ?? 'Not given'}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* Said explicitly rather than shown as an absent badge. "Never" is the
+          normal state for a store that has just been created, and a reviewer
+          should not have to infer it from something missing. */}
+      <p className="text-content-muted text-xs">
+        {store.verifiedAt
+          ? `Last verified ${new Date(store.verifiedAt).toLocaleDateString('en-NG')}.`
+          : 'No agent has confirmed this address yet.'}
+      </p>
+    </div>
+  );
 }
 
 export function VisitsQueue({
@@ -339,6 +406,26 @@ function VisitCard({
   const [fraudReason, setFraudReason] = useState('');
   const [picked, setPicked] = useState<string>(v.ambassadorId ?? '');
 
+  /**
+   * One decision, two rails, because they write different tables.
+   *
+   * A hostel decision flips `hostels.verified` from a server action; a store
+   * decision moves the visit and `storefronts.verified_at` inside one
+   * transaction (`decide_store_visit`). Picking the rail here rather than
+   * inside the action keeps each one honest about what it can actually write
+   * decideHostelVisit needs a hostelId it would not have for a store.
+   *
+   * A vendor-wide visit has no rail at all yet: there is no single place to
+   * mark verified, and `vendor_profiles.verification_status` is decided from
+   * documents by set_verification_status, not from a photograph. Those visits
+   * are informational until that is designed, which is why the buttons are
+   * disabled rather than wired to something approximate.
+   */
+  const decide = (decision: 'Verified' | 'Rejected') =>
+    v.kind === 'store'
+      ? decideStoreVisit({ visitId: v.id, decision, notes })
+      : decideHostelVisit({ visitId: v.id, hostelId: v.subjectId, decision, notes });
+
   const settled = v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud';
   const hasEvidence = v.photos.length > 0 || !!v.videoUrl || !!v.selfieUrl || !!v.notes;
   // The listing's own primary photo, falling back to the agent's first shot so
@@ -366,7 +453,7 @@ function VisitCard({
             {thumb ? (
               <Image
                 src={thumb}
-                alt={v.hostelName}
+                alt={v.subjectName}
                 fill
                 sizes="(max-width: 640px) 100vw, 33vw"
                 className="object-cover"
@@ -387,20 +474,20 @@ function VisitCard({
 
           <div className="flex min-w-0 flex-col gap-1">
             <p className="text-content flex items-center gap-2 truncate font-medium">
-              {v.hostelName}
+              {v.subjectName}
               {view === 'list' && (
                 <Badge className={STATUS_BADGE[v.status] ?? STATUS_BADGE['Not Visited']}>
                   {v.status}
                 </Badge>
               )}
-              {v.hostelVerified && (
+              {v.subjectVerified && (
                 <Badge className="bg-emerald-500/10 text-emerald-600">verified</Badge>
               )}
             </p>
             <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3" />
-                {v.hostelArea ?? 'No area'}
+                {v.subjectArea ?? 'No area'}
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="size-3" />
@@ -427,7 +514,7 @@ function VisitCard({
               HostelFacts directly below it, so the panel opened with the same
               name twice and the evidence appeared again further down. The tabs
               are what removed the second copy of everything. */}
-          <SheetTitle>{v.hostelName}</SheetTitle>
+          <SheetTitle>{v.subjectName}</SheetTitle>
           <SheetDescription>
             The decision is whether the agent&rsquo;s findings corroborate the listing.
           </SheetDescription>
@@ -462,6 +549,14 @@ function VisitCard({
               {/* THE SAME COMPONENT the account view renders, so the two cannot
                   drift   a field added there shows up here the same day. */}
               {v.hostel && <HostelFacts hostel={v.hostel} />}
+              {v.store && <StoreFacts store={v.store} />}
+              {!v.hostel && !v.store && (
+                <p className="text-content-muted text-sm">
+                  This visit is against the business as a whole rather than one address, so
+                  there is no single place to describe. The agent&rsquo;s brief says what they
+                  were asked to look at.
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="findings" className="flex flex-col gap-4 pt-4">
@@ -547,7 +642,7 @@ function VisitCard({
                   value={picked}
                   onChange={(e) => setPicked(e.target.value)}
                   className={`${FIELD} max-w-56`}
-                  aria-label={`Agent for ${v.hostelName}`}
+                  aria-label={`Agent for ${v.subjectName}`}
                 >
                   <option value="">Nobody assigned</option>
                   {agents.map((a) => (
@@ -609,34 +704,16 @@ function VisitCard({
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  disabled={pending}
-                  onClick={() =>
-                    run(() =>
-                      decideHostelVisit({
-                        visitId: v.id,
-                        hostelId: v.hostelId,
-                        decision: 'Verified',
-                        notes,
-                      }),
-                    )
-                  }
+                  disabled={pending || v.kind === 'vendor'}
+                  onClick={() => run(() => decide('Verified'))}
                 >
-                  Verify hostel
+                  {v.kind === 'store' ? 'Verify store' : 'Verify hostel'}
                 </Button>
                 <Button
                   variant="outline"
                   className="text-coral"
-                  disabled={pending}
-                  onClick={() =>
-                    run(() =>
-                      decideHostelVisit({
-                        visitId: v.id,
-                        hostelId: v.hostelId,
-                        decision: 'Rejected',
-                        notes,
-                      }),
-                    )
-                  }
+                  disabled={pending || v.kind === 'vendor'}
+                  onClick={() => run(() => decide('Rejected'))}
                 >
                   Reject
                 </Button>

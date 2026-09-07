@@ -546,6 +546,8 @@ export type Database = {
           last_activity_at: string | null
           locked_at: string | null
           move_in: string | null
+          move_in_confirmed_at: string | null
+          moved_in_at: string | null
           paid_at: string | null
           payment_reference: string | null
           price_per_session_kobo: number | null
@@ -565,6 +567,8 @@ export type Database = {
           last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
+          move_in_confirmed_at?: string | null
+          moved_in_at?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           price_per_session_kobo?: number | null
@@ -584,6 +588,8 @@ export type Database = {
           last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
+          move_in_confirmed_at?: string | null
+          moved_in_at?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           price_per_session_kobo?: number | null
@@ -2278,6 +2284,7 @@ export type Database = {
           id: string
           kind: string
           read_at: string | null
+          role: string | null
           title: string
           user_id: string
         }
@@ -2291,6 +2298,7 @@ export type Database = {
           id?: string
           kind: string
           read_at?: string | null
+          role?: string | null
           title: string
           user_id: string
         }
@@ -2304,6 +2312,7 @@ export type Database = {
           id?: string
           kind?: string
           read_at?: string | null
+          role?: string | null
           title?: string
           user_id?: string
         }
@@ -3631,6 +3640,8 @@ export type Database = {
           slug: string
           updated_at: string
           vendor_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           address?: string | null
@@ -3656,6 +3667,8 @@ export type Database = {
           slug: string
           updated_at?: string
           vendor_id: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           address?: string | null
@@ -3681,6 +3694,8 @@ export type Database = {
           slug?: string
           updated_at?: string
           vendor_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -3695,6 +3710,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefronts_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4127,6 +4149,7 @@ export type Database = {
           scheduled_for: string | null
           selfie_url: string | null
           status: string
+          storefront_id: string | null
           submitted_at: string | null
           updated_at: string
           vendor_id: string | null
@@ -4148,6 +4171,7 @@ export type Database = {
           scheduled_for?: string | null
           selfie_url?: string | null
           status?: string
+          storefront_id?: string | null
           submitted_at?: string | null
           updated_at?: string
           vendor_id?: string | null
@@ -4169,6 +4193,7 @@ export type Database = {
           scheduled_for?: string | null
           selfie_url?: string | null
           status?: string
+          storefront_id?: string | null
           submitted_at?: string | null
           updated_at?: string
           vendor_id?: string | null
@@ -4215,6 +4240,13 @@ export type Database = {
             columns: ["meet_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_visits_storefront_id_fkey"
+            columns: ["storefront_id"]
+            isOneToOne: false
+            referencedRelation: "storefronts"
             referencedColumns: ["id"]
           },
           {
@@ -4407,12 +4439,24 @@ export type Database = {
           p_brief?: string
           p_hostel?: string
           p_meet?: string
+          p_storefront?: string
           p_vendor?: string
           p_when?: string
         }
         Returns: string
       }
       auth_role: { Args: never; Returns: string }
+      booking_parties: {
+        Args: { p_booking_ids?: string[] }
+        Returns: {
+          booking_id: string
+          campus: string
+          full_name: string
+          phone: string
+          student_id: string
+          verification_status: string
+        }[]
+      }
       business_role_count: { Args: { p_roles: string[] }; Returns: number }
       campus_pulse: { Args: never; Returns: Json }
       cancel_order: {
@@ -4454,6 +4498,7 @@ export type Database = {
         Args: { p_inspection: string }
         Returns: string
       }
+      confirm_move_in: { Args: { p_booking: string }; Returns: undefined }
       conversation_counterparties: {
         Args: { p_conversation_ids?: string[] }
         Returns: {
@@ -4509,6 +4554,10 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
+      decide_store_visit: {
+        Args: { p_decision: string; p_notes?: string; p_visit: string }
+        Returns: string
+      }
       decline_inspection_time: {
         Args: { p_inspection: string; p_reason?: string }
         Returns: string
@@ -4583,6 +4632,7 @@ export type Database = {
         }[]
       }
       login_method: { Args: { p_email: string }; Returns: string }
+      mark_moved_in: { Args: { p_booking: string }; Returns: undefined }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       max_hold_interval: { Args: never; Returns: string }
       max_holds_per_student: { Args: never; Returns: number }
@@ -4711,6 +4761,10 @@ export type Database = {
         Args: { p_minutes?: number; p_storefront_id: string }
         Returns: string
       }
+      pay_booking_from_wallet: {
+        Args: { p_booking: string; p_move_in: string }
+        Returns: string
+      }
       pay_order_from_wallet: { Args: { p_order_id: string }; Returns: string }
       promote_to_admin: {
         Args: { p_email: string; p_role: string }
@@ -4749,6 +4803,8 @@ export type Database = {
         Args: { p_agent?: string; p_visit: string }
         Returns: string
       }
+      refund_booking: { Args: { p_booking: string }; Returns: undefined }
+      refund_window: { Args: never; Returns: string }
       release_delivery_escrow: {
         Args: { p_delivery_id: string }
         Returns: string
@@ -4885,6 +4941,8 @@ export type Database = {
           slug: string
           updated_at: string
           vendor_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         SetofOptions: {
           from: "*"

@@ -68,6 +68,7 @@ const toStorefront = (r: Row): Storefront => ({
   autoPauseMinutes: r.auto_pause_minutes ?? 10,
   imageUrl: r.image_url ?? null,
   isPrimary: !!r.is_primary,
+  verifiedAt: r.verified_at ?? null,
   archivedAt: r.archived_at ?? null,
   createdAt: r.created_at,
 });

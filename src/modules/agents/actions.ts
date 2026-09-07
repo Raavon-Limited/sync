@@ -195,16 +195,22 @@ export async function revokeAgentInvite(id: string): Promise<AgentResult> {
 /**
  * Send an agent to look at a place.
  *
- * Exactly one of `hostelId` / `vendorId`, which the database also insists on:
- * a visit to nothing, or to both at once, is not a visit anybody can be sent
- * on. `meetUserId` is the student who asked to view the room, when there is
- * one   the agent and the viewer arriving together is one trip instead of two
- * and safer for both of them.
+ * Exactly one of `hostelId` / `storefrontId` / `vendorId`, which the database
+ * also insists on: a visit to nothing, or to two things at once, is not a visit
+ * anybody can be sent on. `meetUserId` is the student who asked to view the
+ * room, when there is one   the agent and the viewer arriving together is one
+ * trip instead of two and safer for both of them.
+ *
+ * A STORE USUALLY DOES NOT COME THROUGH HERE. Creating a storefront queues its
+ * own visit row (20260912120000), so putting an agent on it is `reassignVisit`
+ * against that row. This path is for a store somebody is sending a SECOND agent
+ * to   a re-check after a rejection, most likely.
  */
 export async function assignVisit(input: {
   agentId: string;
   hostelId?: string | null;
   vendorId?: string | null;
+  storefrontId?: string | null;
   scheduledFor?: string | null;
   meetUserId?: string | null;
   brief?: string;
@@ -216,6 +222,7 @@ export async function assignVisit(input: {
     p_agent: input.agentId,
     p_hostel: input.hostelId ?? null,
     p_vendor: input.vendorId ?? null,
+    p_storefront: input.storefrontId ?? null,
     p_when: input.scheduledFor || null,
     p_meet: input.meetUserId ?? null,
     p_brief: input.brief ?? null,

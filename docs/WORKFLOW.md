@@ -239,10 +239,49 @@ broken by accident already.
 
 ## 5. Where we stopped
 
-**State: clean.** Every local migration through `20260910210000` is applied remotely. Latest
-commit `f81c5c5`.
+**State: clean.** Every local migration through `20260912120000` is applied remotely.
+
+> **Five migrations were live with no file in the repo** (`20260911120000` … `20260912090000`) and
+> have been recovered from `supabase_migrations.schema_migrations` and committed. `db push` refuses
+> to work past a remote version with no local file, which is how this was found — the same trap
+> `20260901210000`'s header describes. If `migration list` ever shows a remote with a blank local
+> again, **recover the statements; do not run the `repair --status reverted` the CLI suggests.**
+> That marks applied work as un-applied.
+>
+> ```sql
+> select version, name, statements from supabase_migrations.schema_migrations
+>  where version >= '<first missing>' order by version;
+> ```
 
 ### Just finished
+
+**Store verification visits (`20260912120000`)** — creating a storefront now queues its own visit.
+The flow *sign up → onboarding → create store → an agent goes and looks* had its first three steps
+built and nothing joining them to the fourth: `assign_verification_visit` could take a vendor, but
+only if a staff member noticed a store had appeared, and no vendor address had ever been checked.
+
+- `verification_visits.storefront_id` — the subject is now exactly one of **three**. `vendor_id` is
+  the *brand*, so it says who to visit and not where; a business with two branches had two
+  addresses and one row for both.
+- An `AFTER INSERT` trigger on `storefronts` writes an unassigned `Not Visited` row and alerts
+  staff. **The row is the request.** Deliberately asymmetric with hostels, where "no row" means
+  unvisited and the queue derives the list by subtraction — nobody reads `storefronts` looking for
+  work, and a queue you have to compute is one that silently empties.
+- `storefronts.verified_at` + `decide_store_visit`, which moves the visit and the store together in
+  one transaction and refuses a visit with no filed evidence. `guard_storefront_privileged_cols`
+  freezes both columns against *every* client-side caller including the owner — a shop cannot
+  certify that it exists.
+- `/admin/verify-visits` renders store visits. Its `AdminVisit` was hostel-shaped, so the
+  vendor-wide case reachable since `20260905120000` had always rendered as "Unknown hostel".
+
+**Two bugs fixed on the way, neither part of the store work:**
+
+- `flag_visit_fraud` branched *hostel, else vendor*. A store visit is neither, so it read a null
+  `vendor_id`, blocked nobody and returned success.
+- **Standing an agent down never told the agent.** `20260907090000`'s own header says they must be
+  told "otherwise they turn up at a stranger's gate believing they are expected", and only the
+  *swap* branch did it. The Stand down button notified the owner and left the agent still expecting
+  to go.
 
 **Multi-role access (committed, `f81c5c5`)** — a landlord invited onto staff was locked out of both
 dashboards. Four separate bugs, all fixed: the console root requiring `overview`; the proxy gating
@@ -281,6 +320,22 @@ Roughly in priority order. Nothing here is started.
 - No reconciliation between Paystack and the ledger.
 - Nobody has checked whether the Paystack balance covers wallet + escrow liability. Transfers draw
   on the Paystack balance, so the **settlement schedule** decides whether payouts can run at all.
+
+**Left undone by the store-visit work (`20260912120000`).** Named here rather than rediscovered.
+- **The trigger has never been observed firing.** Everything asserted in the migration's verify
+  block is true of the catalogue — the trigger exists, the guard freezes `verified_at`, the old
+  6-arg `assign` is gone — but no store has actually been created since. `storefronts` is empty
+  live, so the first real onboarding is also the first test. Watch that a visit row appears.
+- **A vendor-wide visit (`vendor_id`) still has no decision rail.** The Verify/Reject buttons are
+  disabled for `kind === 'vendor'`. There is no single place to mark verified, and
+  `vendor_profiles.verification_status` is decided from *documents* by `set_verification_status`,
+  not from a photograph. Wiring it to that would mean a document decision made on a photo.
+- **`decideHostelVisit` still writes the visit and `hostels.verified` as two statements** outside a
+  transaction. `decide_store_visit` does the equivalent in one. The hostel path should follow; it
+  was left alone because nothing about stores required touching it.
+- **The bell still does not filter on `notifications.role`.** `20260911150000` added the column and
+  says so itself: the read side is unchanged until enough producers stamp a role. Store visits now
+  stamp one, so the filter is closer to being safe to turn on.
 
 **Known and unfixed.**
 - `switch_role` writes **no audit row** (`20260830090000`, line ~114). The most

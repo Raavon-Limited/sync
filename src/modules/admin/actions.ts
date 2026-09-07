@@ -419,6 +419,49 @@ export async function flagVisitFraud(input: { visitId: string; reason: string })
   revalidatePath('/admin/accounts');
 }
 
+/**
+ * Decide a STORE verification visit.
+ *
+ * NOT decideHostelVisit WITH A STOREFRONT ID, and the difference is where the
+ * work happens. That helper writes the visit row and then `hostels.verified`
+ * as two separate service-role statements, which is survivable for a boolean
+ * on a listing. A store decision moves the visit, `storefronts.verified_at`
+ * and `verified_by` together, and a server action cannot offer a transaction
+ * across them   a failure between the two would leave a Verified visit against
+ * an unverified shop, which reads to the next reviewer as a bug rather than a
+ * half-applied write.
+ *
+ * So the rule lives in `decide_store_visit` (20260912120000): one transaction,
+ * staff re-checked inside, and it refuses a visit the agent has not filed
+ * evidence on. This is a thin call rather than a second place that knows it.
+ *
+ * THE SESSION CLIENT, not the service role   same reason as flagVisitFraud.
+ * The RPC gates on `is_staff()`, which reads `auth.uid()`; a service-role call
+ * has none and its own guard would correctly refuse it.
+ */
+export async function decideStoreVisit(input: {
+  visitId: string;
+  decision: 'Verified' | 'Rejected';
+  notes?: string;
+}) {
+  await assertStaffArea('verify_visits');
+
+  const supabase = await createServerClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc('decide_store_visit', {
+    p_visit: input.visitId,
+    p_decision: input.decision,
+    p_notes: input.notes?.trim() || null,
+  });
+
+  if (error) throw new Error(userMessage(error, 'We could not save that visit.'));
+
+  revalidatePath('/admin/verify-visits');
+  // The vendor's own store list carries the badge this just moved.
+  revalidatePath('/vendor/stores');
+}
+
 /** Assign an ambassador and put a visit on the calendar. */
 export async function scheduleHostelVisit(input: {
   hostelId: string;

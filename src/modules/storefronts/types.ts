@@ -53,6 +53,17 @@ export interface Storefront {
   imageUrl?: string | null;
   /** Exactly one per storefront. A link to the business resolves here. */
   isPrimary: boolean;
+  /**
+   * When an agent stood at this address and confirmed the shop is trading.
+   * Null means it has not happened yet   which is the normal state for a store
+   * that was created minutes ago, since creating one only QUEUES the visit
+   * (20260912120000).
+   *
+   * Read-only from the client: `guard_storefront_privileged_cols` restores this
+   * on any update from `authenticated`, owner included. A shop cannot certify
+   * that it exists.
+   */
+  verifiedAt?: string | null;
   archivedAt?: string | null;
   createdAt: string;
 }
