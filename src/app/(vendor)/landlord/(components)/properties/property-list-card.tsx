@@ -229,7 +229,7 @@ function ListPropertyRow(props: Omit<PropertyListCardProps, 'view'>) {
       </p>
       <span className="flex items-center gap-1 text-sm font-medium">
         <Star className="fill-lime-deep text-lime-deep size-4" />
-        {property.rating ? property.rating.toFixed(1) : '—'}
+        {property.rating ? property.rating.toFixed(1) : '-'}
       </span>
       <PropertyActions {...props} compact />
     </div>

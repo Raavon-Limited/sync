@@ -180,7 +180,7 @@ export function ActivityLog({
       )}
 
       <p className="text-content-muted text-xs">
-        Newest first, up to 200 events. Written by the database, append-only — nothing here can be
+        Newest first, up to 200 events. Written by the database, append-only. Nothing here can be
         edited after the fact, including by staff.
       </p>
     </div>

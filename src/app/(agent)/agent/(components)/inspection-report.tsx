@@ -89,7 +89,7 @@ export function MeetingPoint({
         id={`meet-${inspectionId}`}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="KWASU gate, by the bank — or leave blank for the property"
+        placeholder="KWASU gate, by the bank, or leave blank for the property"
         className="border-line/15 bg-panel text-content placeholder:text-content-muted/60 rounded-lg border px-3 py-2 text-sm"
       />
       <p className="text-content-muted text-xs">

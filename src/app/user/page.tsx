@@ -1,24 +1,41 @@
-import { Button } from '@/components/ui';
-import { ArrowRight, Star, MessageCircle, Check, Search, Plus } from 'lucide-react';
+/**
+ * ROUTE: /user  (and /<handle>, via the proxy rewrite)
+ * ACCESS: authenticated student
+ * PURPOSE: The overview. One section per part of their life on Sync.
+ *
+ * THE PAGE SAID THE SAME THING TWICE, TWICE.
+ *   - The billboard showed "ACTIVE BOOKING · Crescent villa 2 · Room 4", and MY
+ *     BOOKINGS directly beneath it showed the same room again, from the same
+ *     query. A student rents ONE apartment, so a list of one under a feature
+ *     card of the same one is a list with nothing to list.
+ *   - "SAVED HOSTELS" and "RECENTLY LISTED" both rendered HostelCardListLive,
+ *     which queries the public catalogue - so they were the same three listings
+ *     under two headings, and neither was saved or notably recent.
+ *
+ *   Both are gone. The apartment is the billboard; saved hostels are actually
+ *   saved hostels; browsing lives on /hostels, which is a whole screen built
+ *   for it and is one tap away in the nav.
+ *
+ * SECTIONS ARE BY SUBJECT, and each one hides itself when it is empty.
+ *   Somewhere to live · Saved hostels · Events and tickets · Recent activity.
+ *   A new student sees the first two and nothing else, rather than five
+ *   headings over five empty states.
+ *
+ * NOTHING ON THIS PAGE IS INVENTED ANY MORE. The recent-activity list was four
+ * hardcoded lines naming a person and a property that exist in nobody's data,
+ * and the saved count was the literal constant 12.
+ */
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { BookingBillboard } from './(components)/BillboardComponent';
-import { HostelCardListLive } from './(components)/HostelCard';
 import { UsageSummary } from './(components)/UsageSummary';
-import { BookingsTracker } from './(components)/BookingsTracker';
+import { SavedHostels } from './(components)/SavedHostels';
+import { RecentActivity } from './(components)/RecentActivity';
 import { EventsTicketsSummary } from './(components)/EventsTickets';
 import { getDashboardProfile } from '@/components/layouts/dashboard-profile';
 import { VerifyReminder } from './(components)/VerifyReminder';
 import { getMyStudentIdentity } from '@/modules/students';
 
 export const metadata: Metadata = { title: 'Dashboard' };
-
-const recentActivity = [
-  { id: '1', icon: Star, label: 'You saved Pipeline Court', time: '2h ago' },
-  { id: '2', icon: MessageCircle, label: 'Mama Yetunde replied', time: 'Yesterday' },
-  { id: '3', icon: Check, label: 'Booking request sent', time: 'Yesterday' },
-  { id: '4', icon: Search, label: '3 new hostels match your search', time: '2d ago' },
-];
 
 export default async function Page() {
   const [profile, identity] = await Promise.all([
@@ -33,10 +50,9 @@ export default async function Page() {
   ]);
   const studentName = profile.name;
   const base = profile.handle ? `/${profile.handle}` : '/user';
-  const savedCount = 12;
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-8">
       <div>
         <p className="text-content-muted font-mono text-sm tracking-wide">WELCOME BACK</p>
         <h1 className="font-display mt-1 text-3xl">
@@ -49,105 +65,25 @@ export default async function Page() {
           there is a step left   see /user/verify. */}
       <VerifyReminder status={identity.verificationStatus} />
 
-      {/* Usage / spending summary */}
       <UsageSummary />
 
-      {/* Featured active booking */}
-      <BookingBillboard
-        propertyName="Tanke Crescent Lodge"
-        room="Room 4B"
-        moveInDate="Sept 5"
-        daysAway={18}
-        requestedAgo="2 hrs ago"
-      />
-
-      {/* Bookings tracker - hostels + countdown to when they end */}
-      <section>
-        <h2 className="text-content-muted mb-3 font-mono text-sm tracking-wide">MY BOOKINGS</h2>
-        <BookingsTracker basePath={base} />
+      {/* ── Somewhere to live ──────────────────────────────────────────────
+          The apartment they have, then the ones they are considering. Both
+          hostel-shaped, so they sit together and nothing else comes between
+          them. */}
+      <section className="flex flex-col gap-8">
+        <BookingBillboard basePath={base} />
+        <SavedHostels basePath={base} />
       </section>
 
-      {/* SAVED HOSTELS + RECENT ACTIVITY */}
-      <section className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        {/* LEFT: Saved Hostels */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-content-muted font-mono text-sm tracking-wide">
-              SAVED HOSTELS · {savedCount}
-            </h2>
-            <Button
-              asChild
-              variant="outline"
-              className="text-body text-content-muted flex shrink-0 items-center gap-1 border-none"
-            >
-              <Link href={`${base}/saved`}>
-                Manage <ArrowRight className="ml-1 size-4" />
-              </Link>
-            </Button>
-          </div>
+      {/* ── Everything else they have bought ───────────────────────────────
+          Renders nothing at all until there is a ticket or an event worth
+          showing, rather than two headings over two empty states. */}
+      <EventsTicketsSummary basePath={base} />
 
-          <HostelCardListLive limit={3} />
-
-          <Button
-            asChild
-            variant="outline"
-            className="text-content-muted mt-4 flex items-center gap-2 border-none"
-          >
-            <Link href={`${base}/saved`}>
-              <Plus className="size-4" />
-              {savedCount} more
-              <ArrowRight className="ml-1 size-4" />
-            </Link>
-          </Button>
-        </div>
-
-        {/* RIGHT: Recent Activity */}
-        <div className="w-full shrink-0 lg:w-72 xl:w-80">
-          <div className="mb-4 flex h-9 items-center">
-            <h2 className="text-content-muted font-mono text-sm tracking-wide">RECENT ACTIVITY</h2>
-          </div>
-
-          <div className="bg-panel border-line/20 rounded-2xl border border-dashed">
-            {recentActivity.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className={`flex items-start gap-3 px-4 py-4 ${
-                    index !== recentActivity.length - 1
-                      ? 'border-line/10 border-b border-dashed'
-                      : ''
-                  }`}
-                >
-                  <Icon className="text-content mt-0.5 size-4 shrink-0" />
-                  <div>
-                    <p className="text-content text-sm font-medium">{item.label}</p>
-                    <p className="text-content-muted text-xs">{item.time}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Events & tickets */}
-      <section>
-        <h2 className="text-content-muted mb-3 font-mono text-sm tracking-wide">
-          EVENTS & TICKETS
-        </h2>
-        <EventsTicketsSummary basePath={base} />
-      </section>
-
-      {/* Recommendations */}
-      <section>
-        <h2 className="text-content-muted mb-4 font-mono text-sm tracking-wide">
-          {/* The old heading claimed personalisation ("BASED ON TANKE + 250K")
-              that nothing computes. Recently listed is what this actually is. */}
-          RECENTLY LISTED
-        </h2>
-        <HostelCardListLive limit={3} />
-      </section>
+      {/* ── What has happened ──────────────────────────────────────────────
+          Real notifications, and absent entirely on a new account. */}
+      <RecentActivity basePath={base} />
     </section>
   );
 }

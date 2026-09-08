@@ -242,7 +242,7 @@ function TenantRow({ tenant, properties }: { tenant: Tenant; properties: Propert
       </TableCell>
       <TableCell>
         <p className="min-w-32 font-medium">{tenant.property}</p>
-        <p className="text-content-muted mt-1 text-xs">{property?.roomsTotal ?? '—'} rooms</p>
+        <p className="text-content-muted mt-1 text-xs">{property?.roomsTotal ?? '-'} rooms</p>
       </TableCell>
       <TableCell>
         <p className="flex min-w-36 items-center gap-1.5 text-sm">

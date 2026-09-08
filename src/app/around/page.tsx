@@ -21,7 +21,7 @@
  */
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ArrowRight, ChevronDown, Search, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Flame, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AroundMap } from '@/components/shared/around-map';
 import { SITE } from '@/config/site';
@@ -348,9 +348,7 @@ function HotspotsCard({
         <p className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
           Hot spots · {hotspots.length} trending
         </p>
-        <span aria-hidden="true" className="text-[14px]">
-          🔥
-        </span>
+        <Flame aria-hidden="true" className="size-3.5 text-orange-500" />
       </header>
       <ul className="divide-line/5 -mx-1 divide-y">
         {hotspots.map((h) => (

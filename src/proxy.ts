@@ -199,6 +199,18 @@ const HANDLE_DASHBOARD: Record<Role, string | null> = {
   super_admin: null,
 };
 
+/**
+ * The dashboard roots that have a handle equivalent, derived from the map above
+ * rather than typed out again - a role added there is covered here for free,
+ * and the two cannot disagree about which paths are handle-rooted.
+ *
+ * `null` entries are excluded on purpose: admins go to /admin explicitly and a
+ * creator has no dashboard, so neither has a handle to redirect to.
+ */
+const HANDLE_ROOTED = new Set(
+  Object.values(HANDLE_DASHBOARD).filter((v): v is string => v !== null),
+);
+
 const supabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
@@ -237,6 +249,47 @@ export async function proxy(request: NextRequest) {
     roles: heldRoles,
     isStorefrontStaff,
   } = await updateSession(request);
+
+  /*
+   * THE HANDLE IS THE ADDRESS, SO THE RAW PATH REDIRECTS TO IT.
+   *
+   * `/<handle>/<page>` has rewritten to `/user/<page>` for a while, but nothing
+   * sent anyone the other way - so `/user` stayed a working, linkable URL and
+   * the same dashboard had two addresses. Whichever one a student happened to
+   * land on is the one they bookmarked and shared.
+   *
+   * A REDIRECT, not a rewrite: the point is the URL a student SEES, and a
+   * rewrite would leave `/user` in the bar. It cannot loop, because the handle
+   * branch below rewrites internally rather than redirecting back.
+   *
+   * TEMPORARY, never permanent. The handle is derived from the account's name,
+   * so it changes when they change their name. A 308 would be cached by the
+   * browser against the old handle and survive the rename.
+   *
+   * Falls through untouched when no handle resolves (no name, no email). `/user`
+   * still works in that case, which is what keeps this from stranding an
+   * account that has not finished signing up.
+   */
+  if (user && firstSeg && HANDLE_ROOTED.has(`/${firstSeg}`)) {
+    const meta = user.user_metadata ?? {};
+    const role = (trustedRole as Role | undefined) ?? 'student';
+    const handle = resolveHandle({
+      role,
+      full_name: meta.full_name as string | undefined,
+      business_name: meta.business_name as string | undefined,
+      email: user.email,
+    });
+    // Only when this path is the dashboard for the role they are wearing - a
+    // landlord on /user is not somebody whose handle should point there.
+    if (handle && HANDLE_DASHBOARD[role] === `/${firstSeg}`) {
+      const url = request.nextUrl.clone();
+      const rest = segments.slice(1).join('/');
+      url.pathname = rest ? `/${handle}/${rest}` : `/${handle}`;
+      const redirected = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((c) => redirected.cookies.set(c));
+      return redirected;
+    }
+  }
 
   // Personalised dashboard handles: /<handle>/<page> → the real /user or /vendor
   // page, but ONLY when <handle> is the signed-in user's own handle (private).

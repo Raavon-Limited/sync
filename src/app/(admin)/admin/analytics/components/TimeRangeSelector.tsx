@@ -7,7 +7,7 @@
 "use client";
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2 } from "lucide-react";
 import { RANGES, type TimeRange } from "../data";
 
 const OPTIONS = Object.keys(RANGES) as TimeRange[];
@@ -57,7 +57,7 @@ export function TimeRangeSelector({ value }: { value: TimeRange }) {
                   : " hover:bg-gray-50 font-medium"
               }`} >
               {o}
-              {o === value && <span className="text-[#90d505] text-xs">✓</span>}
+              {o === value && <Check className="text-[#90d505] size-3" aria-hidden="true" />}
             </button>
           ))}
         </div>

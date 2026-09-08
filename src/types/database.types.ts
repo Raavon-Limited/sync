@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -539,13 +539,20 @@ export type Database = {
       }
       bookings: {
         Row: {
+          agreement_accepted_at: string | null
+          agreement_version: string | null
           created_at: string
           end_date: string | null
+          grace_granted_at: string | null
+          grace_granted_by: string | null
+          grace_until: string | null
           hostel_id: string
           id: string
           last_activity_at: string | null
           locked_at: string | null
           move_in: string | null
+          move_in_confirmed_at: string | null
+          moved_in_at: string | null
           paid_at: string | null
           payment_reference: string | null
           price_per_session_kobo: number | null
@@ -558,13 +565,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agreement_accepted_at?: string | null
+          agreement_version?: string | null
           created_at?: string
           end_date?: string | null
+          grace_granted_at?: string | null
+          grace_granted_by?: string | null
+          grace_until?: string | null
           hostel_id: string
           id?: string
           last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
+          move_in_confirmed_at?: string | null
+          moved_in_at?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           price_per_session_kobo?: number | null
@@ -577,13 +591,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agreement_accepted_at?: string | null
+          agreement_version?: string | null
           created_at?: string
           end_date?: string | null
+          grace_granted_at?: string | null
+          grace_granted_by?: string | null
+          grace_until?: string | null
           hostel_id?: string
           id?: string
           last_activity_at?: string | null
           locked_at?: string | null
           move_in?: string | null
+          move_in_confirmed_at?: string | null
+          moved_in_at?: string | null
           paid_at?: string | null
           payment_reference?: string | null
           price_per_session_kobo?: number | null
@@ -596,6 +617,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_grace_granted_by_fkey"
+            columns: ["grace_granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_hostel_id_fkey"
             columns: ["hostel_id"]
@@ -1757,6 +1785,8 @@ export type Database = {
       hostels: {
         Row: {
           address: string | null
+          agreement_uploaded_at: string | null
+          agreement_url: string | null
           amenities: string[]
           archived_at: string | null
           area: string
@@ -1778,11 +1808,14 @@ export type Database = {
           ribbon: string | null
           room_type: string
           slug: string
+          term: string
           updated_at: string
           verified: boolean
         }
         Insert: {
           address?: string | null
+          agreement_uploaded_at?: string | null
+          agreement_url?: string | null
           amenities?: string[]
           archived_at?: string | null
           area: string
@@ -1804,11 +1837,14 @@ export type Database = {
           ribbon?: string | null
           room_type: string
           slug: string
+          term?: string
           updated_at?: string
           verified?: boolean
         }
         Update: {
           address?: string | null
+          agreement_uploaded_at?: string | null
+          agreement_url?: string | null
           amenities?: string[]
           archived_at?: string | null
           area?: string
@@ -1830,6 +1866,7 @@ export type Database = {
           ribbon?: string | null
           room_type?: string
           slug?: string
+          term?: string
           updated_at?: string
           verified?: boolean
         }
@@ -2267,6 +2304,38 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          email: boolean
+          in_app: boolean
+          kind: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          email?: boolean
+          in_app?: boolean
+          kind: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          email?: boolean
+          in_app?: boolean
+          kind?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action: string | null
@@ -2278,6 +2347,7 @@ export type Database = {
           id: string
           kind: string
           read_at: string | null
+          role: string | null
           title: string
           user_id: string
         }
@@ -2291,6 +2361,7 @@ export type Database = {
           id?: string
           kind: string
           read_at?: string | null
+          role?: string | null
           title: string
           user_id: string
         }
@@ -2304,6 +2375,7 @@ export type Database = {
           id?: string
           kind?: string
           read_at?: string | null
+          role?: string | null
           title?: string
           user_id?: string
         }
@@ -2843,6 +2915,54 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renewal_requests: {
+        Row: {
+          booking_created: string | null
+          booking_id: string
+          created_at: string
+          id: string
+          initiated_by: string
+          responded_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booking_created?: string | null
+          booking_id: string
+          created_at?: string
+          id?: string
+          initiated_by: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_created?: string | null
+          booking_id?: string
+          created_at?: string
+          id?: string
+          initiated_by?: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renewal_requests_booking_created_fkey"
+            columns: ["booking_created"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -3631,6 +3751,8 @@ export type Database = {
           slug: string
           updated_at: string
           vendor_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           address?: string | null
@@ -3656,6 +3778,8 @@ export type Database = {
           slug: string
           updated_at?: string
           vendor_id: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           address?: string | null
@@ -3681,6 +3805,8 @@ export type Database = {
           slug?: string
           updated_at?: string
           vendor_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -3695,6 +3821,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefronts_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4127,6 +4260,7 @@ export type Database = {
           scheduled_for: string | null
           selfie_url: string | null
           status: string
+          storefront_id: string | null
           submitted_at: string | null
           updated_at: string
           vendor_id: string | null
@@ -4148,6 +4282,7 @@ export type Database = {
           scheduled_for?: string | null
           selfie_url?: string | null
           status?: string
+          storefront_id?: string | null
           submitted_at?: string | null
           updated_at?: string
           vendor_id?: string | null
@@ -4169,6 +4304,7 @@ export type Database = {
           scheduled_for?: string | null
           selfie_url?: string | null
           status?: string
+          storefront_id?: string | null
           submitted_at?: string | null
           updated_at?: string
           vendor_id?: string | null
@@ -4215,6 +4351,13 @@ export type Database = {
             columns: ["meet_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_visits_storefront_id_fkey"
+            columns: ["storefront_id"]
+            isOneToOne: false
+            referencedRelation: "storefronts"
             referencedColumns: ["id"]
           },
           {
@@ -4336,6 +4479,7 @@ export type Database = {
       wallet_transactions: {
         Row: {
           amount_kobo: number | null
+          booking_id: string | null
           created_at: string | null
           direction: string | null
           id: number | null
@@ -4344,6 +4488,7 @@ export type Database = {
           order_id: string | null
           owner_id: string | null
           reference: string | null
+          request_id: string | null
         }
         Relationships: [
           {
@@ -4368,6 +4513,7 @@ export type Database = {
       }
       accept_staff_invite: { Args: { p_token: string }; Returns: string }
       accept_storefront_invite: { Args: { p_token: string }; Returns: string }
+      accept_tenancy_terms: { Args: { p_booking: string }; Returns: string }
       access_level: {
         Args: { p_area: string; p_storefront?: string }
         Returns: string
@@ -4407,12 +4553,24 @@ export type Database = {
           p_brief?: string
           p_hostel?: string
           p_meet?: string
+          p_storefront?: string
           p_vendor?: string
           p_when?: string
         }
         Returns: string
       }
       auth_role: { Args: never; Returns: string }
+      booking_parties: {
+        Args: { p_booking_ids?: string[] }
+        Returns: {
+          booking_id: string
+          campus: string
+          full_name: string
+          phone: string
+          student_id: string
+          verification_status: string
+        }[]
+      }
       business_role_count: { Args: { p_roles: string[] }; Returns: number }
       campus_pulse: { Args: never; Returns: Json }
       cancel_order: {
@@ -4441,7 +4599,12 @@ export type Database = {
         Args: { p_inspection: string; p_meeting?: string; p_proposed?: string }
         Returns: string
       }
+      claim_notification: {
+        Args: { p_channel: string; p_key: string }
+        Returns: boolean
+      }
       claim_role: { Args: { p_role: string }; Returns: string[] }
+      complete_ended_tenancies: { Args: { p_limit?: number }; Returns: number }
       confirm_inspection_payment: {
         Args: {
           p_amount_kobo: number
@@ -4454,6 +4617,7 @@ export type Database = {
         Args: { p_inspection: string }
         Returns: string
       }
+      confirm_move_in: { Args: { p_booking: string }; Returns: undefined }
       conversation_counterparties: {
         Args: { p_conversation_ids?: string[] }
         Returns: {
@@ -4509,6 +4673,10 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
+      decide_store_visit: {
+        Args: { p_decision: string; p_notes?: string; p_visit: string }
+        Returns: string
+      }
       decline_inspection_time: {
         Args: { p_inspection: string; p_reason?: string }
         Returns: string
@@ -4548,6 +4716,10 @@ export type Database = {
           notifications: number
         }[]
       }
+      grant_lease_grace: {
+        Args: { p_booking: string; p_until: string }
+        Returns: string
+      }
       has_role: { Args: { roles: string[] }; Returns: boolean }
       hold_interval: { Args: never; Returns: string }
       hostel_is_visible: { Args: { p_hostel: string }; Returns: boolean }
@@ -4583,6 +4755,7 @@ export type Database = {
         }[]
       }
       login_method: { Args: { p_email: string }; Returns: string }
+      mark_moved_in: { Args: { p_booking: string }; Returns: undefined }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       max_hold_interval: { Args: never; Returns: string }
       max_holds_per_student: { Args: never; Returns: number }
@@ -4629,6 +4802,7 @@ export type Database = {
         }[]
       }
       my_revenue_series: { Args: { p_period?: string }; Returns: Json }
+      my_tenancy_code: { Args: { p_booking: string }; Returns: string }
       my_verification_code: { Args: never; Returns: string }
       naira: { Args: { p_kobo: number }; Returns: string }
       nearby_storefronts: {
@@ -4711,6 +4885,10 @@ export type Database = {
         Args: { p_minutes?: number; p_storefront_id: string }
         Returns: string
       }
+      pay_booking_from_wallet: {
+        Args: { p_booking: string; p_move_in: string }
+        Returns: string
+      }
       pay_order_from_wallet: { Args: { p_order_id: string }; Returns: string }
       promote_to_admin: {
         Args: { p_email: string; p_role: string }
@@ -4749,6 +4927,8 @@ export type Database = {
         Args: { p_agent?: string; p_visit: string }
         Returns: string
       }
+      refund_booking: { Args: { p_booking: string }; Returns: undefined }
+      refund_window: { Args: never; Returns: string }
       release_delivery_escrow: {
         Args: { p_delivery_id: string }
         Returns: string
@@ -4766,6 +4946,7 @@ export type Database = {
         }[]
       }
       release_order_escrow: { Args: { p_order_id: string }; Returns: string }
+      request_renewal: { Args: { p_booking: string }; Returns: string }
       request_withdrawal: {
         Args: { p_amount_kobo: number; p_bank_account_id: string }
         Returns: string
@@ -4781,6 +4962,10 @@ export type Database = {
           p_refund_kobo?: number
           p_resolution: string
         }
+        Returns: string
+      }
+      respond_to_renewal: {
+        Args: { p_accept: boolean; p_booking: string }
         Returns: string
       }
       resume_store: { Args: { p_storefront_id: string }; Returns: undefined }
@@ -4814,6 +4999,7 @@ export type Database = {
         Args: { p_department: string; p_level?: string; p_matric: string }
         Returns: undefined
       }
+      send_rent_reminder: { Args: { p_booking: string }; Returns: string }
       set_account_role: {
         Args: { p_role: string; p_user: string }
         Returns: string
@@ -4885,6 +5071,8 @@ export type Database = {
           slug: string
           updated_at: string
           vendor_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -5066,6 +5254,21 @@ export type Database = {
         Returns: number
       }
       switch_role: { Args: { p_role: string }; Returns: string }
+      tenancy_proof: {
+        Args: { p_code: string }
+        Returns: {
+          accepted_at: string
+          address: string
+          area: string
+          ends_on: string
+          hostel_name: string
+          is_current: boolean
+          landlord_name: string
+          move_in: string
+          room_label: string
+          student_name: string
+        }[]
+      }
       toggle_favorite: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: boolean

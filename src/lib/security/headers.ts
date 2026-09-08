@@ -11,7 +11,30 @@
  *   - `'unsafe-inline'` is allowed for styles because Tailwind / next/font
  *     inject `<style>` tags during streaming. We do NOT allow it for scripts.
  */
-const PAYSTACK_ORIGINS = 'https://js.paystack.co https://checkout.paystack.com';
+/**
+ * PAYSTACK IS FOUR ORIGINS, NOT TWO, AND THE MISSING ONE FAILS AS A SPINNER.
+ *
+ * This was one constant - `js.paystack.co checkout.paystack.com` - reused for
+ * script-src, connect-src, frame-src and form-action alike. The script and the
+ * iframe were therefore allowed, so the modal OPENED, and then sat loading
+ * forever: `inline.js` runs in OUR page and calls `https://api.paystack.co`
+ * from it, which `connect-src` did not name. A blocked fetch is not an error
+ * the popup can render, so it shows the same spinner it shows on a slow
+ * network, indefinitely.
+ *
+ * Split by directive, because each one wants a different set and a single
+ * shared list is how the gap got there:
+ *   - script:  js.paystack.co            the inline SDK itself
+ *   - frame:   checkout.paystack.com     the popup, and 3-D Secure inside it
+ *   - connect: api + checkout            transaction status polling
+ *   - img:     checkout.paystack.com     bank and card-scheme logos
+ * Nothing here is a wildcard: a wildcard on *.paystack.co would have hidden
+ * this by accident rather than fixed it on purpose.
+ */
+const PAYSTACK_SCRIPT = 'https://js.paystack.co';
+const PAYSTACK_FRAME = 'https://checkout.paystack.com';
+const PAYSTACK_CONNECT = 'https://api.paystack.co https://checkout.paystack.com';
+const PAYSTACK_IMG = 'https://checkout.paystack.com';
 
 // Allow Supabase storage + signed URLs for images, and Supabase realtime / REST.
 const SUPABASE_ORIGINS = 'https://*.supabase.co https://*.supabase.in wss://*.supabase.co';
@@ -61,9 +84,9 @@ const DEV_SCRIPT_RELAXATIONS = isDev ? `'unsafe-eval'` : '';
 
 export const contentSecurityPolicy = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_SCRIPT}`,
+  `script-src 'self' 'unsafe-inline' ${DEV_SCRIPT_RELAXATIONS} ${PAYSTACK_SCRIPT} ${GOOGLE_MAPS_SCRIPT}`,
   `style-src 'self' 'unsafe-inline' ${GOOGLE_FONTS_STYLE}`,
-  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${GOOGLE_MAPS_IMG}`,
+  `img-src 'self' data: blob: ${SUPABASE_ORIGINS} ${GOOGLE_MAPS_IMG} ${PAYSTACK_IMG}`,
   // AUDIO AND VIDEO ARE NOT COVERED BY img-src.
   //
   // There was no media-src at all, so <video> and <audio> fell through to
@@ -82,12 +105,12 @@ export const contentSecurityPolicy = [
   //     finishes (chat-window, property-form)
   `media-src 'self' data: blob: ${SUPABASE_ORIGINS}`,
   `font-src 'self' data: ${GOOGLE_FONTS_FONT}`,
-  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_CONNECT}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
+  `connect-src 'self' ${SUPABASE_ORIGINS} ${PAYSTACK_CONNECT} ${GOOGLE_MAPS_CONNECT}${isDev ? ' ws: http://localhost:* ws://localhost:*' : ''}`,
   `worker-src 'self' blob:`,
-  `frame-src ${PAYSTACK_ORIGINS} ${GOOGLE_MAPS_EMBED_ORIGIN}`,
+  `frame-src ${PAYSTACK_FRAME} ${GOOGLE_MAPS_EMBED_ORIGIN}`,
   `frame-ancestors 'none'`,
   `base-uri 'self'`,
-  `form-action 'self' ${PAYSTACK_ORIGINS}`,
+  `form-action 'self' ${PAYSTACK_FRAME}`,
   `object-src 'none'`,
   `upgrade-insecure-requests`,
 ].join('; ');
@@ -104,10 +127,10 @@ export const securityHeaders = [
   // HSTS only in production - never on localhost or it pins your browser.
   ...(process.env.NODE_ENV === 'production'
     ? [
-      {
-        key: 'Strict-Transport-Security',
-        value: 'max-age=63072000; includeSubDomains; preload',
-      },
-    ]
+        {
+          key: 'Strict-Transport-Security',
+          value: 'max-age=63072000; includeSubDomains; preload',
+        },
+      ]
     : []),
 ] as const;

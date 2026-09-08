@@ -89,7 +89,7 @@ export function TierManager({ eventId, tiers }: { eventId: string; tiers: Ticket
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Tier name — Early bird, Regular, VIP"
+            placeholder="Tier name: Early bird, Regular, VIP"
             className="min-w-48 flex-1"
           />
           <Input

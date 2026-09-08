@@ -67,20 +67,35 @@ export function ServicesDock({ role }: ServicesDockProps) {
    * union without giving it tabs is now a type error, which is what the comment
    * on that union always claimed to guarantee.
    */
+  /*
+   * NO HARDCODED BADGES, AND ONE NAME FOR ONE FEATURE.
+   *
+   * These carried `badge: 2` and `badge: 3` as literals, so every landlord saw
+   * "2" and every student "3" forever - on an empty inbox, on a read one, on a
+   * brand new account. A count that is always wrong is worse than no count: it
+   * trains people to ignore the one place unread actually gets shown.
+   *
+   * Real unread lives in `conversations` behind `hasUnread` per thread (see
+   * modules/messaging). Wiring it here means a query in the dock on every
+   * route, so it is left off until that is worth doing, rather than faked.
+   *
+   * The student tab also said "Chats" while everyone else said "Inbox". Same
+   * table, same screen, same feature - it gets one name.
+   */
   const TABS_BY_ROLE: Record<Role, DockTab[]> = {
     vendor: [
       { href: '/vendor/orders', label: 'Orders', icon: ClipboardList },
-      { href: '/vendor/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/vendor/inbox', label: 'Inbox', icon: MessageCircle },
       { href: '/vendor', label: 'You', icon: LayoutDashboard },
     ],
     landlord: [
       { href: '/landlord/requests', label: 'Requests', icon: ClipboardList },
-      { href: '/landlord/inbox', label: 'Inbox', icon: MessageCircle, badge: 2 },
+      { href: '/landlord/inbox', label: 'Inbox', icon: MessageCircle },
       { href: '/landlord', label: 'You', icon: LayoutDashboard, iconName: 'landlord' },
     ],
     student: [
       { href: '/user/saved', label: 'Saved', icon: Heart },
-      { href: '/user/messages', label: 'Chats', icon: MessageCircle, badge: 3 },
+      { href: '/user/messages', label: 'Inbox', icon: MessageCircle },
       { href: '/user', label: 'You', icon: User, iconName: 'student' },
     ],
     // An agent's whole job is the visits assigned to them, so that IS the

@@ -41,6 +41,7 @@ import {
   UserRound,
   Users,
   Wallet,
+  Receipt,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -187,7 +188,10 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
       },
       {
         label: 'Business',
-        items: [{ href: '/landlord/earnings', label: 'Earnings', icon: Wallet }],
+        items: [
+          { href: '/landlord/earnings', label: 'Earnings', icon: Wallet },
+          { href: '/landlord/receipts', label: 'Receipts', icon: Receipt },
+        ],
       },
       {
         label: 'Account',
@@ -464,6 +468,12 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             icon: TrendingUp,
           },
           { href: '/user/wallet', label: 'Wallet', heading: 'Your wallet', icon: Wallet },
+          {
+            href: '/user/receipts',
+            label: 'Receipts',
+            heading: 'Receipts & invoices',
+            icon: Receipt,
+          },
           { href: '/user/saved', label: 'Saved', heading: 'Saved places', icon: Bookmark },
           {
             href: '/user/bookings',
@@ -471,6 +481,20 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             heading: 'Your bookings',
             icon: ClipboardList,
           },
+          /*
+           * THE STUDENT HAD NO WAY INTO THEIR OWN MESSAGES.
+           *
+           * `/user/messages` has existed as a route the whole time and appeared
+           * in no navigation, so the only way a student ever reached a thread
+           * was the floating chat bubble - which is exactly why that bubble felt
+           * load-bearing. Removing it without this row would have taken
+           * messaging away from students entirely.
+           *
+           * Called "Inbox" to match the vendor and landlord rows. It is one
+           * feature and it should not have two names depending on who is
+           * looking at it.
+           */
+          { href: '/user/messages', label: 'Inbox', heading: 'Your messages', icon: Inbox },
         ],
       },
       {

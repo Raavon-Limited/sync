@@ -190,3 +190,47 @@ jobs:
           fi
 
           echo "Hold expiry completed."
+
+  # Independent again: a lease that has run out must free its room even if
+  # escrow, inspections or hold expiry are failing.
+  #
+  # UNLIKE THE HOLD SWEEP, THIS ONE IS NOT CATCH-UP. `hostel_room_state` reads a
+  # lapsed HOLD as free without needing the sweep, but it has no date test at
+  # all for a CONFIRMED booking - so until this runs, a room whose tenancy ended
+  # months ago still displays as booked and cannot be let to anybody. Nothing
+  # else in the product can end a tenancy; see the route's own header.
+  tenancies:
+    name: Complete ended tenancies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the tenancy completion endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ] || [ -z "${SITE_URL:-}" ]; then
+            echo "::error::CRON_SECRET and SITE_URL must both be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(
+            curl -sS \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -w $'\n%{http_code}' \
+              "${SITE_URL}/api/cron/complete-tenancies" 2>&1
+          ) || true
+
+          http_status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "$body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Tenancy completion returned HTTP ${http_status:-<no response>}. See the body above."
+            exit 1
+          fi

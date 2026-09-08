@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/modules/auth/queries';
 import { PropertyCard, type Property } from './(components)/HostelCards';
 import { getLandlordDashboard } from './(components)/landlord-data';
+import { PendingBookingRequests } from './(components)/bookings/pending-booking-requests';
 
 export const metadata: Metadata = { title: 'Landlord dashboard' };
 
@@ -54,12 +55,17 @@ export default async function Page() {
   });
 
   return (
+    /* The dashboard rendered the shared pending list with NO handlers, so
+       Accept here ran acceptOrderMock - a timer that changes nothing and fails
+       8% of the time - while the same decision on /landlord/requests ran for
+       real. Both write `awaiting_payment` now. */
     <RoleDashboard
       variant="landlord"
       count={dashboard.count}
       kpis={dashboard.kpis}
       pending={dashboard.pending}
       chart={dashboard.chart}
+      pendingList={<PendingBookingRequests items={dashboard.pending} />}
     >
       <section>
         <h2 className="text-content-muted mb-2 max-w-xl font-mono text-sm tracking-wide">

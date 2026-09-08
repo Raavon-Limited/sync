@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatNaira } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -281,7 +281,7 @@ export function FoodCarousel({ className }: { className?: string }) {
           <div className="mt-3 flex items-start justify-between gap-2">
             <h3 className="font-display text-card text-foreground">{f.name}</h3>
             <span className="text-foreground inline-flex items-center gap-0.5 text-xs">
-              ★ <span className="font-medium">{f.rating}</span>
+              <Star className="size-3 fill-current" aria-hidden="true" /> <span className="font-medium">{f.rating}</span>
             </span>
           </div>
           <p className="text-content-muted text-xs">

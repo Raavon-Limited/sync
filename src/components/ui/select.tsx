@@ -53,11 +53,11 @@ export const SelectContent = React.forwardRef<
           'max-h-[--radix-select-content-available-height]',
           'border-border overflow-hidden rounded-xl border',
 
-          // 👇 Match the width of the trigger
+          // Match the width of the trigger
           position === 'popper' &&
             'w-[--radix-popper-anchor-width] data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
 
-          // 👇 Nice animations
+          // Nice animations
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
           'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',

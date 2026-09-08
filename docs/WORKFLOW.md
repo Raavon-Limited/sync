@@ -4,7 +4,7 @@
 two Claudes) from building contradictory things. It is the *how* and the *where we are*. The
 *what* lives in the other docs, listed below.
 
-Last updated: **6 September 2026**.
+Last updated: **7 September 2026**.
 
 > Keep this file current. If you change an invariant in [§4](#4-invariants--do-not-contradict-these),
 > change it here in the same commit. A stale handoff is worse than none, because it is trusted.
@@ -147,6 +147,30 @@ the scratchpad, never in the repo.
   get `42P13`.
 - **Filenames are a sequence, not a calendar.** They run ahead of the real date. Do not read them
   as when something happened.
+- **Two FKs to the same table make a PostgREST embed ambiguous, and it fails the WHOLE query.**
+  `renewal_requests` references `bookings` twice (`booking_id`, `booking_created`), so
+  `renewal:renewal_requests(...)` returns **PGRST201** and the entire select errors — not just that
+  column. Because it was in the shared `BOOKING_SELECT`, every bookings read broke at once and the
+  hostel vanished from the dashboard, the bookings list and the apartment card simultaneously. That
+  is what an unhandled query error looks like from the outside: not an error, an empty app. Name the
+  constraint — `renewal_requests!renewal_requests_booking_id_fkey(...)` — and never simplify it back.
+  **Test a changed select against the live database before trusting it**; `tsc` cannot see this.
+- **Never edit an applied migration. Ever.** It does not re-run, so the file quietly stops
+  describing the database and every later `db push` is a no-op against a remote that disagrees
+  with the repo. `20260912120000` created `private.claim_notification`, was applied, and was then
+  edited to say `public` - `migration list` showed it applied, and the function the app called did
+  not exist. The fix is always a NEW migration (`20260912210000`), and the old file gets restored
+  to what actually ran even though it records a mistake.
+- **A new view in `public` is granted to `anon` whether you ask or not.** Supabase's default
+  privileges on that schema do it, so `grant select ... to authenticated` alone leaves anon holding
+  select too - true of `wallet_transactions` since 20260823090000. No rows leaked, because that
+  view's own `auth.uid()` predicate returns empty for anon, but the grant was wrong and one edit to
+  that where clause away from a public ledger. `revoke all ... from anon` explicitly after every
+  create, and assert it.
+- **Functions in `private` are unreachable from the app.** PostgREST exposes `public` and
+  `graphql_public` only (PGRST106). Put the function in `public` and lock it with
+  `revoke`/`grant execute ... to service_role`, the way `credit_wallet_topup` does; keep the TABLE
+  in `private`.
 
 ### Types
 
@@ -244,6 +268,110 @@ commit `f81c5c5`.
 
 ### Just finished
 
+**The booking chain was broken at the landlord's Accept button (UNCOMMITTED).** A student's request
+sat at `requested` forever, so no hold started and their Pay button — which only renders at
+`awaiting_payment` — had nothing to render on. The cause was one missing prop:
+`src/components/dashboard/role-dashboard.tsx` rendered `PendingRequestList` with no `onAccept`, and
+that component **defaults to `acceptOrderMock`** — a 500ms timer that changes nothing and rejects 8%
+of the time at random. So `/landlord` ran a demo while `/landlord/requests` ran the real
+`acceptBookingRequest` on the same rows. Fixed via a `pendingList` slot and
+`PendingBookingRequests`. Related, in the same pass:
+
+- `acceptBookingRequest` now accepts from `interested` as well as `requested`. Both screens list
+  enquiries as needing a decision, and Accept on one answered "no longer waiting on you".
+- The decline reasons were a food vendor's only — a landlord chose between *Out of stock* and
+  *Kitchen too busy*. `BOOKING_DECLINE_REASONS` is theirs; the popover takes a `reasons` prop.
+- `PendingRow` now shows the thrown message instead of swallowing it into "try again".
+
+**Booking a viewing was a `setTimeout` and an `alert()` (UNCOMMITTED).** `/hostels` collected a
+name, a phone and a time, waited a second, and said an agent would call. Nothing was inserted and
+nothing was charged — and the webhook that finishes this (`purpose: 'inspection_fee'` →
+`confirm_inspection_payment`) has always existed, with **nothing anywhere starting such a charge**.
+Now: `POST /api/inspections/pay` (amount read server-side from the row's snapshotted `fee_kobo`,
+never from the client) plus `components/hostels/book-viewing-dialog.tsx`, used by both `/hostels`
+and `/user/bookings`. The viewing button is also offered while a booking is still `requested` — an
+inspection needs no landlord and no hold, and telling students to wait was the reason none of them
+saw a building.
+
+**The dashboard's featured booking was five hardcoded props (UNCOMMITTED).** `/user` rendered
+`BookingBillboard propertyName="Tanke Crescent Lodge" room="Room 4B"` above the student's real
+bookings, with all three buttons unwired. It reads `useMyBookings` now, features whichever booking
+needs something, and renders nothing when none does.
+
+**Notifications: none of them were about money, and `private.notify` will not tell you about
+your own actions (UNCOMMITTED, migrations APPLIED).** Two separate causes for "I see no
+notifications". First, `private.notify` returns early when the recipient is `auth.uid()` — sound in
+general, and it means a landlord testing on one account sees nothing on either side. Second, and
+worse: **not one money event notified anybody**. Every producer in `20260823100000` is about a
+*status*; `credit_wallet_topup`, `confirm_inspection_payment`, every `release_*_escrow` and every
+refund had zero calls between them.
+
+`20260912150000` puts one trigger on `private.ledger_entries` rather than editing eight money
+functions across four migrations — everything ends in `post_transaction`, so this covers the paths
+that do not exist yet. `private.notify_money` is the deliberate exception to the self-suppression
+rule: a payment confirmation is a record, not news.
+
+**`notifications.kind` is a CHECK constraint, and `notify` swallows its own exceptions.** Those two
+together make a wrong kind fail *invisibly, forever* — the insert raises, the handler downgrades it
+to a warning, and the alert is silently dropped with only a Postgres log line. That shipped:
+`notify_inspection_paid` passed `'inspection'`, which is not one of the nine permitted values, so
+every paid-viewing alert vanished. `20260913090000` fixes it to `'payment'` and makes
+`notify_money` validate the kind up front. **A tenth kind means four edits: the constraint, the TS
+union, the icon map, and `PREFERENCE_CATALOGUE`.**
+
+**Notification preferences exist now** (`20260913090000`). `/user/notifications` had a Preferences
+tab holding four toggles in local state — *Hostel Allocations*, *Laundry Metrics*, *Event Ticket
+Channels*, *System Diagnostics* — none of which named a kind anything actually sends, so they would
+have muted nothing even once persisted. **Absence means ON**: rows are stored only to say no.
+`payment` and `system` ignore the in-app preference on purpose — a debit alert is how somebody
+notices a payment they did not make, and a silenceable account is the first thing an attacker
+silences. Email is stored and **no sender reads it yet**; the screen says so.
+
+**Generated types were regenerated** against the remote (`supabase gen types typescript
+--project-id inehfobzuworypywaowy --schema public`), which cleared the hand-written `rpc()` casts
+in `apply-charge.ts`. `inspection-actions.ts` still has one.
+
+**Nothing ever credited a wallet except the webhook (UNCOMMITTED).** `/api/webhooks/paystack`
+was the only path by which money landed, and Paystack can only post to a public URL — so on a dev
+machine a top-up succeeded on Paystack and the wallet stayed at zero **forever**, under a toast
+reading "your wallet will update shortly". Confirmed, not inferred: two ₦500,000 charges sat
+`success` on Paystack against a zero balance. Now there are two doors into one room —
+`modules/payments/apply-charge.ts` holds the dispatch, and both the webhook and the new
+`POST /api/payments/verify` (the payer's own browser, on return from checkout) call it. Both
+re-verify with Paystack; every effect is idempotent by reference, so whichever lands second is a
+no-op. The webhook is still the backstop for anyone who closes the tab. The same fix carries the
+inspection fee, which had exactly the same single point of failure.
+
+Those two charges were credited by hand through `credit_wallet_topup`, at the user's explicit
+request. Balance and ledger both reconcile.
+
+**A trap when probing this: `public.wallet_transactions` is a view with
+`w.owner_id = (select auth.uid())` in it.** A service-role probe returns `[]` no matter what the
+ledger holds, which reads exactly like "nothing was ever written". Check `wallets.balance_kobo`,
+or query as the user. The real ledger is `private.ledger_entries`, and `private` is **not exposed
+over PostgREST** (PGRST106) — so a REST probe cannot see it at all.
+
+**Wallet top-up receipt email (UNCOMMITTED, needs a migration applied).** There was no email on a
+top-up at all — never built, not broken. `src/emails/wallet-topup-email.tsx` plus a send from the
+credit path. **It will not send until `20260912120000_notification_claims.sql` is pushed**: two
+paths now apply each charge, and the money RPCs absorb repeats silently while an email cannot, so
+the send is gated on `public.claim_notification(reference, 'email')` returning true exactly once.
+Without the function the claim errors and the code deliberately sends **nothing** rather than risk
+a duplicate receipt about money. (First draft put that function in `private` — it typechecked and
+would have failed at runtime, because PostgREST only exposes `public`. Table private, function
+public, locked by grant, same shape as `credit_wallet_topup`.)
+
+**Paystack's modal hung on a blocked fetch (UNCOMMITTED).** `PAYSTACK_ORIGINS` was one constant
+reused for four CSP directives, and it named `js.paystack.co` and `checkout.paystack.com` only. The
+script and the iframe were allowed, so the popup **opened** — then `inline.js` called
+`https://api.paystack.co` from our page, `connect-src` blocked it, and a blocked fetch renders as
+the same spinner a slow network does, forever. Now split per directive in
+`src/lib/security/headers.ts`. *Confirm against the browser console before treating this as
+closed — it was diagnosed from the policy, not from a violation report.*
+
+**Message landlord had nowhere to go.** Every one of those buttons fired `openChat(id)`, and the
+only listener — `ChatWidget` — was deleted. `/user/messages` now reads `?c=<id>`.
+
 **Multi-role access (committed, `f81c5c5`)** — a landlord invited onto staff was locked out of both
 dashboards. Four separate bugs, all fixed: the console root requiring `overview`; the proxy gating
 on the worn role only; two areas advertising pages that were never built; and `roles` being
@@ -283,6 +411,18 @@ Roughly in priority order. Nothing here is started.
   on the Paystack balance, so the **settlement schedule** decides whether payouts can run at all.
 
 **Known and unfixed.**
+- **The vendor's Accept/Decline is still `acceptOrderMock`.** `/vendor` renders
+  `PendingRequestList` with no handlers, exactly as `/landlord` did, so a vendor accepting an
+  order changes nothing and fails at random. The landlord half is wired; there is no vendor
+  endpoint to wire this to yet. Until there is, treat every screen rendering that list without
+  `onAccept` as a demo — the buttons are indistinguishable from working ones.
+- **A viewing can only be paid for by card.** `/api/inspections/pay` goes to Paystack; there is no
+  wallet path, because `confirm_inspection_payment` is driven by the webhook and takes a payment
+  reference. Paying a ₦5,000 fee from a funded wallet needs an RPC that does not exist.
+- **An unpaid inspection has no second chance to pay.** The row survives a cancelled checkout as
+  `pending_payment` on purpose, and `ViewingConfirm` does not list or offer to pay for one — so
+  the student's only route back is to book another. A "pay for this viewing" button on that state
+  is the missing piece.
 - `switch_role` writes **no audit row** (`20260830090000`, line ~114). The most
   privilege-relevant self-service write in the system leaves no trail — which is exactly why the
   demotion above could not be traced to a time or a device.

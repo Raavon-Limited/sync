@@ -1,6 +1,6 @@
 // components/food-comps/StoreInfoModal.tsx
 "use client"
-import { X, MapPin, Clock, Phone, Mail, AlertCircle, CheckCircle } from "lucide-react"
+import { X, MapPin, Clock, Phone, Mail, AlertCircle, CheckCircle, Star, BadgeCheck } from "lucide-react"
 
 export interface StoreInfo {
     address: string
@@ -146,14 +146,23 @@ export default function StoreInfoModal({ vendorName, info, onClose }: Props) {
                                     <CheckCircle size={15} className="text-lime-deep dark:text-lime flex-shrink-0" />
                                     <span className="text-content-muted">Hygiene rating:</span>
                                     <span className="font-semibold text-content">
-                                        {"★".repeat(info.hygieneRating)}{"☆".repeat(5 - info.hygieneRating)}
+                                        {/* Drawn, not typed. "★".repeat() renders whatever star glyph the
+                                            device font has, and "☆" is a different
+                                            character that may not pair with it at all. */}
+                                        {Array.from({ length: 5 }, (_, i) => (
+                                            <Star
+                                                key={i}
+                                                aria-hidden="true"
+                                                className={i < (info.hygieneRating ?? 0) ? "inline size-3.5 fill-current" : "inline size-3.5 opacity-30"}
+                                            />
+                                        ))}
                                     </span>
                                 </div>
                             )}
                             <div className="flex items-center gap-2 text-sm">
                                 <CheckCircle size={15} className="text-lime-deep dark:text-lime flex-shrink-0" />
                                 <span className="text-content-muted">Verified by</span>
-                                <span className="font-semibold text-content">Sync ✓</span>
+                                <span className="font-semibold text-content inline-flex items-center gap-1">Sync <BadgeCheck className="size-3.5" aria-hidden="true" /></span>
                             </div>
                         </div>
                     </section>

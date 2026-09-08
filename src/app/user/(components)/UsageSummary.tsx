@@ -19,7 +19,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Wallet, BedDouble, CalendarDays } from 'lucide-react';
-import { useMyOrders } from '@/modules/food/hooks';
+import { useWalletTransactions } from '@/modules/payments/hooks';
 import { useMyBookings } from '@/modules/hostels/hooks';
 import { useMyTickets } from '@/modules/events/hooks';
 import type { BookingStatus } from '@/modules/hostels/types';
@@ -30,15 +30,26 @@ const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 const CLOSED: BookingStatus[] = ['completed', 'cancelled', 'expired'];
 
 export function UsageSummary() {
-  const { data: orders = [], isLoading: lo } = useMyOrders({ pageSize: 100 });
+  const { data: ledger = [], isLoading: lo } = useWalletTransactions({ pageSize: 200 });
   const { data: bookings = [], isLoading: lb } = useMyBookings();
   const { data: tickets = [], isLoading: lt } = useMyTickets({ status: 'valid', pageSize: 50 });
   const isLoading = lo || lb || lt;
 
-  // Cancelled orders are not spend. Everything else the student committed to is.
-  const spentKobo = orders
-    .filter((o) => o.status !== 'cancelled')
-    .reduce((sum, o) => sum + o.totalKobo, 0);
+  /*
+   * SPEND IS THE LEDGER, NOT THE FOOD ORDERS.
+   *
+   * This summed `useMyOrders` and nothing else, so a student who had paid
+   * ₦300,000 in rent read "TOTAL SPENT ₦0 across 0 orders" - literally true of
+   * orders, and the opposite of what the tile is called. Rent, viewings and
+   * tickets were all invisible.
+   *
+   * Every outbound wallet line is spend, with one exception: a WITHDRAWAL is
+   * moving your own money to your own bank, not spending it. Counting it would
+   * make emptying the wallet look like a purchase.
+   */
+  const spendKinds = new Set(['escrow_hold', 'order_payment', 'subscription_charge']);
+  const outgoing = ledger.filter((t) => t.direction === 'out' && spendKinds.has(t.kind));
+  const spentKobo = outgoing.reduce((sum, t) => sum + Math.abs(t.amountKobo), 0);
 
   const active = bookings.filter((b) => !CLOSED.includes(b.status));
   const endingSoon = active.filter(
@@ -49,7 +60,7 @@ export function UsageSummary() {
     {
       label: 'TOTAL SPENT',
       value: naira(spentKobo),
-      sub: `across ${orders.length} order${orders.length === 1 ? '' : 's'}`,
+      sub: `across ${outgoing.length} payment${outgoing.length === 1 ? '' : 's'}`,
       icon: Wallet,
     },
     {

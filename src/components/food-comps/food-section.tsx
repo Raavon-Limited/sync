@@ -2,7 +2,7 @@
 import { useState, useRef } from "react"
 import Image, { StaticImageData } from "next/image"
 import FoodCards from "./food-card"
-import { X, ChevronDown, SlidersHorizontal, Crown, Tag, ArrowUpDown } from "lucide-react"
+import { X, ChevronDown, SlidersHorizontal, Crown, Tag, ArrowUpDown, UserRound, MapPin, ThumbsUp, Bike } from "lucide-react"
 import BurgerImage from '@/assets/images/illustrtions/burger-illustration.png'
 import PizzaImage from '@/assets/images/illustrtions/pizza-illustration.png'
 import PastaImage from '@/assets/images/illustrtions/local-food-illustration.png'
@@ -64,11 +64,20 @@ const FOOD_TYPE_CATEGORIES: { label: string; image: StaticImageData }[] = [
     { label: "Pasta", image: PastaImage },
 ]
 
+/**
+ * Icons are COMPONENTS, not emoji characters.
+ *
+ * These were "👤" / "📍" / "👍" / "🛵" rendered in a <span>, which means the
+ * glyph is whatever the device font decides: a different drawing on iOS,
+ * Android and Windows, in full colour next to a monochrome interface, and at a
+ * size that ignores the surrounding type scale. Lucide draws them in the
+ * current text colour at a size we set, like every other icon in the app.
+ */
 const SORT_OPTIONS = [
-    { label: "Recommended", value: "recommended", icon: "👤" },
-    { label: "Near me", value: "near", icon: "📍" },
-    { label: "Ratings", value: "rating", icon: "👍" },
-    { label: "Delivery fee", value: "delivery", icon: "🛵" },
+    { label: "Recommended", value: "recommended", Icon: UserRound },
+    { label: "Near me", value: "near", Icon: MapPin },
+    { label: "Ratings", value: "rating", Icon: ThumbsUp },
+    { label: "Delivery fee", value: "delivery", Icon: Bike },
 ]
 
 function Pill({
@@ -388,7 +397,7 @@ export default function FoodSection({ food }: Props) {
                                     className="flex items-center justify-between w-full px-4 py-3.5 rounded-xl hover:bg-content-muted/5 cursor-pointer transition"
                                 >
                                     <span className="flex items-center gap-3 text-sm text-content font-medium">
-                                        <span className="text-xl">{opt.icon}</span>
+                                        <opt.Icon className="size-5" aria-hidden="true" />
                                         {opt.label}
                                     </span>
                                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${tempSort === opt.value ? "border-lime bg-lime" : "border-content-muted/40"

@@ -52,7 +52,7 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
   const { data: hostels } = await db
     .from('hostels')
     .select(
-      'id, slug, name, area, address, lat, lng, room_type, amenities, house_rules, description, price_per_session_kobo, fee_mode, verified, created_at, hostel_images(url, position, kind)',
+      'id, slug, name, area, address, lat, lng, room_type, term, amenities, house_rules, description, price_per_session_kobo, fee_mode, verified, created_at, hostel_images(url, position, kind)',
     )
     .eq('landlord_id', landlordId)
     .is('archived_at', null)
@@ -134,7 +134,9 @@ export async function getLandlordProperties(landlordId: string): Promise<Propert
       // adds nothing to the student's total, so an unset value cannot
       // overcharge anyone.
       feeMode: h.fee_mode === 'pass_on' ? 'pass_on' : 'absorb',
-      term: 'per session',
+      // Was hardcoded, so a landlord who picked "Per year" was shown "Per
+      // session" every time they reopened the form.
+      term: h.term === 'per year' ? 'per year' : 'per session',
       roomType: (h.room_type as string) ?? undefined,
       amenities: (h.amenities as string[]) ?? undefined,
       availability:
@@ -157,11 +159,24 @@ export async function getLandlordRequests(landlordId: string): Promise<BookingRe
         name: personName(b),
         propertyId: b.hostel_id as string,
         property: hostelName(b),
-        requestedMoveIn: (b.move_in as string) ?? (b.requested_at as string) ?? '',
-        amount: naira(b.price_per_session_kobo as number),
+        /*
+         * NO FALLBACK TO `requested_at`. It used to read
+         *   (b.move_in) ?? (b.requested_at) ?? ''
+         * and `move_in` is null on every booking in the database - nothing
+         * collects one. So the screen took the moment the request was SENT and
+         * printed it as "moving in 6 Sept 2026", inventing an agreement that
+         * did not exist and putting it in front of the person deciding.
+         *
+         * Empty is the honest answer, and the row says so rather than showing
+         * a date. Who sets a real one is an open product question: nothing in
+         * the request flow asks the student for it.
+         */
+        requestedMoveIn: (b.move_in as string) ?? '',
+        amount: naira(bookingPriceKobo(b)),
         studentVerified: studentVerified(b),
         submitted: (b.requested_at as string) ?? (b.created_at as string),
         status: b.status as string,
+        holdEndsAt: (b.reserved_until as string) ?? null,
       }),
     );
 }
@@ -178,17 +193,39 @@ export async function getLandlordTenants(landlordId: string): Promise<Tenant[]> 
     return {
       id: b.id as string,
       name: personName(b),
-      // Contact details come from the profile row, which RLS lets a landlord
-      // read for somebody booked into their own hostel and nobody else.
-      email: (student?.email as string) ?? '',
+      // Contact details come from `booking_parties`, which discloses them only
+      // for bookings on this landlord's own hostels AND only once the request
+      // has been accepted - a pending request is a stranger's phone number.
+      //
+      // EMAIL IS ALWAYS EMPTY and always has been: `profiles` has no email
+      // column, it lives on auth.users (see modules/admin/emails.ts, which
+      // goes through the admin API for it). This read has been returning ''
+      // for every tenant since it was written. Left here rather than deleted
+      // because the Tenant type and the table column still expect the field -
+      // wiring it to a real address is its own change.
+      email: '',
       phone: (student?.phone as string) ?? '',
-      school: (student?.campus_other as string) ?? '',
+      school: (student?.campus as string) ?? '',
       studentVerified: studentVerified(b),
       propertyId: b.hostel_id as string,
       property: hostelName(b),
       moveIn: (b.move_in as string) ?? (b.created_at as string),
       leaseEnd: (b.end_date as string) ?? '',
       paymentStatus: paymentStatus(b),
+      graceUntil: (b.grace_until as string) ?? null,
+      // Only a request still awaiting an answer or already agreed; the join
+      // returns declined and withdrawn ones too.
+      renewal: (() => {
+        const open = ((b.renewal as Row[] | null) ?? []).find(
+          (x) => x.status === 'pending' || x.status === 'accepted',
+        );
+        return open
+          ? {
+              status: open.status as 'pending' | 'accepted',
+              initiatedBy: open.initiated_by as 'tenant' | 'landlord',
+            }
+          : null;
+      })(),
       // Every other stay this person has had with THIS landlord. It is the
       // question a landlord actually asks about a returning tenant.
       bookingHistory: rows
@@ -268,7 +305,12 @@ export async function getLandlordEarnings(landlordId: string): Promise<LandlordE
         date: (b.paid_at as string) ?? (b.created_at as string),
         tenant: personName(b),
         property: hostelName(b),
-        amount: naira(b.price_per_session_kobo as number),
+        // Same fallback as the requests list, and the same caveat: nothing
+        // snapshots a price onto the booking, so without it every line of a
+        // landlord's earnings statement reads ₦0. This is the LISTED price, not
+        // a settled amount - once payments write a real figure onto the row,
+        // step 1 of the chain takes over and this stops estimating.
+        amount: naira(bookingPriceKobo(b)),
         status: transactionStatus(b),
       }),
     ),
@@ -301,12 +343,43 @@ async function bookingsFor(
   const { data } = await db
     .from('bookings')
     .select(
-      'id, hostel_id, student_id, status, move_in, end_date, created_at, requested_at, paid_at, price_per_session_kobo, hostel:hostels(name, area), student:profiles(full_name, phone, campus_other, verification_status)',
+      // `reserved_until` was missing, and two things read it: the hold
+      // countdown on the requests row, and `transactionStatus`, whose
+      // `b.reserved_until ?? b.move_in` therefore always took the move_in
+      // branch - silently, because an unselected column is undefined rather
+      // than an error.
+      'id, hostel_id, student_id, status, move_in, end_date, grace_until, created_at, requested_at, paid_at, reserved_until, price_per_session_kobo, room_id, renewal:renewal_requests!renewal_requests_booking_id_fkey(status, initiated_by), hostel:hostels(name, area, price_per_session_kobo), room:hostel_rooms(price_per_session_kobo)',
     )
     .in('hostel_id', ids)
     .order('created_at', { ascending: false });
 
-  return (data ?? []) as Row[];
+  const rows = (data ?? []) as Row[];
+  if (rows.length === 0) return rows;
+
+  /*
+   * THE STUDENT IS NOT AN EMBED, AND CANNOT BE.
+   *
+   * This select used to carry `student:profiles(full_name, phone,
+   * campus_other, verification_status)`, and it returned NULL every single
+   * time: `profiles` is locked to the caller's own row by
+   * `profiles_select_own` (auth.uid() = id) and no policy has ever let a
+   * landlord read a tenant. PostgREST does not error on an embed RLS refuses -
+   * it just hands back null - so this failed silently and produced
+   * "A student" for every request, blank contact details for every tenant, and
+   * NOT VERIFIED for people we had in fact verified.
+   *
+   * `booking_parties` discloses four columns for bookings on this landlord's
+   * own hostels instead. It is the same answer the inbox reached with
+   * `conversation_counterparties`, for the same reason.
+   */
+  const { data: parties } = await db.rpc('booking_parties', {
+    p_booking_ids: rows.map((r) => r.id as string),
+  });
+
+  const byBooking = new Map(((parties ?? []) as Row[]).map((p) => [p.booking_id as string, p]));
+
+  // Re-attached under `student` so every caller below reads unchanged.
+  return rows.map((r) => ({ ...r, student: byBooking.get(r.id as string) ?? null }));
 }
 
 function hostelName(b: Row): string {
@@ -315,6 +388,35 @@ function hostelName(b: Row): string {
 
 function personName(b: Row): string {
   return ((b.student as Row | null)?.full_name as string) ?? 'A student';
+}
+
+/**
+ * What this booking is worth, in kobo.
+ *
+ * `bookings.price_per_session_kobo` IS NULL ON EVERY ROW. Nothing snapshots a
+ * price when a request is made - `createBooking` sends hostel, room and student
+ * and nothing else - so reading that column alone rendered "₦0" beside every
+ * request a landlord had to decide on, on hostels priced at ₦200,000+.
+ *
+ * The fallback chain is deliberate and ordered by specificity:
+ *   1. the booking's own snapshot, once something sets it, because a price
+ *      agreed at request time must not silently change if the listing is
+ *      re-priced afterwards;
+ *   2. the ROOM's price, which is what `hostel_room_state` bills from and is
+ *      allowed to differ from the building's headline rate;
+ *   3. the hostel's price.
+ *
+ * This is display only. The number a student is actually charged comes from
+ * `quote_rent` at payment time, which also applies fee_mode - do not treat this
+ * as the amount owed.
+ */
+function bookingPriceKobo(b: Row): number {
+  return (
+    (b.price_per_session_kobo as number | null) ??
+    ((b.room as Row | null)?.price_per_session_kobo as number | null) ??
+    ((b.hostel as Row | null)?.price_per_session_kobo as number | null) ??
+    0
+  );
 }
 
 /**

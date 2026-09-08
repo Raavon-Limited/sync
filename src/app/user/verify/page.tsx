@@ -83,7 +83,7 @@ export default async function Page() {
         </h1>
         <p className="text-content-muted mt-2 text-sm">
           {asked} {asked === 1 ? 'document' : 'documents'}, reviewed by a person. A verified account
-          gets taken seriously by landlords and vendors — an unverified one can browse, but it asks
+          gets taken seriously by landlords and vendors. An unverified one can browse, but it asks
           a stranger to take your word for it.
         </p>
       </div>

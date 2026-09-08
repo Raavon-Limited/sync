@@ -23,7 +23,8 @@ import { useRealtime } from '@/lib/query/use-realtime';
 import { useSession } from '@/providers/session-provider';
 import { toast } from '@/components/ui/toast';
 import * as api from './queries';
-import type { Message } from './types';
+import * as prefs from './preferences';
+import type { Message, NotificationKind } from './types';
 
 const db = () => createClient();
 
@@ -371,5 +372,60 @@ export function useAttachmentUrls(paths: string[]) {
     // Links are issued for an hour; refresh well before they lapse.
     staleTime: 45 * 60_000,
     gcTime: 60 * 60_000,
+  });
+}
+
+// ── Notification preferences ───────────────────────────────────────────────
+
+/**
+ * What the user has chosen NOT to be told about.
+ *
+ * Only stored rows come back; a kind with no row is on. The catalogue lives in
+ * `preferences.ts` and the screen merges the two, so a kind nobody has ever
+ * touched still renders - with its real default rather than as missing.
+ */
+export function useNotificationPreferences() {
+  const { userId } = useSession();
+  return useQuery({
+    queryKey: ['notification-preferences', userId ?? ''] as const,
+    queryFn: () => prefs.fetchPreferences(db()),
+    enabled: !!userId,
+    // Preferences change only when this user changes them, on this screen.
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Save one toggle.
+ *
+ * OPTIMISTIC, and it has to be: a switch that waits for a round trip before
+ * moving reads as broken, and people flick several in a row. The rollback in
+ * `onError` puts the previous list back so a failed save cannot leave the
+ * screen claiming something the database does not hold.
+ */
+export function useSaveNotificationPreference() {
+  const { userId } = useSession();
+  const qc = useQueryClient();
+  const key = ['notification-preferences', userId ?? ''] as const;
+
+  return useMutation({
+    mutationFn: (input: { kind: NotificationKind; inApp: boolean; email: boolean }) =>
+      prefs.savePreference(db(), { ...input, userId: userId! }),
+
+    async onMutate(next) {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<prefs.NotificationPreference[]>(key) ?? [];
+      const others = previous.filter((p) => p.kind !== next.kind);
+      qc.setQueryData<prefs.NotificationPreference[]>(key, [...others, next]);
+      return { previous };
+    },
+
+    onError(_err, _next, context) {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+
+    onSettled() {
+      qc.invalidateQueries({ queryKey: key });
+    },
   });
 }

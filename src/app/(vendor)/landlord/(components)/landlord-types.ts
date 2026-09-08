@@ -102,6 +102,14 @@ export interface BookingRequest {
   studentVerified: boolean;
   submitted: string;
   status: string;
+  /**
+   * ISO deadline of the 24h hold, or null when nothing is being held.
+   *
+   * Only meaningful at awaiting_payment - `bookings_sync_hold` clears it for
+   * every other status, so a null here means there is no clock rather than a
+   * clock we failed to read.
+   */
+  holdEndsAt: string | null;
 }
 
 export interface Tenant {
@@ -116,6 +124,10 @@ export interface Tenant {
   moveIn: string;
   leaseEnd: string;
   paymentStatus: PaymentStatus;
+  /** ISO date the landlord has already extended the stay to, if they have. */
+  graceUntil?: string | null;
+  /** The open renewal on this tenancy, from either side. */
+  renewal?: { status: 'pending' | 'accepted'; initiatedBy: 'tenant' | 'landlord' } | null;
   bookingHistory: { property: string; period: string }[];
 }
 

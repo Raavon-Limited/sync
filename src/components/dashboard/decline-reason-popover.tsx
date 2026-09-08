@@ -15,7 +15,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui';
-import { DECLINE_REASONS, type DeclinePayload, type DeclineReasonCode } from './order-actions';
+import {
+  DECLINE_REASONS,
+  type DeclinePayload,
+  type DeclineReasonCode,
+  type DeclineReasonOption,
+} from './order-actions';
 
 interface DeclineReasonPopoverProps {
   /** The element this popover is anchored to (e.g. a span wrapping the Decline button). */
@@ -23,6 +28,10 @@ interface DeclineReasonPopoverProps {
   onCancel: () => void;
   onConfirm: (payload: DeclinePayload) => void;
   submitting?: boolean;
+  /** The choices offered. Defaults to a food vendor's; a landlord passes their own. */
+  reasons?: readonly DeclineReasonOption[];
+  /** What the popover is turning down, for the heading and the placeholder. */
+  subject?: string;
 }
 
 const POPOVER_WIDTH = 256;
@@ -33,8 +42,13 @@ export function DeclineReasonPopover({
   onCancel,
   onConfirm,
   submitting,
+  reasons = DECLINE_REASONS,
+  subject = 'order',
 }: DeclineReasonPopoverProps) {
-  const [reason, setReason] = useState<DeclineReasonCode>('out_of_stock');
+  // Seeded from the list rather than from a hardcoded 'out_of_stock', which is
+  // not a value every caller's list even contains - a landlord would have
+  // submitted a reason that was not on screen and was not selectable.
+  const [reason, setReason] = useState<DeclineReasonCode>(reasons[0].value);
   const [note, setNote] = useState('');
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -93,7 +107,7 @@ export function DeclineReasonPopover({
     <div
       ref={popoverRef}
       role="dialog"
-      aria-label="Decline order"
+      aria-label={`Decline ${subject}`}
       style={{ position: 'fixed', top: coords.top, left: coords.left, width: POPOVER_WIDTH }}
       className="border-line/10 bg-panel z-50 rounded-lg border p-3 shadow-lg"
     >
@@ -102,7 +116,7 @@ export function DeclineReasonPopover({
       </p>
 
       <div className="flex flex-col gap-1.5">
-        {DECLINE_REASONS.map((r) => (
+        {reasons.map((r) => (
           <label
             key={r.value}
             className="text-content flex items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-black/5"
@@ -124,14 +138,19 @@ export function DeclineReasonPopover({
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Briefly tell the customer why…"
+          placeholder="Briefly say why…"
           rows={2}
           className="border-line/20 text-content mt-2 w-full resize-none rounded-md border bg-transparent p-2 text-sm outline-none focus:border-current"
         />
       )}
 
       <div className="mt-3 flex justify-end gap-2">
-        <Button variant="outline" className="h-8 px-3 text-xs" onClick={onCancel} disabled={submitting}>
+        <Button
+          variant="outline"
+          className="h-8 px-3 text-xs"
+          onClick={onCancel}
+          disabled={submitting}
+        >
           Cancel
         </Button>
         <Button

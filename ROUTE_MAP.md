@@ -51,6 +51,8 @@ and ultimately by Supabase RLS on the data layer.
 | `/me/reviews` | student | Reviews to leave + already left. |
 | `/me/notifications` | student | Notification inbox + preferences. |
 | `/me/profile` | student | Profile editing. |
+| `/user/receipts` | student | Receipts and invoices for every payment - rent, viewings, orders, tickets, top-ups. Derived from the ledger, never stored. |
+| `/user/receipts/[id]` | student | One document. Print-to-PDF, or emailed to the account address. The id is the payment reference. |
 
 ## Vendor - `(vendor)`
 
@@ -66,6 +68,8 @@ and ultimately by Supabase RLS on the data layer.
 | `/vendor/plan` | vendor | Subscription tier. |
 | `/vendor/documents` | vendor | Business documents. |
 | `/landlord` | landlord | Landlord dashboard overview. |
+| `/landlord/receipts` | landlord | Rent receipts for their properties, read from `escrow_holds` so one exists before the money reaches their wallet. |
+| `/landlord/receipts/[id]` | landlord | One rent receipt, itemised with Sync's commission. |
 
 ## Admin - `(admin)`
 

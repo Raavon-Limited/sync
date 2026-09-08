@@ -20,13 +20,7 @@
  */
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  ArrowRight,
-  BadgeCheck,
-  ChevronDown,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, BadgeCheck, ChevronDown, ShieldCheck, Sparkles, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ListingCard } from '@/components/shared/listing-card';
@@ -243,7 +237,12 @@ export default async function LandingPage() {
                   {showcase.food.name}
                 </p>
                 <p className="text-content-muted mt-1 text-xs">
-                  {showcase.food.rating !== null && `★ ${showcase.food.rating.toFixed(1)} · `}
+                  {showcase.food.rating !== null && (
+                    <>
+                      <Star className="inline size-3 fill-current" aria-hidden="true" />{' '}
+                      {showcase.food.rating.toFixed(1)} ·{' '}
+                    </>
+                  )}
                   {showcase.food.meta}
                 </p>
               </div>

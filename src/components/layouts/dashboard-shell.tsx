@@ -9,7 +9,6 @@
  * by the proxy (middleware), not here.
  */
 import { DashboardSidebar } from './dashboard-sidebar';
-import { ChatWidget } from '@/components/chat/chat-widget';
 import { DashboardHeader } from './dashboard-header';
 import { getDashboardProfile } from './dashboard-profile';
 import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
@@ -63,7 +62,25 @@ export async function DashboardShell({
 
   return (
     <div className="bg-surface text-content min-h-screen">
-      <div className={`mx-auto flex ${maxWidth}`}>
+      {/*
+        `min-h-dvh` IS WHAT MAKES THE BACKDROP REACH THE BOTTOM ON A PHONE.
+
+        The backdrop is painted inside <main>, which is `flex-1` - so it fills
+        whatever height this row has. This row had none: the wrapper above sets
+        `min-h-screen`, but a block parent does not stretch a child, so the row
+        was only ever as tall as its contents.
+
+        On desktop that was invisible, because the sidebar next to it is
+        `h-screen` and a flex row is as tall as its tallest child. On mobile the
+        sidebar is `hidden`, that prop disappeared, and the doodle stopped dead
+        where the content stopped - on every dashboard screen at once, which is
+        the tell that it was the shell and not any one page.
+
+        dvh rather than vh: on mobile browsers vh is the height WITH the address
+        bar hidden, so it overshoots by the toolbar and leaves a scroll nobody
+        asked for.
+      */}
+      <div className={`mx-auto flex min-h-dvh ${maxWidth}`}>
         <aside className="border-line/10 bg-panel sticky top-0 hidden h-screen w-64 shrink-0 overflow-hidden border-r p-4 md:block">
           {/* The store switcher is suppressed for the same reason the nav is:
               "No store assigned yet" over a sidebar that is already saying the
@@ -107,9 +124,16 @@ export async function DashboardShell({
         </div>
       </div>
 
-      {/* Live messaging. Every dashboard route is auth-gated by the proxy, so
-          there is no signed-out case to guard here. */}
-      <ChatWidget />
+      {/* NO FLOATING CHAT BUBBLE.
+
+          Messaging lives in ONE place, the Inbox, and it used to live in two:
+          a draggable overlay pinned over every screen, plus the real inbox
+          route. Two surfaces onto the same conversations table meant two sets
+          of unread state, two places to look for the same thread, and a bubble
+          sitting on top of the primary action on a small screen.
+
+          The Inbox is a nav destination now, on every dashboard including the
+          student one. See config/dashboard-nav. */}
     </div>
   );
 }

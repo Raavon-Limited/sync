@@ -477,7 +477,7 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
       {filed && !done && (
         <p className="text-content-muted text-xs">
           {i.outcome === 'student_no_show'
-            ? 'Filed as a no-show. Staff decide this one — reporting it does not release your fee.'
+            ? 'Filed as a no-show. Staff decide this one. Reporting it does not release your fee.'
             : 'Filed. Your fee releases in 24 hours, or the moment the student confirms.'}
         </p>
       )}

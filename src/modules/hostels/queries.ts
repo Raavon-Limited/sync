@@ -75,6 +75,16 @@ const toHostel = (r: Row): Hostel => ({
   availability: r.availability?.availability ?? undefined,
 });
 
+/** The one request still awaiting an answer or already agreed, or none. */
+function openRenewal(rows: Row[] | null): Booking['renewal'] {
+  const open = (rows ?? []).find((x) => x.status === 'pending' || x.status === 'accepted');
+  if (!open) return null;
+  return {
+    status: open.status as 'pending' | 'accepted',
+    initiatedBy: open.initiated_by as 'tenant' | 'landlord',
+  };
+}
+
 const toBooking = (r: Row): Booking => ({
   id: r.id,
   studentId: r.student_id,
@@ -86,10 +96,38 @@ const toBooking = (r: Row): Booking => ({
   roomLabel: r.room?.label ?? null,
   status: r.status,
   reservedUntil: r.reserved_until,
+  lockedAt: r.locked_at ?? null,
+  graceUntil: r.grace_until ?? null,
+  agreementAcceptedAt: r.agreement_accepted_at ?? null,
+  hostelAgreementUrl: r.hostel?.agreement_url ?? null,
+  // The OPEN one, if any. The join returns every request ever made on this
+  // booking - declined and withdrawn ones included - and only a pending or
+  // accepted one is a live decision.
+  renewal: openRenewal(r.renewal as Row[] | null),
   moveIn: r.move_in,
   endDate: r.end_date,
-  pricePerSessionKobo: r.price_per_session_kobo ? Number(r.price_per_session_kobo) : null,
+  // Ordered by specificity, and the booking's own value wins when it exists so
+  // a price agreed at request time cannot change under the student if the
+  // listing is re-priced later. See the note on BOOKING_SELECT for why the
+  // fallbacks are needed at all. Display only - `quote_rent` decides what is
+  // actually charged, because it also applies fee_mode.
+  pricePerSessionKobo:
+    (r.price_per_session_kobo ? Number(r.price_per_session_kobo) : null) ??
+    (r.room?.price_per_session_kobo ? Number(r.room.price_per_session_kobo) : null) ??
+    (r.hostel?.price_per_session_kobo ? Number(r.hostel.price_per_session_kobo) : null),
   paidAt: r.paid_at,
+  movedInAt: r.moved_in_at ?? null,
+  moveInConfirmedAt: r.move_in_confirmed_at ?? null,
+  hostelSlug: r.hostel?.slug ?? null,
+  // Who to message, and - just as important - who NOT to offer to message.
+  // `open_hostel_conversation` raises 'cannot open a thread with yourself'
+  // when the caller owns the hostel, which is right, and the button was
+  // offered anyway.
+  hostelLandlordId: r.hostel?.landlord_id ?? null,
+  // Joined so the booking card can offer a viewing without a second fetch per
+  // row. A viewing is bought at the LISTING's price, not the rent's, and the
+  // number is snapshotted onto the inspection when one is booked.
+  inspectionFeeKobo: r.hostel?.inspection_fee_kobo ? Number(r.hostel.inspection_fee_kobo) : null,
   requestedAt: r.requested_at,
   createdAt: r.created_at,
 });
@@ -290,20 +328,55 @@ export async function fetchHostelsNear(
 
 // ── Bookings ───────────────────────────────────────────────────────────────
 
+/*
+ * The prices are joined in because THE BOOKING HAS NONE.
+ *
+ * `bookings.price_per_session_kobo` is null on every row - nothing snapshots a
+ * price when a request is made - so a card reading it alone printed
+ * "₦0/session" under hostels listed at ₦200,000+. Both sides showed it: the
+ * student's own booking card and the landlord's requests list.
+ */
 const BOOKING_SELECT = `
   *,
-  hostel:hostels(name, area, hostel_images(url)),
-  room:hostel_rooms(label)
+  renewal:renewal_requests!renewal_requests_booking_id_fkey(status, initiated_by),
+  hostel:hostels(name, slug, area, landlord_id, agreement_url, price_per_session_kobo, inspection_fee_kobo, hostel_images(url)),
+  room:hostel_rooms(label, price_per_session_kobo)
 `;
 
+/**
+ * The caller's own bookings, as a STUDENT.
+ *
+ * `studentId` IS NOT AN OPTIMISATION - IT IS THE FILTER.
+ *   This leaned entirely on RLS, and `bookings_select_own` reads:
+ *
+ *     auth.uid() = student_id
+ *     or exists (... hostels h where h.id = hostel_id and h.landlord_id = auth.uid())
+ *
+ *   Both halves are correct for a SELECT policy - a landlord has to be able to
+ *   read bookings on their own property. But this query then showed everything
+ *   the policy allowed under the heading "My bookings", so a landlord saw their
+ *   TENANTS' bookings listed as their own. On an account holding both roles it
+ *   read as "I requested this hostel" for a room somebody else had asked for,
+ *   which is how it was found.
+ *
+ *   RLS decides what you MAY see. It cannot decide which of those rows this
+ *   particular screen means. That distinction has to be made here.
+ *
+ * Undefined `studentId` returns nothing rather than everything: a signed-out or
+ * still-loading caller getting an empty list is correct, and getting somebody
+ * else's bookings is the bug this exists to prevent.
+ */
 export async function fetchMyBookings(
   db: Client,
-  opts: { status?: string } & PageParams = {},
+  opts: { studentId?: string; status?: string } & PageParams = {},
 ): Promise<Booking[]> {
+  if (!opts.studentId) return [];
+
   const [from, to] = toRange(opts);
   let q = db
     .from('bookings')
     .select(BOOKING_SELECT)
+    .eq('student_id', opts.studentId)
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -493,6 +566,9 @@ export async function upsertHostel(
     landmark: input.landmark ?? null,
     area: input.area,
     room_type: input.roomType,
+    // Was collected by the form and dropped on the floor. It is what
+    // `set_booking_end_date` reads to work out when a tenancy ends.
+    term: input.term ?? 'per session',
     price_per_session_kobo: input.pricePerSessionKobo,
     inspection_fee_kobo: input.inspectionFeeKobo ?? 500000,
     // The landlord's own commercial choice, not a privileged column. Defaulted

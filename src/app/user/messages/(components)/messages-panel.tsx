@@ -1,12 +1,13 @@
 /**
  * Student inbox   conversation list, thread, composer.
  *
- * WHY IT DOES NOT REUSE THE FLOATING WIDGET
- *   `ChatWidget` is a draggable overlay with its own position and size state;
- *   its list and thread are internal to it. This is a route, and it should be
- *   a two-pane layout on desktop and a stack on mobile. The shared part is the
- *   messaging module underneath   both read the same hooks, so a message sent
- *   here appears there without either knowing about the other.
+ * THIS IS THE ONLY MESSAGING SURFACE NOW.
+ *   There used to be a second one: `ChatWidget`, a draggable overlay mounted on
+ *   every shell, with its own list and thread inside it. Two surfaces onto the
+ *   same `conversations` table meant two places to look for one thread, two
+ *   sets of unread state, and a bubble sitting over the primary action on a
+ *   phone. The widget is gone and this route is where messaging lives, reached
+ *   from the "Inbox" row that every dashboard now has.
  *
  * REALTIME IS AN INVALIDATION SIGNAL, NOT A CACHE WRITE
  *   `useConversationRealtime` tells React Query something changed and lets the
@@ -17,6 +18,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MessageCircle, Send, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatRelative } from '@/lib/utils';
@@ -46,15 +48,30 @@ export function MessagesPanel() {
   const { isAuthenticated } = useSession();
   useConversationsRealtime();
   const { data: conversations = [], isLoading } = useConversations({ pageSize: 50 });
-  const [activeId, setActiveId] = useState<string | null>(null);
+  /*
+   * ?c=<id> OPENS THAT THREAD, on a phone as well as a desktop.
+   *
+   * Every "Message the landlord" button in the product creates the thread with
+   * an idempotent RPC and then has nowhere to send anybody: it fired
+   * `openChat(id)`, which the deleted ChatWidget was the only listener for, so
+   * the thread was made and the student was left on the page they started on.
+   * The inbox is the surface now, so it has to be addressable by thread.
+   *
+   * Read as INITIAL STATE, not applied in an effect: an effect would paint the
+   * list, then snap into a conversation, and would fight the student the moment
+   * they picked a different one.
+   */
+  const deepLinkId = useSearchParams().get('c');
+  const [activeId, setActiveId] = useState<string | null>(deepLinkId);
 
   // Land on the most recent thread on desktop; mobile starts on the list so the
-  // student is not dropped into a conversation they did not pick.
+  // student is not dropped into a conversation they did not pick. A deep link
+  // is the exception - they DID pick it - so it wins on both.
   useEffect(() => {
-    if (!activeId && conversations.length && window.innerWidth >= 768) {
+    if (!activeId && !deepLinkId && conversations.length && window.innerWidth >= 768) {
       setActiveId(conversations[0].id);
     }
-  }, [conversations, activeId]);
+  }, [conversations, activeId, deepLinkId]);
 
   if (!isAuthenticated) {
     return <p className="text-content-muted text-sm">Sign in to see your messages.</p>;
@@ -193,9 +210,7 @@ function Thread({
           ))}
 
         {!isLoading && messages.length === 0 && (
-          <p className="text-content-muted py-8 text-center text-sm">
-            No messages yet   say hello.
-          </p>
+          <p className="text-content-muted py-8 text-center text-sm">No messages yet say hello.</p>
         )}
 
         {messages.map((m) => (
@@ -241,7 +256,11 @@ function Thread({
           className="border-line/10 bg-surface-deep text-content placeholder:text-content-muted min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none"
         />
         <Button type="submit" disabled={!draft.trim() || send.isPending} className="shrink-0 gap-1">
-          {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          {send.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Send className="size-4" />
+          )}
           Send
         </Button>
       </form>

@@ -56,7 +56,7 @@ export function rejectReason(file: File): string | null {
       const mb = Math.round(file.size / (1024 * 1024));
       return `That video is ${mb}MB and the limit is 40MB. Record a shorter clip, or drop your camera to 1080p and try again.`;
     }
-    return `${file.name} is over 5MB even after shrinking — try a different photo`;
+    return `${file.name} is over 5MB even after shrinking, try a different photo`;
   }
   return null;
 }

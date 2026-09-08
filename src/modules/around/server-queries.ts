@@ -258,11 +258,30 @@ export const getResumeBooking = cache(async (): Promise<ResumeBooking | null> =>
   if (!configured) return null;
   try {
     const supabase = await createClient();
-    // RLS scopes bookings to the caller, so there is no student_id filter here:
-    // an anonymous caller simply gets no rows.
+
+    /*
+     * "RLS SCOPES BOOKINGS TO THE CALLER" IS WHAT THIS USED TO SAY, AND IT IS
+     * HALF TRUE. `bookings_select_own` is:
+     *
+     *   auth.uid() = student_id
+     *   or exists (... hostels h where h.id = hostel_id and h.landlord_id = auth.uid())
+     *
+     * The second branch is right for a landlord reading their own property's
+     * bookings, and fatal here: this picks the single most recent row the
+     * policy allows and calls it "your booking, pick it up where you left
+     * off". For a landlord that is a TENANT's booking, offered back to them as
+     * their own.
+     *
+     * The anonymous case the old comment worried about still holds - auth.uid()
+     * is null, so no row matches either branch.
+     */
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return null;
+
     const { data, error } = await supabase
       .from('bookings')
       .select('hostel_id, price_per_session_kobo, hostels(name, slug)')
+      .eq('student_id', auth.user.id)
       .in('status', ['interested', 'requested', 'awaiting_payment'])
       .order('updated_at', { ascending: false })
       .limit(1)

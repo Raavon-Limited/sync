@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
+import { Home, SlidersHorizontal } from "lucide-react";
 import SearchStrip, { type SearchQuery } from "./components/SearchStrip";
 import FilterSidebar from "./components/FilterSidebar";
 import ResultsHeader from "./components/ResultsHeader";
@@ -266,7 +266,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-line/20 rounded-xl bg-panel/30">
       <div className="w-14 h-14 rounded-md bg-surface-deep border border-line/15 flex items-center justify-center mb-4 shadow-sm text-xl">
-        🏠
+        <Home className="size-6" aria-hidden="true" />
       </div>
       <h3 className="text-sm font-semibold text-content mb-1">No hostels match your filters</h3>
       <p className="text-xs text-content-muted/80 mb-5 max-w-xs leading-relaxed">

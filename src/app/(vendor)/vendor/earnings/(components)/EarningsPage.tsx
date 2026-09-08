@@ -340,7 +340,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('1Y');
   const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
-  const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null); // 👈 new
+  const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   /**
    * The payout account, from `bank_accounts`   not local state.
    *
@@ -413,7 +413,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
         onClose={() => setWithdrawOpen(false)}
         availableBalance={data.availableBalance}
       />
-      <TransactionDetailModal // 👈 new
+      <TransactionDetailModal
         txn={selectedTxn}
         onClose={() => setSelectedTxn(null)}
       />

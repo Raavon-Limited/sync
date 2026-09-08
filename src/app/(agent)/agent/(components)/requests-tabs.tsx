@@ -113,7 +113,7 @@ function OpenBoard({ jobs }: { jobs: BoardJob[] }) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-content-muted text-sm">
-        Paid viewings nobody has taken. Offer a time you can do — the student confirms it, or it
+        Paid viewings nobody has taken. Offer a time you can do. The student confirms it, or it
         comes back here for somebody else.
       </p>
 
@@ -159,7 +159,7 @@ function OpenBoard({ jobs }: { jobs: BoardJob[] }) {
       )}
 
       <p className="text-content-muted text-xs">
-        Taking one is a commitment. Miss the agreed time and it goes back on the board — and you
+        Taking one is a commitment. Miss the agreed time and it goes back on the board, and you
         will not be able to take that one again.
       </p>
 
@@ -233,7 +233,7 @@ function OfferSheet({ job, onClose }: { job: BoardJob | null; onClose: () => voi
                 onChange={(e) => setProposed(e.target.value)}
               />
               <p className="text-content-muted text-xs">
-                They asked for {when(job?.scheduledFor ?? null)}. Offer that or something else —
+                They asked for {when(job?.scheduledFor ?? null)}. Offer that or something else:
                 they confirm either way.
               </p>
             </div>
@@ -246,7 +246,7 @@ function OfferSheet({ job, onClose }: { job: BoardJob | null; onClose: () => voi
                 id="offer-where"
                 value={meeting}
                 onChange={(e) => setMeeting(e.target.value)}
-                placeholder="KWASU gate, by the bank — or leave blank for the property"
+                placeholder="KWASU gate, by the bank, or leave blank for the property"
               />
             </div>
 

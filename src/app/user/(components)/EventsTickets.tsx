@@ -131,6 +131,16 @@ export function EventsTicketsSummary({ basePath = '/user' }: { basePath?: string
     status: t.status,
   }));
 
+  /*
+   * AN EMPTY SECTION IS STILL A SECTION, AND IT WAS TAKING UP A SCREEN.
+   *
+   * A student with no tickets and no events nearby got two headings, two "view
+   * all" buttons and two empty states - a third of the dashboard spent saying
+   * nothing. The section now renders only once there is something in it; the
+   * nav still gets them to /user/events when they go looking.
+   */
+  if (upcomingEvents.length === 0 && heldTickets.length === 0) return null;
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* Upcoming events */}

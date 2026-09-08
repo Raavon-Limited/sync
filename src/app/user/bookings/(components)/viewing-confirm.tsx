@@ -22,10 +22,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { CalendarClock, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useActionRefresh } from '@/lib/query/use-action-refresh';
 import {
   confirmViewing,
   confirmViewingTime,
@@ -56,9 +56,7 @@ export function ViewingConfirm({ inspections }: { inspections: StudentInspection
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-content-muted font-mono text-xs tracking-wide uppercase">
-        Your viewings
-      </p>
+      <p className="text-content-muted font-mono text-xs tracking-wide uppercase">Your viewings</p>
       <div className="flex flex-col gap-3">
         {inspections.map((i) => (
           <ViewingCard key={i.id} inspection={i} />
@@ -69,11 +67,11 @@ export function ViewingConfirm({ inspections }: { inspections: StudentInspection
 }
 
 function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
-  const router = useRouter();
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState('');
+  const refresh = useActionRefresh();
 
   // Only once the time has actually passed. Asking "did it happen?" about a
   // viewing that is still three hours away is a question with no answer.
@@ -87,7 +85,9 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
     setError(null);
     start(async () => {
       const res = await confirmViewing(i.id);
-      if (res.ok) router.refresh();
+      // router.refresh() alone only moved the server half - the wallet and the
+      // agent's escrow card are client queries.
+      if (res.ok) await refresh();
       else setError(res.error);
     });
   }
@@ -98,7 +98,7 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
       const res = await disputeViewing({ inspectionId: i.id, reason });
       if (res.ok) {
         setAsking(false);
-        router.refresh();
+        await refresh();
       } else {
         setError(res.error);
       }
@@ -140,13 +140,11 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
         student answers, nobody is going anywhere   which is why this sits
         above the meeting point and the confirm-it-happened block.
       */}
-      {i.proposedFor && !i.studentConfirmedAt && !settled && (
-        <TimeOffer inspection={i} />
-      )}
+      {i.proposedFor && !i.studentConfirmedAt && !settled && <TimeOffer inspection={i} />}
 
       {i.disputedAt && (
         <p className="text-content-muted border-line/15 bg-surface-deep rounded-lg border px-3 py-2 text-xs">
-          You told us this did not happen. Staff are looking at it and the fee is on hold — nothing
+          You told us this did not happen. Staff are looking at it and the fee is on hold. Nothing
           has been paid out.
         </p>
       )}
@@ -233,17 +231,17 @@ function ViewingCard({ inspection: i }: { inspection: StudentInspection }) {
  * already paid reads as cancelling the whole thing.
  */
 function TimeOffer({ inspection: i }: { inspection: StudentInspection }) {
-  const router = useRouter();
   const [busy, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState('');
+  const refresh = useActionRefresh();
 
   function confirm() {
     setError(null);
     start(async () => {
       const res = await confirmViewingTime(i.id);
-      if (res.ok) router.refresh();
+      if (res.ok) await refresh();
       else setError(res.error);
     });
   }
@@ -254,7 +252,7 @@ function TimeOffer({ inspection: i }: { inspection: StudentInspection }) {
       const res = await declineViewingTime({ inspectionId: i.id, reason });
       if (res.ok) {
         setAsking(false);
-        router.refresh();
+        await refresh();
       } else {
         setError(res.error);
       }
@@ -264,13 +262,13 @@ function TimeOffer({ inspection: i }: { inspection: StudentInspection }) {
   return (
     <div className="border-lime-deep/30 bg-lime/5 flex flex-col gap-2 rounded-lg border p-3">
       <p className="text-content text-sm font-medium">
-        {i.agentName ?? "An agent"} can show you this on{" "}
-        {new Date(i.proposedFor as string).toLocaleString("en-NG", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          hour: "numeric",
-          minute: "2-digit",
+        {i.agentName ?? 'An agent'} can show you this on{' '}
+        {new Date(i.proposedFor as string).toLocaleString('en-NG', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          hour: 'numeric',
+          minute: '2-digit',
         })}
         .
       </p>
@@ -297,7 +295,7 @@ function TimeOffer({ inspection: i }: { inspection: StudentInspection }) {
             </Button>
           </div>
           <p className="text-content-muted text-xs">
-            Saying no does not cancel your viewing or cost you anything — it goes back for a
+            Saying no does not cancel your viewing or cost you anything. It goes back for a
             different agent to offer another time.
           </p>
         </>

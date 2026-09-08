@@ -10,13 +10,21 @@
  * go through one query rather than two that could disagree about what
  * "pending" means.
  *
- * IT DOES NOT DECIDE ANYTHING YET
- *   Accepting a request moves money into escrow and takes a room out of
- *   availability. That is a transaction with a booking RPC behind it, not a
- *   button this screen can honestly offer today - so it shows the request, the
- *   student, and whether they are verified, and says plainly where the decision
- *   currently lives. A button that looked like it accepted and did not would be
- *   worse than no button.
+ * IT DECIDES NOW, and the caution this header used to carry was aimed at the
+ * wrong risk. It said accepting "moves money into escrow", so the button was
+ * withheld until an RPC existed to do that safely. Accepting moves no money:
+ * it sets `awaiting_payment`, which starts a 24-hour hold and asks the student
+ * to pay. Escrow is created by the payment, and `guard_booking_privileged_cols`
+ * refuses `confirmed` from any client precisely so a landlord cannot shortcut
+ * to it.
+ *
+ * Meanwhile the real cost of not shipping it was total: nothing else in the
+ * product could write `awaiting_payment` either, so every request ever made sat
+ * at `requested` and the whole hold system was unreachable. The honest button
+ * was the missing piece, not the dangerous one.
+ *
+ * The database side has been ready since `20260823110000` - see
+ * modules/hostels/request-actions.ts for why this needs no RPC.
  */
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -25,6 +33,8 @@ import { Badge } from '@/components/ui';
 import { getCurrentUser } from '@/modules/auth/queries';
 import { PageHeader } from '../(components)/shared/page-header';
 import { getLandlordRequests } from '../(components)/landlord-queries';
+import { RequestDecision } from '../(components)/bookings/request-decision';
+import { HoldCountdown } from '../(components)/bookings/hold-countdown';
 import { formatDate, formatNaira, initials } from '../(components)/landlord-types';
 
 export const metadata: Metadata = { title: 'Requests' };
@@ -73,12 +83,15 @@ export default async function Page() {
                 </p>
                 <p className="text-content-muted text-xs">
                   {r.property}
-                  {r.requestedMoveIn && (
-                    <>
-                      {' · '}
-                      <CalendarClock className="inline size-3" /> moving in{' '}
-                      {formatDate(r.requestedMoveIn)}
-                    </>
+                  {/* Stated either way. A blank where a date belongs reads as
+                      a rendering bug; "no move-in date yet" is a fact the
+                      landlord can act on by asking. */}
+                  {' · '}
+                  <CalendarClock className="inline size-3" />{' '}
+                  {r.requestedMoveIn ? (
+                    <>moving in {formatDate(r.requestedMoveIn)}</>
+                  ) : (
+                    <span className="italic">no move-in date agreed yet</span>
                   )}
                 </p>
               </div>
@@ -86,15 +99,31 @@ export default async function Page() {
               <p className="text-content text-sm font-semibold tabular-nums">
                 {formatNaira(r.amount)}
               </p>
-              <Badge className="bg-amber-500/10 text-amber-600">{r.status}</Badge>
+
+              {/* Only a request still waiting on the landlord can be decided.
+                  Anything already accepted shows its status instead, so the
+                  list never offers a decision the database would refuse. */}
+              {r.status === 'requested' ? (
+                <RequestDecision bookingId={r.id} name={r.name} />
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  <Badge className="bg-amber-500/10 text-amber-600">
+                    {/* The raw column value read as AWAITING_PAYMENT, which is a
+                        database status and not a sentence. */}
+                    {r.status === 'awaiting_payment' ? 'Accepted, waiting on payment' : r.status}
+                  </Badge>
+                  {r.holdEndsAt && <HoldCountdown endsAt={r.holdEndsAt} />}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
       <p className="text-content-muted text-xs">
-        Accepting a request moves money into escrow and takes the room out of availability, so it is
-        handled in the booking flow rather than here.
+        Accepting holds the room for that student for 24 hours while they pay. It does not charge
+        them, and nothing reaches your wallet until they do. If they don&rsquo;t pay in time the room
+        goes back on the market on its own.
       </p>
     </div>
   );

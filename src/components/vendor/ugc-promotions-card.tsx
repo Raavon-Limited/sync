@@ -32,7 +32,7 @@ export function UgcPromotionsCard({ className }: { className?: string }) {
       </div>
 
       <p className="text-content-muted text-sm">
-        Post what you need filmed — a plate, a room, a haircut — say what you will pay, and student
+        Post what you need filmed: a plate, a room, a haircut. Say what you will pay, and student
         creators apply. You approve the work before any money leaves your wallet.
       </p>
 

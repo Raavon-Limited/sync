@@ -16,14 +16,29 @@
  * (portaled to body   see DeclineReasonPopover) before the decline call
  * fires.
  *
- * Swap `onAccept`/`onDecline` defaults for real API calls once the backend
- * exists   see order-actions.ts for the exact shape to match.
+ * THE DEFAULTS ARE A DEMO AND THEY LOOK EXACTLY LIKE THE REAL THING.
+ * `acceptOrderMock` waits half a second, fails 8% of the time at random, and
+ * touches nothing. /landlord rendered this list without handlers for months, so
+ * a landlord pressing Accept watched the row vanish, changed no booking, and
+ * every twelfth press showed "Couldn't accept this order. Try again." on a
+ * request that was never sent anywhere. Every student request therefore sat at
+ * `requested` forever, which is also why the student's own Pay button - which
+ * only exists at `awaiting_payment` - could never appear.
+ *
+ * PASS `onAccept`/`onDecline`. A caller with no real endpoint yet should say so
+ * on screen rather than fall through to a mock that is indistinguishable from
+ * a working button.
  */
 import { useRef, useState } from 'react';
 import { Button, Card } from '@/components/ui';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { acceptOrderMock, declineOrderMock, type DeclinePayload } from './order-actions';
+import {
+  acceptOrderMock,
+  declineOrderMock,
+  type DeclinePayload,
+  type DeclineReasonOption,
+} from './order-actions';
 import { DeclineReasonPopover } from './decline-reason-popover';
 
 export interface PendingRequestItem {
@@ -44,6 +59,12 @@ interface PendingRequestListProps {
   items: PendingRequestItem[];
   onAccept?: (id: string) => Promise<void>;
   onDecline?: (id: string, payload: DeclinePayload) => Promise<void>;
+  /** Decline choices for this role. Defaults to a food vendor's. */
+  reasons?: readonly DeclineReasonOption[];
+  /** What a row is, in the copy: "order" for a vendor, "request" for a landlord. */
+  subject?: string;
+  /** Shown when the list is empty. */
+  emptyLabel?: string;
 }
 
 type RowState = 'idle' | 'accepting' | 'declining' | 'error';
@@ -52,10 +73,14 @@ function PendingRow({
   item,
   onAccept,
   onDecline,
+  reasons,
+  subject,
 }: {
   item: PendingRequestItem;
   onAccept: (id: string) => Promise<void>;
   onDecline: (id: string, payload: DeclinePayload) => Promise<void>;
+  reasons?: readonly DeclineReasonOption[];
+  subject: string;
 }) {
   const [state, setState] = useState<RowState>('idle');
   const [error, setError] = useState('');
@@ -72,9 +97,15 @@ function PendingRow({
     try {
       await onAccept(item.id);
       // Parent removes this row from the list on success.
-    } catch {
+    } catch (e) {
       setState('error');
-      setError("Couldn't accept this order. Try again.");
+      // The thrown message when there is one. The generic line used to swallow
+      // "That request is no longer waiting on you. Refresh to see where it got
+      // to." - which is the whole answer - and replace it with "try again",
+      // which is advice that cannot work.
+      setError(
+        e instanceof Error && e.message ? e.message : "Couldn't accept this request. Try again.",
+      );
     }
   }
 
@@ -84,9 +115,11 @@ function PendingRow({
     try {
       await onDecline(item.id, payload);
       setDeclineOpen(false);
-    } catch {
+    } catch (e) {
       setState('error');
-      setError("Couldn't decline this order. Try again.");
+      setError(
+        e instanceof Error && e.message ? e.message : "Couldn't decline this request. Try again.",
+      );
       setDeclineOpen(false);
     }
   }
@@ -168,6 +201,8 @@ function PendingRow({
         <DeclineReasonPopover
           anchorRef={declineAnchorRef as React.RefObject<HTMLElement>}
           submitting={state === 'declining'}
+          reasons={reasons}
+          subject={subject}
           onCancel={() => setDeclineOpen(false)}
           onConfirm={handleDeclineConfirm}
         />
@@ -180,6 +215,9 @@ export function PendingRequestList({
   items: initialItems,
   onAccept = acceptOrderMock,
   onDecline = declineOrderMock,
+  reasons,
+  subject = 'order',
+  emptyLabel = 'No pending orders right now.',
 }: PendingRequestListProps) {
   const [items, setItems] = useState(initialItems);
 
@@ -199,7 +237,7 @@ export function PendingRequestList({
     // it, which reads as a render that failed rather than as "nothing yet".
     return (
       <Card className="border-line/5 text-content-muted border px-5 py-6 text-sm">
-        No pending orders right now.
+        {emptyLabel}
       </Card>
     );
   }
@@ -207,7 +245,14 @@ export function PendingRequestList({
   return (
     <div className="flex flex-col gap-4">
       {items.map((item) => (
-        <PendingRow key={item.id} item={item} onAccept={handleAccept} onDecline={handleDecline} />
+        <PendingRow
+          key={item.id}
+          item={item}
+          onAccept={handleAccept}
+          onDecline={handleDecline}
+          reasons={reasons}
+          subject={subject}
+        />
       ))}
     </div>
   );

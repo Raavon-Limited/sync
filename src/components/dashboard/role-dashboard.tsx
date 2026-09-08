@@ -101,6 +101,16 @@ interface RoleDashboardProps {
   pending: PendingRequestItem[];
   /** Initial chart data, shown for the "weekly" period on first paint. */
   chart: RevenueDatum[];
+  /**
+   * The pending list, when the role has real Accept/Decline endpoints.
+   *
+   * WITHOUT THIS THE BUTTONS ARE A MOCK. `PendingRequestList` defaults its
+   * handlers to `acceptOrderMock`, which changes nothing and fails at random -
+   * and looks exactly like a working button. A role that can really decide
+   * passes its own wired list here (see PendingBookingRequests); one that
+   * cannot falls back to the demo, deliberately and visibly.
+   */
+  pendingList?: ReactNode;
   /** Role-specific lower sections (e.g. products & earnings, or hostels). */
   children?: ReactNode;
 }
@@ -111,6 +121,7 @@ export async function RoleDashboard({
   kpis,
   pending,
   chart,
+  pendingList,
   children,
 }: RoleDashboardProps) {
   const content = DASHBOARD_CONTENT[variant];
@@ -286,7 +297,13 @@ export async function RoleDashboard({
                 </Link>
               )}
             </div>
-            <PendingRequestList items={locked ? [] : pending} />
+            {/* `locked` still wins: an unverified account has no rows to
+                decide on, so the empty list is right whichever variant this is. */}
+            {locked ? (
+              <PendingRequestList items={[]} />
+            ) : (
+              (pendingList ?? <PendingRequestList items={pending} />)
+            )}
           </Card>
 
           <div className="flex-1">

@@ -677,7 +677,7 @@ export function SignupForm({
                 acceptedTerms ? 'bg-lime border-lime' : 'border-line/25 bg-transparent',
               )}
             >
-              {acceptedTerms && <span className="text-ink text-xs font-bold">✓</span>}
+              {acceptedTerms && <Check className="text-ink size-3.5" aria-hidden="true" strokeWidth={3} />}
             </button>
             <p className="text-content-muted text-xs">
               I agree to Sync&rsquo;s{' '}

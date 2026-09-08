@@ -32,16 +32,16 @@ const COPY = {
     points: [
       'The brief on each card is the half a listing cannot tell you: which gate, who to ask for, what to photograph.',
       'Take the photos, add one of yourself at the property, and file what you found.',
-      'A reviewer decides — you never decide your own visit. That separation is the whole point of the job.',
+      'A reviewer decides. You never decide your own visit. That separation is the whole point of the job.',
     ],
   },
   requests: {
     title: 'How viewing requests work',
-    lead: 'A student paid for somebody to show them a room. Nobody assigns these — you take them.',
+    lead: 'A student paid for somebody to show them a room. Nobody assigns these. You take them.',
     points: [
       'First agent to tap gets it, and the student is told your name straight away.',
       'The fee is yours in full. Sync takes no commission on a viewing.',
-      'Filing your report is what releases your money — until you file, it sits in escrow.',
+      'Filing your report is what releases your money. Until you file, it sits in escrow.',
       'Miss the time and it goes back on the board for someone else, and you cannot take that one again.',
     ],
   },

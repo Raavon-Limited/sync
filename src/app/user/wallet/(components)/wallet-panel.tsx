@@ -34,7 +34,8 @@ import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { openWalletTopup } from '@/lib/paystack/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWallet, useWalletTransactions } from '@/modules/payments/hooks';
+import { useEscrowHolds, useWallet, useWalletTransactions } from '@/modules/payments/hooks';
+import { StatCard } from '@/components/shared';
 import { qk } from '@/lib/query/keys';
 import type { LedgerKind, WalletTransaction } from '@/modules/payments/types';
 
@@ -118,7 +119,64 @@ export function WalletPanel() {
   // 20260817090300 and this file even referred to it in a comment, but
   // nothing wrote it and nothing showed it, so a wallet with work behind it
   // read as empty.
-  const held = (wallet?.pendingKobo ?? 0) / 100;
+  /*
+   * ESCROW HAS TWO SIDES AND THIS WALLET CAN BE ON EITHER.
+   *
+   * `pending_kobo` is only one of them - money OWED to you and not yet
+   * released. It says nothing about money you have PAID that is still held,
+   * which for a student is the larger and more surprising number: paying rent
+   * moves ₦300,000 out of the balance immediately and into a hold that does not
+   * mature until a week after move-in. The wallet showed the balance drop with
+   * nothing at all to say where it went, which reads like money vanishing.
+   *
+   * Both come from `escrow_holds`, which carries payer_id and payee_id and has
+   * an RLS policy ("escrow_holds_party") scoping it to exactly those two - so
+   * this is the client reading its own rows, not a privileged aggregate.
+   *
+   * They are NEVER SUMMED. One is an asset and the other a liability; a single
+   * "in escrow" total made of both would be a number that means nothing.
+   */
+  const { data: holds = [] } = useEscrowHolds('held');
+  const escrow = useMemo(() => {
+    const me = wallet?.ownerId;
+    let out = 0;
+    let inbound = 0;
+    let fees = 0;
+    let bothSides = false;
+    let nextRelease: string | null = null;
+
+    for (const h of holds) {
+      // Both sides of a hold can be the SAME person - a landlord booking a room
+      // in their own hostel, which is also what every one-account test looks
+      // like - so these are two independent ifs rather than an else.
+      const iPaid = !!me && h.payerId === me;
+      const iAmPaid = !!me && h.payeeId === me;
+      if (iPaid) out += h.amountKobo;
+      if (iAmPaid) {
+        inbound += Math.max(0, h.amountKobo - h.commissionKobo);
+        fees += h.commissionKobo;
+      }
+      if (iPaid && iAmPaid) bothSides = true;
+      if ((iPaid || iAmPaid) && h.releaseAfter) {
+        // The soonest one, because that is the date the reader is waiting on.
+        if (!nextRelease || h.releaseAfter < nextRelease) nextRelease = h.releaseAfter;
+      }
+    }
+
+    return {
+      paidIn: out / 100,
+      owedToMe: inbound / 100,
+      feesKobo: fees,
+      bothSides,
+      releaseLabel: nextRelease
+        ? new Date(nextRelease).toLocaleDateString('en-NG', {
+            day: 'numeric',
+            month: 'long',
+          })
+        : null,
+    };
+  }, [holds, wallet?.ownerId]);
+
   const txns = useMemo(() => ledger.map(toCard), [ledger]);
 
   // "This month" is derived from the ledger rather than stored: a running
@@ -136,6 +194,15 @@ export function WalletPanel() {
     return { added: inK / 100, spent: outK / 100 };
   }, [ledger]);
 
+  // Which stat card has its explanation open, or null. Held here rather than
+  // per card so opening one closes the others structurally.
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
+
+  // Said the same way in three sentences, so it is built once.
+  const releaseWhen = escrow.releaseLabel
+    ? `on ${escrow.releaseLabel}`
+    : 'when the stay is confirmed';
+
   const isLoading = walletLoading || txnsLoading;
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
@@ -152,6 +219,36 @@ export function WalletPanel() {
     // Transactions are nested under the wallet key, so this covers both the
     // balance and the ledger list.
     qc.invalidateQueries({ queryKey: qk.wallet.all });
+  }
+
+  /**
+   * Claim the credit for a charge this browser just completed.
+   *
+   * Failure here is NOT lost money and must not be worded as though it were:
+   * the charge succeeded, and the webhook applies the same thing on its own
+   * schedule. The message says the balance is behind, not that the payment is.
+   */
+  async function confirmTopup(reference: string, naiaraAmount: number) {
+    try {
+      const res = await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference }),
+      });
+      const data = (await res.json()) as { applied?: boolean; error?: string };
+      if (res.ok && data.applied) {
+        refreshWallet();
+        toast(`${naira(naiaraAmount)} added to your wallet.`);
+        return;
+      }
+      toast(data.error ?? 'Payment received. Your balance will catch up shortly.');
+    } catch {
+      toast('Payment received. Your balance will catch up shortly.');
+    } finally {
+      // Even on a failed claim: the webhook may have credited it already, and
+      // a refetch is the cheapest way to find out.
+      refreshWallet();
+    }
   }
 
   async function addFunds(e: React.FormEvent) {
@@ -183,11 +280,29 @@ export function WalletPanel() {
         return;
       }
 
-      // Real Paystack: open the popup for the server-initialized transaction.
-      // The wallet is credited by the verified webhook, so we just inform here.
+      /*
+       * "YOUR WALLET WILL UPDATE SHORTLY" WAS NOT TRUE, AND ON A DEV MACHINE IT
+       * WAS NEVER GOING TO BE.
+       *
+       * The credit came only from Paystack's webhook, which needs a public URL
+       * to post to. On localhost there is none, so a top-up that succeeded on
+       * Paystack left the balance at zero and the ledger empty - permanently -
+       * under a toast promising otherwise. (Two ₦500,000 test charges were
+       * confirmed 'success' against an entirely empty wallet_transactions.)
+       * In production the same words are still a guess: a late or missed
+       * delivery looks identical to the payer.
+       *
+       * So the browser now asks the server to verify its own reference the
+       * moment the popup closes happily. /api/payments/verify re-checks with
+       * Paystack and applies exactly what the webhook would, keyed on the same
+       * reference - so whichever arrives second is a no-op, and the webhook is
+       * still the backstop for anyone who closes the tab.
+       */
       setOpen(false);
       await openWalletTopup(data.accessCode, {
-        onSuccess: () => toast('Payment received   your wallet will update shortly.'),
+        onSuccess: () => {
+          void confirmTopup(data.reference as string, value);
+        },
         onCancel: () => toast('Payment cancelled.'),
       });
       setAmount('');
@@ -208,16 +323,11 @@ export function WalletPanel() {
               Available to withdraw
             </p>
             <p className="font-display mt-1 text-4xl font-semibold">{naira(balance)}</p>
-            {/*
-              ONLY WHEN THERE IS SOME. A permanent "₦0 held" line on a student
-              wallet is noise; on an agent mid-round it is the reason the big
-              number is smaller than the work they have done.
-            */}
-            {held > 0 && (
-              <p className="text-cream/60 mt-1.5 text-xs">
-                {naira(held)} held in escrow — released when the work is confirmed.
-              </p>
-            )}
+            {/* The escrow figure used to be stated here AND is now on its own
+                card below, in different words. Two statements of one number
+                six inches apart is how they start disagreeing; the card owns
+                it, because it can show both sides of a hold and this line
+                could only ever show one. */}
           </div>
           <span className="bg-cream/10 flex size-12 shrink-0 items-center justify-center rounded-full">
             <Wallet className="size-6" />
@@ -231,18 +341,118 @@ export function WalletPanel() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="border-line/10 border p-5">
-          <p className="text-content-muted font-mono text-xs tracking-wide">ADDED THIS MONTH</p>
-          <p className="text-content mt-1 text-2xl font-bold">{naira(added)}</p>
-        </Card>
-        <Card className="border-line/10 border p-5">
-          <p className="text-content-muted font-mono text-xs tracking-wide">SPENT THIS MONTH</p>
-          <p className="text-content mt-1 text-2xl font-bold">
-            {naira(spent)}
-          </p>
-        </Card>
+      {/* Stats. Three across from sm up: escrow is not an optional extra on a
+          wallet that can have rent sitting in one. */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <StatCard
+          id="added"
+          label="ADDED THIS MONTH"
+          value={naira(added)}
+          openId={openInfo}
+          onOpenChange={setOpenInfo}
+          info={
+            <>
+              <p>Everything you have topped up since the month began.</p>
+              {/* The exact misreading this card produced: it was taken for
+                  the balance, and "why does it still say a million after I
+                  spent 300,000" is a fair question about a number that never
+                  said what it was. */}
+              <p>
+                It is a running total,{' '}
+                <span className="text-content font-medium">not your balance</span> - spending does
+                not bring it down. Your balance is the big figure at the top.
+              </p>
+            </>
+          }
+        />
+
+        <StatCard
+          id="spent"
+          label="SPENT THIS MONTH"
+          value={naira(spent)}
+          openId={openInfo}
+          onOpenChange={setOpenInfo}
+          info={
+            <>
+              <p>Everything that has left this wallet since the month began.</p>
+              <p>
+                Rent counts from the moment you pay it, even though it sits in escrow for a while
+                afterwards - it has left your balance either way.
+              </p>
+            </>
+          }
+        />
+
+        {/*
+          THE CARD IS ALWAYS THERE, EVEN AT ZERO.
+          Every other figure here is one a student can reason about from their
+          own actions. Escrow is the one that explains a balance that dropped
+          for a reason they cannot see, so it must not appear only once they
+          are already confused by it. Zero is an answer.
+        */}
+        <StatCard
+          id="escrow"
+          label="IN ESCROW"
+          value={naira(escrow.paidIn)}
+          className="col-span-2 sm:col-span-1"
+          openId={openInfo}
+          onOpenChange={setOpenInfo}
+          detail={
+            escrow.owedToMe > 0 ? (
+              <p className="text-accent-fg mt-1 text-xs font-medium">
+                + {naira(escrow.owedToMe)} coming to you
+              </p>
+            ) : null
+          }
+          info={
+            <>
+              <p>
+                Money that has left your balance but has not reached the other person yet. Sync
+                holds it in the middle so neither side can be left short.
+              </p>
+
+              {escrow.paidIn > 0 && (
+                <p>
+                  <span className="text-content font-medium">You paid {naira(escrow.paidIn)}.</span>{' '}
+                  It goes to the landlord {releaseWhen} - a week after your move-in date. Cancel
+                  within 72 hours of paying and it comes back here instead.
+                </p>
+              )}
+
+              {/*
+                WHAT THIS IS NOT. It was read as a refund, because "owed to
+                you" gives the amount and not the reason. The COMMISSION
+                arithmetic behind the figure is deliberately absent here: a
+                student did not choose it and does not pay it. That belongs on
+                the landlord screens, where it is a decision - see
+                FeeModeField in the property form.
+              */}
+              {escrow.owedToMe > 0 && (
+                <p>
+                  <span className="text-content font-medium">
+                    {naira(escrow.owedToMe)} is coming to you
+                  </span>{' '}
+                  from a booking where you are the one being paid - as a landlord, agent or vendor.
+                  It arrives on its own {releaseWhen}.{' '}
+                  <span className="text-content font-medium">It is not a refund</span> and you do
+                  not have to request it.
+                </p>
+              )}
+
+              {escrow.bothSides && (
+                <p>
+                  Both figures are the same booking, because it is on{' '}
+                  <span className="text-content font-medium">your own listing</span> - you paid as
+                  the tenant and you are being paid as the landlord.
+                </p>
+              )}
+
+              {escrow.paidIn === 0 && escrow.owedToMe === 0 && (
+                <p>Nothing is being held right now, either way.</p>
+              )}
+            </>
+          }
+        />
       </div>
 
       {/* Transactions */}

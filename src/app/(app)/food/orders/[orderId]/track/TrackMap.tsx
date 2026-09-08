@@ -6,6 +6,7 @@
  * sit inside the page's dark shell instead of glaring against it.
  */
 'use client'
+import { Utensils } from "lucide-react";
 
 import { AdvancedMarker, AdvancedMarkerAnchorPoint, ColorScheme, Map, Polyline } from '@vis.gl/react-google-maps'
 
@@ -72,7 +73,7 @@ export default function TrackMap() {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                         }}
                     >
-                        🍽️
+                        <Utensils className="size-4" aria-hidden="true" />
                     </div>
                 </AdvancedMarker>
 

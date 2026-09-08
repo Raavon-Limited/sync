@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image, { StaticImageData } from "next/image"
 import Link from "next/link"
-import { MoveRight } from "lucide-react"
+import { MoveRight, Star } from "lucide-react"
 import { GoDotFill } from "react-icons/go"
 import { LuDot } from "react-icons/lu"
 import { TbCurrencyNaira } from "react-icons/tb"
@@ -27,7 +27,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
     const [sliding, setSliding] = useState(false)
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-    // 👇 SWIPE refs
+    // SWIPE refs
     const startX = useRef<number | null>(null)
     const startY = useRef<number | null>(null)
     const endX = useRef<number | null>(null)
@@ -70,7 +70,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
         startTimer()
     }
 
-    // 👇 SWIPE HANDLERS   now on the whole card, not just the image
+    // SWIPE HANDLERS   now on the whole card, not just the image
     function onTouchStart(e: React.TouchEvent) {
         startX.current = e.touches[0].clientX
         startY.current = e.touches[0].clientY
@@ -211,7 +211,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
                                     </span>
                                 ))}
                                 <span className="border border-white/25 rounded-full px-2.5 py-0.5 text-xs text-white/80 flex items-center gap-1">
-                                    ★ {item.rating}
+                                    <Star className="size-3 fill-current" aria-hidden="true" /> {item.rating}
                                 </span>
                             </div>
 

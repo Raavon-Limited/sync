@@ -116,7 +116,7 @@ export function VerifyForm({
         <Panel
           icon={<Clock className="text-content-muted size-5 shrink-0" aria-hidden="true" />}
           title="With a reviewer now"
-          body="Your documents are in the queue. You will hear back here — there is nothing to resend."
+          body="Your documents are in the queue. You will hear back here. There is nothing to resend."
         />
         {/* Still editable while it sits in the queue: a reviewer who cannot find
             a matric number is about to ask for one, and the answer arriving

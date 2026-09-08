@@ -122,7 +122,7 @@ export function EventForm({
           It was a URL field, which pointed at wherever the organiser happened
           to host the image and broke the day they deleted it. This puts the
           file in the same public-media bucket every other image on the platform
-          lives in, under the uploader's own folder — which is what the storage
+          lives in, under the uploader's own folder, which is what the storage
           policy authorises on. */}
       <ImageField
         label="Event flyer"

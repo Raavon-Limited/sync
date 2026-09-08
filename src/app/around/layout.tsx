@@ -8,7 +8,6 @@
  * Sign in / List a property buttons).
  */
 import { AppFooter } from '@/components/layouts/app-footer';
-import { ChatWidget } from '@/components/chat/chat-widget';
 import { MarketingHeader } from '@/components/layouts/marketing-header';
 import { ServicesDock } from '@/components/layouts/services-dock';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
@@ -35,9 +34,16 @@ export default async function AroundLayout({ children }: { children: React.React
         <AppFooter dockOffset />
       </div>
 
-      {/* Live messaging, signed-in only - /around is public, and a signed-out
-          visitor should not open a Realtime channel. */}
-      {user && <ChatWidget />}
+      {/* NO FLOATING CHAT BUBBLE.
+
+          Messaging lives in ONE place, the Inbox, and it used to live in two:
+          a draggable overlay pinned over every screen, plus the real inbox
+          route. Two surfaces onto the same conversations table meant two sets
+          of unread state, two places to look for the same thread, and a bubble
+          sitting on top of the primary action on a small screen.
+
+          The Inbox is a nav destination now, on every dashboard including the
+          student one. See config/dashboard-nav. */}
     </>
   );
 }

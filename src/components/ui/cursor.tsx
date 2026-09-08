@@ -9,6 +9,8 @@
  * background video on the landing hero.
  *
  * Deliberately NOT rendered when:
+ *   - the route is not a reading page. See CURSOR_ROUTES below - this is the
+ *     one that keeps it off /hostels, /around and every dashboard.
  *   - the device has no fine pointer (touch). Hiding the system cursor on a
  *     phone buys nothing and the trailing ring would chase taps around.
  *   - the user prefers reduced motion. The ring's easing is the whole effect;
@@ -22,6 +24,41 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+/**
+ * WHERE THE CUSTOM CURSOR BELONGS: pages people READ.
+ *
+ * It was mounted globally, so it followed users into the product - and a
+ * trailing ring with `cursor: none` under it is actively worse for work. On
+ * /hostels, /around and every dashboard a person is aiming: at a room in a
+ * dropdown, at Accept, at a pin on a map. A dot that leads the ring and a
+ * system pointer that is not there removes the two cues aiming depends on -
+ * the exact hotspot, and the hand that says "this is clickable".
+ *
+ * So it is scoped to the marketing and policy pages, where the pointer is
+ * decoration on something being read rather than an instrument.
+ *
+ * NOT `WEB_ROUTES` from install-gate, though the lists look alike. That one
+ * answers "is this reachable without the app", which includes /login, /signup
+ * and the password-reset flow - forms, i.e. exactly the aiming case this
+ * excludes. Two different questions that happen to share some routes; merging
+ * them would silently put the ring back over every auth form.
+ */
+const CURSOR_ROUTES = [
+  '/about',
+  '/for-vendors',
+  '/how-it-works',
+  '/how-verification-works',
+  '/legal',
+];
+
+function isReadingPage(pathname: string): boolean {
+  // '/' exactly - a prefix test would match the entire site.
+  return (
+    pathname === '/' || CURSOR_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
+  );
+}
 
 /** How much of the gap the ring closes each frame. Lower = longer trail. */
 const EASE = 0.18;
@@ -29,14 +66,17 @@ const EASE = 0.18;
 const HOVER_SCALE = 1.6;
 
 export function Cursor() {
-  const [enabled, setEnabled] = useState(false);
+  const [pointerOk, setPointerOk] = useState(false);
   const dotRef = useRef<HTMLDivElement | null>(null);
   const ringRef = useRef<HTMLDivElement | null>(null);
+
+  const pathname = usePathname();
+  const allowedHere = isReadingPage(pathname);
 
   useEffect(() => {
     const fine = window.matchMedia('(pointer: fine)');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const decide = () => setEnabled(fine.matches && !reduce.matches);
+    const decide = () => setPointerOk(fine.matches && !reduce.matches);
 
     decide();
     fine.addEventListener('change', decide);
@@ -46,6 +86,10 @@ export function Cursor() {
       reduce.removeEventListener('change', decide);
     };
   }, []);
+
+  // Derived, not stored: the route is already a render input, so folding it
+  // into state would mean an effect writing state the render could compute.
+  const enabled = allowedHere && pointerOk;
 
   useEffect(() => {
     if (!enabled) return;
@@ -109,7 +153,10 @@ export function Cursor() {
   if (!enabled) return null;
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[9999] mix-blend-difference">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-[9999] mix-blend-difference"
+    >
       <div
         ref={ringRef}
         className="absolute top-0 left-0 h-9 w-9 rounded-full border-2 border-white opacity-0 will-change-transform"

@@ -1,8 +1,10 @@
 ﻿'use client';
 
 import { useMemo, useState, useEffect, Suspense } from 'react';
+import { BookViewingDialog } from '@/components/hostels/book-viewing-dialog';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Check, KeyRound, MessageCircle, X } from 'lucide-react';
 import { ROOM_TYPE_NAMES } from '@/lib/constants/room-types';
 import { useCreateBooking, useHostel, useHostels, useMyBookings } from '@/modules/hostels/hooks';
 import { rentQuote, naira } from '@/modules/hostels/pricing';
@@ -170,7 +172,7 @@ function activeBookingFor(bookings: Booking[], hostelId: string): Booking | unde
 const BOOKING_LABEL: Record<string, string> = {
   interested: 'Saved',
   requested: 'Waiting on the landlord',
-  awaiting_payment: 'Accepted — pay to confirm',
+  awaiting_payment: 'Accepted, pay to confirm',
   confirmed: 'Confirmed',
 };
 
@@ -191,17 +193,17 @@ function VerifiedBadge({ verified, compact = false }: { verified: boolean; compa
   if (verified) {
     return (
       <span
-        className={`whitespace-nowrap rounded-full border border-lime-500/30 bg-lime-500/10 font-semibold text-lime-400 ${
+        className={`rounded-full border border-lime-500/30 bg-lime-500/10 font-semibold whitespace-nowrap text-lime-400 ${
           compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-0.5 text-xs'
         }`}
       >
-        ✓ Visited by an agent
+        <Check className="inline size-3.5" aria-hidden="true" /> Visited by an agent
       </span>
     );
   }
   return (
     <span
-      className={`whitespace-nowrap rounded-full border border-line/20 bg-surface-deep font-semibold text-content-muted ${
+      className={`border-line/20 bg-surface-deep text-content-muted rounded-full border font-semibold whitespace-nowrap ${
         compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-0.5 text-xs'
       }`}
       title="No agent has inspected this listing yet."
@@ -223,9 +225,9 @@ function Gallery({ hostel }: { hostel: Hostel }) {
 
   if (photos.length === 0) {
     return (
-      <div className="border-b border-line/10 pb-6">
+      <div className="border-line/10 border-b pb-6">
         <div className="border-line/10 bg-panel text-content-muted flex h-48 flex-col items-center justify-center gap-1 rounded-2xl border text-center">
-          <p className="text-sm font-semibold text-content">No photos yet</p>
+          <p className="text-content text-sm font-semibold">No photos yet</p>
           <p className="text-xs">
             The landlord has not uploaded any. Book a visit, or message them, before you pay.
           </p>
@@ -240,9 +242,9 @@ function Gallery({ hostel }: { hostel: Hostel }) {
   const hidden = photos.length - 1 - side.length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 p-0 pb-6 border-b border-line/10">
+    <div className="border-line/10 grid grid-cols-1 gap-2 border-b p-0 pb-6 md:grid-cols-4">
       <div
-        className={`h-64 rounded-2xl relative overflow-hidden border border-line/10 group ${
+        className={`border-line/10 group relative h-64 overflow-hidden rounded-2xl border ${
           side.length ? 'md:col-span-2' : 'md:col-span-4'
         }`}
       >
@@ -256,7 +258,7 @@ function Gallery({ hostel }: { hostel: Hostel }) {
       </div>
 
       {side.length > 0 && (
-        <div className="hidden md:grid md:col-span-2 grid-cols-2 gap-2 content-start">
+        <div className="hidden grid-cols-2 content-start gap-2 md:col-span-2 md:grid">
           {side.map((url, i) => {
             const isLast = i === side.length - 1 && hidden > 0;
             return (
@@ -266,12 +268,16 @@ function Gallery({ hostel }: { hostel: Hostel }) {
                   isLast ? 'border-lime-500/30' : 'border-line/10'
                 }`}
               >
-                <Image src={url} alt={`${hostel.name}, photo ${i + 2}`} fill sizes="25vw" className="object-cover" />
+                <Image
+                  src={url}
+                  alt={`${hostel.name}, photo ${i + 2}`}
+                  fill
+                  sizes="25vw"
+                  className="object-cover"
+                />
                 {isLast && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/55">
-                    <span className="text-lime-400 font-bold text-sm">
-                      +{hidden} more
-                    </span>
+                    <span className="text-sm font-bold text-lime-400">+{hidden} more</span>
                   </div>
                 )}
               </div>
@@ -322,16 +328,6 @@ function HostelsPage() {
 
   // Inspection Scheduler System States
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [clientAvailableTime, setClientAvailableTime] = useState('');
-  const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false);
-
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessage, setChatMessage] = useState('');
-  const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([
-    { sender: 'agent', text: 'Hello! I am the manager for this listing. Would you like to confirm a physical walkthrough or process payment details?' }
-  ]);
 
   /**
    * THE BOOKING SIDE, WHICH IS NOW REAL.
@@ -352,7 +348,7 @@ function HostelsPage() {
   // These modals are hand-rolled `fixed inset-0` divs rather than Radix, so
   // nothing was stopping the listing scrolling away behind them. Covers both:
   // whichever is open, the page underneath holds still.
-  useScrollLock(showModal || showScheduleModal);
+  useScrollLock(showModal);
 
   /**
    * ROOMS FOR THE PICKER.
@@ -386,7 +382,6 @@ function HostelsPage() {
       ),
     [selectedDetail],
   );
-
 
   const bookingForSelected = useMemo(
     () => (selectedHostel ? activeBookingFor(myBookings, selectedHostel.id) : undefined),
@@ -422,13 +417,11 @@ function HostelsPage() {
   /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on selection change */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setChatOpen(false);
     setShowScheduleModal(false);
     setShowModal(false);
     setBookingError(null);
-    setClientName('');
-    setClientPhone('');
-    setClientAvailableTime('');
+    // The viewing form's own fields are reset by the dialog unmounting with the
+    // listing, so there is nothing left to clear here.
     resetBooking();
   }, [selectedHostel, resetBooking]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -471,40 +464,18 @@ function HostelsPage() {
     );
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatMessage.trim()) return;
-    setMessages((prev) => [...prev, { sender: 'user', text: chatMessage }]);
-    setChatMessage('');
-    
-    setTimeout(() => {
-      // A canned reply, and it must not make claims about the booking. The one
-      // it replaced said "Holding allocation open", which now contradicts the
-      // real status shown two panels up. Real threads exist   see
-      // `useOpenHostelConversation`, which /hostels/[slug] already uses.
-      setMessages((prev) => [...prev, { sender: 'agent', text: 'Thanks — a real reply comes through Messages once the landlord picks this up.' }]);
-    }, 1200);
-  };
-
-  const handleScheduleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientName || !clientPhone || !clientAvailableTime) return;
-    
-    setIsSubmittingSchedule(true);
-    
-    setTimeout(() => {
-      setIsSubmittingSchedule(false);
-      setShowScheduleModal(false);
-      alert(
-        `Inspection request sent.\n\nName: ${clientName}\nPhone: ${clientPhone}\nWhen: ${clientAvailableTime}\n\nAn agent will call to confirm a time. The ${naira(
-          selectedHostel?.inspectionFeeKobo ?? 0,
-        )} fee is paid then, and only then   nothing has been charged yet.`,
-      );
-      setClientName('');
-      setClientPhone('');
-      setClientAvailableTime('');
-    }, 1000);
-  };
+  // handleScheduleSubmit IS GONE, AND IT IS WORTH SAYING WHAT IT DID.
+  //
+  // It called preventDefault, set a spinner, waited 1000ms on a setTimeout,
+  // closed the modal and popped an alert() reading "Inspection request sent...
+  // An agent will call to confirm a time." No row was inserted into
+  // hostel_inspections and no fee was charged, so no agent could ever see it -
+  // `open_inspection_board` lists inspections that are 'scheduled' with no
+  // agent yet, and only payment sets 'scheduled'. Every student who filled that
+  // form was told to expect a call that nothing had asked anybody to make.
+  //
+  // BookViewingDialog does the two real steps in order: insert the row, then
+  // charge the fee that puts it on the board.
 
   // Real hostels. The page keeps its own card shape; `toCard` bridges the two.
   const { data: domainHostels = [], isLoading: hostelsLoading } = useHostels();
@@ -589,8 +560,7 @@ function HostelsPage() {
             .toLowerCase()
             .includes(query.trim().toLowerCase());
 
-        const matchesFilter =
-          active === 'all' ? true : hostel.type === active;
+        const matchesFilter = active === 'all' ? true : hostel.type === active;
 
         return matchesQuery && matchesFilter;
       }),
@@ -606,8 +576,7 @@ function HostelsPage() {
     const quote = rentQuote(selectedHostel.rentKobo, selectedHostel.feeMode);
 
     return (
-      <main className="min-h-screen text-current transition-colors duration-300 animate-in fade-in duration-500 relative">
-        
+      <main className="animate-in fade-in relative min-h-screen text-current transition-colors duration-300 duration-500">
         {/*
           THE REQUEST, CONFIRMED BEFORE IT IS SENT.
 
@@ -618,16 +587,16 @@ function HostelsPage() {
           accepts -> the hold begins, and this now says that and then does it.
         */}
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-black/60 animate-in fade-in duration-200">
-            <div className="border border-zinc-800 bg-zinc-950 p-6 md:p-8 rounded-3xl max-w-md w-full text-center shadow-2xl space-y-5 animate-in zoom-in-95 duration-300">
-              <div className="h-12 w-12 rounded-full bg-lime-500/10 border border-lime-500/30 text-lime-400 flex items-center justify-center mx-auto text-xl">
-                🔑
+          <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md duration-200">
+            <div className="animate-in zoom-in-95 w-full max-w-md space-y-5 rounded-3xl border border-zinc-800 bg-zinc-950 p-6 text-center shadow-2xl duration-300 md:p-8">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-lime-500/30 bg-lime-500/10 text-xl text-lime-400">
+                <KeyRound className="size-6" aria-hidden="true" />
               </div>
               <div>
                 <h3 className="text-xl font-black tracking-tight text-white">
                   Request a room at {selectedHostel.name}?
                 </h3>
-                <ol className="text-xs text-zinc-400 mt-3 space-y-1.5 text-left list-decimal list-inside leading-relaxed">
+                <ol className="mt-3 list-inside list-decimal space-y-1.5 text-left text-xs leading-relaxed text-zinc-400">
                   <li>The landlord sees your request and picks you a room.</li>
                   <li>
                     When they accept, that room is held for you for 24 hours and the countdown
@@ -635,13 +604,13 @@ function HostelsPage() {
                   </li>
                   <li>You pay within the 24 hours to confirm it.</li>
                 </ol>
-                <p className="text-xs bg-lime-500/5 text-lime-400 border border-lime-500/20 p-3 rounded-xl mt-4 font-semibold">
+                <p className="mt-4 rounded-xl border border-lime-500/20 bg-lime-500/5 p-3 text-xs font-semibold text-lime-400">
                   Nothing is charged now, and nothing is charged until you choose to pay.
                 </p>
               </div>
 
               {bookingError && (
-                <p className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/20 rounded-xl p-3 text-left">
+                <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-left text-xs text-rose-400">
                   {bookingError}
                 </p>
               )}
@@ -651,7 +620,7 @@ function HostelsPage() {
                   type="button"
                   onClick={() => setShowModal(false)}
                   disabled={book.isPending}
-                  className="flex-1 py-3 border border-zinc-800 text-zinc-300 hover:text-white font-bold rounded-xl text-xs transition-all disabled:opacity-50"
+                  className="flex-1 rounded-xl border border-zinc-800 py-3 text-xs font-bold text-zinc-300 transition-all hover:text-white disabled:opacity-50"
                 >
                   Not now
                 </button>
@@ -659,7 +628,7 @@ function HostelsPage() {
                   type="button"
                   onClick={requestRoom}
                   disabled={book.isPending}
-                  className="flex-2 py-3 bg-lime-400 hover:bg-lime-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all"
+                  className="flex-2 rounded-xl bg-lime-400 py-3 text-xs font-extrabold tracking-wider text-black uppercase transition-all hover:bg-lime-500 disabled:bg-zinc-800 disabled:text-zinc-500"
                 >
                   {book.isPending ? 'Sending…' : 'Send request'}
                 </button>
@@ -668,160 +637,47 @@ function HostelsPage() {
           </div>
         )}
 
-        {/* ==================== SCHEDULE INSPECTION MODAL SYSTEM ==================== */}
-        {showScheduleModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-black/60 animate-in fade-in duration-200">
-            <div className="border border-zinc-800 bg-zinc-950 p-6 md:p-8 rounded-3xl max-w-md w-full shadow-2xl relative space-y-4 animate-in zoom-in-95 duration-300 text-left">
-              
-              <button 
-                type="button"
-                onClick={() => setShowScheduleModal(false)}
-                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors text-lg p-1 font-mono focus:outline-none"
-              >
-                ✕
-              </button>
+        {/* ==================== BOOK A VIEWING ====================
+            The hand-rolled modal that used to live here is replaced by the
+            shared dialog, which is the same one /user/bookings opens. One
+            booking path means the fee, the copy and the payment step cannot
+            drift between the two places a student can start a visit from. */}
+        <BookViewingDialog
+          open={showScheduleModal}
+          onOpenChange={setShowScheduleModal}
+          hostelId={selectedHostel.id}
+          hostelName={selectedHostel.name}
+          feeKobo={selectedHostel.inspectionFeeKobo}
+        />
 
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-lime-400 tracking-wider font-mono">Optional</span>
-                <h3 className="text-xl font-black tracking-tight text-white">Visit before you decide</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  An agent meets you at <span className="text-zinc-200 font-bold">{selectedHostel.name}</span> and walks you through the room.
-                </p>
-              </div>
-
-              {/*
-                THE FEE, WHERE IT ACTUALLY APPLIES.
-                It used to be described as "mandatory" both here and as a line
-                on the rent breakdown, so every student was quoted it whether or
-                not they wanted a visit. It buys one thing - this visit - and it
-                is the AGENT'S fee: Sync takes no commission on it. The amount is
-                the hostel's own `inspection_fee_kobo`, not a constant, because
-                the column exists and a listing may price a visit differently.
-              */}
-              <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl p-3.5 flex items-start gap-3">
-                <span className="text-base mt-0.5">💡</span>
-                <div className="text-xs text-amber-300/90 leading-relaxed">
-                  <span className="font-extrabold text-white block mb-0.5">
-                    A visit costs {naira(selectedHostel.inspectionFeeKobo)}
-                  </span>
-                  {/*
-                    THE ORDER HERE WAS BACKWARDS AND CONTRADICTED THE DATABASE.
-                    This read "you pay after an agent confirms a time, not now".
-                    The opposite is true: `confirm_inspection_payment` sets the
-                    inspection to 'scheduled', and `open_inspection_board` only
-                    lists inspections that are 'scheduled' with no agent yet. So
-                    paying is what PUTS the job in front of agents - an unpaid
-                    request is invisible to every one of them and nobody is ever
-                    coming. Telling a student to wait for a confirmation that
-                    their own payment triggers left them waiting forever.
-                  */}
-                  It goes to the agent who shows you around, and it is separate from the rent
-                  {' '}&mdash; skip the visit and you never pay it. Paying is what puts your request
-                  in front of agents: one takes it, proposes a time, and you confirm before anybody
-                  sets off. One reschedule is free.
-                </div>
-              </div>
-
-              <form onSubmit={handleScheduleSubmit} className="space-y-3 pt-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-zinc-400 block tracking-wider">Your name</label>
-                  <input 
-                    type="text"
-                    required
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Enter your first and last name"
-                    className="w-full h-11 bg-zinc-900 border border-zinc-800 focus:border-lime-400 rounded-xl px-3.5 text-xs text-white outline-none transition-colors placeholder-zinc-600"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-zinc-400 block tracking-wider">Phone / WhatsApp</label>
-                  <input 
-                    type="tel"
-                    required
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="e.g., +234 812 345 6789"
-                    className="w-full h-11 bg-zinc-900 border border-zinc-800 focus:border-lime-400 rounded-xl px-3.5 text-xs text-white outline-none transition-colors placeholder-zinc-600"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-zinc-400 block tracking-wider">When are you free?</label>
-                  <input 
-                    type="text"
-                    required
-                    value={clientAvailableTime}
-                    onChange={(e) => setClientAvailableTime(e.target.value)}
-                    placeholder="e.g., Saturday morning between 10am - 2pm"
-                    className="w-full h-11 bg-zinc-900 border border-zinc-800 focus:border-lime-400 rounded-xl px-3.5 text-xs text-white outline-none transition-colors placeholder-zinc-600"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmittingSchedule}
-                  className="w-full h-12 bg-lime-400 hover:bg-lime-500 disabled:bg-zinc-800 text-black disabled:text-zinc-500 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all mt-4 shadow-lg flex items-center justify-center gap-2"
-                >
-                  {isSubmittingSchedule ? (
-                    <span>Sending…</span>
-                  ) : (
-                    <span>Request a visit</span>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-          
+        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
           {/* Top Navigation Bar */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-line/10">
+          <div className="border-line/10 mb-6 flex items-center justify-between border-b pb-4">
             <button
               type="button"
               onClick={() => setSelectedHostel(null)}
-              className="flex items-center gap-2 group text-sm font-semibold text-content-muted hover:text-lime-400 transition-colors"
+              className="group text-content-muted flex items-center gap-2 text-sm font-semibold transition-colors hover:text-lime-400"
             >
-              <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg
+                className="h-5 w-5 transform transition-transform group-hover:-translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
               </svg>
               Back to hostels
             </button>
             <ThemeToggle />
           </div>
 
-          {/* Other listings, when there are any. A row headed "Explore Remaining
-              (0):" with nothing after it is a control with no controls in it. */}
-          {remainingHostels.length > 0 && (
-            <div className="mb-8 border border-line/10 rounded-2xl p-4 bg-panel flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-content-muted tracking-wider">Other hostels</span>
-                <div className="text-xs text-content-muted">
-                  {remainingHostels.length} more {remainingHostels.length === 1 ? 'listing' : 'listings'} in Malete.
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                {remainingHostels.map((hostel) => (
-                  <button
-                    key={hostel.slug}
-                    onClick={() => setSelectedHostel(hostel)}
-                    type="button"
-                    className="whitespace-nowrap text-[11px] font-medium border border-line/10 hover:border-line/25 bg-surface-deep text-content hover:text-lime-400 px-3 py-1.5 rounded-xl transition-all"
-                  >
-                    {hostel.name} ·{' '}
-                    {hostel.roomsLeft === 0 ? 'full' : `${hostel.roomsLeft} free`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Core Content Shell */}
-          <div className="bg-transparent rounded-3xl overflow-hidden">
-            
+          <div className="overflow-hidden rounded-3xl bg-transparent">
             {/*
               THE LANDLORD'S PHOTOS.
               This grid used to render the same three imported JPEGs for every
@@ -834,12 +690,11 @@ function HostelsPage() {
             <Gallery hostel={selectedHostel} />
 
             {/* Core Data Fields */}
-            <div className="py-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
-              
+            <div className="grid grid-cols-1 gap-10 py-8 lg:grid-cols-12">
               {/* Left Column Structural Details */}
-              <div className="lg:col-span-7 space-y-8">
+              <div className="space-y-8 lg:col-span-7">
                 <div>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="mb-4 flex flex-wrap gap-2">
                     {/*
                       THE BADGE NOW READS THE COLUMN.
                       It used to say "Real-time Verified · 2026" on every
@@ -852,10 +707,12 @@ function HostelsPage() {
                       make.
                     */}
                     <VerifiedBadge verified={selectedHostel.isVerified} />
-                    <span className={`px-3 py-0.5 rounded-full border text-xs font-semibold ${STATUS_MAP[selectedHostel.status].cls}`}>
+                    <span
+                      className={`rounded-full border px-3 py-0.5 text-xs font-semibold ${STATUS_MAP[selectedHostel.status].cls}`}
+                    >
                       {STATUS_MAP[selectedHostel.status].label}
                     </span>
-                    <span className="px-3 py-0.5 rounded-full border border-line/10 bg-panel text-content-muted text-xs font-mono">
+                    <span className="border-line/10 bg-panel text-content-muted rounded-full border px-3 py-0.5 font-mono text-xs">
                       {selectedHostel.type}
                     </span>
                   </div>
@@ -872,7 +729,7 @@ function HostelsPage() {
                     own-row-only, so "Managed by " rendered with nothing after
                     it. Both come back when there is a column behind them.
                   */}
-                  <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-content-muted">
+                  <div className="text-content-muted mt-3 flex flex-wrap items-center gap-3 text-sm">
                     <span>{selectedHostel.address ?? selectedHostel.location}</span>
                     {selectedHostel.landmark && (
                       <>
@@ -888,8 +745,8 @@ function HostelsPage() {
                 </div>
 
                 {selectedHostel.description && (
-                  <div className="border-t border-dashed border-line/10 pt-6">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-content-muted mb-2">
+                  <div className="border-line/10 border-t border-dashed pt-6">
+                    <h3 className="text-content-muted mb-2 text-xs font-bold tracking-widest uppercase">
                       About this place
                     </h3>
                     {/*
@@ -901,7 +758,7 @@ function HostelsPage() {
                       description now gets no section, rather than someone
                       else's prose over their name.
                     */}
-                    <p className="text-sm leading-relaxed text-content-muted whitespace-pre-line">
+                    <p className="text-content-muted text-sm leading-relaxed whitespace-pre-line">
                       {selectedHostel.description}
                     </p>
                   </div>
@@ -909,20 +766,23 @@ function HostelsPage() {
 
                 {/* The amenities the landlord actually ticked. */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-content-muted mb-3">
+                  <h3 className="text-content-muted mb-3 text-xs font-bold tracking-widest uppercase">
                     What this place has
                   </h3>
                   {selectedHostel.tags.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {selectedHostel.tags.map((facility) => (
-                        <div key={facility} className="flex items-center gap-2 border border-line/10 rounded-xl p-2.5 bg-panel text-xs">
-                          <span className="text-lime-400 font-bold">✓</span>
-                          <span className="font-medium text-content">{facility}</span>
+                        <div
+                          key={facility}
+                          className="border-line/10 bg-panel flex items-center gap-2 rounded-xl border p-2.5 text-xs"
+                        >
+                          <Check className="size-3.5 shrink-0 text-lime-400" aria-hidden="true" />
+                          <span className="text-content font-medium">{facility}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-content-muted">
+                    <p className="text-content-muted text-sm">
                       The landlord has not listed any amenities yet. Ask them before you book.
                     </p>
                   )}
@@ -930,13 +790,15 @@ function HostelsPage() {
 
                 {selectedHostel.houseRules.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-content-muted mb-3">
+                    <h3 className="text-content-muted mb-3 text-xs font-bold tracking-widest uppercase">
                       House rules
                     </h3>
-                    <ul className="space-y-1.5 text-sm text-content-muted">
+                    <ul className="text-content-muted space-y-1.5 text-sm">
                       {selectedHostel.houseRules.map((rule) => (
                         <li key={rule} className="flex gap-2">
-                          <span aria-hidden="true" className="text-content-muted">–</span>
+                          <span aria-hidden="true" className="text-content-muted">
+                            –
+                          </span>
                           <span>{rule}</span>
                         </li>
                       ))}
@@ -944,8 +806,8 @@ function HostelsPage() {
                   </div>
                 )}
 
-                <div className="border-t border-dashed border-line/10 pt-6">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-content-muted mb-3">
+                <div className="border-line/10 border-t border-dashed pt-6">
+                  <h3 className="text-content-muted mb-3 text-xs font-bold tracking-widest uppercase">
                     Where it is
                   </h3>
                   <HostelMap
@@ -959,9 +821,8 @@ function HostelsPage() {
               </div>
 
               {/* Right Sidebar Calculations & CTA Interaction Deck */}
-              <div className="lg:col-span-5 space-y-4">
-                <div className="border border-line/10 rounded-2xl p-6 bg-panel shadow-xl relative overflow-hidden">
-
+              <div className="space-y-4 lg:col-span-5">
+                <div className="border-line/10 bg-panel relative overflow-hidden rounded-2xl border p-6 shadow-xl">
                   {/*
                     WHAT A STUDENT ACTUALLY PAYS.
 
@@ -982,39 +843,43 @@ function HostelsPage() {
                     exactly; under 'pass_on' the landlord has chosen to add
                     Sync's 2.5%, and it is itemised rather than folded in.
                   */}
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="mb-4 flex items-start justify-between">
                     <div>
-                      <p className="text-[10px] text-content-muted uppercase font-bold tracking-wider">Rent per session</p>
-                      <h2 className="text-4xl font-black font-mono text-current mt-1">
+                      <p className="text-content-muted text-[10px] font-bold tracking-wider uppercase">
+                        Rent per session
+                      </p>
+                      <h2 className="mt-1 font-mono text-4xl font-black text-current">
                         {naira(quote.rentKobo)}
                       </h2>
                     </div>
-                    <span className="text-xs font-semibold bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2.5 py-1 rounded-md">
+                    <span className="rounded-md border border-lime-500/20 bg-lime-500/10 px-2.5 py-1 text-xs font-semibold text-lime-400">
                       Per session
                     </span>
                   </div>
 
-                  <div className="space-y-2 border-b border-dashed border-line/10 pb-4 mb-4 text-xs text-content-muted">
+                  <div className="border-line/10 text-content-muted mb-4 space-y-2 border-b border-dashed pb-4 text-xs">
                     <div className="flex justify-between">
                       <span>Rent, one academic session</span>
-                      <span className="font-mono text-content">{naira(quote.rentKobo)}</span>
+                      <span className="text-content font-mono">{naira(quote.rentKobo)}</span>
                     </div>
                     {quote.feeMode === 'pass_on' ? (
                       <div className="flex justify-between">
                         <span>Sync service fee (2.5%)</span>
-                        <span className="font-mono text-content">+ {naira(quote.feeKobo)}</span>
+                        <span className="text-content font-mono">+ {naira(quote.feeKobo)}</span>
                       </div>
                     ) : (
                       <div className="flex justify-between">
                         <span>Sync service fee</span>
-                        <span className="font-mono text-content-muted">Included</span>
+                        <span className="text-content-muted font-mono">Included</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center text-sm font-bold text-current mb-2">
+                  <div className="mb-2 flex items-center justify-between text-sm font-bold text-current">
                     <span>Total to pay</span>
-                    <span className="text-xl font-mono text-lime-400">{naira(quote.totalKobo)}</span>
+                    <span className="font-mono text-xl text-lime-400">
+                      {naira(quote.totalKobo)}
+                    </span>
                   </div>
 
                   {/*
@@ -1023,7 +888,7 @@ function HostelsPage() {
                     inspection fee is real and is a genuine cost - it is simply
                     not part of this number unless the student chooses a visit.
                   */}
-                  <p className="text-[11px] text-content-muted mb-6 leading-relaxed">
+                  <p className="text-content-muted mb-6 text-[11px] leading-relaxed">
                     Nothing else is added at checkout. A visit is optional and costs{' '}
                     {naira(selectedHostel.inspectionFeeKobo)} separately, paid to the agent who
                     shows you around.
@@ -1053,21 +918,21 @@ function HostelsPage() {
                     ) : !isAuthenticated ? (
                       <Link
                         href={`/login?next=${encodeURIComponent('/hostels')}`}
-                        className="w-full py-3.5 bg-lime-400 hover:bg-lime-500 text-black font-extrabold rounded-xl text-xs transition-all uppercase tracking-wider shadow-lg active:scale-95 flex items-center justify-center"
+                        className="flex w-full items-center justify-center rounded-xl bg-lime-400 py-3.5 text-xs font-extrabold tracking-wider text-black uppercase shadow-lg transition-all hover:bg-lime-500 active:scale-95"
                       >
                         Sign in to request a room
                       </Link>
                     ) : bookingForSelected ? (
                       <div className="space-y-2">
-                        <div className="border border-line/10 bg-surface-deep p-4 rounded-xl space-y-1">
-                          <p className="text-[10px] text-content-muted uppercase tracking-widest font-bold">
+                        <div className="border-line/10 bg-surface-deep space-y-1 rounded-xl border p-4">
+                          <p className="text-content-muted text-[10px] font-bold tracking-widest uppercase">
                             Your request
                           </p>
-                          <p className="text-sm font-bold text-content">
+                          <p className="text-content text-sm font-bold">
                             {BOOKING_LABEL[bookingForSelected.status] ?? bookingForSelected.status}
                           </p>
                           {bookingForSelected.roomLabel && (
-                            <p className="text-[11px] text-content-muted">
+                            <p className="text-content-muted text-[11px]">
                               Room {bookingForSelected.roomLabel}
                             </p>
                           )}
@@ -1080,17 +945,17 @@ function HostelsPage() {
                           room is genuinely being held.
                         */}
                         {counting && holdEndsAt != null && (
-                          <div className="border border-amber-500/30 bg-amber-500/5 p-4 rounded-xl text-center space-y-1">
-                            <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold">
-                              Held for you — pay within
+                          <div className="space-y-1 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-center">
+                            <p className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
+                              Held for you, pay within
                             </p>
-                            <h4 className="text-2xl font-black font-mono text-amber-400 tracking-wider">
+                            <h4 className="font-mono text-2xl font-black tracking-wider text-amber-400">
                               {formatCountdown(holdEndsAt - nowMs)}
                             </h4>
                           </div>
                         )}
                         {holdEndsAt != null && !counting && (
-                          <p className="text-[11px] text-rose-400 text-center">
+                          <p className="text-center text-[11px] text-rose-400">
                             That hold has expired. Ask the landlord to re-open it.
                           </p>
                         )}
@@ -1098,22 +963,36 @@ function HostelsPage() {
                         <div className="grid grid-cols-5 gap-2">
                           <Link
                             href="/user/bookings"
-                            className="col-span-3 bg-surface-deep border border-line/10 rounded-xl p-3 flex flex-col justify-center text-content hover:text-lime-400 transition-colors"
+                            className="bg-surface-deep border-line/10 text-content col-span-3 flex flex-col justify-center rounded-xl border p-3 transition-colors hover:text-lime-400"
                           >
-                            <span className="text-[9px] uppercase text-content-muted block">Manage</span>
+                            <span className="text-content-muted block text-[9px] uppercase">
+                              Manage
+                            </span>
                             <span className="text-[11px] font-bold">Go to my bookings</span>
                           </Link>
 
-                          <button
-                            type="button"
-                            onClick={() => setChatOpen(!chatOpen)}
-                            className={`col-span-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 border border-line/10 ${
-                              chatOpen ? 'bg-lime-400 text-black border-lime-400' : 'bg-surface-deep text-content hover:bg-panel'
-                            }`}
+                          {/*
+                            THE REAL INBOX, not a panel on this page.
+
+                            This used to toggle an inline pane seeded with
+                            "Hello! I am the manager for this listing" and a
+                            canned reply on a 1.2s timer. Nobody was on the
+                            other end. A student could type a question about
+                            deposits, watch it be answered, and never reach
+                            the landlord at all.
+
+                            `conversations` already supports a booking thread
+                            (kind='booking'), and the Inbox is the one place
+                            messaging lives. Sending them there is the honest
+                            version of this button.
+                          */}
+                          <Link
+                            href="/user/messages"
+                            className="border-line/10 bg-surface-deep text-content hover:bg-panel col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl border text-xs font-bold transition-all"
                           >
-                            <span className="text-base">💬</span>
-                            <span>{chatOpen ? 'Hide chat' : 'Chat'}</span>
-                          </button>
+                            <MessageCircle className="size-4" aria-hidden="true" />
+                            <span>Message the landlord</span>
+                          </Link>
                         </div>
                       </div>
                     ) : (
@@ -1148,7 +1027,7 @@ function HostelsPage() {
                               {freeRooms.map((r) => (
                                 <option key={r.id} value={r.id}>
                                   {r.label}
-                                  {r.priceKobo ? ` — ${naira(r.priceKobo)}` : ''}
+                                  {r.priceKobo ? `  ${naira(r.priceKobo)}` : ''}
                                 </option>
                               ))}
                             </select>
@@ -1163,7 +1042,7 @@ function HostelsPage() {
                             book.isPending ||
                             (freeRooms.length > 0 && !selectedRoomId)
                           }
-                          className="w-full py-3.5 bg-lime-400 hover:bg-lime-500 disabled:bg-surface-deep disabled:text-content-muted text-black font-extrabold rounded-xl text-xs transition-all uppercase tracking-wider shadow-lg active:scale-95 disabled:active:scale-100 disabled:cursor-not-allowed"
+                          className="disabled:bg-surface-deep disabled:text-content-muted w-full rounded-xl bg-lime-400 py-3.5 text-xs font-extrabold tracking-wider text-black uppercase shadow-lg transition-all hover:bg-lime-500 active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                           {/* A full hostel had a live "Lock Apartment Layout" button
                               over a "SOLD OUT" counter. One of the two was lying. */}
@@ -1184,76 +1063,70 @@ function HostelsPage() {
                     <button
                       type="button"
                       onClick={() => setShowScheduleModal(true)}
-                      className="w-full py-3 border border-line/10 text-content hover:text-lime-400 font-bold rounded-xl text-xs hover:bg-surface-deep transition-all active:scale-98"
+                      className="border-line/10 text-content hover:bg-surface-deep w-full rounded-xl border py-3 text-xs font-bold transition-all hover:text-lime-400 active:scale-98"
                     >
-                      Book a visit ({naira(selectedHostel.inspectionFeeKobo)}) — optional
+                      Book a visit ({naira(selectedHostel.inspectionFeeKobo)}) is optional
                     </button>
                   </div>
                 </div>
-
-                {/* Inline Drawer messaging pane block element */}
-                {bookingForSelected && chatOpen && (
-                  <div className="border border-zinc-800 rounded-2xl bg-zinc-950 p-4 shadow-xl flex flex-col h-72 animate-in slide-in-from-top-4 duration-300">
-                    <div className="flex items-center justify-between pb-2 border-b border-zinc-800/60 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                        {/* The landlord's name is in `profiles`, own-row-only,
-                            so there is nothing to put here yet   see toCard. */}
-                        <span className="text-xs font-bold text-white">Listing agent</span>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto space-y-2 p-1 text-xs no-scrollbar">
-                      {messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] rounded-xl px-3 py-2 ${
-                            msg.sender === 'user' ? 'bg-lime-400 text-black font-medium' : 'bg-zinc-900 border border-zinc-800 text-zinc-300'
-                          }`}>
-                            {msg.text}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <form onSubmit={handleSendMessage} className="mt-2 flex gap-1.5 pt-2 border-t border-zinc-800/60">
-                      <input
-                        type="text"
-                        value={chatMessage}
-                        onChange={(e) => setChatMessage(e.target.value)}
-                        placeholder="Ask about deposits, documents..."
-                        className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 text-xs outline-none text-white focus:border-lime-500/50"
-                      />
-                      <button type="submit" className="bg-zinc-100 hover:bg-white text-black px-3 rounded-xl text-xs font-bold transition-all">
-                        Send
-                      </button>
-                    </form>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* OTHER LISTINGS SIT BELOW THE DETAIL, not above it.
+              A strip of rival hostels between the back button and the one you
+              actually opened pushed the content down and invited you to leave
+              before reading any of it. Suggestions belong after the thing they
+              are alternatives to.
+
+              The empty case is still hidden: a row headed "Other hostels" with
+              nothing in it is a control with no controls. */}
+        {remainingHostels.length > 0 && (
+          <div className="border-line/10 bg-panel mt-8 flex flex-col justify-between gap-4 rounded-2xl border p-4 md:flex-row md:items-center">
+            <div className="space-y-1">
+              <span className="text-content-muted text-[10px] font-bold tracking-wider uppercase">
+                Other hostels
+              </span>
+              <div className="text-content-muted text-xs">
+                {remainingHostels.length} more{' '}
+                {remainingHostels.length === 1 ? 'listing' : 'listings'} in Malete.
+              </div>
+            </div>
+
+            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto py-1">
+              {remainingHostels.map((hostel) => (
+                <button
+                  key={hostel.slug}
+                  onClick={() => setSelectedHostel(hostel)}
+                  type="button"
+                  className="border-line/10 hover:border-line/25 bg-surface-deep text-content rounded-xl border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-all hover:text-lime-400"
+                >
+                  {hostel.name} · {hostel.roomsLeft === 0 ? 'full' : `${hostel.roomsLeft} free`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     );
   }
 
   /* ==================== SCREEN 1: COMPREHENSIVE DIRECTORY LIST VIEW ==================== */
   return (
-    <main className="min-h-screen text-current transition-colors duration-300 animate-in fade-in duration-500">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
-        
-
+    <main className="animate-in fade-in min-h-screen text-current transition-colors duration-300 duration-500">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
         {/* Hero Section */}
         <section className="mb-10">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display tracking-tight font-extrabold text-current leading-tight">
+          <h1 className="font-display text-4xl leading-tight font-extrabold tracking-tight text-current md:text-5xl lg:text-6xl">
             Find your{' '}
-            <span className="block md:inline italic text-lime-400 font-normal">
+            <span className="block font-normal text-lime-400 italic md:inline">
               perfect hostel.
             </span>
           </h1>
-          <p className="mt-4 max-w-2xl text-sm md:text-base text-content-muted">
-            Off-campus rooms around Malete, listed by their landlords. Filter by layout to find
-            the ones you can actually live in.
+          <p className="text-content-muted mt-4 max-w-2xl text-sm md:text-base">
+            Off-campus rooms around Malete, listed by their landlords. Filter by layout to find the
+            ones you can actually live in.
           </p>
 
           {/*
@@ -1264,15 +1137,15 @@ function HostelsPage() {
             reviews table that does not exist. A number nobody can trace is worse
             than an empty space where a number would go.
           */}
-          <div className="grid grid-cols-2 gap-3 mt-8 max-w-md">
-            <div className="bg-panel border border-line/10 rounded-2xl p-4">
-              <p className="text-xs text-content-muted font-medium">Listings</p>
-              <h3 className="text-2xl font-bold mt-1 text-content">{totalHostelsCount}</h3>
+          <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
+            <div className="bg-panel border-line/10 rounded-2xl border p-4">
+              <p className="text-content-muted text-xs font-medium">Listings</p>
+              <h3 className="text-content mt-1 text-2xl font-bold">{totalHostelsCount}</h3>
             </div>
-            <div className="bg-panel border border-line/10 rounded-2xl p-4">
-              <p className="text-xs text-content-muted font-medium">From</p>
-              <h3 className="text-2xl font-bold mt-1 text-content">
-                {cheapestKobo == null ? '—' : naira(cheapestKobo)}
+            <div className="bg-panel border-line/10 rounded-2xl border p-4">
+              <p className="text-content-muted text-xs font-medium">From</p>
+              <h3 className="text-content mt-1 text-2xl font-bold">
+                {cheapestKobo == null ? '-' : naira(cheapestKobo)}
               </h3>
             </div>
           </div>
@@ -1292,35 +1165,40 @@ function HostelsPage() {
           </label>
           <svg
             aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-content-muted"
+            className="text-content-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
+            />
           </svg>
           <input
             id="hostel-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, area or amenity — “Safari”, “Wi-Fi”…"
-            className="w-full h-12 rounded-2xl border border-line/10 bg-panel pl-11 pr-11 text-sm text-content outline-none transition-colors placeholder:text-content-muted focus:border-lime-400"
+            placeholder="Search by name, area or amenity: “Safari”, “Wi-Fi”…"
+            className="border-line/10 bg-panel text-content placeholder:text-content-muted h-12 w-full rounded-2xl border pr-11 pl-11 text-sm transition-colors outline-none focus:border-lime-400"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-content-muted transition-colors hover:text-content"
+              className="text-content-muted hover:text-content absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1.5 transition-colors"
             >
-              ✕
+              <X className="size-4" aria-hidden="true" />
             </button>
           )}
         </div>
 
         {/* Layout Filter Row Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 no-scrollbar scroll-smooth">
+        <div className="no-scrollbar mb-5 flex gap-2 overflow-x-auto scroll-smooth pb-2">
           {FILTERS.map((filter) => {
             const isSelected = active === filter.value;
             return (
@@ -1328,9 +1206,9 @@ function HostelsPage() {
                 key={filter.value}
                 type="button"
                 onClick={() => setActive(filter.value)}
-                className={`whitespace-nowrap px-5 py-2 rounded-full border text-sm font-medium transition-all duration-200 transform active:scale-95 ${
+                className={`transform rounded-full border px-5 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95 ${
                   isSelected
-                    ? 'bg-zinc-100 text-black border-zinc-100 shadow-sm'
+                    ? 'border-zinc-100 bg-zinc-100 text-black shadow-sm'
                     : 'bg-panel text-content-muted border-line/10 hover:bg-surface-deep'
                 }`}
               >
@@ -1341,7 +1219,7 @@ function HostelsPage() {
         </div>
 
         <div className="mb-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-content-muted">
+          <p className="text-content-muted text-xs font-bold tracking-wider uppercase">
             {hostelsLoading
               ? 'Loading hostels…'
               : `Showing ${visible.length} of ${totalHostelsCount}`}
@@ -1349,7 +1227,7 @@ function HostelsPage() {
         </div>
 
         {/* Hostels Directory Cards Block Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* An empty grid because you searched for "penthouse" is not the same
               thing as an empty grid because nobody has listed anything. */}
           {!hostelsLoading && visible.length === 0 && (
@@ -1368,7 +1246,7 @@ function HostelsPage() {
                       setQuery('');
                       setActive('all');
                     }}
-                    className="rounded-full border border-line/10 bg-panel px-4 py-2 text-xs font-semibold text-content transition-colors hover:text-lime-400"
+                    className="border-line/10 bg-panel text-content rounded-full border px-4 py-2 text-xs font-semibold transition-colors hover:text-lime-400"
                   >
                     Clear search and filters
                   </button>
@@ -1381,9 +1259,9 @@ function HostelsPage() {
             <div
               key={hostel.slug}
               onClick={() => setSelectedHostel(hostel)}
-              className="group text-left cursor-pointer overflow-hidden rounded-3xl border border-line/10 bg-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-line/15 flex flex-col h-full focus:outline-none"
+              className="group border-line/10 bg-panel hover:border-line/15 flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus:outline-none"
             >
-              <div className="h-44 w-full relative overflow-hidden border-b border-line/10">
+              <div className="border-line/10 relative h-44 w-full overflow-hidden border-b">
                 <Image
                   src={imageFor(hostel)}
                   alt={hostel.photos[0] ? hostel.name : `${hostel.name} (no photo yet)`}
@@ -1400,28 +1278,40 @@ function HostelsPage() {
                     scrolling a grid is comparing pictures, and needs to know
                     when one of them is not of this building. */}
                 {!hostel.photos[0] && (
-                  <span className="absolute top-4 left-4 z-10 text-[10px] font-semibold bg-black/70 text-zinc-200 border border-zinc-700 px-2 py-0.5 rounded">
+                  <span className="absolute top-4 left-4 z-10 rounded border border-zinc-700 bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-zinc-200">
                     No photo yet
                   </span>
                 )}
-                <span className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-xs font-semibold backdrop-blur-xs z-10 shadow-sm ${STATUS_MAP[hostel.status].cls}`}>
+                <span
+                  className={`absolute top-4 right-4 z-10 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur-xs ${STATUS_MAP[hostel.status].cls}`}
+                >
                   {STATUS_MAP[hostel.status].label}
                 </span>
-                <span className="absolute bottom-3 left-4 z-10 text-[10px] uppercase tracking-wider font-mono bg-black/60 text-zinc-300 border border-zinc-800 px-2 py-0.5 rounded">
+                <span className="absolute bottom-3 left-4 z-10 rounded border border-zinc-800 bg-black/60 px-2 py-0.5 font-mono text-[10px] tracking-wider text-zinc-300 uppercase">
                   {hostel.type}
                 </span>
               </div>
 
-              <div className="p-5 flex flex-col flex-1 justify-between">
+              <div className="flex flex-1 flex-col justify-between p-5">
                 <div>
-                  <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-bold text-lg text-current group-hover:text-lime-400 transition-colors">
+                      <h3 className="text-lg font-bold text-current transition-colors group-hover:text-lime-400">
                         {hostel.name}
                       </h3>
-                      <p className="text-xs text-content-muted mt-1 flex items-center gap-1">
-                        <svg className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <p className="text-content-muted mt-1 flex items-center gap-1 text-xs">
+                        <svg
+                          className="h-3.5 w-3.5 opacity-60"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
                         </svg>
                         {hostel.location}
                       </p>
@@ -1434,29 +1324,34 @@ function HostelsPage() {
                   </div>
 
                   {/* Room counters matrix */}
-                  <div className="mt-3 flex items-center justify-between border border-line/10 rounded-xl p-2 bg-surface-deep text-[11px] font-mono">
+                  <div className="border-line/10 bg-surface-deep mt-3 flex items-center justify-between rounded-xl border p-2 font-mono text-[11px]">
                     <span className="text-content-muted">Rooms</span>
                     <span className="text-content font-bold">{hostel.totalRooms} total</span>
                     <span className="text-content-muted">|</span>
-                    <span className={`${hostel.roomsLeft === 0 ? 'text-rose-400 font-black' : 'text-lime-400 font-black'}`}>
+                    <span
+                      className={`${hostel.roomsLeft === 0 ? 'font-black text-rose-400' : 'font-black text-lime-400'}`}
+                    >
                       {hostel.roomsLeft === 0 ? 'FULLY BOOKED' : `${hostel.roomsLeft} FREE`}
                     </span>
                   </div>
 
                   <div className="mt-4">
-                    <p className="text-2xl font-black text-current font-mono tracking-tight">
+                    <p className="font-mono text-2xl font-black tracking-tight text-current">
                       {naira(rentQuote(hostel.rentKobo, hostel.feeMode).totalKobo)}
                     </p>
-                    <span className="text-[11px] text-content-muted font-medium">
+                    <span className="text-content-muted text-[11px] font-medium">
                       per session
                       {hostel.feeMode === 'pass_on' ? ', service fee included' : ''}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-1 mt-5">
+                <div className="mt-5 flex flex-wrap gap-1">
                   {hostel.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="text-[10px] font-semibold px-2.5 py-0.5 rounded-md bg-surface-deep border border-line/10 text-content-muted">
+                    <span
+                      key={tag}
+                      className="bg-surface-deep border-line/10 text-content-muted rounded-md border px-2.5 py-0.5 text-[10px] font-semibold"
+                    >
                       {tag}
                     </span>
                   ))}

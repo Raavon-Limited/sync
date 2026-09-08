@@ -9,6 +9,7 @@ import { qk } from '@/lib/query/keys';
 import type { PageParams } from '@/lib/query/helpers';
 import { useSession } from '@/providers/session-provider';
 import * as api from './queries';
+import { fetchSavedHostels } from './saved';
 import type { Hostel } from './types';
 
 const db = () => createClient();
@@ -91,9 +92,17 @@ export function useHostelsNear(coords: { lat: number; lng: number } | null, radi
 // ── Bookings ───────────────────────────────────────────────────────────────
 
 export function useMyBookings(opts: { status?: string } & PageParams = {}) {
+  // The identity has to reach the query - see fetchMyBookings. Without it RLS
+  // returns everything the caller MAY read, which for a landlord includes every
+  // booking on their own hostels, listed as if they had made them.
+  const { userId } = useSession();
+  const args = { ...opts, studentId: userId ?? undefined };
   return useQuery({
-    queryKey: qk.bookings.list(opts),
-    queryFn: () => api.fetchMyBookings(db(), opts),
+    // In the key as well, or switching account would serve the previous user's
+    // bookings out of the cache until a refetch landed.
+    queryKey: qk.bookings.list(args),
+    queryFn: () => api.fetchMyBookings(db(), args),
+    enabled: !!userId,
   });
 }
 
@@ -214,5 +223,24 @@ export function useArchiveHostel() {
     onSuccess() {
       qc.invalidateQueries({ queryKey: [...qk.hostels.all, 'mine', landlordId] });
     },
+  });
+}
+
+// ── Saved hostels ──────────────────────────────────────────────────────────
+
+/**
+ * What this student has actually saved.
+ *
+ * NOT `useHostels()`. The dashboard's "Saved hostels" section used to call the
+ * public catalogue and label the result saved, so every student saw the same
+ * three newest listings and a hardcoded count of 12 beside them. See
+ * modules/hostels/saved.ts for why `favorites` and not `saved_hostels`.
+ */
+export function useSavedHostels(limit?: number) {
+  const { userId } = useSession();
+  return useQuery({
+    queryKey: [...qk.hostels.all, 'saved', userId ?? '', limit ?? 'all'] as const,
+    queryFn: () => fetchSavedHostels(db(), limit),
+    enabled: !!userId,
   });
 }

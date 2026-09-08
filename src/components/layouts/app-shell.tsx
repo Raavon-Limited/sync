@@ -11,7 +11,6 @@
 import { MarketingHeader } from './marketing-header';
 import { ServicesDock } from './services-dock';
 import { AppFooter } from './app-footer';
-import { ChatWidget } from '@/components/chat/chat-widget';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
@@ -35,9 +34,16 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           dockOffset clears the fixed mobile ServicesDock. */}
       <AppFooter dockOffset />
 
-      {/* Live messaging, signed-in only. Mounted per shell rather than in root
-          Providers so a signed-out visitor never opens a Realtime channel. */}
-      {user && <ChatWidget />}
+      {/* NO FLOATING CHAT BUBBLE.
+
+          Messaging lives in ONE place, the Inbox, and it used to live in two:
+          a draggable overlay pinned over every screen, plus the real inbox
+          route. Two surfaces onto the same conversations table meant two sets
+          of unread state, two places to look for the same thread, and a bubble
+          sitting on top of the primary action on a small screen.
+
+          The Inbox is a nav destination now, on every dashboard including the
+          student one. See config/dashboard-nav. */}
     </div>
   );
 }

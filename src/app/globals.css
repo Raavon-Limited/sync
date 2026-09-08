@@ -625,3 +625,118 @@ input:-webkit-autofill:focus {
 .has-custom-cursor * {
   cursor: none !important;
 }
+
+/* THE HAND HAS TO COME BACK when the custom cursor is not rendered.
+   Tailwind v4's preflight does not give <button> `cursor: pointer` the way v3
+   did, so on every page outside the marketing pages - which is now most of the
+   product - buttons showed a plain arrow and nothing announced itself as
+   clickable. `<a href>` gets it from the UA stylesheet; buttons, summary and
+   role="button" do not.
+
+   Scoped to :not(:disabled) so a disabled control still reads as unavailable
+   rather than inviting a click that does nothing. The `.has-custom-cursor`
+   rule above wins where it applies, being !important. */
+button:not(:disabled),
+summary,
+[role='button']:not([aria-disabled='true']),
+label[for],
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+/* ── Printing a document ────────────────────────────────────────────────────
+   Receipts and invoices are "downloaded" by printing to PDF, so print is a
+   real output format here rather than an afterthought, and what comes out has
+   to be the thing that was on screen.
+
+   THE THEME SURVIVES THE PRINT. Browsers drop background colours by default,
+   which on a dark receipt means white-on-white - a blank page with a total
+   floating in it. `print-color-adjust: exact` keeps the palette that was
+   rendered, so a dark-mode receipt saves as a dark PDF and a light one as
+   light. That is the house rule for anything downloadable: the file matches
+   the screen it came from.
+
+   Everything that is not the document itself is removed rather than hidden
+   off-page - a nav that prints as a blank first page is worse than no nav. */
+@media print {
+  html,
+  body {
+    background: var(--color-surface-deep) !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Chrome and Safari need this on every painted element, not just the root. */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Anything the reader interacts with is not part of the document: buttons,
+     shells, navs, the cursor layer. */
+  .no-print,
+  nav,
+  header[data-app-shell],
+  aside[data-app-shell] {
+    display: none !important;
+  }
+
+  /* PRINT THE DOCUMENT, NOT THE SCREEN IT IS ON.
+     
+     Hiding the nav was not enough. A receipt opened in a side sheet printed the
+     sheet AND the whole page behind it - the bookings list, the stage rail, the
+     listing photos - across a page and a half, with the actual document as one
+     panel in the middle of it.
+
+     Hiding by ancestor cannot work here: the sheet is portalled to <body>, so
+     it is not inside the page it appears over, and there is no single wrapper
+     that means "everything except this".
+
+     So: hide EVERYTHING, then re-show the document and its descendants.
+     `visibility`, not `display` - display:none on an ancestor cannot be undone
+     by a descendant, whereas visibility:visible on a child of a hidden parent
+     works, which is precisely the property this needs. The document is then
+     lifted to the top-left so it does not print inset by whatever margin the
+     sheet had on screen.
+
+     Scoped to a body class the print button sets, so an ordinary Ctrl+P on a
+     normal page still prints that page. */
+  body.printing-document * {
+    visibility: hidden !important;
+  }
+
+  body.printing-document .print-sheet,
+  body.printing-document .print-sheet * {
+    visibility: visible !important;
+  }
+
+  body.printing-document .print-sheet {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* The document takes the page. Margins belong to @page, not to a container
+     that would otherwise indent every sheet after the first. */
+  .print-sheet {
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Never split a line item across two sheets. */
+  .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+@page {
+  margin: 14mm;
+}

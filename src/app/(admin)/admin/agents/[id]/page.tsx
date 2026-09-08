@@ -48,7 +48,7 @@ function loose(c: unknown): SupabaseClient {
 const day = (iso?: string | null) =>
   iso
     ? new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   await requireStaffArea('agents');

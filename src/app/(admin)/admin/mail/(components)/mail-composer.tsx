@@ -243,7 +243,7 @@ export function MailComposer({ recipients, sent }: { recipients: Recipient[]; se
           {withoutEmail > 0 && byEmail && (
             <span className="text-coral">
               {' · '}
-              {withoutEmail} with no email address — they can only be notified in the app
+              {withoutEmail} with no email address. They can only be notified in the app
             </span>
           )}
         </p>
@@ -255,7 +255,7 @@ export function MailComposer({ recipients, sent }: { recipients: Recipient[]; se
         <Input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          placeholder="Subject — also the heading in the email and the title of the notification"
+          placeholder="Subject, also the heading in the email and the title of the notification"
         />
 
         <textarea

@@ -150,6 +150,11 @@ export async function getAroundData(userId?: string): Promise<AroundData> {
     const { data: booking } = await db
       .from('bookings')
       .select('hostel_id, price_per_session_kobo, status')
+      // Same trap as fetchMyBookings: `bookings_select_own` also admits the
+      // LANDLORD of the hostel, so without this a landlord's "pick up where you
+      // left off" nudge offers them a tenant's booking as their own. `userId` was
+      // already in scope and only used to decide whether to run the query.
+      .eq('student_id', userId)
       .in('status', ['interested', 'awaiting_payment'])
       .order('created_at', { ascending: false })
       .limit(1)

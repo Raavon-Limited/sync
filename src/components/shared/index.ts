@@ -14,5 +14,6 @@ export { MapPlaceholder } from './map-placeholder';
 export { ImageGallery } from './image-gallery';
 export { ReviewCard, type ReviewCardData } from './review-card';
 export { OrderStageTracker, type OrderStage } from './order-stage-tracker';
+export { StatCard, type StatCardProps } from './stat-card';
 export { QuantityStepper } from './quantity-stepper';
 export { PlanCard, type PlanCardProps } from './plan-card';

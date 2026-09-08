@@ -44,9 +44,19 @@ function loadScript(): Promise<void> {
   return loader;
 }
 
-/** Open the Paystack popup for a server-initialized transaction. The wallet is
- *  credited by the verified webhook, not these callbacks - they're just UX. */
-export async function openWalletTopup(
+/**
+ * Open the Paystack popup for a server-initialized transaction.
+ *
+ * WHATEVER WAS PAID FOR IS CREDITED BY THE VERIFIED WEBHOOK, not by these
+ * callbacks. onSuccess only means the popup closed happily on this device; the
+ * wallet credit and the inspection's move to 'scheduled' both happen server
+ * side on `charge.success`. Treat the callback as a cue to refetch, never as
+ * proof the money arrived.
+ *
+ * Named for the transaction, not the wallet: the same three lines resume an
+ * inspection fee. `openWalletTopup` stays as the name its callers already use.
+ */
+export async function openPaystackCheckout(
   accessCode: string,
   callbacks: { onSuccess?: () => void; onCancel?: () => void } = {},
 ): Promise<void> {
@@ -59,3 +69,6 @@ export async function openWalletTopup(
     onCancel: () => callbacks.onCancel?.(),
   });
 }
+
+/** The wallet top-up's name for the above. Same call, existing callers. */
+export const openWalletTopup = openPaystackCheckout;

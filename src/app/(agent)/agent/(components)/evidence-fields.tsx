@@ -84,7 +84,7 @@ export function EvidenceFields({
 
   async function upload(files: FileList, slot: 'photos' | 'selfie' | 'video') {
     if (!userId) {
-      setError('Sign in again — we could not tell who you are.');
+      setError('Sign in again, we could not tell who you are.');
       return;
     }
     setError(null);
@@ -226,7 +226,7 @@ export function EvidenceFields({
           Walkthrough video <span className="text-coral">*</span>
         </p>
         <p className="text-content-muted text-xs">
-          A continuous pan is much harder to fake than stills. Keep it short — 20 to 30 seconds is
+          A continuous pan is much harder to fake than stills. Keep it short: 20 to 30 seconds is
           plenty, and it is the one file we cannot shrink for you before it uploads.
         </p>
 
@@ -296,7 +296,7 @@ export function EvidenceFields({
           <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin" />
           <p>
             Uploading {uploading} file{uploading === 1 ? '' : 's'}… Photos are shrunk on your phone
-            first, so they go quickly. A video on a weak signal can take a minute — keep this open,
+            first, so they go quickly. A video on a weak signal can take a minute. keep this open,
             it retries on its own.
           </p>
         </div>
