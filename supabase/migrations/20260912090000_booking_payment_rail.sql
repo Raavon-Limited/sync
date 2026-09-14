@@ -13,7 +13,7 @@
 -- wallet up is an existing, working Paystack flow (`wallet_topup`), so rent does
 -- not need a second gateway integration - it needs a debit.
 --
--- ── MOVE-IN IS SET AT PAYMENT, AND THAT FIXES THE ESCROW CLOCK ──────────────
+-- ── MOVE-IN IS SET AT PAYMENT, AND THAT FIXES THE ESCROW CLOCK ───────────────
 --   `apply_escrow_settings` already dates a rent hold as `move_in + 7 days`,
 --   with the comment "rent settles a week after move-in, not a day after
 --   payment: the student has to actually get the room". Correct - and it has

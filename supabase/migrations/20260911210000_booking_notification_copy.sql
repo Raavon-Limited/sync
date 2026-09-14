@@ -60,7 +60,7 @@ begin
     return new;
   end if;
 
-  -- ── The student's side ──────────────────────────────────────────────────
+  -- ── The student's side ────────────────────────────────────────────────────
   if new.status = 'awaiting_payment' then
     perform private.notify(
       new.student_id, 'booking', 'Your room is held',
@@ -96,7 +96,7 @@ begin
     );
   end if;
 
-  -- ── The landlord's side ─────────────────────────────────────────────────
+  -- ── The landlord's side ───────────────────────────────────────────────────
   if new.status = 'awaiting_payment' then
     perform private.notify(
       v_landlord, 'booking', 'Room held for a student',
