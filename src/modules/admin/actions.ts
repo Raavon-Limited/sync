@@ -306,101 +306,57 @@ export async function resolveDispute(input: {
 }
 
 /**
- * Decide a hostel verification visit.
+ * Decide a verification visit: a hostel, a store, or a business as a whole.
  *
- * The visit row records what an ambassador saw; `hostels.verified` is what
- * students see. They are updated together because a verified visit that leaves
- * the hostel unverified is a decision nobody can act on   and an unverified
- * hostel with a "Verified" visit reads as a bug to whoever looks next.
+ * A THIN CALL, ON PURPOSE. This used to be two actions with the rules written
+ * out in each. The hostel one read the visit, checked the evidence in
+ * TypeScript, then wrote the visit and `hostels.verified` as two separate
+ * service-role statements. A failure between them left a Verified visit on an
+ * unverified hostel, and nothing told the landlord either way.
+ *
+ * `decide_verification_visit` (20260914180000) now owns all of it in one
+ * transaction: staff only, a filed report first (rejection included, since
+ * rejecting a place nobody visited tells its owner they failed a check that
+ * never happened), and the subject's flag moved alongside the visit. A
+ * vendor-wide visit records its outcome and moves no status. That status is
+ * decided from documents, and a photograph must not become a second road to it.
+ *
+ * THE SESSION CLIENT, not the service role. The RPC gates on `is_staff()`,
+ * which reads `auth.uid()`; a service-role call has none and would be refused.
  */
-/**
- * EVIDENCE BEFORE A DECISION.
- *
- * A verified badge is the one claim on this platform that has to mean somebody
- * stood in the building. This action would previously flip
- * `hostels.verified` on a visit with no photograph, no notes and no agent
- * it was reachable the moment a visit row existed, which is the moment it was
- * SCHEDULED.
- *
- * `submit_verification_visit` already refuses a submission with no photo, so
- * "the agent has submitted" is a reliable proxy for "there is evidence". That
- * makes the gate one status check rather than a second evidence rule that could
- * drift from the first.
- *
- * CHECKED HERE AND NOT ONLY IN THE UI. This runs on the service-role client,
- * which is above RLS by construction, so a disabled button is the whole of the
- * client-side story and none of the enforcement.
- *
- * REJECTION IS GATED TOO, and that is deliberate rather than an oversight:
- * rejecting an unvisited listing tells a landlord their property failed a check
- * nobody performed. A visit that should not have been scheduled is cancelled or
- * reassigned, not rejected.
- */
-export async function decideHostelVisit(input: {
+export async function decideVisit(input: {
   visitId: string;
-  hostelId: string;
   decision: 'Verified' | 'Rejected';
   notes?: string;
 }) {
-  const reviewerId = await assertStaffArea('verify_visits');
-  const admin = createAdminClient();
-  const now = new Date().toISOString();
+  await assertStaffArea('verify_visits');
 
-  const { data: visit, error: readErr } = await admin
-    .from('verification_visits')
-    .select('status, photos, video_url')
-    .eq('id', input.visitId)
-    .maybeSingle();
-  if (readErr) throw new Error(userMessage(readErr, 'We could not read that visit.'));
-  if (!visit) throw new Error('That visit no longer exists.');
+  const supabase = await createServerClient();
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc('decide_verification_visit', {
+    p_visit: input.visitId,
+    p_decision: input.decision,
+    p_notes: input.notes?.trim() || null,
+  });
 
-  if (visit.status !== 'Under Review') {
-    throw new Error(
-      visit.status === 'Verified' || visit.status === 'Rejected'
-        ? 'That visit has already been decided.'
-        : 'The agent has not filed their report yet, so there is nothing to decide on.',
-    );
-  }
-
-  // Belt and braces: the submit RPC guarantees a photo, so this only fires if a
-  // row reached Under Review some other way (a hand-run UPDATE, most likely).
-  const photos = (visit.photos as string[] | null) ?? [];
-  if (photos.length === 0 && !visit.video_url) {
-    throw new Error('That visit has no photo or video on it. It cannot be decided.');
-  }
-
-  const { error: visitErr } = await admin
-    .from('verification_visits')
-    .update({
-      status: input.decision,
-      decided_by: reviewerId,
-      decided_at: now,
-      notes: input.notes?.trim() || undefined,
-      updated_at: now,
-    })
-    .eq('id', input.visitId);
-  if (visitErr) throw new Error(userMessage(visitErr, 'We could not save that visit.'));
-
-  const { error: hostelErr } = await admin
-    .from('hostels')
-    .update({ verified: input.decision === 'Verified', updated_at: now })
-    .eq('id', input.hostelId);
-  if (hostelErr) {
-    throw new Error(userMessage(hostelErr, 'The visit was saved, but the hostel was not updated.'));
-  }
+  if (error) throw new Error(userMessage(error, 'We could not save that visit.'));
 
   revalidatePath('/admin/verify-visits');
+  // Both badges this can move live on the owner's own screens.
+  revalidatePath('/vendor/stores');
+  revalidatePath('/landlord/properties');
 }
 
 /**
  * Mark a visit as fraud and block the account behind it.
  *
- * NOT decideHostelVisit WITH A THIRD DECISION. That helper writes the visit
- * row and the hostel flag with the service role, and a permanent block has to
- * move three things together   the visit, the listing and
- * vendor_profiles.verification_blocked_at   or it half-applies. flag_visit_fraud
- * does all three in one transaction and re-checks staff itself, so this is a
- * thin call rather than a fourth place that knows the rule.
+ * NOT decideVisit WITH A THIRD DECISION. A permanent block has to move three
+ * things together   the visit, the listing and
+ * vendor_profiles.verification_blocked_at   and it deliberately does reach the
+ * documents rail, which a Verified/Rejected decision must never do.
+ * flag_visit_fraud does all three in one transaction and re-checks staff itself,
+ * so this is a thin call rather than another place that knows the rule.
  */
 export async function flagVisitFraud(input: { visitId: string; reason: string }) {
   await assertStaffArea('verify_visits');
@@ -417,49 +373,6 @@ export async function flagVisitFraud(input: { visitId: string; reason: string })
 
   revalidatePath('/admin/verify-visits');
   revalidatePath('/admin/accounts');
-}
-
-/**
- * Decide a STORE verification visit.
- *
- * NOT decideHostelVisit WITH A STOREFRONT ID, and the difference is where the
- * work happens. That helper writes the visit row and then `hostels.verified`
- * as two separate service-role statements, which is survivable for a boolean
- * on a listing. A store decision moves the visit, `storefronts.verified_at`
- * and `verified_by` together, and a server action cannot offer a transaction
- * across them   a failure between the two would leave a Verified visit against
- * an unverified shop, which reads to the next reviewer as a bug rather than a
- * half-applied write.
- *
- * So the rule lives in `decide_store_visit` (20260912120000): one transaction,
- * staff re-checked inside, and it refuses a visit the agent has not filed
- * evidence on. This is a thin call rather than a second place that knows it.
- *
- * THE SESSION CLIENT, not the service role   same reason as flagVisitFraud.
- * The RPC gates on `is_staff()`, which reads `auth.uid()`; a service-role call
- * has none and its own guard would correctly refuse it.
- */
-export async function decideStoreVisit(input: {
-  visitId: string;
-  decision: 'Verified' | 'Rejected';
-  notes?: string;
-}) {
-  await assertStaffArea('verify_visits');
-
-  const supabase = await createServerClient();
-  const { error } = await (supabase as unknown as {
-    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-  }).rpc('decide_store_visit', {
-    p_visit: input.visitId,
-    p_decision: input.decision,
-    p_notes: input.notes?.trim() || null,
-  });
-
-  if (error) throw new Error(userMessage(error, 'We could not save that visit.'));
-
-  revalidatePath('/admin/verify-visits');
-  // The vendor's own store list carries the badge this just moved.
-  revalidatePath('/vendor/stores');
 }
 
 /** Assign an ambassador and put a visit on the calendar. */

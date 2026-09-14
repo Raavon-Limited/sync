@@ -20,6 +20,9 @@ export const metadata: Metadata = { title: 'Verification visits   Admin' };
 
 import type { Row } from '@/lib/supabase/row';
 
+/** A visit against a whole business rather than a hostel or one branch. */
+const kindIsVendor = (v: Row) => !v.hostel_id && !v.storefront_id && !!v.vendor_id;
+
 const HOSTEL_COLUMNS =
   'id, name, area, verified, address, landmark, room_type, price_per_session_kobo, inspection_fee_kobo, amenities, house_rules, description, lat, lng, hostel_images(url, position, kind)';
 
@@ -71,9 +74,24 @@ export default async function Page() {
   const hostelById = new Map(((hostels ?? []) as Row[]).map((h) => [h.id, h]));
   const storeById = new Map(((stores ?? []) as Row[]).map((s) => [s.id, s]));
 
+  // Businesses visited as a whole. Only the ones that actually have a visit:
+  // this runs after the visits query because it needs their ids, and loading
+  // every vendor profile to name a handful of rows would be most of the page.
+  const vendorIds = ((visits ?? []) as Row[])
+    .filter(kindIsVendor)
+    .map((v) => v.vendor_id as string);
+  const { data: vendors } = vendorIds.length
+    ? await admin
+        .from('vendor_profiles')
+        .select('id, business_name, area, business_address, public_phone')
+        .in('id', vendorIds)
+    : { data: [] };
+  const vendorById = new Map(((vendors ?? []) as Row[]).map((b) => [b.id, b]));
+
   const rows: AdminVisit[] = ((visits ?? []) as Row[]).map((v) => {
     const h = v.hostel_id ? hostelById.get(v.hostel_id) : null;
     const s = v.storefront_id ? storeById.get(v.storefront_id) : null;
+    const b = kindIsVendor(v) ? vendorById.get(v.vendor_id) : null;
 
     // EVERY VISIT HAS EXACTLY ONE SUBJECT   the database enforces it
     // (verification_visits_one_subject). This screen used to assume that
@@ -89,10 +107,14 @@ export default async function Page() {
       id: v.id,
       kind,
       subjectId: (v.hostel_id ?? v.storefront_id ?? v.vendor_id) as string,
-      subjectName: (h?.name as string) ?? storeName ?? 'Unknown subject',
-      subjectArea: (h?.area as string) ?? (s?.area as string) ?? null,
+      subjectName:
+        (h?.name as string) ?? storeName ?? (b?.business_name as string) ?? 'Unknown subject',
+      subjectArea: (h?.area as string) ?? (s?.area as string) ?? (b?.area as string) ?? null,
       subjectVerified: kind === 'store' ? !!s?.verified_at : !!h?.verified,
       hostel: h ? hostelFactsFromRow(h) : null,
+      // A business visited as a whole uses the same small panel as a branch: it
+      // is claiming the same one thing, that it trades at this address. Its
+      // verifiedAt stays null because a visit here moves no badge.
       store: s
         ? {
             brand,
@@ -100,7 +122,14 @@ export default async function Page() {
             phone: (s.public_phone as string) ?? null,
             verifiedAt: (s.verified_at as string) ?? null,
           }
-        : null,
+        : b
+          ? {
+              brand: (b.business_name as string) ?? null,
+              address: (b.business_address as string) ?? null,
+              phone: (b.public_phone as string) ?? null,
+              verifiedAt: null,
+            }
+          : null,
       ambassadorId: v.ambassador_id ?? null,
       ambassadorName: nameById.get(v.ambassador_id) ?? null,
       status: v.status,

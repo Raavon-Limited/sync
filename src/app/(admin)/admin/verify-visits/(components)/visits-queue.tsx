@@ -61,8 +61,7 @@ import {
 import { HostelFacts, type HostelFactsData } from '@/components/shared/hostel-facts';
 import { PhotoGrid } from '@/components/shared/photo-grid';
 import {
-  decideHostelVisit,
-  decideStoreVisit,
+  decideVisit,
   flagVisitFraud,
   scheduleHostelVisit,
 } from '@/modules/admin/actions';
@@ -156,8 +155,8 @@ const REASSIGNABLE = new Set(['Not Visited', 'Visit Scheduled']);
  * badge could be issued on a building nobody had been to, which is the one
  * thing that badge cannot survive.
  *
- * `decideHostelVisit` enforces the same rule server-side. This is the half that
- * stops somebody trying.
+ * `decide_verification_visit` enforces the same rule in the database. This is
+ * the half that stops somebody trying.
  */
 const DECIDABLE = 'Under Review';
 
@@ -189,7 +188,14 @@ function whenText(iso: string | null): string {
  * claiming one thing   that it is trading, here   so the address is most of the
  * panel and the rest is context for finding it.
  */
-function StoreFacts({ store }: { store: StoreFactsData }) {
+function StoreFacts({
+  store,
+  hasBadge = true,
+}: {
+  store: StoreFactsData;
+  /** False for a business visited as a whole, which carries no badge to report. */
+  hasBadge?: boolean;
+}) {
   const rows: [string, string | null][] = [
     ['Business', store.brand],
     ['Address', store.address],
@@ -211,11 +217,13 @@ function StoreFacts({ store }: { store: StoreFactsData }) {
       {/* Said explicitly rather than shown as an absent badge. "Never" is the
           normal state for a store that has just been created, and a reviewer
           should not have to infer it from something missing. */}
-      <p className="text-content-muted text-xs">
-        {store.verifiedAt
-          ? `Last verified ${new Date(store.verifiedAt).toLocaleDateString('en-NG')}.`
-          : 'No agent has confirmed this address yet.'}
-      </p>
+      {hasBadge && (
+        <p className="text-content-muted text-xs">
+          {store.verifiedAt
+            ? `Last verified ${new Date(store.verifiedAt).toLocaleDateString('en-NG')}.`
+            : 'No agent has confirmed this address yet.'}
+        </p>
+      )}
     </div>
   );
 }
@@ -407,24 +415,14 @@ function VisitCard({
   const [picked, setPicked] = useState<string>(v.ambassadorId ?? '');
 
   /**
-   * One decision, two rails, because they write different tables.
-   *
-   * A hostel decision flips `hostels.verified` from a server action; a store
-   * decision moves the visit and `storefronts.verified_at` inside one
-   * transaction (`decide_store_visit`). Picking the rail here rather than
-   * inside the action keeps each one honest about what it can actually write
-   * decideHostelVisit needs a hostelId it would not have for a store.
-   *
-   * A vendor-wide visit has no rail at all yet: there is no single place to
-   * mark verified, and `vendor_profiles.verification_status` is decided from
-   * documents by set_verification_status, not from a photograph. Those visits
-   * are informational until that is designed, which is why the buttons are
-   * disabled rather than wired to something approximate.
+   * One decision for every subject. The database works out what else moves
+   * (`decide_verification_visit`): a hostel's flag, a store's `verified_at`, or,
+   * for a visit against a whole business, nothing but the visit itself. That
+   * last one used to have its buttons disabled, so a filed visit could never be
+   * closed.
    */
   const decide = (decision: 'Verified' | 'Rejected') =>
-    v.kind === 'store'
-      ? decideStoreVisit({ visitId: v.id, decision, notes })
-      : decideHostelVisit({ visitId: v.id, hostelId: v.subjectId, decision, notes });
+    decideVisit({ visitId: v.id, decision, notes });
 
   const settled = v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud';
   const hasEvidence = v.photos.length > 0 || !!v.videoUrl || !!v.selfieUrl || !!v.notes;
@@ -549,7 +547,7 @@ function VisitCard({
               {/* THE SAME COMPONENT the account view renders, so the two cannot
                   drift   a field added there shows up here the same day. */}
               {v.hostel && <HostelFacts hostel={v.hostel} />}
-              {v.store && <StoreFacts store={v.store} />}
+              {v.store && <StoreFacts store={v.store} hasBadge={v.kind === 'store'} />}
               {!v.hostel && !v.store && (
                 <p className="text-content-muted text-sm">
                   This visit is against the business as a whole rather than one address, so
@@ -701,21 +699,38 @@ function VisitCard({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Decision note (optional)"
               />
+              {/* SAID OUT LOUD for a vendor-wide visit, because the button
+                  looks identical and does far less. It closes the visit with
+                  a finding; the business's verification status is still
+                  decided from its documents on the vendor review screen. A
+                  reviewer who assumed otherwise would believe they had
+                  verified a business they had not. */}
+              {v.kind === 'vendor' && (
+                <p className="text-content-muted text-xs">
+                  This records what the agent found. It does not change the
+                  business&rsquo;s verification status, which is decided from its
+                  documents.
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  disabled={pending || v.kind === 'vendor'}
+                  disabled={pending}
                   onClick={() => run(() => decide('Verified'))}
                 >
-                  {v.kind === 'store' ? 'Verify store' : 'Verify hostel'}
+                  {v.kind === 'store'
+                    ? 'Verify store'
+                    : v.kind === 'vendor'
+                      ? 'Confirm finding'
+                      : 'Verify hostel'}
                 </Button>
                 <Button
                   variant="outline"
                   className="text-coral"
-                  disabled={pending || v.kind === 'vendor'}
+                  disabled={pending}
                   onClick={() => run(() => decide('Rejected'))}
                 >
-                  Reject
+                  {v.kind === 'vendor' ? 'Could not confirm' : 'Reject'}
                 </Button>
               </div>
 
