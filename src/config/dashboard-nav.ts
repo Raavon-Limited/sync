@@ -53,6 +53,30 @@ export type DashboardNavKey =
   | 'organiser'
   | 'agent';
 
+/**
+ * The `notifications.role` a dashboard shows, alongside the unstamped rows every
+ * dashboard shows.
+ *
+ * KEYED ON THE DASHBOARD, NOT THE WORN ROLE. The proxy opens every dashboard
+ * except /admin on a role the account merely holds, so somebody wearing
+ * 'student' can be in /landlord. Filtering on what they wear would hide their
+ * tenants' alerts on the one screen built to show them. See
+ * 20260914210000_notification_role_filter.
+ *
+ * Mostly the same word. The organiser dashboard is the one that is not: its
+ * role is `event_manager`, and a literal 'organiser' would match nothing.
+ * 'admin' also covers super_admin; the database treats staff as one hat.
+ */
+export const NOTIFICATION_ROLE: Record<DashboardNavKey, string> = {
+  vendor: 'vendor',
+  landlord: 'landlord',
+  admin: 'admin',
+  student: 'student',
+  rider: 'rider',
+  organiser: 'event_manager',
+  agent: 'agent',
+};
+
 export interface DashboardNavItem {
   href: string;
   label: string;

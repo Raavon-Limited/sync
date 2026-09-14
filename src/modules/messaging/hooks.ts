@@ -326,18 +326,24 @@ export function useConversationsRealtime() {
 
 // ── Notifications ──────────────────────────────────────────────────────────
 
-export function useNotifications(opts: { unreadOnly?: boolean } & PageParams = {}) {
+/**
+ * `role` is the dashboard being rendered (NOTIFICATION_ROLE). The list, the
+ * badge and "mark all read" must all be given the same one, or they disagree.
+ */
+export function useNotifications(opts: { unreadOnly?: boolean; role?: string } & PageParams = {}) {
   return useQuery({
     queryKey: qk.notifications.list(opts),
     queryFn: () => api.fetchNotifications(db(), opts),
   });
 }
 
-export function useMarkNotificationsRead() {
+export function useMarkNotificationsRead(role?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids?: string[]) => api.markNotificationsRead(db(), ids),
+    mutationFn: (ids?: string[]) => api.markNotificationsRead(db(), ids, role),
     onSuccess() {
+      // Every dashboard's list and badge: a row marked read here may be an
+      // unstamped one that the other dashboards show too.
       qc.invalidateQueries({ queryKey: qk.notifications.all });
       qc.invalidateQueries({ queryKey: qk.unreadCounts.all });
     },
@@ -345,10 +351,12 @@ export function useMarkNotificationsRead() {
 }
 
 /** Badge counts for the shell. Cheap enough to poll as a realtime backstop. */
-export function useUnreadCounts() {
+export function useUnreadCounts(role?: string) {
   return useQuery({
-    queryKey: qk.unreadCounts.all,
-    queryFn: () => api.fetchUnreadCounts(db()),
+    // The role goes in the key: /admin and /landlord open in two tabs must not
+    // share one cached count.
+    queryKey: [...qk.unreadCounts.all, role ?? 'all'],
+    queryFn: () => api.fetchUnreadCounts(db(), role),
     refetchInterval: 60_000,
   });
 }
