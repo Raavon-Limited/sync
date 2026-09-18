@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -4673,7 +4673,7 @@ export type Database = {
         Returns: string
       }
       current_app_role: { Args: never; Returns: string }
-      decide_store_visit: {
+      decide_verification_visit: {
         Args: { p_decision: string; p_notes?: string; p_visit: string }
         Returns: string
       }
@@ -4710,7 +4710,7 @@ export type Database = {
         Returns: string
       }
       get_unread_counts: {
-        Args: never
+        Args: { p_role?: string }
         Returns: {
           messages: number
           notifications: number
@@ -4756,7 +4756,10 @@ export type Database = {
       }
       login_method: { Args: { p_email: string }; Returns: string }
       mark_moved_in: { Args: { p_booking: string }; Returns: undefined }
-      mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
+      mark_notifications_read: {
+        Args: { p_ids?: string[]; p_role?: string }
+        Returns: number
+      }
       max_hold_interval: { Args: never; Returns: string }
       max_holds_per_student: { Args: never; Returns: number }
       my_access: {

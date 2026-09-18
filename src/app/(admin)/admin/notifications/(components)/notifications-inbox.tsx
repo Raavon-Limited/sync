@@ -34,6 +34,7 @@ import {
   useMarkNotificationsRead,
   useNotificationsRealtime,
 } from '@/modules/messaging/hooks';
+import { NOTIFICATION_ROLE } from '@/config/dashboard-nav';
 import type { Notification, NotificationKind } from '@/modules/messaging/types';
 
 const KIND_ICON: Record<NotificationKind, LucideIcon> = {
@@ -54,8 +55,14 @@ export function NotificationsInbox() {
   // Live: `notifications` is in the realtime publication, so a verification
   // request submitted while this page is open arrives without a refresh.
   useNotificationsRealtime();
-  const { data: notifications = [], isLoading } = useNotifications({ pageSize: 50 });
-  const markRead = useMarkNotificationsRead();
+  // Staff alerts only, plus unstamped ones. Every href here resolves against
+  // /admin, so a landlord alert for 'requests' opened from this list built
+  // /admin/requests, a page that does not exist.
+  const { data: notifications = [], isLoading } = useNotifications({
+    pageSize: 50,
+    role: NOTIFICATION_ROLE.admin,
+  });
+  const markRead = useMarkNotificationsRead(NOTIFICATION_ROLE.admin);
 
   const unread = notifications.filter((n) => n.isUnread).length;
 

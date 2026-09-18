@@ -20,6 +20,9 @@ export const metadata: Metadata = { title: 'Verification visits   Admin' };
 
 import type { Row } from '@/lib/supabase/row';
 
+/** A visit against a whole business rather than a hostel or one branch. */
+const kindIsVendor = (v: Row) => !v.hostel_id && !v.storefront_id && !!v.vendor_id;
+
 const HOSTEL_COLUMNS =
   'id, name, area, verified, address, landmark, room_type, price_per_session_kobo, inspection_fee_kobo, amenities, house_rules, description, lat, lng, hostel_images(url, position, kind)';
 
@@ -28,25 +31,34 @@ export default async function Page() {
 
   const admin = createAdminClient();
 
-  const [{ data: visits }, { data: hostels }, { data: profiles }] = await Promise.all([
-    admin
-      .from('verification_visits')
-      .select(
-        'id, hostel_id, ambassador_id, status, scheduled_for, photos, video_url, selfie_url, notes, submitted_at, decided_at, decided_by',
-      )
-      .order('updated_at', { ascending: false }),
-    // THE WHOLE LISTING, because this is the screen where somebody decides
-    // whether it is real. It used to select four columns, so a reviewer saw a
-    // name and an area and none of the claims the agent's photographs are
-    // supposed to corroborate.
-    admin.from('hostels').select(HOSTEL_COLUMNS).is('archived_at', null),
-    // Ambassador names: `profiles` is own-row-only under RLS, so the service
-    // role is the only way to resolve them, and only here.
-    admin
-      .from('profiles')
-      .select('id, full_name, role, roles, suspended_at')
-      .is('archived_at', null),
-  ]);
+  const [{ data: visits }, { data: hostels }, { data: stores }, { data: profiles }] =
+    await Promise.all([
+      admin
+        .from('verification_visits')
+        .select(
+          'id, hostel_id, vendor_id, storefront_id, ambassador_id, status, scheduled_for, brief, photos, video_url, selfie_url, notes, submitted_at, decided_at, decided_by',
+        )
+        .order('updated_at', { ascending: false }),
+      // THE WHOLE LISTING, because this is the screen where somebody decides
+      // whether it is real. It used to select four columns, so a reviewer saw a
+      // name and an area and none of the claims the agent's photographs are
+      // supposed to corroborate.
+      admin.from('hostels').select(HOSTEL_COLUMNS).is('archived_at', null),
+      // Branches, with the brand attached. NOT filtered on archived_at: a store
+      // archived while its visit was open still has to be decidable, and the
+      // visit row outlives the shopfront being on the market.
+      admin
+        .from('storefronts')
+        .select(
+          'id, name, area, address, public_phone, verified_at, vendor_id, vendor_profiles(business_name)',
+        ),
+      // Ambassador names: `profiles` is own-row-only under RLS, so the service
+      // role is the only way to resolve them, and only here.
+      admin
+        .from('profiles')
+        .select('id, full_name, role, roles, suspended_at')
+        .is('archived_at', null),
+    ]);
 
   // SAME FIX AS /admin/agents. `full_name` is null for anyone who accepted an
   // invite and only set a password, so every such agent rendered as the literal
@@ -60,16 +72,64 @@ export default async function Page() {
     ]),
   );
   const hostelById = new Map(((hostels ?? []) as Row[]).map((h) => [h.id, h]));
+  const storeById = new Map(((stores ?? []) as Row[]).map((s) => [s.id, s]));
+
+  // Businesses visited as a whole. Only the ones that actually have a visit:
+  // this runs after the visits query because it needs their ids, and loading
+  // every vendor profile to name a handful of rows would be most of the page.
+  const vendorIds = ((visits ?? []) as Row[])
+    .filter(kindIsVendor)
+    .map((v) => v.vendor_id as string);
+  const { data: vendors } = vendorIds.length
+    ? await admin
+        .from('vendor_profiles')
+        .select('id, business_name, area, business_address, public_phone')
+        .in('id', vendorIds)
+    : { data: [] };
+  const vendorById = new Map(((vendors ?? []) as Row[]).map((b) => [b.id, b]));
 
   const rows: AdminVisit[] = ((visits ?? []) as Row[]).map((v) => {
-    const h = hostelById.get(v.hostel_id);
+    const h = v.hostel_id ? hostelById.get(v.hostel_id) : null;
+    const s = v.storefront_id ? storeById.get(v.storefront_id) : null;
+    const b = kindIsVendor(v) ? vendorById.get(v.vendor_id) : null;
+
+    // EVERY VISIT HAS EXACTLY ONE SUBJECT   the database enforces it
+    // (verification_visits_one_subject). This screen used to assume that
+    // subject was always a hostel, so a vendor visit rendered as the literal
+    // "Unknown hostel" with a dead decision panel underneath it.
+    const kind: AdminVisit['kind'] = v.hostel_id ? 'hostel' : v.storefront_id ? 'store' : 'vendor';
+    const brand = (s?.vendor_profiles as { business_name?: string } | null)?.business_name ?? null;
+    // "Mama Put - Tanke branch". The same string the notification uses, so the
+    // alert and the queue name the place identically.
+    const storeName = s ? [brand, s.name as string].filter(Boolean).join(' - ') : null;
+
     return {
       id: v.id,
-      hostelId: v.hostel_id,
-      hostelName: h?.name ?? 'Unknown hostel',
-      hostelArea: h?.area ?? null,
-      hostelVerified: !!h?.verified,
+      kind,
+      subjectId: (v.hostel_id ?? v.storefront_id ?? v.vendor_id) as string,
+      subjectName:
+        (h?.name as string) ?? storeName ?? (b?.business_name as string) ?? 'Unknown subject',
+      subjectArea: (h?.area as string) ?? (s?.area as string) ?? (b?.area as string) ?? null,
+      subjectVerified: kind === 'store' ? !!s?.verified_at : !!h?.verified,
       hostel: h ? hostelFactsFromRow(h) : null,
+      // A business visited as a whole uses the same small panel as a branch: it
+      // is claiming the same one thing, that it trades at this address. Its
+      // verifiedAt stays null because a visit here moves no badge.
+      store: s
+        ? {
+            brand,
+            address: (s.address as string) ?? null,
+            phone: (s.public_phone as string) ?? null,
+            verifiedAt: (s.verified_at as string) ?? null,
+          }
+        : b
+          ? {
+              brand: (b.business_name as string) ?? null,
+              address: (b.business_address as string) ?? null,
+              phone: (b.public_phone as string) ?? null,
+              verifiedAt: null,
+            }
+          : null,
       ambassadorId: v.ambassador_id ?? null,
       ambassadorName: nameById.get(v.ambassador_id) ?? null,
       status: v.status,
@@ -88,7 +148,12 @@ export default async function Page() {
   });
 
   // Hostels with no open or completed visit at all   nobody has been sent.
-  const visitedIds = new Set(rows.map((r) => r.hostelId));
+  //
+  // HOSTELS ONLY, and there is no store equivalent by design: creating a
+  // storefront queues its own visit row (20260912120000), so a store is never
+  // in the "no row exists" state this list is computing. A store awaiting
+  // somebody shows up in the queue above as 'Not Visited' with no agent.
+  const visitedIds = new Set(rows.filter((r) => r.kind === 'hostel').map((r) => r.subjectId));
   const unvisited: UnvisitedHostel[] = ((hostels ?? []) as Row[])
     .filter((h) => !visitedIds.has(h.id))
     .map((h) => ({

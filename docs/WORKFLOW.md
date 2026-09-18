@@ -4,7 +4,7 @@
 two Claudes) from building contradictory things. It is the *how* and the *where we are*. The
 *what* lives in the other docs, listed below.
 
-Last updated: **7 September 2026**.
+Last updated: **18 September 2026**.
 
 > Keep this file current. If you change an invariant in [§4](#4-invariants--do-not-contradict-these),
 > change it here in the same commit. A stale handoff is worse than none, because it is trusted.
@@ -155,12 +155,17 @@ the scratchpad, never in the repo.
   is what an unhandled query error looks like from the outside: not an error, an empty app. Name the
   constraint — `renewal_requests!renewal_requests_booking_id_fkey(...)` — and never simplify it back.
   **Test a changed select against the live database before trusting it**; `tsc` cannot see this.
+- **Two branches can claim the same migration version, and the second one silently never runs.**
+  `20260912120000` was `notification_claims.sql` on main and `store_verification_visits.sql` (987
+  lines) on `verification-visits`. Both were pushed to the SAME remote. Only one version row can
+  exist, so whichever landed first won and the other was skipped as "already applied" - with
+  `migration list` reporting everything fine. That is why `claim_notification` did not exist after a
+  successful push, and why `20260912210000` had to be written to create it. The orphan was deleted
+  at the merge; its content was already reproduced idempotently by the later file.
+  **Before starting a migration, `git fetch` and check no branch has taken your timestamp.**
 - **Never edit an applied migration. Ever.** It does not re-run, so the file quietly stops
   describing the database and every later `db push` is a no-op against a remote that disagrees
-  with the repo. `20260912120000` created `private.claim_notification`, was applied, and was then
-  edited to say `public` - `migration list` showed it applied, and the function the app called did
-  not exist. The fix is always a NEW migration (`20260912210000`), and the old file gets restored
-  to what actually ran even though it records a mistake.
+  with the repo. The fix is always a NEW migration.
 - **A new view in `public` is granted to `anon` whether you ask or not.** Supabase's default
   privileges on that schema do it, so `grant select ... to authenticated` alone leaves anon holding
   select too - true of `wallet_transactions` since 20260823090000. No rows leaked, because that
@@ -263,10 +268,83 @@ broken by accident already.
 
 ## 5. Where we stopped
 
-**State: clean.** Every local migration through `20260910210000` is applied remotely. Latest
-commit `f81c5c5`.
+**State: clean.** All 151 migrations through `20260914210000` are applied remotely and present
+locally. Branch `verification-visits`, not yet merged or pushed.
+
+> **Migrations keep being applied to the remote with no file committed.** Five turned up on 7 Sep
+> (`20260911120000` … `20260912090000`) and eleven more on 14 Sep (`20260912150000` …
+> `20260914150000`, the tenancy and notification-preference work). All sixteen are recovered and
+> committed. `db push` refuses to work past a remote version with no local file, so **whoever
+> applies a migration straight to the remote must commit its file in the same sitting.** If
+> `migration list` shows a remote with a blank local, **recover the statements; never run the
+> `repair --status reverted` the CLI suggests**, which marks applied work as un-applied.
+>
+> Fastest recovery, with Docker running:
+>
+> ```powershell
+> npx supabase db dump --data-only --schema supabase_migrations -f mig_dump.sql
+> ```
+>
+> then split the `statements` array back into one file per version. Without Docker, run this in the
+> SQL editor and export:
+>
+> ```sql
+> select version, name, statements from supabase_migrations.schema_migrations
+>  where version >= '<first missing>' order by version;
+> ```
+>
+> A CSV export mangles box-drawing characters in comments; the dump does not.
 
 ### Just finished
+
+**One decision path for every visit (`20260914180000`)** — `decide_verification_visit` replaces
+`decide_store_visit` and the old two-statement `decideHostelVisit`. Staff only, a filed report
+first, and the subject's flag moved in the same transaction: `hostels.verified`,
+`storefronts.verified_at`, or nothing. It now tells the landlord the outcome, which the hostel path
+never did. **A vendor-wide visit records its finding and moves no status**: `verification_status` is
+decided from documents by `set_verification_status`, and a photograph must not become a second road
+to it. The verify block asserts the function never mentions `verification_status`.
+
+**The bell filters by dashboard (`20260914210000`)** — the read side of `20260911150000`. The list,
+`get_unread_counts(p_role)` and `mark_notifications_read(p_ids, p_role)` all take the same role,
+from `NOTIFICATION_ROLE` in `config/dashboard-nav.ts`. **Keyed on the dashboard being rendered, not
+the worn role**, because of invariant 4. Unstamped rows show everywhere; staff is one hat
+(`admin` + `super_admin`).
+
+**`current_user` inside SECURITY DEFINER is NOT `authenticated`.** `20260830100000`'s header says
+otherwise, and so does the comment on `setVendorVerification`. Both are wrong, which the live data
+shows: `decideHostelVisit` set `hostels.verified = true` on 4 and 6 Sep with a service-role write,
+through `guard_hostel_privileged_cols`, which reverts that column whenever `current_user` is
+`authenticated`. `20260910210000` has it right. Guards keyed on `current_user` stop clients and let
+definer functions through.
+
+**Store verification visits (`20260912120000`)** — creating a storefront now queues its own visit.
+The flow *sign up → onboarding → create store → an agent goes and looks* had its first three steps
+built and nothing joining them to the fourth: `assign_verification_visit` could take a vendor, but
+only if a staff member noticed a store had appeared, and no vendor address had ever been checked.
+
+- `verification_visits.storefront_id` — the subject is now exactly one of **three**. `vendor_id` is
+  the *brand*, so it says who to visit and not where; a business with two branches had two
+  addresses and one row for both.
+- An `AFTER INSERT` trigger on `storefronts` writes an unassigned `Not Visited` row and alerts
+  staff. **The row is the request.** Deliberately asymmetric with hostels, where "no row" means
+  unvisited and the queue derives the list by subtraction — nobody reads `storefronts` looking for
+  work, and a queue you have to compute is one that silently empties.
+- `storefronts.verified_at` + `decide_store_visit`, which moves the visit and the store together in
+  one transaction and refuses a visit with no filed evidence. `guard_storefront_privileged_cols`
+  freezes both columns against *every* client-side caller including the owner — a shop cannot
+  certify that it exists.
+- `/admin/verify-visits` renders store visits. Its `AdminVisit` was hostel-shaped, so the
+  vendor-wide case reachable since `20260905120000` had always rendered as "Unknown hostel".
+
+**Two bugs fixed on the way, neither part of the store work:**
+
+- `flag_visit_fraud` branched *hostel, else vendor*. A store visit is neither, so it read a null
+  `vendor_id`, blocked nobody and returned success.
+- **Standing an agent down never told the agent.** `20260907090000`'s own header says they must be
+  told "otherwise they turn up at a stranger's gate believing they are expected", and only the
+  *swap* branch did it. The Stand down button notified the owner and left the agent still expecting
+  to go.
 
 **The booking chain was broken at the landlord's Accept button (UNCOMMITTED).** A student's request
 sat at `requested` forever, so no hold started and their Pay button — which only renders at
@@ -409,6 +487,23 @@ Roughly in priority order. Nothing here is started.
 - No reconciliation between Paystack and the ledger.
 - Nobody has checked whether the Paystack balance covers wallet + escrow liability. Transfers draw
   on the Paystack balance, so the **settlement schedule** decides whether payouts can run at all.
+
+**Left undone by the verification-visit work.** Named here rather than rediscovered.
+- **The store flow has never been run end to end.** Every migration's verify block passed, which
+  proves the catalogue: the trigger exists, the guard freezes `verified_at`, one decision function,
+  one overload of each notification RPC. It does not prove behaviour, and `storefronts` is still
+  empty live. **`supabase/checks/store_verification_flow.sql`** is the test: it signs up a staff,
+  vendor and agent, creates a store, and asserts the visit is queued, the owner cannot verify, the
+  agent is told, a decision sets `verified_at`, and the bell counts differ by dashboard. One
+  rolled-back transaction, **local database only**; the run command is in its header. It has
+  **never run**: `supabase start` filled the C: drive pulling images and Docker went read-only. Free
+  roughly 10 GB first. Expect to fix a column or two in its `auth.users` insert on the first run.
+- **"View all notifications" 404s on most dashboards.** It links to `<base>/notifications`, and only
+  `/admin/notifications` and `/user/notifications` exist. A vendor's lands on
+  `/vendor/notifications`.
+- **The documents review screen does not show visit findings.** A vendor-wide visit's outcome is
+  recorded on the visit so the documents reviewer can weigh it, but `/admin/vendors` does not
+  surface it yet.
 
 **Known and unfixed.**
 - **The vendor's Accept/Decline is still `acceptOrderMock`.** `/vendor` renders

@@ -316,9 +316,23 @@ export async function deleteMessage(db: Client, messageId: string) {
 
 // ── Notifications ──────────────────────────────────────────────────────────
 
+/**
+ * The notification roles one dashboard shows. Mirrors
+ * `private.notification_hats`: staff is a single hat, because notify_staff
+ * stamps 'admin' and a super_admin must still see those alerts.
+ */
+function hatsFor(role: string): string[] {
+  return role === 'admin' || role === 'super_admin' ? ['admin', 'super_admin'] : [role];
+}
+
 export async function fetchNotifications(
   db: Client,
-  opts: { unreadOnly?: boolean } & PageParams = {},
+  /**
+   * `role` is the DASHBOARD being rendered (see NOTIFICATION_ROLE). Unstamped
+   * rows show everywhere, which is what every row before 20260911150000 is.
+   * Omit it for the old, unfiltered behaviour.
+   */
+  opts: { unreadOnly?: boolean; role?: string } & PageParams = {},
 ): Promise<Notification[]> {
   const [from, to] = toRange(opts);
   let q = db
@@ -328,22 +342,35 @@ export async function fetchNotifications(
     .range(from, to);
 
   if (opts.unreadOnly) q = q.is('read_at', null);
+  // The same predicate get_unread_counts and mark_notifications_read apply. If
+  // the list filters and they do not, the badge disagrees with the dropdown.
+  if (opts.role) q = q.or(`role.is.null,role.in.(${hatsFor(opts.role).join(',')})`);
 
   return unwrapList<Row>(await q).map(toNotification);
 }
 
-/** `null` marks everything read; an array marks just those. */
-export async function markNotificationsRead(db: Client, ids?: string[]): Promise<number> {
+/**
+ * `undefined` ids marks everything read; an array marks just those.
+ *
+ * With a `role`, "everything" means everything on THIS dashboard. Without it,
+ * clearing the staff bell also cleared a landlord badge the person had not seen.
+ */
+export async function markNotificationsRead(
+  db: Client,
+  ids?: string[],
+  role?: string,
+): Promise<number> {
   // `undefined` rather than `null`: the SQL parameter defaults to null when
   // omitted, and the generated signature types an omitted argument as optional.
-  const { data, error } = await db.rpc('mark_notifications_read', { p_ids: ids });
+  const { data, error } = await db.rpc('mark_notifications_read', { p_ids: ids, p_role: role });
   if (error) throw error;
   return (data as number) ?? 0;
 }
 
-/** One round trip for every badge in the shell. */
-export async function fetchUnreadCounts(db: Client): Promise<UnreadCounts> {
-  const { data, error } = await db.rpc('get_unread_counts');
+/** One round trip for every badge in the shell. `role` scopes the notification
+ *  count to one dashboard; the message count is per person either way. */
+export async function fetchUnreadCounts(db: Client, role?: string): Promise<UnreadCounts> {
+  const { data, error } = await db.rpc('get_unread_counts', { p_role: role });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return { notifications: row?.notifications ?? 0, messages: row?.messages ?? 0 };

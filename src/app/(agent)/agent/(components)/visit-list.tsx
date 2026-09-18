@@ -54,7 +54,13 @@ import { MeetingPoint, ReportSheet } from './inspection-report';
 
 export interface AgentVisit {
   id: string;
-  kind: 'hostel' | 'vendor';
+  /**
+   * 'store' is a BRANCH at its own address; 'vendor' is the business as a
+   * whole. They look the same on a card and are not the same trip   see
+   * 20260912120000. Both draw the Store icon, which is why the icon test below
+   * is written as "hostel or not".
+   */
+  kind: 'hostel' | 'vendor' | 'store';
   place: string;
   address: string;
   status: string;

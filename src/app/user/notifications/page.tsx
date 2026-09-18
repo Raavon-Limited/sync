@@ -35,6 +35,7 @@ import {
   useMarkNotificationsRead,
   useNotificationsRealtime,
 } from '@/modules/messaging/hooks';
+import { NOTIFICATION_ROLE } from '@/config/dashboard-nav';
 import type { NotificationKind } from '@/modules/messaging/types';
 
 /**
@@ -60,8 +61,14 @@ export default function NotificationsPage() {
   // Live: `notifications` is in the realtime publication, so a new alert
   // arrives without a refresh.
   useNotificationsRealtime();
-  const { data: notifications = [], isLoading } = useNotifications({ pageSize: 50 });
-  const markRead = useMarkNotificationsRead();
+  // The student dashboard's inbox, so the student hat. The same filter as the
+  // bell in this header; without it, "View all" showed more than the bell did
+  // and "Mark all read" here cleared the landlord and agent badges too.
+  const { data: notifications = [], isLoading } = useNotifications({
+    pageSize: 50,
+    role: NOTIFICATION_ROLE.student,
+  });
+  const markRead = useMarkNotificationsRead(NOTIFICATION_ROLE.student);
 
   // No argument marks everything; the RPC returns how many it touched.
   const handleMarkAllRead = () => markRead.mutate(undefined);

@@ -58,15 +58,30 @@ const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   system: Info,
 };
 
-export function NotificationBell({ basePath = '/user' }: { basePath?: string }) {
+export function NotificationBell({
+  basePath = '/user',
+  role,
+}: {
+  basePath?: string;
+  /**
+   * The dashboard this bell sits in (NOTIFICATION_ROLE). Its hrefs are
+   * suffixes resolved against `basePath`, so an alert written for another
+   * dashboard cannot be opened from here. An agent alert for 'visits', clicked
+   * from /admin, built /admin/visits. Filtering by role is what stops that.
+   */
+  role?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   useNotificationsRealtime();
 
-  const { data: notifications = [], isLoading } = useNotifications({ pageSize: 12 });
-  const { data: counts } = useUnreadCounts();
-  const markRead = useMarkNotificationsRead();
+  // One role for all three. If only the list were filtered, the badge would
+  // count alerts the dropdown does not show and "Mark all read" would clear
+  // other dashboards' badges.
+  const { data: notifications = [], isLoading } = useNotifications({ pageSize: 12, role });
+  const { data: counts } = useUnreadCounts(role);
+  const markRead = useMarkNotificationsRead(role);
 
   // Prefer the RPC's count: the dropdown only holds the most recent page, so
   // counting unread within it would under-report once there are more than a

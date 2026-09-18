@@ -21,6 +21,8 @@ import { useState } from 'react';
 import {
   Store,
   Star,
+  ShieldCheck,
+  Clock,
   MapPinOff,
   Archive,
   ArchiveRestore,
@@ -302,6 +304,24 @@ function StoreCard({
         {store.isPrimary && (
           <Badge className="bg-lime/15 text-lime-deep gap-1">
             <Star className="size-3" /> Primary
+          </Badge>
+        )}
+        {/*
+          SAID ON EVERY STORE, not only the verified ones.
+          A new branch is queued for a visit the moment it is created
+          (20260912120000), and until an agent has been there the vendor has no
+          way of knowing that is happening. An absent badge would read as
+          "nothing to see"; "Visit pending" says the check is coming and that
+          nothing is required of them, which is the whole difference between
+          waiting and being ignored.
+        */}
+        {store.verifiedAt ? (
+          <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+            <ShieldCheck className="size-3" /> Verified
+          </Badge>
+        ) : (
+          <Badge className="bg-ink/5 text-content-muted gap-1">
+            <Clock className="size-3" /> Visit pending
           </Badge>
         )}
       </span>

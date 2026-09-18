@@ -10,7 +10,12 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
-import { DASHBOARD_NAV, activeNav, type DashboardNavKey } from '@/config/dashboard-nav';
+import {
+  DASHBOARD_NAV,
+  NOTIFICATION_ROLE,
+  activeNav,
+  type DashboardNavKey,
+} from '@/config/dashboard-nav';
 import { DashboardSidebar } from './dashboard-sidebar';
 import { NotificationBell } from './notification-bell';
 import { AccountMenu } from './account-menu';
@@ -87,7 +92,7 @@ export function DashboardHeader({ navKey, profile, areas = null }: DashboardHead
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <NotificationBell basePath={base} />
+        <NotificationBell basePath={base} role={NOTIFICATION_ROLE[navKey]} />
         <AccountMenu
           name={profile.name}
           email={profile.email}
