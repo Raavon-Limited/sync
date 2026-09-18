@@ -59,6 +59,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { HostelFacts, type HostelFactsData } from '@/components/shared/hostel-facts';
+import { StoreFacts, type StoreFactsData } from '@/components/shared/store-facts';
 import { PhotoGrid } from '@/components/shared/photo-grid';
 import {
   decideVisit,
@@ -66,16 +67,6 @@ import {
   scheduleHostelVisit,
 } from '@/modules/admin/actions';
 import { assignVisit, reassignVisit } from '@/modules/agents/actions';
-
-/** A branch, for the side panel. The store equivalent of HostelFactsData, and
- *  deliberately much smaller: a shop makes far fewer claims than a listing. */
-export interface StoreFactsData {
-  brand: string | null;
-  address: string | null;
-  phone: string | null;
-  /** When an agent last stood at this address. Null means never. */
-  verifiedAt: string | null;
-}
 
 export interface AdminVisit {
   id: string;
@@ -193,53 +184,6 @@ function whenText(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('en-NG') : 'Not scheduled';
 }
 
-/**
- * What a branch claims, which is the thing the agent's photographs corroborate.
- *
- * Far shorter than HostelFacts on purpose. A hostel advertises a price, rooms,
- * amenities and house rules, and a visit is checking all of it. A shop is
- * claiming one thing   that it is trading, here   so the address is most of the
- * panel and the rest is context for finding it.
- */
-function StoreFacts({
-  store,
-  hasBadge = true,
-}: {
-  store: StoreFactsData;
-  /** False for a business visited as a whole, which carries no badge to report. */
-  hasBadge?: boolean;
-}) {
-  const rows: [string, string | null][] = [
-    ['Business', store.brand],
-    ['Address', store.address],
-    ['Phone', store.phone],
-  ];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <dl className="flex flex-col gap-2">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex flex-col gap-0.5">
-            <dt className="text-content-muted font-mono text-xs tracking-wide uppercase">
-              {label}
-            </dt>
-            <dd className="text-content text-sm">{value ?? 'Not given'}</dd>
-          </div>
-        ))}
-      </dl>
-      {/* Said explicitly rather than shown as an absent badge. "Never" is the
-          normal state for a store that has just been created, and a reviewer
-          should not have to infer it from something missing. */}
-      {hasBadge && (
-        <p className="text-content-muted text-xs">
-          {store.verifiedAt
-            ? `Last verified ${new Date(store.verifiedAt).toLocaleDateString('en-NG')}.`
-            : 'No agent has confirmed this address yet.'}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export function VisitsQueue({
   visits,
@@ -439,9 +383,11 @@ function VisitCard({
 
   const settled = v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud';
   const hasEvidence = v.photos.length > 0 || !!v.videoUrl || !!v.selfieUrl || !!v.notes;
-  // The listing's own primary photo, falling back to the agent's first shot so
-  // a card is not blank the moment there is anything to show.
-  const thumb = v.hostel?.images?.[0] ?? v.photos[0];
+  // The place's own photo   a hostel's first image, or the store's shopfront
+  // shot   falling back to the agent's first picture so a card is not blank the
+  // moment there is anything to show. Store cards were always blank before the
+  // agent filed, which made a queue of new shops look like a queue of nothing.
+  const thumb = v.hostel?.images?.[0] ?? v.store?.imageUrl ?? v.photos[0];
 
   return (
     <Sheet>
@@ -560,7 +506,7 @@ function VisitCard({
               {/* THE SAME COMPONENT the account view renders, so the two cannot
                   drift   a field added there shows up here the same day. */}
               {v.hostel && <HostelFacts hostel={v.hostel} />}
-              {v.store && <StoreFacts store={v.store} hasBadge={v.kind === 'store'} />}
+              {v.store && <StoreFacts store={v.store} showVerification={v.kind === 'store'} />}
               {!v.hostel && !v.store && (
                 <p className="text-content-muted text-sm">
                   This visit is against the business as a whole rather than one address, so

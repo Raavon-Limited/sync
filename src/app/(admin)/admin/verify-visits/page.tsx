@@ -9,6 +9,7 @@ import { requireStaffArea } from '@/modules/admin/guard';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { displayName, emailsByAccount } from '@/modules/admin/emails';
 import { hostelFactsFromRow } from '@/components/shared/hostel-facts';
+import { storeFactsFromRow } from '@/components/shared/store-facts';
 import {
   VisitsQueue,
   type AdminVisit,
@@ -62,10 +63,20 @@ export default async function Page() {
       // Branches, with the brand attached. NOT filtered on archived_at: a store
       // archived while its visit was open still has to be decidable, and the
       // visit row outlives the shopfront being on the market.
+      // THE WHOLE BRANCH, for the same reason the hostel query above takes the
+      // whole listing: this is the screen where somebody decides whether the
+      // place is real, and every one of these is a claim the agent's
+      // photographs are supposed to corroborate. It used to select five
+      // columns, so a reviewer saw a name, an address and a phone number and
+      // could not tell whether the shop was even open when somebody stood
+      // outside it.
       admin
         .from('storefronts')
         .select(
-          'id, name, area, address, public_phone, verified_at, vendor_id, vendor_profiles(business_name)',
+          'id, name, area, address, public_phone, opens_at, closes_at, is_accepting_orders, ' +
+            'is_primary, paused_until, pause_reason, auto_pause_after, auto_pause_minutes, ' +
+            'image_url, lat, lng, verified_at, created_at, vendor_id, ' +
+            'vendor_profiles(business_name)',
         ),
       // Ambassador names: `profiles` is own-row-only under RLS, so the service
       // role is the only way to resolve them, and only here.
@@ -98,7 +109,7 @@ export default async function Page() {
   const { data: vendors } = vendorIds.length
     ? await admin
         .from('vendor_profiles')
-        .select('id, business_name, area, business_address, public_phone')
+        .select('id, business_name, area, business_address, public_phone, logo_url')
         .in('id', vendorIds)
     : { data: [] };
   const vendorById = new Map(((vendors ?? []) as Row[]).map((b) => [b.id, b]));
@@ -127,22 +138,20 @@ export default async function Page() {
       subjectArea: (h?.area as string) ?? (s?.area as string) ?? (b?.area as string) ?? null,
       subjectVerified: kind === 'store' ? !!s?.verified_at : !!h?.verified,
       hostel: h ? hostelFactsFromRow(h) : null,
-      // A business visited as a whole uses the same small panel as a branch: it
-      // is claiming the same one thing, that it trades at this address. Its
-      // verifiedAt stays null because a visit here moves no badge.
+      // A business visited as a whole borrows the branch panel: it claims the
+      // same thing, that it trades at an address. Only the fields it actually
+      // has are filled, and `showVerification` is off for it in the queue,
+      // because a visit there moves no badge.
       store: s
-        ? {
-            brand,
-            address: (s.address as string) ?? null,
-            phone: (s.public_phone as string) ?? null,
-            verifiedAt: (s.verified_at as string) ?? null,
-          }
+        ? storeFactsFromRow(s)
         : b
           ? {
-              brand: (b.business_name as string) ?? null,
+              name: (b.business_name as string) ?? 'This business',
+              brand: null,
               address: (b.business_address as string) ?? null,
+              area: (b.area as string) ?? null,
               phone: (b.public_phone as string) ?? null,
-              verifiedAt: null,
+              imageUrl: (b.logo_url as string) ?? null,
             }
           : null,
       ambassadorId: v.ambassador_id ?? null,
