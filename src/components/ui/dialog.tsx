@@ -44,6 +44,11 @@ export const DialogContent = React.forwardRef<
         className={cn(
           'bg-panel text-content shadow-pop fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-6',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          // Here rather than on each caller: a dialog only scrolls when its
+          // content is taller than the viewport, and the one that does should
+          // not have to remember to ask for a bar that suits a modal. Inert
+          // until something sets `overflow`, so nothing else changes.
+          'panel-scroll',
           className,
         )}
         {...props}
