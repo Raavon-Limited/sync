@@ -25,6 +25,7 @@ import { DashboardShell } from '@/components/layouts/dashboard-shell';
 import { ActiveStorefrontProvider } from '@/modules/storefronts/active-storefront';
 import { getBusinessKind } from '@/modules/vendor/business-kind';
 import { StoreSwitcher } from './(components)/store-switcher';
+import { VerificationPanel } from './(components)/verification-panel';
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
   // Null   no business row yet   deliberately does NOT redirect: that account
@@ -37,6 +38,11 @@ export default async function VendorLayout({ children }: { children: React.React
   return (
     <ActiveStorefrontProvider>
       <DashboardShell navKey="vendor" sidebarSlot={<StoreSwitcher />} doodle="food">
+        {/* IN THE LAYOUT, not on the overview page. A business that has just
+            registered lands wherever it last was, or on whichever screen it
+            came to use, and the state of its own account is worth knowing on
+            all of them. It renders nothing once verified. */}
+        <VerificationPanel />
         {children}
       </DashboardShell>
     </ActiveStorefrontProvider>

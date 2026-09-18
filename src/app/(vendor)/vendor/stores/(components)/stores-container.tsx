@@ -66,7 +66,23 @@ export function StoresContainer() {
   // Archived stores are the owner's own history and nobody else's   the public
   // policy filters them out at the database, so this cannot leak one.
   const { data: stores = [], isLoading } = useMyStorefronts({ includeArchived: true });
-  const { data: brand } = useMyStorefront();
+  const { data: brand, isLoading: brandLoading } = useMyStorefront();
+
+  /**
+   * OWNING A BUSINESS, NOT OWNING A STORE.
+   *
+   * `isOwner` comes from the ACTIVE branch's capacity, and there is no active
+   * branch until a branch exists. So a vendor with no stores read as a manager,
+   * got the manager view below, and that view has no way to add a store. You
+   * needed a store to be recognised as the owner, and owner rights to make one:
+   * the first store could never be created, by anybody. Every account on the
+   * platform had zero stores, and therefore nowhere to put a listing.
+   *
+   * `brand` is the caller's own `vendor_profiles` row, which is what actually
+   * makes somebody a business owner. A manager invited to staff a branch has no
+   * such row, so they still get the manager view.
+   */
+  const ownsBusiness = !!brand;
 
   const [selected, setSelected] = useState<string | null>(null);
   const active = stores.filter((s) => !s.archivedAt);
@@ -85,7 +101,9 @@ export function StoresContainer() {
   const setArchived = useSetStorefrontArchived();
   const [confirming, setConfirming] = useState<Storefront | null>(null);
 
-  if (isLoading) {
+  // Both, or the manager view flashes up for an owner while the business row is
+  // still in flight   which is the wrong page, not just an early one.
+  if (isLoading || brandLoading) {
     return (
       <div className="flex flex-col gap-3">
         {Array.from({ length: 3 }).map((_, i) => (
@@ -101,7 +119,7 @@ export function StoresContainer() {
   // sections they were handed   is both honest and more useful than hiding the
   // route, and it states the permission boundary rather than leaving them to
   // discover it by hitting an error.
-  if (!isOwner) {
+  if (!isOwner && !ownsBusiness) {
     return (
       <div className="flex flex-col gap-4">
         {managed.map((s) => (
@@ -184,6 +202,19 @@ export function StoresContainer() {
             />
           ))}
         </div>
+
+        {/* The state every new business starts in. Without it the page is a
+            heading and a button over dead space, which reads as a screen that
+            failed to load rather than one waiting to be used. */}
+        {active.length === 0 && (
+          <div className="border-line/10 rounded-xl border border-dashed p-6">
+            <p className="text-content text-sm font-medium">No store yet</p>
+            <p className="text-content-muted mt-1 max-w-xl text-sm">
+              A store is one location, with its own trading hours and order queue. You need one
+              before a listing has anywhere to live.
+            </p>
+          </div>
+        )}
 
         {setArchived.error && (
           <p className="text-coral flex items-start gap-1 text-xs">
