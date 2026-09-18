@@ -61,6 +61,7 @@ import {
 import { HostelFacts, type HostelFactsData } from '@/components/shared/hostel-facts';
 import { StoreFacts, type StoreFactsData } from '@/components/shared/store-facts';
 import { PhotoGrid } from '@/components/shared/photo-grid';
+import { toast } from '@/components/ui/toast';
 import {
   decideVisit,
   flagVisitFraud,
@@ -215,13 +216,35 @@ export function VisitsQueue({
 
   const visible = visits.filter((v) => filter === 'all' || v.status === filter);
 
-  function run(fn: () => Promise<unknown>) {
+  /**
+   * Every write on this screen, with the answer said out loud.
+   *
+   * TWO THINGS WERE MISSING. Assigning an agent changed the row and told the
+   * reviewer nothing: the panel looked identical afterwards, so the natural
+   * response was to assign somebody again. And the agent actions RETURN their
+   * failure as `{ ok: false, error }` rather than throwing, so a refusal landed
+   * in the success path and was swallowed whole   a failed assignment and a
+   * successful one were indistinguishable.
+   *
+   * `success` is the sentence to show when it worked. Failures always surface,
+   * inline for the panel and as a toast for the corner of the eye.
+   */
+  function run(fn: () => Promise<unknown>, success?: string) {
     setError(null);
     startTransition(async () => {
+      const fail = (msg: string) => {
+        setError(msg);
+        toast(msg);
+      };
       try {
-        await fn();
+        const res = await fn();
+        if (res && typeof res === 'object' && 'ok' in res && (res as { ok: boolean }).ok === false) {
+          fail((res as { error?: string }).error ?? 'That did not work.');
+          return;
+        }
+        if (success) toast(success);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Action failed');
+        fail(e instanceof Error ? e.message : 'That did not work.');
       }
     });
   }
@@ -364,7 +387,7 @@ function VisitCard({
   visit: AdminVisit;
   agents: AgentOption[];
   pending: boolean;
-  run: (fn: () => Promise<unknown>) => void;
+  run: (fn: () => Promise<unknown>, success?: string) => void;
   view: 'grid' | 'list';
 }) {
   const [notes, setNotes] = useState('');
@@ -380,6 +403,17 @@ function VisitCard({
    */
   const decide = (decision: 'Verified' | 'Rejected') =>
     decideVisit({ visitId: v.id, decision, notes });
+
+  // What actually happened, named. A store decision moves a badge the owner can
+  // see and sends them a notification, and "Saved" would not say either.
+  const verifiedMessage =
+    v.kind === 'vendor'
+      ? `Finding recorded for ${v.subjectName}. Their verification status is unchanged.`
+      : `${v.subjectName} is verified. The owner has been told.`;
+  const rejectedMessage =
+    v.kind === 'vendor'
+      ? `Recorded: the agent could not confirm ${v.subjectName}.`
+      : `${v.subjectName} was rejected. The owner has been told.`;
 
   const settled = v.status === 'Verified' || v.status === 'Rejected' || v.status === 'Fraud';
   const hasEvidence = v.photos.length > 0 || !!v.videoUrl || !!v.selfieUrl || !!v.notes;
@@ -439,6 +473,13 @@ function VisitCard({
               )}
               {v.subjectVerified && (
                 <Badge className="bg-emerald-500/10 text-emerald-600">verified</Badge>
+              )}
+              {/* The one state the status chip gets wrong. An agent assigned
+                  with no agreed time leaves the row at 'Not Visited', which
+                  reads as "nobody has done anything" on the card a reviewer
+                  scans   and that is the card they assign somebody to twice. */}
+              {v.ambassadorId && v.status === 'Not Visited' && (
+                <Badge className="bg-blue-500/10 text-blue-600">agent assigned</Badge>
               )}
             </p>
             <p className="text-content-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -594,6 +635,32 @@ function VisitCard({
               <h3 className="text-content-muted font-mono text-xs tracking-wide uppercase">
                 Who is going
               </h3>
+
+              {/* SAID BEFORE THE CONTROLS, not inferred from them.
+                  A visit with an agent but no agreed time stays at 'Not
+                  Visited' - reassign_verification_visit only moves it to
+                  'Visit Scheduled' once there is a date - so the status chip
+                  alone cannot tell a reviewer whether anybody is going. The
+                  panel looked the same before and after assigning, which is
+                  how the same visit gets a second agent. */}
+              {v.ambassadorId ? (
+                <p className="text-content flex flex-wrap items-center gap-2 text-sm">
+                  <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+                    <UserRound className="size-3" /> Agent assigned
+                  </Badge>
+                  <span>{v.ambassadorName ?? 'Someone'} is going.</span>
+                  <span className="text-content-muted">
+                    {v.scheduledFor
+                      ? whenText(v.scheduledFor)
+                      : 'No time agreed yet   they will arrange one.'}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-content-muted text-sm">
+                  Nobody is going yet. Pick an agent and press Assign.
+                </p>
+              )}
+
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={picked}
@@ -612,7 +679,14 @@ function VisitCard({
                   variant="outline"
                   disabled={pending || picked === (v.ambassadorId ?? '')}
                   onClick={() =>
-                    run(() => reassignVisit({ visitId: v.id, agentId: picked || null }))
+                    run(
+                      () => reassignVisit({ visitId: v.id, agentId: picked || null }),
+                      // Names both ends of it. "Saved" would leave the reviewer
+                      // checking the row to find out what was saved.
+                      `${agents.find((a) => a.id === picked)?.name ?? 'The agent'} is going to ${
+                        v.subjectName
+                      }. They have been told.`,
+                    )
                   }
                 >
                   {v.ambassadorId ? 'Reassign' : 'Assign'}
@@ -624,7 +698,10 @@ function VisitCard({
                     disabled={pending}
                     onClick={() => {
                       setPicked('');
-                      run(() => reassignVisit({ visitId: v.id, agentId: null }));
+                      run(
+                        () => reassignVisit({ visitId: v.id, agentId: null }),
+                        `Stood down. ${v.subjectName} is back in the queue with nobody going.`,
+                      );
                     }}
                   >
                     Stand down
@@ -675,7 +752,7 @@ function VisitCard({
                 <Button
                   variant="outline"
                   disabled={pending}
-                  onClick={() => run(() => decide('Verified'))}
+                  onClick={() => run(() => decide('Verified'), verifiedMessage)}
                 >
                   {v.kind === 'store'
                     ? 'Verify store'
@@ -687,7 +764,7 @@ function VisitCard({
                   variant="outline"
                   className="text-coral"
                   disabled={pending}
-                  onClick={() => run(() => decide('Rejected'))}
+                  onClick={() => run(() => decide('Rejected'), rejectedMessage)}
                 >
                   {v.kind === 'vendor' ? 'Could not confirm' : 'Reject'}
                 </Button>
@@ -723,7 +800,12 @@ function VisitCard({
                   variant="outline"
                   className="text-coral self-start"
                   disabled={pending || !fraudReason.trim()}
-                  onClick={() => run(() => flagVisitFraud({ visitId: v.id, reason: fraudReason }))}
+                  onClick={() =>
+                    run(
+                      () => flagVisitFraud({ visitId: v.id, reason: fraudReason }),
+                      `Flagged as fraud. The account behind ${v.subjectName} can no longer re-submit.`,
+                    )
+                  }
                 >
                   Mark as fraud &amp; block the account
                 </Button>
@@ -804,7 +886,7 @@ function UnvisitedItem({
   hostel: UnvisitedHostel;
   agents: AgentOption[];
   pending: boolean;
-  run: (fn: () => Promise<unknown>) => void;
+  run: (fn: () => Promise<unknown>, success?: string) => void;
   view: 'grid' | 'list';
 }) {
   const [picked, setPicked] = useState('');
@@ -901,18 +983,24 @@ function UnvisitedItem({
               <Button
                 disabled={pending || !when}
                 onClick={() =>
-                  run(() =>
+                  run(
+                    () =>
+                      picked
+                        ? assignVisit({
+                            agentId: picked,
+                            hostelId: h.id,
+                            scheduledFor: new Date(when).toISOString(),
+                          })
+                        : scheduleHostelVisit({
+                            hostelId: h.id,
+                            ambassadorId: null,
+                            scheduledFor: new Date(when).toISOString(),
+                          }),
                     picked
-                      ? assignVisit({
-                          agentId: picked,
-                          hostelId: h.id,
-                          scheduledFor: new Date(when).toISOString(),
-                        })
-                      : scheduleHostelVisit({
-                          hostelId: h.id,
-                          ambassadorId: null,
-                          scheduledFor: new Date(when).toISOString(),
-                        }),
+                      ? `${agents.find((a) => a.id === picked)?.name ?? 'The agent'} is going to ${
+                          h.name
+                        }. They have been told.`
+                      : `${h.name} is on the calendar. Nobody is going yet.`,
                   )
                 }
               >
