@@ -18,6 +18,8 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   Store,
   Star,
@@ -28,6 +30,7 @@ import {
   ArchiveRestore,
   Check,
   Pencil,
+  Plus,
   BarChart3,
   TriangleAlert,
 } from 'lucide-react';
@@ -35,8 +38,20 @@ import { CooldownSheet } from './cooldown-sheet';
 import { StoreFormDialog } from './store-form-dialog';
 import { StoreAnalytics } from './store-analytics';
 import { StoreTransactions } from './store-transactions';
-import { Button, Badge } from '@/components/ui';
+import {
+  Button,
+  Badge,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { StoreFacts, type StoreFactsData } from '@/components/shared/store-facts';
+import { useModalStore } from '@/store/use-modal-store';
 import { useActiveStorefront } from '@/modules/storefronts/active-storefront';
 import {
   isStoreOpen,
@@ -59,6 +74,37 @@ function statusLine(s: Storefront) {
   // now means a cooldown, and a store closed indefinitely is a different thing
   // from one that reopens in six minutes.
   return isStoreOpen(s) ? 'Accepting orders' : `Paused · ${pauseMinutesLeft(s.pausedUntil)} min left`;
+}
+
+/**
+ * A branch, in the shape the shared panel renders.
+ *
+ * The mapper lives here rather than in the component because the vendor's
+ * `Storefront` and the admin's raw row are two different sources for one panel
+ * - which is the point of sharing it. `coords` is already the pair that the
+ * admin reads as lat/lng columns.
+ */
+function storeFacts(store: Storefront, brandName?: string | null): StoreFactsData {
+  return {
+    name: store.name,
+    brand: brandName ?? null,
+    imageUrl: store.imageUrl ?? null,
+    area: store.area ?? null,
+    address: store.address ?? null,
+    phone: store.publicPhone ?? null,
+    opensAt: store.opensAt ?? null,
+    closesAt: store.closesAt ?? null,
+    isAcceptingOrders: store.isAcceptingOrders,
+    pausedUntil: store.pausedUntil ?? null,
+    pauseReason: store.pauseReason ?? null,
+    autoPauseAfter: store.autoPauseAfter,
+    autoPauseMinutes: store.autoPauseMinutes,
+    isPrimary: store.isPrimary,
+    lat: store.coords?.lat ?? null,
+    lng: store.coords?.lng ?? null,
+    verifiedAt: store.verifiedAt ?? null,
+    createdAt: store.createdAt,
+  };
 }
 
 export function StoresContainer() {
@@ -190,6 +236,7 @@ export function StoresContainer() {
             <StoreCard
               key={s.id}
               store={s}
+              brandName={brand?.businessName ?? null}
               isWorking={s.id === branchId}
               onWorkHere={() => {
                 setSelected(s.id);
@@ -306,6 +353,7 @@ export function StoresContainer() {
 
 function StoreCard({
   store,
+  brandName,
   isWorking,
   onWorkHere,
   onPromote,
@@ -314,6 +362,9 @@ function StoreCard({
   canArchive,
 }: {
   store: Storefront;
+  /** The business this branch trades under. Shown in the panel, where the
+   *  branch name alone ("Phase 1") does not say whose it is. */
+  brandName?: string | null;
   isWorking: boolean;
   onWorkHere: () => void;
   onPromote: () => void;
@@ -321,58 +372,147 @@ function StoreCard({
   busy: boolean;
   canArchive: boolean;
 }) {
+  const router = useRouter();
+  const openAddListing = useModalStore((s) => s.openAddListing);
+
+  /**
+   * Stock this branch, from the branch.
+   *
+   * Listings are shown for the store being WORKED, so sending somebody to
+   * /vendor/listings without setting that first lands them on a different
+   * store's menu and the item they add belongs to the wrong shop. Three steps,
+   * in this order: point the dashboard here, open the form, then navigate.
+   * The modal store is global, so it is already open when the page arrives.
+   */
+  const addItems = () => {
+    onWorkHere();
+    openAddListing();
+    router.push('/vendor/listings');
+  };
+
   return (
     // A div, not a button. The card used to be a <button> with clickable spans
     // inside it, which is invalid HTML and gave keyboard users an action they
-    // could not reach.
+    // could not reach. The header below is the one button; the actions are
+    // their own, and neither is nested in the other.
     <div
       className={`border-line/10 bg-panel flex flex-col gap-1 rounded-xl border p-4 transition-colors ${
         isWorking ? 'border-lime-deep/40 ring-lime-deep/20 ring-2' : 'hover:border-line/25'
       }`}
     >
-      <span className="flex flex-wrap items-center gap-2">
-        <span className="text-content font-medium">{store.name}</span>
-        {store.isPrimary && (
-          <Badge className="bg-lime/15 text-lime-deep gap-1">
-            <Star className="size-3" /> Primary
-          </Badge>
-        )}
-        {/*
-          SAID ON EVERY STORE, not only the verified ones.
-          A new branch is queued for a visit the moment it is created
-          (20260912120000), and until an agent has been there the vendor has no
-          way of knowing that is happening. An absent badge would read as
-          "nothing to see"; "Visit pending" says the check is coming and that
-          nothing is required of them, which is the whole difference between
-          waiting and being ignored.
-        */}
-        {store.verifiedAt ? (
-          <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
-            <ShieldCheck className="size-3" /> Verified
-          </Badge>
-        ) : (
-          <Badge className="bg-ink/5 text-content-muted gap-1">
-            <Clock className="size-3" /> Visit pending
-          </Badge>
-        )}
-      </span>
+      <Sheet>
+        <SheetTrigger asChild>
+          <button
+            type="button"
+            className="hover:bg-ink/5 -m-1 flex w-full items-start gap-3 rounded-lg p-1 text-left transition-colors"
+          >
+            {/* THE SHOPFRONT. A vendor with three branches was reading three
+                identical cards distinguished only by a line of text, and the
+                photo is the fastest way to tell which door a card is about. */}
+            <span className="bg-surface-deep relative size-14 shrink-0 overflow-hidden rounded-lg">
+              {store.imageUrl ? (
+                <Image
+                  src={store.imageUrl}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              ) : (
+                <span className="text-content-muted absolute inset-0 grid place-items-center text-[10px]">
+                  No photo
+                </span>
+              )}
+            </span>
 
-      {/* Not cosmetic. Discovery is location-first: a store with no area is
-          left out of the campus board and cannot be ranked by distance, so
-          students simply never see it. Nothing errors   it is just absent,
-          which is the hardest kind of bug to notice from the vendor's side. */}
-      {store.area ? (
-        <span className="text-content-muted text-xs">{store.area}</span>
-      ) : (
-        <span className="flex items-center gap-1 text-xs text-amber-600">
-          <MapPinOff className="size-3 shrink-0" />
-          No area   students cannot find this store
-        </span>
-      )}
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-content font-medium">{store.name}</span>
+                {store.isPrimary && (
+                  <Badge className="bg-lime/15 text-lime-deep gap-1">
+                    <Star className="size-3" /> Primary
+                  </Badge>
+                )}
+                {/*
+                  SAID ON EVERY STORE, not only the verified ones.
+                  A new branch is queued for a visit the moment it is created
+                  (20260912120000), and until an agent has been there the vendor
+                  has no way of knowing that is happening. An absent badge would
+                  read as "nothing to see"; "Visit pending" says the check is
+                  coming and that nothing is required of them, which is the
+                  whole difference between waiting and being ignored.
+                */}
+                {store.verifiedAt ? (
+                  <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+                    <ShieldCheck className="size-3" /> Verified
+                  </Badge>
+                ) : (
+                  <Badge className="bg-ink/5 text-content-muted gap-1">
+                    <Clock className="size-3" /> Visit pending
+                  </Badge>
+                )}
+              </span>
 
-      <span className="text-content-muted text-xs">
-        {store.coords ? 'Pinned on the map' : 'No map pin'} · {statusLine(store)}
-      </span>
+              {/* Not cosmetic. Discovery is location-first: a store with no area
+                  is left out of the campus board and cannot be ranked by
+                  distance, so students simply never see it. Nothing errors   it
+                  is just absent, which is the hardest kind of bug to notice
+                  from the vendor's side. */}
+              {store.area ? (
+                <span className="text-content-muted text-xs">{store.area}</span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-amber-600">
+                  <MapPinOff className="size-3 shrink-0" />
+                  No area   students cannot find this store
+                </span>
+              )}
+
+              <span className="text-content-muted text-xs">
+                {store.coords ? 'Pinned on the map' : 'No map pin'} · {statusLine(store)}
+              </span>
+            </span>
+          </button>
+        </SheetTrigger>
+
+        <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-xl">
+          <SheetHeader className="pr-8 pb-4">
+            <SheetTitle>{store.name}</SheetTitle>
+            <SheetDescription>
+              Everything students see about this branch, and what it has been doing.
+            </SheetDescription>
+          </SheetHeader>
+
+          <SheetBody className="flex flex-col gap-6">
+            {/* THE SAME COMPONENT the reviewer sees on /admin/verify-visits.
+                One shape means a vendor and the person deciding whether their
+                shop is real are looking at the same facts, and a field added
+                for either appears on both the same day. */}
+            <StoreFacts
+              store={storeFacts(store, brandName)}
+              headingClassName="font-display text-content flex flex-wrap items-center gap-2 text-lg"
+            />
+
+            {/* The reason most vendors open a store at all, and it was two
+                screens away: Stores, then Listings, then work out which branch
+                the listings screen was pointed at. */}
+            <section className="border-line/10 flex flex-col gap-2 rounded-xl border border-dashed p-4">
+              <p className="text-content text-sm font-medium">Stock this branch</p>
+              <p className="text-content-muted text-sm">
+                An item belongs to the store it is sold from. This points the dashboard at{' '}
+                {store.name} and opens a new item straight away.
+              </p>
+              <Button onClick={addItems} className="gap-1 self-start">
+                <Plus className="size-4" /> Add an item to this store
+              </Button>
+            </section>
+
+            {/* Its own orders, not the brand's. The page-level table follows
+                whichever store is being worked; this one is always about the
+                branch whose card was opened. */}
+            <StoreTransactions storefrontId={store.id} storeName={store.name} />
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
 
       <div className="mt-2 flex flex-wrap items-center gap-1">
         {/* "Work here" points the rest of the dashboard at this store: the
