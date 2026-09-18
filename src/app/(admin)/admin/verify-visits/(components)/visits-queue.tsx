@@ -172,7 +172,20 @@ const STATUS_BADGE: Record<string, string> = {
   Fraud: 'bg-rose-600 text-white',
 };
 
-const FILTERS = ['all', 'Visit Scheduled', 'Under Review', 'Verified', 'Rejected', 'Fraud'];
+// 'Not Visited' earns a chip now that rows arrive in it on their own. It was
+// omitted while the only way to get a visit was to create one WITH an agent
+// already on it, so nothing sat here for long. A store queues itself the moment
+// it is created, so this is the state most of the queue is in, and it is the
+// one a reviewer is looking for: somebody has to be sent.
+const FILTERS = [
+  'all',
+  'Not Visited',
+  'Visit Scheduled',
+  'Under Review',
+  'Verified',
+  'Rejected',
+  'Fraud',
+];
 
 const FIELD = 'border-line/15 bg-surface-deep text-content rounded-lg border px-3 py-2 text-sm';
 

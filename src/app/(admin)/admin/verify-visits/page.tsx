@@ -18,6 +18,21 @@ import {
 
 export const metadata: Metadata = { title: 'Verification visits   Admin' };
 
+/**
+ * The queue fills from somewhere else entirely.
+ *
+ * Every OTHER row on this screen arrives through an action on this screen, and
+ * those call `revalidatePath('/admin/verify-visits')` on their way out. A store
+ * visit does not: creating a storefront queues one from a trigger
+ * (20260912120000), in a vendor's session, and nothing in the admin's process
+ * knows it happened. A reviewer therefore sat looking at a cached render from
+ * before the shop existed, and no amount of reloading produced it.
+ *
+ * Same reason /admin/agents carries this line: what is waiting changes under
+ * you. It is the reads that need it, not the writes.
+ */
+export const dynamic = 'force-dynamic';
+
 import type { Row } from '@/lib/supabase/row';
 
 /** A visit against a whole business rather than a hostel or one branch. */
