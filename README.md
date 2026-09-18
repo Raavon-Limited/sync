@@ -43,6 +43,14 @@ move into focused **modules**:
 
 The complete list of routes and their access levels lives in **[ROUTE_MAP.md](ROUTE_MAP.md)**.
 
+For the full product documentation - the problem, the approach, the money and tenancy
+rules as actually configured, and an honest list of what is not finished - see
+**[docs/PRODUCT.md](docs/PRODUCT.md)**.
+
+To work on it, start with **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)**: how the
+scope was cut, how the brand became a design system, the layer contract, and the working
+method for adding a feature end to end.
+
 ## Tech stack
 
 - **Framework:** Next.js 16 (App Router, RSC) + React 19
