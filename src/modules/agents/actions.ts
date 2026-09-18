@@ -26,7 +26,7 @@ import { SITE, canonicalOrigin } from '@/config/site';
 import { userMessage } from '@/lib/errors';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { assertArea } from '@/modules/access/guard';
+import { accessLevel, assertArea } from '@/modules/access/guard';
 import { getCurrentUser, getProfile } from '@/modules/auth/queries';
 import { isStaffRole } from '@/modules/admin/guard';
 import { logEmail, sendMail } from '@/modules/admin/mail';
@@ -46,6 +46,30 @@ async function assertAgentStaff() {
   const profile = await getProfile();
   if (!profile || !isStaffRole(profile.role)) throw new Error('Staff only');
   await assertArea('agents');
+}
+
+/**
+ * Sending somebody to a place, which is the verify-visits screen's own job.
+ *
+ * EITHER AREA, unlike the rest of this file. Recruiting an agent, revoking one
+ * and reading the console are `agents`, and that is right. But assigning a
+ * visit is the central action of /admin/verify-visits: a reviewer granted that
+ * screen is shown an agent picker, and gating the button behind a DIFFERENT
+ * grant means the screen offers work it will then refuse. That is the shape of
+ * the bug this replaces   with `agents` missing from every role, the queue was
+ * fully readable and completely inert.
+ *
+ * Still both-or-nothing on staff itself: this is not a widening of who may
+ * send an agent, only of which grant says so.
+ */
+async function assertVisitStaff() {
+  const profile = await getProfile();
+  if (!profile || !isStaffRole(profile.role)) throw new Error('Staff only');
+
+  const levels = await Promise.all([accessLevel('verify_visits'), accessLevel('agents')]);
+  if (!levels.includes('write')) {
+    throw new Error('You do not have access to send an agent');
+  }
 }
 
 /**
@@ -215,7 +239,7 @@ export async function assignVisit(input: {
   meetUserId?: string | null;
   brief?: string;
 }): Promise<AgentResult> {
-  await assertAgentStaff();
+  await assertVisitStaff();
 
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('assign_verification_visit', {
@@ -252,7 +276,7 @@ export async function reassignVisit(input: {
   /** null stands the current agent down and returns the visit to the queue. */
   agentId: string | null;
 }): Promise<AgentResult> {
-  await assertAgentStaff();
+  await assertVisitStaff();
 
   const supabase = await createServerClient();
   const { error } = await rpc(supabase)('reassign_verification_visit', {
