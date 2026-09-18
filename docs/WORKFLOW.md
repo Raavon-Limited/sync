@@ -480,6 +480,23 @@ cap.
 
 Roughly in priority order. Nothing here is started.
 
+**`authenticated` cannot reach schema `private`, and three call sites forget it.**
+`20260816225649` revokes that schema from clients and grants usage to `service_role` alone. Several
+migrations then `grant execute` on a `private.*` function to `authenticated` — which does nothing,
+because EXECUTE on a function in a schema you have no USAGE on is not a permission. Anything
+evaluated **as the caller** that reaches into `private` therefore fails with a raw 42501, which the
+UI renders as "You do not have permission to do that."
+- Fixed 18 Sep: both plan-limit triggers, via `public.effective_plan` (`20260918090000`). This is
+  why `storefronts` never held a row — **nobody could create a store, ever**, and so nobody could
+  create a listing.
+- **Still open:** the policies consulting `private.can_manage_storefront` (`20260822130000`) —
+  `storefronts_update_staff`, `orders_select_own`, `listings_write_own`. They are OR-ed behind a
+  disjunct that is true for an owner, so Postgres short-circuits and never evaluates them. **A
+  MANAGER updating a branch or reading an order will hit it.** Same fix: a `public` SECURITY
+  DEFINER wrapper, not `grant usage on schema private`.
+- The rule to apply when writing either: invoker-rights code — a trigger that tests `current_user`,
+  or any RLS policy — may only touch `public`.
+
 **Money — the largest gap.**
 - **Paystack Transfers is not implemented anywhere.** Accept, verify and the signed webhook are all
   built, but no money can *leave*. `payout_requests` rows are written and nothing consumes them.
