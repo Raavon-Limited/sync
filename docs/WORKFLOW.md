@@ -489,13 +489,31 @@ UI renders as "You do not have permission to do that."
 - Fixed 18 Sep: both plan-limit triggers, via `public.effective_plan` (`20260918090000`). This is
   why `storefronts` never held a row — **nobody could create a store, ever**, and so nobody could
   create a listing.
-- **Still open:** the policies consulting `private.can_manage_storefront` (`20260822130000`) —
-  `storefronts_update_staff`, `orders_select_own`, `listings_write_own`. They are OR-ed behind a
-  disjunct that is true for an owner, so Postgres short-circuits and never evaluates them. **A
-  MANAGER updating a branch or reading an order will hit it.** Same fix: a `public` SECURITY
-  DEFINER wrapper, not `grant usage on schema private`.
+- Fixed 12 Oct, because hiding unverified vendors makes them reachable (`20261012120000`):
+  `listings_write_own`, `storefront_listings_write_manager` and `promotions_write_own`, via
+  `public.i_have_storefront_scope` / `i_manage_storefront` / `i_have_business_scope`. They were
+  safe only while the permissive select policy beside them was always true; once a select policy
+  can be false for a row they are evaluated, and a student's query would have errored instead of
+  filtering. **That is the general lesson: tightening a select policy can expose an unreachable
+  `private.*` call in a sibling `for all` policy. Check the siblings first, and test as a signed-in
+  stranger — the self-test in that migration is the pattern.**
+- **Still open:** `storefronts_update_staff`, `orders_select_own`, `orders_update_vendor`,
+  `storefront_staff_read`, `tiers_write_own` and the messaging policies still consult `private.*`
+  and are OR-ed behind a disjunct that is true for an owner, so Postgres short-circuits and never
+  evaluates them. **A MANAGER updating a branch or reading an order will hit it.** Same fix: a
+  `public` SECURITY DEFINER wrapper, not `grant usage on schema private`.
 - The rule to apply when writing either: invoker-rights code — a trigger that tests `current_user`,
   or any RLS policy — may only touch `public`.
+
+**Unverified vendors are hidden from students (12 Oct), but can still be ordered from by a crafted request.**
+`20261012120000` hides them everywhere a student reads — `vendor_profiles`, `storefronts`, `listings`,
+`storefront_listings`, `services`, `promotions`, `nearby_storefronts`, `campus_pulse` — mirroring
+`hostel_is_visible`. Landlords (`category = 'landlord'`) are deliberately exempt; `hostels` has its own rule.
+- **Anything public that reads through `createAdminClient()` bypasses all of it** and must apply
+  `verification_status = 'verified'` itself — see `landing-data.ts` and `around-data.ts`.
+- **Open:** `checkout_cart` is owner-rights and calls `store_accepting_orders` as its owner, so a hidden
+  vendor is still orderable by id. Needs a verified check inside `store_accepting_orders`.
+- Reviews are not hidden. A manager of ANY branch of a vendor can read all of its branches.
 
 **Money — the largest gap.**
 - **Paystack Transfers is not implemented anywhere.** Accept, verify and the signed webhook are all
