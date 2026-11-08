@@ -65,10 +65,11 @@ export async function getAroundData(userId?: string): Promise<AroundData> {
     { count: verifiedVendors },
     { data: banner },
     { data: hotspots },
-    { data: laundry },
+    { data: laundryRows },
     { data: openStores },
     { count: upcomingEvents },
     { data: availability },
+    { data: verifiedIds },
   ] = await Promise.all([
     admin.from('hostels').select('*', { count: 'exact', head: true }).eq('verified', true).is('archived_at', null),
     admin
@@ -101,21 +102,36 @@ export async function getAroundData(userId?: string): Promise<AroundData> {
       .eq('is_active', true)
       .not('price_kobo', 'is', null)
       .order('price_kobo')
-      .limit(1)
-      .maybeSingle(),
-    admin.from('storefronts').select('id, is_accepting_orders, paused_until').is('archived_at', null),
+      // Not 1: the cheapest row may belong to a vendor Sync has not verified, and
+      // it is picked from this list below once that is known.
+      .limit(25),
+    admin
+      .from('storefronts')
+      .select('id, vendor_id, is_accepting_orders, paused_until')
+      .is('archived_at', null),
     admin
       .from('events')
       .select('*', { count: 'exact', head: true })
       .gt('starts_at', new Date().toISOString()),
     admin.from('hostel_availability').select('rooms_available'),
+    // Who counts. The service role ignores RLS, so every figure below that names
+    // or counts a vendor has to apply "verified" itself - see
+    // 20261012120000_unverified_vendors_hidden for the rule it mirrors. Fetched
+    // as a list and matched in code rather than embedded: embeds on this schema
+    // have failed silently more than once.
+    admin.from('vendor_profiles').select('id').eq('verification_status', 'verified').is('archived_at', null),
   ]);
+
+  const verified = new Set(((verifiedIds ?? []) as Row[]).map((v) => v.id as string));
 
   // Open right now, mirroring `store_accepting_orders`: switched on and not
   // inside a cooldown.
   const now = Date.now();
   const openNow = ((openStores ?? []) as Row[]).filter(
-    (s) => s.is_accepting_orders && (!s.paused_until || new Date(s.paused_until).getTime() <= now),
+    (s) =>
+      verified.has(s.vendor_id) &&
+      s.is_accepting_orders &&
+      (!s.paused_until || new Date(s.paused_until).getTime() <= now),
   ).length;
 
   const roomsFree = ((availability ?? []) as Row[]).reduce(
@@ -127,6 +143,9 @@ export async function getAroundData(userId?: string): Promise<AroundData> {
   // at vendor_profiles   fetched separately rather than embedded, because
   // embeds on this schema have failed silently more than once.
   let laundryCard: AroundData['laundry'] = null;
+  // The cheapest price among VERIFIED vendors. Rows arrive cheapest-first, so
+  // the first one that qualifies is the answer.
+  const laundry = ((laundryRows ?? []) as Row[]).find((r) => verified.has(r.vendor_id)) ?? null;
   if (laundry) {
     const { data: v } = await admin
       .from('vendor_profiles')

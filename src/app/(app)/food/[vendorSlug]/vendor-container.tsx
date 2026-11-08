@@ -102,9 +102,15 @@ export function VendorContainer({ slug }: { slug: string }) {
   // conversations table today.
   const firstListingId = listings.find((l) => l.status !== 'Archived')?.id;
 
+  // MESSAGING IS FOR VERIFIED VENDORS ONLY. open_listing_conversation refuses a
+  // new thread with anyone else, so offering the button would just be a way to
+  // earn an error toast. A student who already has a thread with this vendor
+  // keeps it in their inbox; this only governs starting one.
+  const canMessage = !!firstListingId && vendor.isVerified;
+
   return (
     <div className="flex flex-col">
-      {firstListingId && (
+      {canMessage && firstListingId && (
         <div className="flex justify-end px-4 pt-4">
           <MessageVendorButton listingId={firstListingId} label={`Message ${vendor.businessName}`} />
         </div>

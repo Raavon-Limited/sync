@@ -102,7 +102,7 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
 
   const [
     { data: event },
-    { data: store },
+    { data: storeRows },
     { data: hotspot },
     { data: hostels },
     { count: verifiedHostels },
@@ -118,13 +118,19 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
       .maybeSingle(),
     // A store, not a brand: the landing card links to a place you can order
     // from, and a brand with three shops is three places.
+    //
+    // A SHORTLIST, NOT ONE ROW. This is above RLS like the hostel strip below,
+    // so "verified vendors only" (20261012120000_unverified_vendors_hidden) has to
+    // be applied here by hand, and it can only be applied once the brand is
+    // known. Taking one row and checking it afterwards would show nothing at all
+    // whenever the first store happened to be an unverified one.
     db
       .from('storefronts')
       .select('slug, name, area, vendor_id')
       .is('archived_at', null)
       .eq('is_accepting_orders', true)
-      .limit(1)
-      .maybeSingle(),
+      .order('created_at')
+      .limit(20),
     db
       .from('hotspots')
       .select('slug, name, area, category, image_url')
@@ -171,20 +177,26 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
   // The brand's name and rating live on vendor_profiles; fetched separately
   // because embeds on this schema have silently returned nothing before.
   let food: LandingShowcase['food'] = null;
-  if (store) {
-    const { data: brand } = await db
+  const candidates = (storeRows ?? []) as Row[];
+  if (candidates.length > 0) {
+    const { data: brands } = await db
       .from('vendor_profiles')
-      .select('business_name, category, rating_avg, rating_count')
-      .eq('id', (store as Row).vendor_id)
-      .maybeSingle();
-    if (brand) {
+      .select('id, business_name, category, rating_avg, rating_count')
+      .in('id', [...new Set(candidates.map((s) => s.vendor_id as string))])
+      .eq('verification_status', 'verified')
+      .is('archived_at', null);
+    const brandById = new Map(((brands ?? []) as Row[]).map((b) => [b.id as string, b]));
+    // The first store whose business Sync has verified, in the order they opened.
+    const store = candidates.find((s) => brandById.has(s.vendor_id));
+    const brand = store ? brandById.get(store.vendor_id) : undefined;
+    if (store && brand) {
       food = {
-        slug: (store as Row).slug,
-        name: (brand as Row).business_name,
-        meta: [(store as Row).area, (brand as Row).category].filter(Boolean).join(' · '),
+        slug: store.slug,
+        name: brand.business_name,
+        meta: [store.area, brand.category].filter(Boolean).join(' · '),
         // A rating nobody has given is not 0 stars, it is no rating. The card
         // omits it rather than showing a business as badly reviewed.
-        rating: (brand as Row).rating_count > 0 ? Number((brand as Row).rating_avg) : null,
+        rating: brand.rating_count > 0 ? Number(brand.rating_avg) : null,
       };
     }
   }
