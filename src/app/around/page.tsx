@@ -5,10 +5,11 @@
  *          hostel right now - events, food, laundry, hotspots, hostel
  *          board posts, MTN sponsored slot, and a hostel-resume nudge.
  * BUILT HERE (per section 02 Around you · Home Hub of the hi-fi PDF):
- *   - Eyebrow date + verified-spots pill
- *   - Personalised hero "Hi Aisha - today in your radius."
- *   - QUICK STATS block (3 rooms left / 240 going / 28 min)
- *   - Full-width segmented search (SEARCH / MODULE / BUDGET / WHEN)
+ *   - AroundBento at the top (Nov 2026 redesign, shared with the landing):
+ *     weather and plans, the public gist feed, the campus poll, daily dose,
+ *     guides. It replaced the date pill, greeting hero, quick stats and the
+ *     segmented search.
+ *   - The map (#map), kept.
  *   - 3-column mosaic: Featured event / food + sponsored / laundry + hotspots
  *   - Bottom: hostel board + resume booking
  * DATA: real, from ./around-data. The hostel-board card is gone: there is no
@@ -20,19 +21,20 @@
  *        "near you" on a GPS fix and name the area when one is picked.
  */
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { ArrowRight, ChevronDown, Flame, Search, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, Flame, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AroundMap } from '@/components/shared/around-map';
-import { SITE } from '@/config/site';
 import { getAroundData, type AroundData } from './around-data';
 import { listMapPins } from '@/modules/around/server-queries';
-import { getCurrentUser, getFirstName } from '@/modules/auth/queries';
+import { getCurrentUser } from '@/modules/auth/queries';
 import { formatNaira } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { FeaturedEventCarousel, FoodCarousel } from './featured-carousels';
-import { ScopeBlurb, ScopeHeadline, ScopeSuffix } from './location-scope';
+import { ScopeSuffix } from './location-scope';
 import { CampusPulse } from './(components)/campus-pulse';
+import { AroundBento } from '@/components/around/around-bento';
+import { getCampusWeather } from '@/app/(marketing)/landing-data';
+import { CAMPUS_POINT } from '@/lib/constants/areas';
 
 export const metadata = {
   title: 'Around you',
@@ -40,61 +42,27 @@ export const metadata = {
 };
 
 export default async function AroundPage() {
-  // Personalise only when signed in; signed-out visitors see a generic greeting.
   // getAroundData needs the user id, so that one read is sequential; the map
   // pins do not, so they go in parallel rather than adding a third round trip.
   const user = await getCurrentUser();
-  const firstName = getFirstName(user);
-  const [data, mapPins] = await Promise.all([getAroundData(user?.id), listMapPins()]);
+  const [data, mapPins, weather] = await Promise.all([
+    getAroundData(user?.id),
+    listMapPins(),
+    getCampusWeather(CAMPUS_POINT.lat, CAMPUS_POINT.lng),
+  ]);
 
-  const today = new Date();
-  // The campus was a hardcoded string on a mock user. It is the same campus
-  // for everyone using this build, so it lives in site config rather than
-  // pretending to be personal data.
-  const dateLine = `${format(today, 'EEE').toUpperCase()} · ${format(today, 'MMM d').toUpperCase()} · ${SITE.launchMarket.toUpperCase()}`;
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col px-6 pt-8 pb-12">
-      {/* ─── Eyebrow row ────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-content-muted font-mono text-[11px] tracking-wider">{dateLine}</p>
-        <span className="bg-lime text-ink inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium">
-          <span className="bg-lime-deep h-1.5 w-1.5 rounded-full" />
-          {data.verifiedSpots} verified spots <ScopeSuffix />
-        </span>
+    <>
+      {/* The same "What's popping" bento as the landing (weather, plans, the
+          gist feed, the campus poll, daily dose, guides), so the two never
+          drift. `.landing` applies the palette's dark-mode remap. */}
+      <div className="landing">
+        <AroundBento weather={weather} headingLevel="h1" />
       </div>
-
-      {/* ─── Hero + Quick stats ─────────────────────────────────────── */}
-      <header className="mt-6 grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">
-        <div>
-          <h1 className="font-display text-[44px] leading-[0.98] font-bold tracking-[-0.035em] md:text-[64px] md:leading-[0.96] md:tracking-[-0.04em]">
-            {firstName ? (
-              <>
-                Hi <span className="text-accent-fg italic">{firstName}</span>
-                <span className="text-foreground"> - today</span>
-              </>
-            ) : (
-              <span className="text-foreground">Today</span>
-            )}
-            <br />
-            in{' '}
-            <span className="bg-lime text-ink box-decoration-clone px-1.5 leading-[1.1]">
-              <ScopeHeadline />
-            </span>
-            .
-          </h1>
-          <p className="text-content-muted text-lead mt-4 max-w-2xl">
-            <ScopeBlurb />
-          </p>
-        </div>
-        <QuickStats stats={data.quickStats} />
-      </header>
-
-      {/* ─── Smart search row ───────────────────────────────────────── */}
-      <SmartSearch />
-
+      <main className="mx-auto flex max-w-7xl flex-col px-6 pt-8 pb-12">
       {/* ─── Map - full width at the top ────────────────────────────── */}
-      <section aria-labelledby="around-map-heading" className="mt-8 w-full">
+      <section id="map" aria-labelledby="around-map-heading" className="w-full scroll-mt-20">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="eyebrow text-content-muted">On the map</p>
@@ -152,107 +120,15 @@ export default async function AroundPage() {
           </Link>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 
 /* ──────────────────── Subcomponents ──────────────────────────────── */
 
-/**
- * The three headline numbers, all derived from real rows.
- *
- * A stat with nothing behind it shows a real 0 and dims, rather than borrowing
- * a plausible-looking mock figure - "0 rooms free" is information, while an
- * invented "3 rooms left" is a claim we cannot back on a public feed.
- */
-function QuickStats({ stats }: { stats: AroundData['quickStats'] }) {
-  return (
-    <aside aria-label="Quick stats" className="flex flex-col gap-3">
-      <p className="eyebrow text-content-muted">Quick stats</p>
-      <div className="grid grid-cols-3 gap-3">
-        {stats.map((s) => {
-          const empty = s.value === '0';
-          return (
-            <div
-              key={s.label}
-              className="border-line/5 bg-panel/70 flex flex-col gap-1.5 rounded-xl border p-4 text-center"
-            >
-              <p
-                className={cn(
-                  'font-display text-[28px] leading-none tracking-tight whitespace-nowrap',
-                  empty
-                    ? 'text-content-muted'
-                    : s.accent
-                      ? 'text-accent-fg'
-                      : 'text-foreground',
-                )}
-              >
-                {s.value}
-              </p>
-              <p className="text-content-muted text-[11px] leading-tight">{s.label}</p>
-            </div>
-          );
-        })}
-      </div>
-    </aside>
-  );
-}
 
-function SmartSearch() {
-  return (
-    <form
-      action="/search"
-      method="get"
-      className="border-line/10 bg-panel mt-8 grid overflow-hidden rounded-2xl border md:grid-cols-[2fr_1fr_1fr_1fr_auto]"
-    >
-      <SearchCell
-        label="Search hostels, food, events…"
-        name="q"
-        placeholder="Try 'jollof, fast wifi, no wahala'"
-      />
-      <SearchCell label="Module" name="module" defaultValue="All" />
-      <SearchCell label="Budget" name="budget" defaultValue="₦ Any" />
-      <SearchCell label="When" name="when" defaultValue="Now" />
-      <div className="bg-surface-deep/50 flex items-center p-2 md:bg-transparent">
-        <Button type="submit" size="md" className="w-full md:w-auto">
-          <Search className="h-4 w-4" />
-          Search
-        </Button>
-      </div>
-    </form>
-  );
-}
 
-function SearchCell({
-  label,
-  name,
-  defaultValue,
-  placeholder,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  placeholder?: string;
-}) {
-  const id = `as-${name}`;
-  return (
-    <label
-      htmlFor={id}
-      className="border-line/5 focus-within:bg-surface/40 flex cursor-text flex-col gap-1 border-r px-4 py-3 transition-colors last:border-r-0"
-    >
-      <span className="text-content-muted font-mono text-[10px] tracking-wider uppercase">
-        {label}
-      </span>
-      <input
-        id={id}
-        name={name}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        className="text-foreground placeholder:text-content-muted bg-transparent text-sm font-medium outline-none"
-      />
-    </label>
-  );
-}
 
 function LaundryCard({
   laundry,
