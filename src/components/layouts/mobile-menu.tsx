@@ -231,7 +231,7 @@ export function MobileMenu({
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Button asChild size="lg" onClick={close} className="min-w-0 flex-1">
+                <Button asChild size="lg" onClick={close} className="min-w-0 flex-[1.5]">
                   <Link href="/for-vendors">
                     <span className="truncate">Become a vendor</span>
                     <ArrowRight />

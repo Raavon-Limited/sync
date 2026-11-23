@@ -23,7 +23,17 @@ import {
   Wifi,
   type LucideIcon,
 } from 'lucide-react';
-import SyncIcon, { SYNC_ICON_NAMES, type SyncIconName } from '@/components/brand/SyncIcon';
+import SyncIcon, { type SyncIconName } from '@/components/brand/SyncIcon';
+
+/**
+ * A copy of SYNC_ICON_NAMES, not an import of it. SyncIcon.tsx is a client
+ * module, and when a SERVER component (the landing's Around section) imports a
+ * plain value from one it gets a client reference, not the array - `.includes`
+ * then throws at render. `satisfies` keeps this list honest against the kit.
+ */
+const KIT = new Set<string>([
+  'around-you', 'hostels', 'events', 'food', 'beauty', 'workmanship', 'laundry', 'hot-spots', 'student', 'landlord', 'about',
+] satisfies SyncIconName[]);
 
 const LUCIDE: Record<string, LucideIcon> = {
   briefcase: Briefcase,
@@ -44,7 +54,7 @@ const LUCIDE: Record<string, LucideIcon> = {
 };
 
 export function NavIcon({ name, size = 18 }: { name?: string; size?: number }) {
-  if (name && (SYNC_ICON_NAMES as readonly string[]).includes(name)) {
+  if (name && KIT.has(name)) {
     return <SyncIcon name={name as SyncIconName} size={size} />;
   }
   const Icon = (name && LUCIDE[name]) || FileText;

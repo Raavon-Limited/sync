@@ -297,6 +297,20 @@ locally. Branch `verification-visits`, not yet merged or pushed.
 
 ### Just finished
 
+**Redesign: green palette, new header, new landing (branch `redesign/green-landing`, Nov 2026).**
+Three commits. (1) The whole app moved to the green palette (stone, paper, sage, leaf, moss, forest,
+sunflower accent) with a dark-green dark mode; the old token NAMES (`lime`, `ink`, `cream`) are
+kept and remapped, see the header of `globals.css`. (2) The public header now carries the full nav
+from `config/marketing-nav.ts` (one list for desktop and mobile), a campus picker and Become a
+vendor. Campus choice lives in `hooks/use-campus-choice.ts`, separate from the area scope in
+`LocationProvider`: anyone may pick any campus, **detection never overwrites a pick**, and a
+non-serviced campus shows "we are not here yet". (3) The landing page is rebuilt from the design
+canvas: constellation hero, Find tabs with five real cards each (`getLandingRails`), Around you
+(real weather via Open-Meteo, server-side), How it works (#how), Why Sync, Reach out (#contact).
+The mock ActivityTicker, the newsletter band (fake success) and the FAQ/trust/CTA bands are gone.
+**Focus outlines and rings are removed app-wide** at the founder's request; `--shadow-focus` is
+still defined if that is revisited.
+
 **One decision path for every visit (`20260914180000`)** — `decide_verification_visit` replaces
 `decide_store_visit` and the old two-statement `decideHostelVisit`. Staff only, a filed report
 first, and the subject's flag moved in the same transaction: `hostels.verified`,
@@ -479,6 +493,14 @@ cap.
 ## 6. Open threads
 
 Roughly in priority order. Nothing here is started.
+
+**Landing gaps the redesign left honest rather than faked.**
+- No paid placement exists, so Find cards are badged **Featured** (from `hotspots.is_featured` or a
+  hostel `ribbon`), never "Sponsored". Build a sponsorship product before using that word.
+- Reach out opens the visitor's email app (`mailto:`); there is no contact table or endpoint.
+- The gist feed, communities, creators, careers pages, Sync Internet and Dispatch are "soon" in the
+  nav with no href. Give each an href in `config/marketing-nav.ts` when it ships.
+- Module pages ignore `?q=` from the Find bar except `/search` (hostels).
 
 **`authenticated` cannot reach schema `private`, and three call sites forget it.**
 `20260816225649` revokes that schema from clients and grants usage to `service_role` alone. Several

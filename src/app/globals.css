@@ -495,11 +495,15 @@ input:-webkit-autofill:focus {
   }
 }
 
-/* Accessible focus ring - visible against cream and white. */
-:where(a, button, [role='button'], select, textarea, [tabindex]):focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: var(--radius-lg);
+/* No focus outlines or rings, anywhere.
+   A product decision from the redesign review (Nov 2026): the founder asked
+   for none, twice. The trade-off is real - keyboard users lose the cue of
+   where they are - so interactive elements keep a visible HOVER/ACTIVE state
+   and inputs keep their border change on focus. If this is ever revisited,
+   --shadow-focus is still defined and this is the one rule to change. */
+*:focus,
+*:focus-visible {
+  outline: none !important;
 }
 
 /* ─── AroundMap (Google Maps) custom markers ──────────────────────────
@@ -811,4 +815,36 @@ select:not(:disabled) {
 
 @page {
   margin: 14mm;
+}
+
+
+/* ─── Landing (redesign Nov 2026) ─────────────────────────────────────────
+   Motion for the hero constellation. All of it stops under reduced motion:
+   the floating icons sit still, the dotted lines stop flowing, and the Sync
+   mark stops spinning (the brand kit's "rotation means waiting" rule has a
+   documented exception for this one hero, see components/brand/README). */
+@keyframes sync-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes sync-flow { to { stroke-dashoffset: -48; } }
+@keyframes sync-flow-in { to { stroke-dashoffset: 48; } }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+@keyframes sync-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(88 129 87 / 0.6); }
+  70% { box-shadow: 0 0 0 8px rgb(88 129 87 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(88 129 87 / 0); }
+}
+.sync-float { animation: sync-float 6s ease-in-out infinite; }
+.sync-flow { animation: sync-flow 2.4s linear infinite; }
+.sync-flow-in { animation: sync-flow-in 3.2s linear infinite; }
+.sync-spin { animation: sync-spin 12s linear infinite; transform-origin: 50% 50%; }
+.sync-fade { animation: sync-fade 0.5s ease-out; }
+.live-dot { animation: live-pulse 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sync-float, .sync-flow, .sync-flow-in, .sync-spin, .sync-fade, .live-dot { animation: none; }
 }

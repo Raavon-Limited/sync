@@ -82,7 +82,7 @@ function Group({ group }: { group: NavGroup }) {
           onPointerLeave={leave}
           className={cn(
             'bg-panel text-foreground border-line/10 shadow-pop z-50 rounded-3xl border p-3',
-            group.wide ? 'w-[34rem]' : 'w-80',
+            group.wide ? 'w-[38rem]' : 'w-80',
           )}
         >
           <p className="eyebrow text-content-muted px-3 pt-1 pb-2">{group.kicker}</p>
