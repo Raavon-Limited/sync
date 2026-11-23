@@ -109,6 +109,11 @@ function underPrefix(pathname: string, prefix: string): boolean {
  */
 const PUBLIC_UNDER_PROTECTED = ['/vendor/join'];
 
+/** /events/<slug>/tickets and below: choosing and paying for tickets. The
+ *  event page itself is public; the slug in the middle is why this is a
+ *  pattern and not a prefix. */
+const TICKET_PURCHASE = /^\/events\/[^/]+\/tickets(\/|$)/;
+
 /**
  * `activeOnly` means the role must be WORN, not merely held.
  *
@@ -123,18 +128,27 @@ const PUBLIC_UNDER_PROTECTED = ['/vendor/join'];
  * no. Switching hats is what grants it, and that is a deliberate act.
  */
 const PROTECTED_PREFIXES: { prefix: string; roles: Role[]; activeOnly?: boolean }[] = [
-  // /around is the public "home of the full Sync app" per the wireframe -
-  // signed-out users land here, so it's deliberately not in the gate list.
-  { prefix: '/hostels', roles: ALL },
-  { prefix: '/events', roles: ALL },
-  { prefix: '/food', roles: ALL },
-  { prefix: '/beauty', roles: ALL },
-  { prefix: '/workmanship', roles: ALL },
-  { prefix: '/laundry', roles: ALL },
-  { prefix: '/hotspots', roles: ALL },
-  { prefix: '/search', roles: ALL },
+  /*
+   * BROWSING IS PUBLIC; DOING IS NOT (Nov 2026).
+   *
+   * /hostels, /events, /food, /beauty, /workmanship, /laundry, /hotspots,
+   * /search and /around are open to signed-out visitors: asking someone to
+   * create an account before they have seen a single room is how they leave.
+   * The browse tables were already anon-readable under RLS (/around relied on
+   * it), so this exposes nothing that was not public.
+   *
+   * What stays here is the pages that only make sense with an account: paying,
+   * your orders and favourites, the wallet, the AI assistant, buying tickets.
+   * Actions ON the public pages (book a viewing, add to cart, save, message a
+   * vendor, request a service) are gated where they happen - see the
+   * MutationCache in lib/query/query-client.ts - and RLS refuses them anyway.
+   */
   { prefix: '/checkout', roles: ALL },
   { prefix: '/wallet', roles: ALL },
+  { prefix: '/food/checkout', roles: ALL },
+  { prefix: '/food/orders', roles: ALL },
+  { prefix: '/food/favorites', roles: ALL },
+  { prefix: '/ai', roles: ALL },
   // Dashboards - role-specific. This is the only access difference.
   // BEFORE '/user', and the order is load-bearing: the list is scanned with
   // startsWith and the first match wins, so a broader '/user' listed above would
@@ -231,7 +245,8 @@ export async function proxy(request: NextRequest) {
   const publiclyExempt = PUBLIC_UNDER_PROTECTED.some((path) => underPrefix(pathname, path));
   const guarded = publiclyExempt
     ? undefined
-    : PROTECTED_PREFIXES.find(({ prefix }) => underPrefix(pathname, prefix));
+    : (PROTECTED_PREFIXES.find(({ prefix }) => underPrefix(pathname, prefix)) ??
+      (TICKET_PURCHASE.test(pathname) ? { prefix: '/events', roles: ALL } : undefined));
 
   // Supabase not configured yet → no session can exist → everyone is
   // logged-out. Gate protected routes, let public ones through.
