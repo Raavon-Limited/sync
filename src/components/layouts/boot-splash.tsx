@@ -8,10 +8,17 @@
  *     <SyncIntro> - the full welcome animation
  *   - every other route gets <BrandLoader>, which is quick and quiet
  *
- * Landing and app-launch are where a 4.7s brand moment is worth the wait,
- * ONCE per session (INTRO_SEEN_KEY);
+ * Landing and app-launch are where a 4.7s brand moment is worth the wait;
  * making a student sit through it on the way to /food would not be. Each keeps the
  * screen up for its own duration, so the intro is never cut off mid-animation.
+ *
+ * The intro plays IN FULL ON EVERY LOAD of the landing page. For one afternoon
+ * (1e71a52) it played in full only once per browser session - but the
+ * component still RENDERED it on every later load, with no minimum, so a
+ * reload showed the animation start and get chopped the moment the page was
+ * ready. A half-played logo reads as a glitch, not as speed. The founder asked
+ * for the full intro back. If it ever needs to be skippable, render the quiet
+ * <BrandLoader> instead of <SyncIntro> - never start the intro and cut it.
  *
  * Visible on initial render (server + hydration), then fades out once the
  * window finishes loading. On in-app navigations the root layout never
@@ -35,8 +42,6 @@ import { cn } from '@/lib/utils';
  * moment to show it.
  */
 const MIN_VISIBLE_MS = 0;
-/** The welcome animation plays once per browser session, not on every reload. */
-const INTRO_SEEN_KEY = 'sync:intro-seen';
 const FADE_MS = 500;
 
 /** SSR default is `false` here: assume a browser tab, so a normal page render
@@ -62,17 +67,8 @@ export function BootSplash() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Hold the intro for its full runtime the FIRST time; anything shorter
-    // clips the exit. After that, this session, it gets out of the way like
-    // the quiet loader does.
-    let seen = false;
-    try {
-      seen = window.sessionStorage.getItem(INTRO_SEEN_KEY) === '1';
-      if (showIntro) window.sessionStorage.setItem(INTRO_SEEN_KEY, '1');
-    } catch {
-      /* storage blocked: play it, as before */
-    }
-    const minVisible = showIntro && !seen ? SYNC_INTRO_DURATION * 1000 : MIN_VISIBLE_MS;
+    // Hold the intro for its full runtime; anything shorter clips the exit.
+    const minVisible = showIntro ? SYNC_INTRO_DURATION * 1000 : MIN_VISIBLE_MS;
     const start = performance.now();
     const timers: ReturnType<typeof setTimeout>[] = [];
 
