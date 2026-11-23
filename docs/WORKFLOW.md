@@ -363,8 +363,11 @@ how verification works, About) says this; keep new copy consistent. **Safety on 
 (`/legal/safety`) carries the founder's meet-up and reporting notice, linked from the footer
 disclaimer, terms and the Policies menu.
 **Around you bento** (`components/around/around-bento.tsx`) is shared by the landing and the top
-of /around (the map stays below it). Backed by **`20261123120000_around_gist_and_polls`, NOT YET
-APPLIED** (parsed with Postgres's parser via pglast, never executed; verify block at the end):
+of /around (the map stays below it). Backed by **`20261124090000_gist_and_polls_v2`** on top of
+`20261123120000_around_gist_and_polls` (the first version, applied, then wrongly rewritten in place;
+restored to what was applied, and v2 drops and recreates its objects behind a guard that refuses
+if any gist post or poll vote exists). **Never edit an applied migration; add a new one.** Parsed
+with Postgres's parser (pglast), never executed; verify blocks at the end:
 - **Gist** shows the poster's `profiles.display_name` (set via `set_display_name()`, unique, or
   "Anonymous"). **Clients have NO select on `gist_posts`** (it holds `author_id`); read through
   `gist_feed()`, write by insert (trigger sets author, cleans text: masks words from
