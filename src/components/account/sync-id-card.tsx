@@ -184,6 +184,7 @@ const KIND_LABEL: Record<CardKind, string> = {
   agent: 'AGENT ID',
   staff: 'STAFF ID',
 };
+// 480px (was a 2000px, 1.8MB PNG downsampled to 420 in canvas anyway).
 const ROSETTE_SRC = '/klario-rosette.png';
 
 // Resolved once at module scope. It is build-time inlined and never changes,

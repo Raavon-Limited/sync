@@ -8,7 +8,8 @@
  *     <SyncIntro> - the full welcome animation
  *   - every other route gets <BrandLoader>, which is quick and quiet
  *
- * Landing and app-launch are where a 4.7s brand moment is worth the wait;
+ * Landing and app-launch are where a 4.7s brand moment is worth the wait,
+ * ONCE per session (INTRO_SEEN_KEY);
  * making a student sit through it on the way to /food would not be. Each keeps the
  * screen up for its own duration, so the intro is never cut off mid-animation.
  *
@@ -26,8 +27,16 @@ import { SyncIntro, SYNC_INTRO_DURATION } from '@/components/ui/sync-intro';
 import { readStandalone, subscribeStandalone } from '@/lib/pwa/use-install';
 import { cn } from '@/lib/utils';
 
-/** How long the quiet loader stays up on non-landing routes. */
-const MIN_VISIBLE_MS = 2800;
+/**
+ * How long the quiet loader stays up on non-landing routes: not at all past
+ * the load itself. This was a 2800ms MINIMUM, so a page that had already
+ * arrived sat behind a logo for nearly three seconds on every hard refresh.
+ * Most students are on phones and slow data; the page being ready is the
+ * moment to show it.
+ */
+const MIN_VISIBLE_MS = 0;
+/** The welcome animation plays once per browser session, not on every reload. */
+const INTRO_SEEN_KEY = 'sync:intro-seen';
 const FADE_MS = 500;
 
 /** SSR default is `false` here: assume a browser tab, so a normal page render
@@ -53,8 +62,17 @@ export function BootSplash() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Hold the intro for its full runtime; anything shorter clips the exit.
-    const minVisible = showIntro ? SYNC_INTRO_DURATION * 1000 : MIN_VISIBLE_MS;
+    // Hold the intro for its full runtime the FIRST time; anything shorter
+    // clips the exit. After that, this session, it gets out of the way like
+    // the quiet loader does.
+    let seen = false;
+    try {
+      seen = window.sessionStorage.getItem(INTRO_SEEN_KEY) === '1';
+      if (showIntro) window.sessionStorage.setItem(INTRO_SEEN_KEY, '1');
+    } catch {
+      /* storage blocked: play it, as before */
+    }
+    const minVisible = showIntro && !seen ? SYNC_INTRO_DURATION * 1000 : MIN_VISIBLE_MS;
     const start = performance.now();
     const timers: ReturnType<typeof setTimeout>[] = [];
 

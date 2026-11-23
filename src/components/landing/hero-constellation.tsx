@@ -244,7 +244,12 @@ export function HeroConstellation({
 
       {/* Floating feature icons. Decorative: the same destinations are links
           in the header's Explore menu. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
+      {/* The icon field is the CONTENT width, not the window: on a 1900px
+          monitor % positions of the full section flung the icons to the far
+          edges, away from the cluster they connect to. Below 1400px this box
+          is the full width, so the phone/tablet pixel positions (measured
+          from the section) still line up. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 z-0 w-full max-w-[1400px] -translate-x-1/2">
         {ICONS.map((ic, i) => {
           const p = mpos?.[i];
           if (mpos && !p) return null;
@@ -257,7 +262,7 @@ export function HeroConstellation({
             >
               <div className="sync-float relative size-full" style={{ animationDelay: `${(i % 5) * -1.2}s` }}>
                 <div className="bg-stone border-forest/35 text-forest flex size-full items-center justify-center rounded-full border">
-                  <NavIcon name={ic.icon} size={22} />
+                  <NavIcon name={ic.icon} size={22} solid />
                 </div>
                 <span className="text-forest absolute top-[68px] left-1/2 -translate-x-1/2 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase max-[880px]:hidden">
                   {ic.label}
@@ -275,10 +280,10 @@ export function HeroConstellation({
             <span className="bg-leaf size-2 rounded-full" />
             Connect · Search · Sync
           </span>
-          <h1 className="font-display text-forest max-w-[600px] text-[clamp(36px,min(4vw,6.4vh),60px)] leading-[1.02] font-bold tracking-[-0.035em]">
+          <h1 className="font-display text-forest max-w-[600px] text-[clamp(36px,min(4vw,6.4vh),60px)] 2xl:max-w-[680px] 2xl:text-[clamp(56px,min(3.5vw,7vh),68px)] leading-[1.02] font-bold tracking-[-0.035em]">
             Everything campus. <span className="text-leaf">One sync.</span>
           </h1>
-          <p className="text-moss max-w-[460px] text-[17px] leading-relaxed">
+          <p className="text-moss max-w-[460px] text-[17px] leading-relaxed 2xl:max-w-[520px] 2xl:text-[19px]">
             Hostels, internet, events, food and every service around campus, in one place built for
             students.
           </p>
@@ -305,7 +310,7 @@ export function HeroConstellation({
         <div className="relative order-1 flex min-w-0 flex-col items-center gap-5 lg:order-2 lg:flex-[1.3] lg:flex-row lg:items-center lg:justify-start">
           <div
             data-cluster=""
-            className="relative mx-auto aspect-[640/600] w-full max-w-[700px] max-sm:aspect-[400/560] lg:mx-0 lg:w-[min(100%,600px,calc((100svh-10rem)*1.0667))]"
+            className="relative mx-auto aspect-[640/600] w-full max-w-[700px] max-sm:aspect-[400/560] lg:mx-0 lg:w-[min(100%,600px,calc((100svh-10rem)*1.0667))] 2xl:w-[min(100%,640px,calc((100svh-10rem)*1.0667))]"
           >
             {TILES.map((t, i) => (
               <figure
@@ -346,7 +351,7 @@ export function HeroConstellation({
 
           {/* Weekly card - its own card, fed by Sync. */}
           <div
-            className="relative flex w-full max-w-[340px] flex-col gap-2.5 lg:absolute lg:right-0 lg:bottom-0 lg:w-[290px]"
+            className="relative flex w-full max-w-[340px] flex-col gap-2.5 lg:absolute lg:right-0 lg:bottom-0 lg:w-[290px] 2xl:w-[300px]"
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
             onFocus={() => setHovering(true)}

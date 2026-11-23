@@ -32,9 +32,17 @@ import { cn } from '@/lib/utils';
  * At the same `text-*` alpha the food sheet reads roughly twice as heavy, so
  * it wants a lower one - see the call sites.
  */
+/*
+ * WebP, 620px wide, served instead of the generator's PNGs (Nov 2026): the
+ * house sheet went 220KB -> 95KB, food 196KB -> 145KB. The pattern tiles at
+ * ~520px, so 620 still covers a 1.2x screen, and only the alpha channel is
+ * read by the mask. Most students are on phones and slow data; a background
+ * texture is the last thing that should cost them. Regenerate both formats
+ * together if the art changes (scripts/make-doodle-pattern.mjs, then re-export).
+ */
 const ART = {
-  house: 'url(/housedoodle.png)',
-  food: 'url(/fooddoodle.png)',
+  house: 'url(/housedoodle.webp)',
+  food: 'url(/fooddoodle.webp)',
 } as const;
 
 export interface DoodleBackdropProps {
