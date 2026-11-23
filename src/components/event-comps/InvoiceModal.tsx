@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { X, Ticket, MapPin, Clock, Calendar } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
 
 interface Ticket {
   id: string
@@ -121,9 +120,9 @@ export default function InvoiceModal({
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-black/50">{qty} × <TbCurrencyNaira className="inline" />{ticket.price.toLocaleString()}</p>
+                      <p className="text-xs text-black/50">{qty} × ₦{ticket.price.toLocaleString()}</p>
                       <p className="font-black text-sm flex items-center justify-end">
-                        <TbCurrencyNaira />{(ticket.price * qty).toLocaleString()}
+                        ₦{(ticket.price * qty).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -136,11 +135,11 @@ export default function InvoiceModal({
           <div className="border-t-2 border-dashed border-black pt-3 flex flex-col gap-2">
             <div className="flex justify-between text-sm">
               <span className="text-black/60">Subtotal</span>
-              <span className="font-medium flex items-center"><TbCurrencyNaira />{subtotal.toLocaleString()}</span>
+              <span className="font-medium flex items-center">₦{subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-black/60">Sync Fee</span>
-              <span className="font-medium flex items-center"><TbCurrencyNaira />{syncFee.toLocaleString()}</span>
+              <span className="font-medium flex items-center">₦{syncFee.toLocaleString()}</span>
             </div>
           </div>
 
@@ -148,7 +147,7 @@ export default function InvoiceModal({
           <div className="border-2 border-black rounded-xl bg-black text-[#FFC93C] px-4 py-3 flex justify-between items-center">
             <span className="font-mono font-bold text-sm tracking-wide uppercase">Total</span>
             <span className="font-black text-xl flex items-center">
-              <TbCurrencyNaira />{total.toLocaleString()}
+              ₦{total.toLocaleString()}
             </span>
           </div>
 

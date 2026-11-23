@@ -163,7 +163,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
     ));
 
   return (
-    <section id="search" className="bg-forest text-paper relative isolate overflow-hidden px-4 pt-14 pb-16 md:px-8 md:pt-16 md:pb-20">
+    <section id="search" className="landing-fixed bg-forest text-paper relative isolate overflow-hidden px-4 pt-14 pb-16 md:px-8 md:pt-16 md:pb-20">
       <DoodleBackdrop tile={520} className="text-paper/[0.07]" />
       <div className="relative mx-auto flex max-w-[1280px] flex-col gap-5">
         <h2 className="sr-only">Search Sync</h2>
@@ -184,7 +184,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
                 )}
               >
                 <span className={cn('flex size-[30px] items-center justify-center rounded-full', on ? 'bg-sage text-forest' : 'bg-paper/12 text-paper')}>
-                  <NavIcon name={t.icon} size={16} />
+                  <NavIcon name={t.icon} size={16} solid />
                 </span>
                 {t.label}
                 {t.key === 'dispatch' && <span className="font-mono text-[9px] tracking-wider uppercase opacity-70">Soon</span>}
@@ -347,7 +347,7 @@ function Card({ c, icon }: { c: RailCard; icon: string }) {
           // stock image that would pass for the real place.
           <span className="from-sage to-leaf/70 text-forest absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br">
             <span className="bg-paper/70 flex size-16 items-center justify-center rounded-2xl">
-              <NavIcon name={icon} size={30} />
+              <NavIcon name={icon} size={30} solid />
             </span>
             <span className="text-forest/70 font-mono text-[10px] tracking-wider uppercase">Photo coming</span>
           </span>

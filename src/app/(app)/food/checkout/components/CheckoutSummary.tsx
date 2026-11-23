@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import { TbCurrencyNaira } from "react-icons/tb"
 
 export interface CheckoutItem {
     id: string
@@ -106,7 +105,7 @@ export default function CheckoutSummary({
 
                         <div className="font-bold text-sm flex items-center">
 
-                            <TbCurrencyNaira />
+                            ₦
 
                             {(item.qty * item.price).toLocaleString()}
 
@@ -130,7 +129,7 @@ export default function CheckoutSummary({
 
                     <span className="flex items-center">
 
-                        <TbCurrencyNaira />
+                        ₦
 
                         {subtotal.toLocaleString()}
 
@@ -146,7 +145,7 @@ export default function CheckoutSummary({
 
                     <span className="flex items-center">
 
-                        <TbCurrencyNaira />
+                        ₦
 
                         {deliveryFee.toLocaleString()}
 
@@ -162,7 +161,7 @@ export default function CheckoutSummary({
 
                     <span className="flex items-center">
 
-                        <TbCurrencyNaira />
+                        ₦
 
                         {packagingFee.toLocaleString()}
 
@@ -178,7 +177,7 @@ export default function CheckoutSummary({
 
                     <span className="flex items-center">
 
-                        <TbCurrencyNaira />
+                        ₦
 
                         {serviceFee.toLocaleString()}
 
@@ -198,7 +197,7 @@ export default function CheckoutSummary({
 
                 <span className="text-2xl font-black flex items-center">
 
-                    <TbCurrencyNaira />
+                    ₦
 
                     {total.toLocaleString()}
 

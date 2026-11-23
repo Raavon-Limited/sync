@@ -1,9 +1,6 @@
 // import type { Metadata } from 'next'
 import { RealVendorsSection } from './real-vendors-section'
-import { LuDot } from 'react-icons/lu'
-import { TbCurrencyNaira } from 'react-icons/tb'
 import { MoveRight } from 'lucide-react'
-import { GoDotFill } from 'react-icons/go'
 
 import JollofOne from '@/assets/images/Food-Pics/Jollof/JollofOne.webp'
 import JollofTwo from '@/assets/images/Food-Pics/Jollof/JollofTwo.webp'

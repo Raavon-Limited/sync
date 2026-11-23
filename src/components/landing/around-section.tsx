@@ -121,7 +121,7 @@ export function AroundSection({
                   className="hover:bg-stone/60 flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm font-medium transition-colors"
                 >
                   <span className="bg-sage/40 text-forest flex size-8 items-center justify-center rounded-lg">
-                    <NavIcon name={p.icon} size={16} />
+                    <NavIcon name={p.icon} size={16} solid />
                   </span>
                   <span className="flex-1">{p.label}</span>
                   <ArrowRight className="size-3.5 opacity-60" aria-hidden="true" />

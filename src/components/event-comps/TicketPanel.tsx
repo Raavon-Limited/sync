@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { TbCurrencyNaira } from "react-icons/tb"
 import { CirclePlus, CircleMinus, MoveRight } from "lucide-react"
 import InvoiceModal from "./InvoiceModal"
 
@@ -81,7 +80,7 @@ export default function TicketPanel({
                                 <h2 className="font-bold text-sm lg:text-base truncate">{t.name}</h2>
                                 <p className="text-xs text-muted truncate">{t.desc}</p>
                                 <p className="font-black text-sm flex items-center mt-1">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {t.price.toLocaleString()}
                                 </p>
                             </div>
@@ -121,7 +120,7 @@ export default function TicketPanel({
                                             {qty} × {ticket.name}
                                         </p>
                                         <p className="text-sm font-medium flex items-center">
-                                            <TbCurrencyNaira />
+                                            ₦
                                             {(ticket.price * qty).toLocaleString()}
                                         </p>
                                     </div>
@@ -130,7 +129,7 @@ export default function TicketPanel({
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-xs text-muted">Sync Fee</p>
                                 <p className="text-sm font-medium flex items-center">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {syncFee.toLocaleString()}
                                 </p>
                             </div>
@@ -139,7 +138,7 @@ export default function TicketPanel({
                         <div className="flex justify-between items-center border-1 rounded-lg p-3 mt-2">
                             <p className="text-sm font-bold">Total</p>
                             <p className="text-sm font-bold flex items-center">
-                                <TbCurrencyNaira />
+                                ₦
                                 {total.toLocaleString()}
                             </p>
                         </div>

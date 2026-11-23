@@ -3,9 +3,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { isVendorOpen } from "@/lib/vendor-hours"
 import Image, { StaticImageData } from "next/image"
-import { X, Plus, Minus, ShoppingBag, Star, AlarmClock, MapPin, Bike, ArrowLeft, Trash2, ShoppingCart } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
-import { GoDotFill } from "react-icons/go"
+import { X, Plus, Minus, ShoppingBag, Star, AlarmClock, MapPin, Bike, ArrowLeft, Trash2, ShoppingCart, Dot } from 'lucide-react';
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import EmptyCart from '@/components/food-comps/EmptyCart'
 import StoreInfoModal, { type StoreInfo } from "@/components/food-comps/StoreInfoModal"
@@ -185,7 +183,7 @@ export default function VendorClient({
             <div className="relative w-full h-48 sm:h-60 lg:h-72 rounded-xl overflow-hidden">
                 <Image src={heroImage} alt={vendorName} fill className="object-cover" />
                 <div className="absolute bottom-3 left-3 bg-black/70 text-white text-[10px] font-mono px-2 py-1 rounded-lg flex items-center gap-1">
-                    <GoDotFill className="text-lime animate-pulse" />
+                    <Dot className="text-lime animate-pulse" />
                     312+ orders today
                 </div>
             </div>
@@ -205,7 +203,7 @@ export default function VendorClient({
                     </div>
                     <span className={`flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full flex-shrink-0 ${open ? "bg-lime text-ink" : "bg-red-500 text-white"
                         }`}>
-                        <GoDotFill className={open ? "animate-pulse" : ""} />
+                        <Dot className={open ? "animate-pulse" : ""} />
                         {open ? "Open now" : "Closed"}
                     </span>
                 </div>
@@ -249,7 +247,7 @@ export default function VendorClient({
                                             <div className="flex items-start justify-between gap-2">
                                                 <h3 className="font-medium text-sm text-content">{item.name}</h3>
                                                 <p className="font-bold text-sm text-content flex-shrink-0 flex items-center">
-                                                    <TbCurrencyNaira />
+                                                    ₦
                                                     {qty > 0 ? (item.price * qty).toLocaleString() : item.price.toLocaleString()}
                                                 </p>
                                             </div>
@@ -407,11 +405,11 @@ export default function VendorClient({
                                         <p className="text-xs text-content-muted mt-0.5 line-clamp-2">{item.description}</p>
                                         <div className="flex items-center gap-1.5 mt-1">
                                             <span className="text-xs text-content-muted flex items-center">
-                                                <TbCurrencyNaira />{item.price.toLocaleString()} each
+                                                ₦{item.price.toLocaleString()} each
                                             </span>
                                             <span className="text-content-muted/40">·</span>
                                             <span className="text-sm font-bold text-content flex items-center">
-                                                <TbCurrencyNaira />{(item.price * item.qty).toLocaleString()}
+                                                ₦{(item.price * item.qty).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>
@@ -451,12 +449,12 @@ export default function VendorClient({
                                 ] as [string, number][]).map(([label, val]) => (
                                     <div key={label} className="flex justify-between px-4 py-3 text-sm">
                                         <span className="text-content-muted">{label}</span>
-                                        <span className="font-medium text-content flex items-center"><TbCurrencyNaira />{val.toLocaleString()}</span>
+                                        <span className="font-medium text-content flex items-center">₦{val.toLocaleString()}</span>
                                     </div>
                                 ))}
                                 <div className="flex justify-between px-4 py-3 font-bold text-base text-content bg-content-muted/5">
                                     <span>Total</span>
-                                    <span className="flex items-center"><TbCurrencyNaira />{total.toLocaleString()}</span>
+                                    <span className="flex items-center">₦{total.toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -471,7 +469,7 @@ export default function VendorClient({
                         className="w-full bg-lime text-ink font-bold text-base border-0 border-black rounded-xl py-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all cursor-pointer font-mono flex items-center justify-between px-5"
                     >
                         <span className="flex items-center gap-1">
-                            <TbCurrencyNaira />{total.toLocaleString()}
+                            ₦{total.toLocaleString()}
                         </span>
                         <span>Go to checkout →</span>
                     </button>
@@ -522,7 +520,7 @@ export default function VendorClient({
                                     {selectedItem.name}
                                 </h2>
                                 <p className="font-bold text-xl text-content flex-shrink-0 flex items-center">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {selectedItem.price.toLocaleString()}
                                 </p>
                             </div>
@@ -560,7 +558,7 @@ export default function VendorClient({
                                 Add {itemQty} to order
                                 <span className="opacity-60">·</span>
                                 <span className="flex items-center">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {(selectedItem.price * itemQty).toLocaleString()}
                                 </span>
                             </button>
@@ -648,7 +646,7 @@ export default function VendorClient({
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[13px] font-medium text-content truncate">{item.name}</p>
                                             <p className="text-[13px] text-content-muted flex items-center mt-0.5">
-                                                <TbCurrencyNaira />{(item.price * item.qty).toLocaleString()}
+                                                ₦{(item.price * item.qty).toLocaleString()}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-1 flex-shrink-0">
@@ -670,13 +668,13 @@ export default function VendorClient({
                                     ] as [string, number][]).map(([label, val]) => (
                                         <div key={label} className="flex justify-between text-[13px] text-content-muted">
                                             <span>{label}</span>
-                                            <span className="flex items-center"><TbCurrencyNaira />{val.toLocaleString()}</span>
+                                            <span className="flex items-center">₦{val.toLocaleString()}</span>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="flex justify-between px-4 py-2 font-bold text-sm text-content">
                                     <span className="text-base">Total</span>
-                                    <span className="flex items-center"><TbCurrencyNaira className="text-xl" />{total.toLocaleString()}</span>
+                                    <span className="flex items-center">₦{total.toLocaleString()}</span>
                                 </div>
                                 <div className="px-4 pb-4">
                                     <button
@@ -709,7 +707,7 @@ export default function VendorClient({
                             <span className="bg-ink text-lime text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{totalItems}</span>
                             Go to cart
                         </span>
-                        <span className="flex items-center"><TbCurrencyNaira />{total.toLocaleString()}</span>
+                        <span className="flex items-center">₦{total.toLocaleString()}</span>
                     </button>
                 </div>
             )}
