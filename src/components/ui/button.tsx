@@ -15,7 +15,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-lime text-ink hover:bg-lime/85 shadow-card',
+        // Sunflower BY NAME: the primary button is the important action on a
+        // screen, the one place the electric colour belongs. `lime` is sage now.
+        primary: 'bg-sunflower text-forest hover:bg-sunflower/85 shadow-card',
         dark: 'bg-ink text-cream hover:bg-ink/85',
         outline: 'border border-line/15 bg-transparent text-content hover:bg-ink/5',
         ghost: 'bg-transparent text-content hover:bg-ink/5',

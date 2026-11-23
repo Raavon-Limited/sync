@@ -145,7 +145,7 @@ export function SyncIntro({ className }: { className?: string }) {
       const pp = span(t, 'pop');
       const pop = pp > 0 && pp < 1 ? 1 + 0.075 * Math.sin(pp * Math.PI) : 1;
 
-      // The lock lands: one lime ring, out and gone.
+      // The lock lands: one sage ring (the brand mark is forest, sage and paper; sunflower is for buttons, never the logo), out and gone.
       if (pp > 0 && pp < 1) {
         const rr = outCubic(pp);
         ring!.setAttribute('r', (40 + 62 * rr).toFixed(2));
@@ -277,12 +277,12 @@ export function SyncIntro({ className }: { className?: string }) {
         <g id={uid + '-root'}>
           <g id={uid + '-stage'}>
             <g id={uid + '-ringg'}>
-              <circle id={uid + '-ring'} cx="0" cy="0" r="40" fill="none" stroke="#FFC93C" opacity="0" />
+              <circle id={uid + '-ring'} cx="0" cy="0" r="40" fill="none" stroke="#A3B18A" opacity="0" />
             </g>
             <g id={uid + '-mark'}>
               <g id={uid + '-gl'}>
                 <g transform="translate(-50,-50)">
-                  <path d={LEFT_PATH} fill="#FFC93C" />
+                  <path d={LEFT_PATH} fill="#A3B18A" />
                 </g>
               </g>
               <g id={uid + '-gr'}>

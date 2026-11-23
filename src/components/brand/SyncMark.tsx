@@ -24,7 +24,7 @@ const RIGHT = "M 50,10 C 65.1,10 65.1,50 51.6,50 C 38.1,50 38.1,90 50,90 A 40,40
 export interface SyncMarkProps {
   /** Width and height in px. Defaults to 32. Never below 16. */
   size?: number;
-  /** The lime half. Change only for single colour use. */
+  /** The sage half. Change only for single colour use. */
   accent?: string;
   /** The other half. Use Cream on Ink surfaces. Defaults to Ink. */
   counter?: string;

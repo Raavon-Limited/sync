@@ -108,7 +108,7 @@ export function AroundSection({
                   <p className="font-display mt-1 text-xl font-bold">{campus}</p>
                 )}
               </div>
-              <span className="bg-sunflower text-forest flex size-11 items-center justify-center rounded-2xl">
+              <span className="bg-sage text-forest flex size-11 items-center justify-center rounded-2xl">
                 {night ? <Moon className="size-5" aria-hidden="true" /> : <Sun className="size-5" aria-hidden="true" />}
               </span>
             </div>
@@ -138,7 +138,7 @@ export function AroundSection({
                 href="/?topic=gist#contact"
                 className="bg-forest text-paper flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold"
               >
-                <Megaphone className="text-sunflower size-3.5" aria-hidden="true" /> Drop gist
+                <Megaphone className="text-sage size-3.5" aria-hidden="true" /> Drop gist
               </Link>
             </div>
             <div className="border-forest/20 rounded-2xl border border-dashed p-5">
@@ -156,7 +156,7 @@ export function AroundSection({
               href={`/events/${showcase.event.slug}`}
               className="bg-forest text-paper flex min-h-44 flex-col justify-between gap-5 rounded-[26px] p-5 transition-transform hover:-translate-y-0.5 md:col-span-3 lg:col-span-4"
             >
-              <span className="bg-sunflower text-forest inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
+              <span className="bg-sage text-forest inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
                 <CalendarDays className="size-3.5" aria-hidden="true" /> {showcase.event.when}
               </span>
               <span>

@@ -75,7 +75,7 @@ export function HowSection() {
             <li key={s.title} className="sync-fade relative flex items-start gap-4 sm:flex-col sm:items-center sm:text-center">
               <span className="bg-forest text-paper relative flex size-14 shrink-0 items-center justify-center rounded-full">
                 <s.Icon className="size-5" aria-hidden="true" />
-                <span className="bg-sunflower text-forest absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full text-xs font-bold">
+                <span className="bg-sage text-forest absolute -top-1 -right-1 flex size-6 items-center justify-center rounded-full text-xs font-bold">
                   {i + 1}
                 </span>
               </span>

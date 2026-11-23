@@ -54,7 +54,7 @@ export function WhySection() {
                 </span>
               </p>
               <p className="flex items-start gap-2.5 text-sm leading-relaxed font-medium">
-                <span className="bg-sunflower text-forest mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                <span className="bg-sage text-forest mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
                   <Check className="size-3" strokeWidth={3} aria-hidden="true" />
                 </span>
                 <span>

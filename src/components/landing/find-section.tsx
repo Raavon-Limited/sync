@@ -183,7 +183,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
                   on ? 'bg-paper text-forest border-paper' : 'border-paper/25 text-paper hover:border-paper/60',
                 )}
               >
-                <span className={cn('flex size-[30px] items-center justify-center rounded-full', on ? 'bg-sunflower text-forest' : 'bg-paper/12 text-paper')}>
+                <span className={cn('flex size-[30px] items-center justify-center rounded-full', on ? 'bg-sage text-forest' : 'bg-paper/12 text-paper')}>
                   <NavIcon name={t.icon} size={16} />
                 </span>
                 {t.label}
@@ -237,7 +237,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
             >
               <SlidersHorizontal className="size-[18px]" aria-hidden="true" />
               {filterCount > 0 && (
-                <span className="bg-sunflower text-forest ring-forest absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ring-2">
+                <span className="bg-sage text-forest ring-forest absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ring-2">
                   {filterCount}
                 </span>
               )}
@@ -353,7 +353,7 @@ function Card({ c, icon }: { c: RailCard; icon: string }) {
           </span>
         )}
         {c.featured && (
-          <span className="bg-sunflower text-forest absolute top-2.5 left-2.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
+          <span className="bg-sage text-forest absolute top-2.5 left-2.5 rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
             Featured
           </span>
         )}

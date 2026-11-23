@@ -11,15 +11,22 @@
  * lime to the green system (Nov 2026), and the old names were kept ON PURPOSE:
  * `bg-lime`, `text-ink`, `bg-cream` appear ~500 times across ~220 files, and
  * renaming them would have been a sweep through every screen for no visual
- * gain. So `lime` now MEANS "the accent fill" (sunflower), `ink` means "the
+ * gain. So `lime` now MEANS "the brand accent fill" (SAGE), `ink` means "the
  * dark brand colour" (forest), `cream` means "the page" (stone). The new names
  * below (`forest`, `sage`, `leaf`, `stone`, `sunflower`) are aliases for new
  * code; both spellings resolve to the same values, so they can never drift.
  *
- * NEVER use bright `lime` (sunflower) as text on `cream` (stone) - it is a
- * fill. Use `lime-deep` for accent TEXT on light grounds. Every pairing below
- * was contrast-checked: forest on stone 6.3:1, lime-deep on stone 4.7:1,
- * forest on sunflower 5.9:1, sunflower on forest 5.9:1.
+ * SUNFLOWER IS NOT THE BRAND ACCENT. It is the electric colour for the few
+ * things that matter most on a screen: the primary Button variant, a section's
+ * one important CTA. It was briefly mapped onto `lime`, which made ~640 class
+ * usages (badges, eyebrows, loaders, the logo intro) yellow and spent the
+ * accent everywhere. Reach for `sunflower` by name, deliberately; never via
+ * `lime`.
+ *
+ * NEVER use `lime` (sage) as text on `cream` (stone) - 1.9:1. Use `lime-deep`
+ * for accent TEXT on light grounds. Checked: forest on stone 6.3:1, lime-deep
+ * on stone 4.7:1, forest on sage 4.2:1 (UI chips), sage on forest 4.0:1,
+ * forest on sunflower 5.9:1.
  */
 @import 'tailwindcss';
 
@@ -45,7 +52,7 @@
   --color-cream: #dad7cd; /* stone - the page */
   --color-cream-deep: #cfcbbe; /* sunken / hover on stone */
   --color-ink: #344e41; /* forest - text and dark panels */
-  --color-lime: #ffc93c; /* sunflower - the accent FILL */
+  --color-lime: #a3b18a; /* sage - the brand accent FILL. Not sunflower, see top. */
   /* Accent TEXT on light grounds. Not the palette's #588157 (leaf): that is
      3.1:1 on stone and fails as body text. This is leaf taken darker until it
      clears 4.5:1 on stone. Leaf itself stays available for large display text
@@ -193,13 +200,10 @@
     --ct: #e8e6dd;
     --ct-muted: #a3b18a;
     /* sage, 7.5:1 on the dark ground */
-    --ac-fg: #ffc93c;
+    --ac-fg: #a3b18a;
     --wn-fg: #ff8b5c;
     --ln: #dad7cd;
     --sb: #588157;
-    /* Slightly deeper sunflower for fills on dark - full sunflower on a
-       near-black green glares. Drives every bg-lime/accent in dark mode. */
-    --color-lime: #f2bd32;
     color-scheme: dark;
   }
 }
@@ -210,12 +214,10 @@
   --sf-card: #203027;
   --ct: #e8e6dd;
   --ct-muted: #a3b18a;
-  --ac-fg: #ffc93c;
+  --ac-fg: #a3b18a;
   --wn-fg: #ff8b5c;
   --ln: #dad7cd;
   --sb: #588157;
-  /* Deeper sunflower for fills on dark (see note above). */
-  --color-lime: #f2bd32;
   color-scheme: dark;
 }
 

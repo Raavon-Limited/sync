@@ -46,7 +46,7 @@ interface TraceTileProps {
   children: React.ReactNode;
 }
 
-/** Shared shell: a tile with a lime trace running its corner radius. */
+/** Shared shell: a tile with a sage trace running its corner radius. */
 function TraceTile({ size = 132, tile = INK, accent = LIME, track, label, children }: TraceTileProps) {
   const raw = useId();
   const id = `sync-${raw.replace(/[^a-zA-Z0-9]/g, "")}`;

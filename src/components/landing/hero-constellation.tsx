@@ -388,7 +388,7 @@ export function HeroConstellation({
                       <span
                         className={cn(
                           'h-1.5 rounded-full transition-all',
-                          i === idx % slides.length ? 'bg-sunflower w-4' : 'bg-paper/40 w-1.5',
+                          i === idx % slides.length ? 'bg-sage w-4' : 'bg-paper/40 w-1.5',
                         )}
                       />
                     </button>

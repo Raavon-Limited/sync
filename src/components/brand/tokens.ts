@@ -3,11 +3,13 @@
 export const color = {
   // Green system, Nov 2026. Key names kept from the original kit so every
   // import keeps working: `cream` is stone, `ink` is forest, `lime` is the
-  // sunflower accent. `sage` is the mark's light half.
+  // brand accent (sage, same as globals.css). Sunflower is NOT a brand colour
+  // of the kit: it is the app's electric colour for important buttons only,
+  // and lives in globals.css as --color-sunflower.
   cream: "#DAD7CD",   // stone - surfaces, roughly 60% of any screen
   paper: "#F2F1EA",   // cards on stone, and the mark's counter on forest
   ink: "#344E41",     // forest - type and marks, roughly 30%
-  lime: "#FFC93C",    // sunflower - accent only, roughly 10%
+  lime: "#A3B18A",    // sage - the brand accent, roughly 10%
   sage: "#A3B18A",    // the mark's accent half
 } as const;
 
