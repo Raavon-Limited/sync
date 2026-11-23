@@ -57,6 +57,11 @@ export interface GistPost {
   reactions: Partial<Record<ReactionKind, number>>;
   /** This visitor's word - by account when signed in, else by this device. */
   myReaction: ReactionKind | null;
+  /** 👍 / 👎 counts, separate from the words (20261124180000). */
+  ups: number;
+  downs: number;
+  /** This visitor's thumb: 1 up, -1 down, null none. */
+  myVote: 1 | -1 | null;
   mine: boolean;
 }
 
@@ -82,6 +87,9 @@ export function useGistFeed(campusId: string | null, limit = 20) {
         createdAt: r.created_at as string,
         reactions: (r.reactions ?? {}) as Partial<Record<ReactionKind, number>>,
         myReaction: (r.my_reaction as ReactionKind | null) ?? null,
+        ups: Number(r.ups ?? 0),
+        downs: Number(r.downs ?? 0),
+        myVote: r.my_vote === 1 ? 1 : r.my_vote === -1 ? -1 : null,
         mine: Boolean(r.mine),
       }));
     },
@@ -177,6 +185,44 @@ export function useReactToGist() {
           const next = p.myReaction === kind ? null : kind;
           if (next) counts[next] = (counts[next] ?? 0) + 1;
           return { ...p, reactions: counts, myReaction: next };
+        }),
+      );
+      return { before };
+    },
+    onError: (_err, _vars, ctx) => ctx?.before.forEach(([key, data]) => qc.setQueryData(key, data)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['gist', 'feed'] }),
+  });
+}
+
+/**
+ * 👍 / 👎, one per person, separate from the word. Same thumb again takes it
+ * back; the other one switches. No account needed, optimistic like the words.
+ */
+export function useVoteGist() {
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { public: true },
+    mutationFn: async ({ postId, value }: { postId: string; value: 1 | -1 }) => {
+      const { error } = await db().rpc('vote_gist', {
+        p_post: postId,
+        p_value: value,
+        p_device: deviceId() ?? null,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async ({ postId, value }) => {
+      await qc.cancelQueries({ queryKey: ['gist', 'feed'] });
+      const before = qc.getQueriesData<GistPost[]>({ queryKey: ['gist', 'feed'] });
+      qc.setQueriesData<GistPost[]>({ queryKey: ['gist', 'feed'] }, (posts) =>
+        posts?.map((p) => {
+          if (p.id !== postId) return p;
+          let { ups, downs } = p;
+          if (p.myVote === 1) ups = Math.max(0, ups - 1);
+          if (p.myVote === -1) downs = Math.max(0, downs - 1);
+          const next = p.myVote === value ? null : value;
+          if (next === 1) ups += 1;
+          if (next === -1) downs += 1;
+          return { ...p, ups, downs, myVote: next };
         }),
       );
       return { before };

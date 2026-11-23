@@ -39,6 +39,8 @@ import {
   Smile,
   ShieldCheck,
   Sun,
+  ThumbsDown,
+  ThumbsUp,
   Ticket,
   Trash2,
   UtensilsCrossed,
@@ -68,6 +70,7 @@ import {
   useReportPoll,
   useSetDisplayName,
   useReactToGist,
+  useVoteGist,
   REACTIONS,
   useVote,
   votedHere,
@@ -600,6 +603,7 @@ function DisplayNameDialog({ current }: { current: string | null }) {
 function GistRow({ post }: { post: GistPost }) {
   const k = KIND[post.kind];
   const react = useReactToGist();
+  const vote = useVoteGist();
   const report = useReportGist();
   const del = useDeleteGist();
   const ago = formatDistanceToNowStrict(new Date(post.createdAt))
@@ -630,6 +634,36 @@ function GistRow({ post }: { post: GistPost }) {
           role="group"
           aria-label="React to this post"
         >
+          {/* 👍 / 👎 first, their own vote (20261124180000): one thumb per
+              person AND one word, so agreeing and laughing can both happen. */}
+          {([
+            { value: 1, Icon: ThumbsUp, n: post.ups, label: 'Thumbs up' },
+            { value: -1, Icon: ThumbsDown, n: post.downs, label: 'Thumbs down' },
+          ] as const).map((t) => {
+            const on = post.myVote === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                aria-pressed={on}
+                aria-label={on ? `Remove your ${t.label.toLowerCase()}` : t.label}
+                onClick={() =>
+                  vote.mutate(
+                    { postId: post.id, value: t.value },
+                    { onError: (err) => toast(err instanceof Error ? err.message : 'Could not vote') },
+                  )
+                }
+                className={cn(
+                  'flex min-h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors',
+                  on ? 'bg-forest text-paper border-forest' : 'border-forest/20 hover:bg-stone',
+                )}
+              >
+                <t.Icon className="size-4" fill={on ? 'currentColor' : 'none'} fillOpacity={on ? 0.3 : undefined} aria-hidden="true" />
+                {t.n > 0 && <span className={on ? 'text-paper/80' : 'text-moss'}>{t.n}</span>}
+              </button>
+            );
+          })}
+          <span className="bg-forest/15 my-1.5 w-px shrink-0" aria-hidden="true" />
           {REACTIONS.map((r) => {
             const n = post.reactions[r.key] ?? 0;
             const on = post.myReaction === r.key;
