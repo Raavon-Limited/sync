@@ -45,16 +45,17 @@ export default function Page() {
 
       <DocSection title="3. Pay into escrow">
         <p>
-          You pay {SITE.name}, not the vendor. We hold the money until the booking or order
-          completes, then release it. That is the whole point: the vendor knows the money is real,
-          and you know it has not left your hands for something that has not happened yet.
+          Your payment goes to our licensed third-party escrow partner, not to the vendor and not
+          to {SITE.name}. The partner holds it until the booking or order completes, then pays the
+          vendor and passes {SITE.name} its fee. The vendor knows the money is real, and you know it
+          has not gone anywhere for something that has not happened yet.
         </p>
       </DocSection>
 
       <DocSection title="4. If something goes wrong">
         <DocList
           items={[
-            'Raise a dispute from the booking or order. The funds stay held while we look.',
+            'Raise a dispute from the booking or order. The funds stay with the escrow partner while we look.',
             'We read both sides, ask for evidence, and decide - refund, partial refund, or release.',
             'Vendors who repeatedly get it wrong lose their verification.',
           ]}
@@ -64,7 +65,7 @@ export default function Page() {
       <DocSection title="What it costs">
         <p>
           Browsing and booking are free for students. Vendors pay a fee on completed transactions,
-          which is what funds verification and the escrow process.
+          which is what funds verification. Any fee is shown before you pay.
         </p>
       </DocSection>
 

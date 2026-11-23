@@ -119,6 +119,16 @@ export function MarketingFooter() {
               pay. By using {SITE.name} you agree to our Terms of Service and acknowledge that
               reliance on any information here is at your own risk.
             </p>
+            <p>
+              Stay safe when buying or selling: only trade with verified vendors, meet in a public
+              place, and never follow anyone to a place you did not agree to in the app. We can only
+              see what is agreed in the app, not what is said in person or on a call. If anything
+              goes wrong, report it immediately and keep evidence; we will follow up and report to
+              the nearest help.{' '}
+              <Link href="/legal/safety" className="text-cream/80 underline underline-offset-2">
+                Safety on Sync
+              </Link>
+            </p>
           </div>
         </div>
 

@@ -349,6 +349,12 @@ no session, the mutation throws `SignInRequired` and the page goes to `/login?ne
 mutation that must work signed out opts out with `meta: { public: true }` (none exist). **A gated
 prefix must also be in RESERVED_HANDLES** (`lib/handle.ts`) or the gate never fires; `ai` was
 missing and is now added.
+**Money: Sync does not hold student funds.** Where escrow applies, a licensed third-party escrow
+partner holds the payment and pays out the vendor and Sync's fee on completion. Paystack is not
+named as the escrow (it has no escrow product). Public copy (footer, terms, privacy, how it works,
+how verification works, About) says this; keep new copy consistent. **Safety on Sync**
+(`/legal/safety`) carries the founder's meet-up and reporting notice, linked from the footer
+disclaimer, terms and the Policies menu.
 
 **Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
 NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every

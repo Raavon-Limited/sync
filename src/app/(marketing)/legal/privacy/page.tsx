@@ -56,8 +56,8 @@ export default function Page() {
 
       <DocSection title="Why we use it">
         <p>
-          To run the marketplace: create your account, show listings near you, take payment, hold it
-          in escrow until a booking completes, verify vendors, resolve disputes, and meet our legal
+          To run the marketplace: create your account, show listings near you, pass payments to our
+          licensed escrow partner, which holds them until a booking completes, verify vendors, resolve disputes, and meet our legal
           obligations. We do not sell your personal data.
         </p>
       </DocSection>
@@ -69,7 +69,7 @@ export default function Page() {
         <DocList
           items={[
             'Supabase - authentication, database and file storage.',
-            'Our licensed payment provider - processing payments you choose to make on Sync.',
+            'Our licensed payment provider and escrow partner - processing payments and holding them until a booking completes.',
             'Our identity verification provider - vendor and landlord ID checks.',
             'Google Maps - map rendering. Your precise location is never sent to us in full.',
             'Resend - transactional email such as sign-in links and receipts.',

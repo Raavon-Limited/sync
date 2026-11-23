@@ -23,6 +23,7 @@ export const LEGAL_LINKS: FooterLink[] = [
   { href: '/legal/terms', label: 'Terms of Service' },
   { href: '/legal/cookies', label: 'Cookie Policy' },
   { href: '/legal/data-protection', label: 'Data Protection' },
+  { href: '/legal/safety', label: 'Safety on Sync' },
 ];
 
 /**
