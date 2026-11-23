@@ -2,8 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { MoveRight, Star, Clock, Bike, Info, ChevronRight } from 'lucide-react'
-import { GoDotFill } from 'react-icons/go'
+import { MoveRight, Star, Clock, Bike, Info, ChevronRight, Dot } from 'lucide-react';
 import type { StaticImageData } from 'next/image'
 
 import JollofOne from '@/assets/images/Food-Pics/Jollof/JollofOne.webp'
@@ -69,7 +68,7 @@ export default function FoodLanding({ onExplore, userName = 'Abdulmuiz' }: Props
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80" />
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-mono px-3 py-1.5 rounded-full border border-white/10 whitespace-nowrap">
-                    <GoDotFill className="text-lime animate-pulse" />
+                    <Dot className="text-lime animate-pulse" />
                     20+ vendors open now
                 </div>
             </div>

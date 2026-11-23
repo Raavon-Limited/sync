@@ -41,10 +41,10 @@ import {
   Text,
 } from '@react-email/components';
 
-const CREAM = '#f4f1e8';
-const INK = '#0e0e12';
-const LIME = '#c5ff4a';
-const MUTED = '#6a6a72';
+const CREAM = '#f2f1ea';
+const INK = '#344e41';
+const LIME = '#ffc93c';
+const MUTED = '#4e5d53';
 const FAINT = '#9a9aa2';
 
 export interface StaffInviteEmailProps {

@@ -1,9 +1,16 @@
 /** Sync design tokens. Single source of truth for colour and motion. */
 
 export const color = {
-  cream: "#F4F1E8",   // surfaces, roughly 60% of any screen
-  ink: "#0E0E12",     // type and marks, roughly 30%
-  lime: "#C5FF4A",    // accent only, roughly 10%
+  // Green system, Nov 2026. Key names kept from the original kit so every
+  // import keeps working: `cream` is stone, `ink` is forest, `lime` is the
+  // brand accent (sage, same as globals.css). Sunflower is NOT a brand colour
+  // of the kit: it is the app's electric colour for important buttons only,
+  // and lives in globals.css as --color-sunflower.
+  cream: "#DAD7CD",   // stone - surfaces, roughly 60% of any screen
+  paper: "#F2F1EA",   // cards on stone, and the mark's counter on forest
+  ink: "#344E41",     // forest - type and marks, roughly 30%
+  lime: "#A3B18A",    // sage - the brand accent, roughly 10%
+  sage: "#A3B18A",    // the mark's accent half
 } as const;
 
 export const radius = {

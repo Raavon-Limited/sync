@@ -186,11 +186,11 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
                   className={cn(
                     'relative mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors',
                     isFrom || isTo
-                      ? 'bg-lime-500 font-semibold text-white'
+                      ? 'bg-accent-fg text-surface font-semibold'
                       : inRange
-                        ? 'bg-lime-100 text-lime-800'
+                        ? 'bg-lime/20 text-content'
                         : isToday
-                          ? 'font-semibold text-lime-600'
+                          ? 'text-accent-fg font-semibold'
                           : 'text-content hover:bg-surface-deep',
                   )}
                 >

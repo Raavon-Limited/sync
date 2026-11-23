@@ -44,12 +44,12 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 280 }}>
           <defs>
             <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#90d505" />
-              <stop offset="100%" stopColor="#6aaf00" />
+              <stop offset="0%" stopColor="#a3b18a" />
+              <stop offset="100%" stopColor="#588157" />
             </linearGradient>
             <linearGradient id="barHov" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b0f020" />
-              <stop offset="100%" stopColor="#90d505" />
+              <stop offset="0%" stopColor="#588157" />
+              <stop offset="100%" stopColor="#44633f" />
             </linearGradient>
           </defs>
 
@@ -88,7 +88,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 <text
                   x={x + bw / 2} y={H - PADDING.bottom + 16}
                   textAnchor="middle" fontSize="11"
-                  fill={isHov ? "#5a9e00" : "#999"} fontFamily="system-ui" fontWeight={isHov ? "700" : "400"} >
+                  fill={isHov ? "#44633f" : "#999"} fontFamily="system-ui" fontWeight={isHov ? "700" : "400"} >
                   {d.month}
                 </text>
 
@@ -98,7 +98,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                     <rect x={x + bw / 2 - 42} y={y - 36} width={84} height={28} rx="6" fill="white"
                       stroke="#e5e7eb" strokeWidth="1" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.08))" />
                     <text x={x + bw / 2} y={y - 26} textAnchor="middle" fontSize="10" fill="#999" fontFamily="system-ui">{d.month}</text>
-                    <text x={x + bw / 2} y={y - 14} textAnchor="middle" fontSize="11" fill="#90d505" fontFamily="system-ui" fontWeight="700">
+                    <text x={x + bw / 2} y={y - 14} textAnchor="middle" fontSize="11" fill="#44633f" fontFamily="system-ui" fontWeight="700">
                       ₦{d.revenue.toLocaleString()}
                     </text>
                   </g>

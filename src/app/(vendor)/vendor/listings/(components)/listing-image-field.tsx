@@ -58,7 +58,7 @@ export function ListingImageField({
           onClick={() => inputRef.current?.click()}
           disabled={upload.isPending}
           className={cn(
-            'border-line/40 hover:border-lime-500 relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed transition-colors',
+            'border-line/40 hover:border-lime relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed transition-colors',
             error && 'border-red-400',
           )}
           aria-label={value ? 'Replace product photo' : 'Upload product photo'}

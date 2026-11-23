@@ -169,7 +169,7 @@ export default function FoodSection({ food }: Props) {
     return (
         <>
             <h2 className="mt-5 text-2xl text-center lg:text-left font-black tracking-tight md:text-4xl lg:text-4xl font-display leading-none">
-                <span className="text-lime bg-ink dark:bg-[#111111] border-2 border-lime px-2 py-1 lg:px-4 lg:py-1 inline-block shadow-[4px_4px_0px_0px_rgba(197,255,74,1)]">
+                <span className="text-lime bg-ink dark:bg-[#111111] border-2 border-lime px-2 py-1 lg:px-4 lg:py-1 inline-block shadow-[4px_4px_0px_0px_rgba(255,201,60,1)]">
                     Order up.
                 </span>
             </h2>
@@ -202,7 +202,7 @@ export default function FoodSection({ food }: Props) {
                                 {active && tab.label !== "All" && (
                                     <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-ink border-2 border-surface flex items-center justify-center z-10">
                                         <svg width="9" height="7" viewBox="0 0 10 8" fill="none">
-                                            <path d="M1 4L3.5 6.5L9 1" stroke="#C5FF4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            <path d="M1 4L3.5 6.5L9 1" stroke="#FFC93C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 )}
@@ -334,7 +334,7 @@ export default function FoodSection({ food }: Props) {
                                             {selected && (
                                                 <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-lime rounded-full flex items-center justify-center">
                                                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                                        <path d="M1 4l2.5 2.5L9 1" stroke="#0e0e12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <path d="M1 4l2.5 2.5L9 1" stroke="#344e41" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                     </svg>
                                                 </span>
                                             )}

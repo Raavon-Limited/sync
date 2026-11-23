@@ -5,26 +5,98 @@
  * automatically creates the matching Tailwind utility (e.g. `--color-lime`
  * exposes `bg-lime`, `text-lime`, `border-lime`, etc.).
  *
- * 60/30/10 colour ratio: cream (surface) / ink (text) / lime (accent).
- * NEVER use bright `lime` as text on `cream` - use `lime-deep` for text and
- * reserve `lime` for fills, badges, focus rings, and accent surfaces.
+ * 60/30/10 colour ratio: stone (surface) / forest (text) / sunflower (accent).
+ *
+ * THE TOKEN NAMES ARE HISTORICAL. The palette moved from cream / ink / electric
+ * lime to the green system (Nov 2026), and the old names were kept ON PURPOSE:
+ * `bg-lime`, `text-ink`, `bg-cream` appear ~500 times across ~220 files, and
+ * renaming them would have been a sweep through every screen for no visual
+ * gain. So `lime` now MEANS "the brand accent fill" (SAGE), `ink` means "the
+ * dark brand colour" (forest), `cream` means "the page" (stone). The new names
+ * below (`forest`, `sage`, `leaf`, `stone`, `sunflower`) are aliases for new
+ * code; both spellings resolve to the same values, so they can never drift.
+ *
+ * SUNFLOWER IS NOT THE BRAND ACCENT. It is the electric colour for the few
+ * things that matter most on a screen: the primary Button variant, a section's
+ * one important CTA. It was briefly mapped onto `lime`, which made ~640 class
+ * usages (badges, eyebrows, loaders, the logo intro) yellow and spent the
+ * accent everywhere. Reach for `sunflower` by name, deliberately; never via
+ * `lime`.
+ *
+ * NEVER use `lime` (sage) as text on `cream` (stone) - 1.9:1. Use `lime-deep`
+ * for accent TEXT on light grounds. Checked: forest on stone 6.3:1, lime-deep
+ * on stone 4.7:1, forest on sage 4.2:1 (UI chips), sage on forest 4.0:1,
+ * forest on sunflower 5.9:1.
  */
 @import 'tailwindcss';
 
+/* `dark:` MUST follow the same rule as the tokens below, or the two disagree.
+   Tailwind v4's default `dark:` is the OS media query alone, so with the OS in
+   dark mode and the theme toggle set to LIGHT, every `dark:text-paper` fired
+   on a light page: pale text on stone, the landing headline washed out. This
+   matches the token blocks exactly: `.dark` wins, `.light` wins, otherwise the
+   OS decides. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   /* ─── Colour tokens ─────────────────────────────────────────────── */
-  --color-cream: #f4f1e8;
-  --color-cream-deep: #ece7d8;
-  --color-ink: #0e0e12;
-  --color-lime: #c5ff4a;
-  --color-lime-deep: #4a8500;
+  --color-cream: #dad7cd; /* stone - the page */
+  --color-cream-deep: #cfcbbe; /* sunken / hover on stone */
+  --color-ink: #344e41; /* forest - text and dark panels */
+  --color-lime: #a3b18a; /* sage - the brand accent FILL. Not sunflower, see top. */
+  /* Accent TEXT on light grounds. Not the palette's #588157 (leaf): that is
+     3.1:1 on stone and fails as body text. This is leaf taken darker until it
+     clears 4.5:1 on stone. Leaf itself stays available for large display text
+     and decoration. */
+  --color-lime-deep: #44633f;
+  /* TAILWIND'S OWN LIME SCALE, OVERRIDDEN. Remapping `lime` above to sage did
+     nothing for `lime-50` … `lime-950`: those are Tailwind's built-in palette,
+     a separate set of variables, and ~80 classes plus a dozen hard-coded
+     #90d505s kept painting the old electric lime on the hostel page, the
+     vendor screens and every admin chart after the palette move. Those uses
+     are converted to tokens; this ramp is the backstop, so a `bg-lime-500`
+     written tomorrow comes out green rather than lime. Do not reach for these
+     in new code - use `lime` / `accent-fg` / `sunflower` by what the thing IS.
+     400 is sage, 500 leaf, 600 lime-deep, 700 moss, 800 forest; the light end
+     is sage mixed into paper. */
+  --color-lime-50: #e8e9de;
+  --color-lime-100: #dee1d2;
+  --color-lime-200: #ced4bf;
+  --color-lime-300: #bbc4a7;
+  --color-lime-400: #a3b18a;
+  --color-lime-500: #588157;
+  --color-lime-600: #44633f;
+  --color-lime-700: #3a5a40;
+  --color-lime-800: #344e41;
+  --color-lime-900: #263a30;
+  --color-lime-950: #141e18;
   --color-white: #ffffff;
-  --color-muted: #6a6a72;
+  --color-muted: #4e5d53;
   --color-coral: #ff8b5c;
-  /* Coral is defined for a DARK ground. On cream it is a pastel that fails
+  /* Coral is defined for a DARK ground. On stone it is a pastel that fails
      contrast as small text, so the ramp has a deep end for exactly the reason
-     lime does - see --color-warning-fg below. */
-  --color-coral-deep: #b4451a;
+     the accent does - see --color-warning-fg below. Darkened from #b4451a,
+     which passed on the old cream and fails (3.8:1) on stone. */
+  --color-coral-deep: #9a3a14;
+
+  /* The green system by its own names. Same values as the historical tokens
+     above where they overlap - see the header. */
+  --color-stone: #dad7cd;
+  --color-paper: #f2f1ea;
+  --color-sage: #a3b18a;
+  --color-leaf: #588157;
+  --color-moss: #3a5a40;
+  --color-forest: #344e41;
+  --color-sunflower: #ffc93c;
 
   /* Semantic, THEME-AWARE tokens - these flip under dark mode (values defined
      in the :root / dark layer below). Convert page surfaces to these
@@ -105,71 +177,68 @@
   --spacing: 0.25rem;
 
   /* ─── Shadows ───────────────────────────────────────────────────── */
-  --shadow-card: 0 1px 2px rgb(14 14 18 / 0.04), 0 4px 16px rgb(14 14 18 / 0.06);
-  --shadow-pop: 0 8px 32px rgb(14 14 18 / 0.12);
-  --shadow-focus: 0 0 0 3px rgb(197 255 74 / 0.6);
+  --shadow-card: 0 1px 2px rgb(52 78 65 / 0.05), 0 4px 16px rgb(52 78 65 / 0.08);
+  --shadow-pop: 0 8px 32px rgb(52 78 65 / 0.16);
+  --shadow-focus: 0 0 0 3px rgb(255 201 60 / 0.6);
 }
 
 /* ─── Theme variables (light default, dark follows the system) ─────────
    Default = light. Dark applies when the OS prefers dark (unless .light is
    set to force light), or when .dark is set explicitly (future manual toggle). */
 :root {
-  --sf: #f4f1e8;
-  /* cream */
-  --sf-2: #ece7d8;
-  /* cream-deep */
-  --sf-card: #ffffff;
-  /* white */
-  --ct: #0e0e12;
-  /* ink */
-  --ct-muted: #6a6a72;
-  /* muted */
-  --ac-fg: #4a8500;
-  /* lime-deep */
-  --wn-fg: #b4451a;
-  /* coral-deep: coral itself is a pastel on cream */
-  --ln: #0e0e12;
-  /* ink (borders use /opacity) */
-  --sb: #0e0e12;
-  /* scrollbar thumb: ink on cream, lime on ink. Not the same hue in both
-     themes on purpose - lime is a fill colour for dark ground, and on the
-     cream page even a deepened lime sits too close to the background to
-     find. Each theme takes whichever of the two carries the contrast. */
+  --sf: #dad7cd;
+  /* stone */
+  --sf-2: #cfcbbe;
+  /* stone, sunken */
+  --sf-card: #f2f1ea;
+  /* paper - cards sit LIGHTER than the page, as in the design */
+  --ct: #344e41;
+  /* forest */
+  --ct-muted: #4e5d53;
+  /* muted green-grey, 4.8:1 on stone */
+  --ac-fg: #44633f;
+  /* deep leaf - accent text */
+  --wn-fg: #9a3a14;
+  /* coral-deep: coral itself is a pastel on stone */
+  --ln: #344e41;
+  /* forest (borders use /opacity) */
+  --sb: #588157;
+  /* scrollbar thumb: leaf. Thin and green on both themes - the design asked
+     for one green scrollbar, and leaf carries enough contrast on stone and on
+     the dark-green ground alike. */
   color-scheme: light;
 }
 
+/* Dark is the SAME palette at night, not a different brand: deep forest
+   grounds, paper text, sunflower accents. The old dark theme was near-black
+   ink; a green product on a black page read as two different apps the moment
+   someone's phone switched theme at sunset. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --sf: #0e0e12;
-    --sf-2: #1b1b22;
-    --sf-card: #17171c;
-    --ct: #f4f1e8;
-    --ct-muted: #9b9ba3;
-    --ac-fg: #c5ff4a;
-    /* bright lime for contrast on dark */
+    --sf: #141e18;
+    --sf-2: #1b2820;
+    --sf-card: #203027;
+    --ct: #e8e6dd;
+    --ct-muted: #a3b18a;
+    /* sage, 7.5:1 on the dark ground */
+    --ac-fg: #a3b18a;
     --wn-fg: #ff8b5c;
-    /* coral reads as intended on ink */
-    --ln: #f4f1e8;
-    --sb: #a8db3c;
-    /* Deeper lime for fills on dark - less glare than the bright brand lime.
-       Drives every bg-lime/accent in dark mode. Tune this one value. */
-    --color-lime: #a8db3c;
+    --ln: #dad7cd;
+    --sb: #588157;
     color-scheme: dark;
   }
 }
 
 .dark {
-  --sf: #0e0e12;
-  --sf-2: #1b1b22;
-  --sf-card: #17171c;
-  --ct: #f4f1e8;
-  --ct-muted: #9b9ba3;
-  --ac-fg: #c5ff4a;
+  --sf: #141e18;
+  --sf-2: #1b2820;
+  --sf-card: #203027;
+  --ct: #e8e6dd;
+  --ct-muted: #a3b18a;
+  --ac-fg: #a3b18a;
   --wn-fg: #ff8b5c;
-  --ln: #f4f1e8;
-  --sb: #a8db3c;
-  /* Deeper lime for fills on dark (see note above). */
-  --color-lime: #a8db3c;
+  --ln: #dad7cd;
+  --sb: #588157;
   color-scheme: dark;
 }
 
@@ -466,11 +535,15 @@ input:-webkit-autofill:focus {
   }
 }
 
-/* Accessible focus ring - visible against cream and white. */
-:where(a, button, [role='button'], select, textarea, [tabindex]):focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: var(--radius-lg);
+/* No focus outlines or rings, anywhere.
+   A product decision from the redesign review (Nov 2026): the founder asked
+   for none, twice. The trade-off is real - keyboard users lose the cue of
+   where they are - so interactive elements keep a visible HOVER/ACTIVE state
+   and inputs keep their border change on focus. If this is ever revisited,
+   --shadow-focus is still defined and this is the one rule to change. */
+*:focus,
+*:focus-visible {
+  outline: none !important;
 }
 
 /* ─── AroundMap (Google Maps) custom markers ──────────────────────────
@@ -495,7 +568,7 @@ input:-webkit-autofill:focus {
   align-items: center;
   gap: 0;
   background: #fff;
-  color: #0e0e12;
+  color: #344e41;
   padding: 4px;
   border-radius: 9999px;
   white-space: nowrap;
@@ -579,8 +652,8 @@ input:-webkit-autofill:focus {
 }
 
 .amap-you__label {
-  background: #0e0e12;
-  color: #f4efe2;
+  background: #344e41;
+  color: #f2f1ea;
   border-radius: 9999px;
   padding: 1px 7px;
   font-size: 10px;
@@ -588,9 +661,9 @@ input:-webkit-autofill:focus {
 }
 
 .amap-campus {
-  background: rgba(197, 255, 74, 0.18);
-  border: 1px dashed rgba(90, 120, 20, 0.7);
-  color: #0e0e12;
+  background: rgba(255, 201, 60, 0.22);
+  border: 1px dashed rgba(88, 129, 87, 0.75);
+  color: #344e41;
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 11px;
@@ -628,15 +701,15 @@ input:-webkit-autofill:focus {
 
 @keyframes amap-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(197, 255, 74, 0.5);
+    box-shadow: 0 0 0 0 rgba(255, 201, 60, 0.5);
   }
 
   70% {
-    box-shadow: 0 0 0 10px rgba(197, 255, 74, 0);
+    box-shadow: 0 0 0 10px rgba(255, 201, 60, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(197, 255, 74, 0);
+    box-shadow: 0 0 0 0 rgba(255, 201, 60, 0);
   }
 }
 
@@ -782,4 +855,78 @@ select:not(:disabled) {
 
 @page {
   margin: 14mm;
+}
+
+
+/* ─── Landing (redesign Nov 2026) ─────────────────────────────────────────
+   Motion for the hero constellation. All of it stops under reduced motion:
+   the floating icons sit still, the dotted lines stop flowing, and the Sync
+   mark stops spinning (the brand kit's "rotation means waiting" rule has a
+   documented exception for this one hero, see components/brand/README). */
+@keyframes sync-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes sync-flow { to { stroke-dashoffset: -48; } }
+@keyframes sync-flow-in { to { stroke-dashoffset: 48; } }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+@keyframes sync-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(88 129 87 / 0.6); }
+  70% { box-shadow: 0 0 0 8px rgb(88 129 87 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(88 129 87 / 0); }
+}
+.sync-float { animation: sync-float 6s ease-in-out infinite; }
+.sync-flow { animation: sync-flow 2.4s linear infinite; }
+.sync-flow-in { animation: sync-flow-in 3.2s linear infinite; }
+.sync-spin { animation: sync-spin 12s linear infinite; transform-origin: 50% 50%; }
+.sync-fade { animation: sync-fade 0.5s ease-out; }
+.live-dot { animation: live-pulse 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sync-float, .sync-flow, .sync-flow-in, .sync-spin, .sync-fade, .live-dot { animation: none; }
+}
+
+/* ─── Landing: dark-green in dark mode ────────────────────────────────────
+   The landing sections are written in palette colours (bg-stone, bg-paper,
+   text-forest...) rather than the semantic tokens, because the design is
+   drawn in them. To follow the theme switch they are REMAPPED inside
+   `.landing` in dark mode, instead of carrying a dark: class on every line:
+   Tailwind utilities read var(--color-*) at the element, so overriding the
+   variable on an ancestor recolours everything under it.
+
+   forest becomes the light text colour, so anything drawn as a dark fill
+   (bg-forest buttons, the weekly card) turns light with dark text: the usual
+   dark-mode inversion for a primary pill. `.landing-fixed` opts a block back
+   out: the Find section is already a dark green band and stays one. */
+.dark .landing {
+  --color-stone: #141e18;
+  --color-paper: #203027;
+  --color-cream-deep: #1b2820;
+  --color-forest: #e8e6dd;
+  --color-moss: #a3b18a;
+  --color-leaf: #a3b18a;
+  --color-sage: #3a5a40;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .landing {
+    --color-stone: #141e18;
+    --color-paper: #203027;
+    --color-cream-deep: #1b2820;
+    --color-forest: #e8e6dd;
+    --color-moss: #a3b18a;
+    --color-leaf: #a3b18a;
+    --color-sage: #3a5a40;
+  }
+}
+.landing .landing-fixed {
+  --color-stone: #dad7cd;
+  --color-paper: #f2f1ea;
+  --color-cream-deep: #cfcbbe;
+  --color-forest: #344e41;
+  --color-moss: #3a5a40;
+  --color-leaf: #588157;
+  --color-sage: #a3b18a;
 }

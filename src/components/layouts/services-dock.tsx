@@ -19,7 +19,8 @@ import {
 
 import { SearchBar } from '@/components/shared/search-bar';
 import { LocationSelector } from '@/components/shared/location-selector';
-import SyncIcon, { type SyncIconName } from '@/components/brand/SyncIcon';
+import type { SyncIconName } from '@/components/brand/SyncIcon';
+import { NavIcon } from '@/components/layouts/nav-icon';
 import { MODULES } from '@/config/modules';
 import { cn } from '@/lib/utils';
 // Canonical role union - kept in one place so new roles (e.g. landlord) can't
@@ -273,7 +274,7 @@ function TabIcon({
           colour below applies to it exactly as it does to the lucide one. */}
       <span className={cn(active && 'text-lime-deep dark:text-lime')}>
         {iconName ? (
-          <SyncIcon name={iconName} size={20} />
+          <NavIcon name={iconName} size={20} />
         ) : (
           <Icon className="h-5 w-5" aria-hidden="true" />
         )}

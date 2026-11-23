@@ -67,8 +67,8 @@ export default function Page() {
         </p>
         <DocList
           items={[
-            'Payment is held in escrow until you confirm, so a listing that turns out wrong does not cost you the money.',
-            'If something is not as described, raise a dispute and we hold the funds while we look.',
+            'Where you pay through Sync, a licensed escrow partner holds the payment until you confirm, so a listing that turns out wrong does not cost you the money.',
+            'If something is not as described, raise a dispute and the funds stay with the escrow partner while we look.',
           ]}
         />
       </DocSection>

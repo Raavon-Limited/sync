@@ -1,9 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { MapPin, Clock } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
-import { GoDotFill } from "react-icons/go"
+import { MapPin, Clock, Dot } from 'lucide-react';
 import { Event, Ticket } from "@/lib/event"
 
 const SERVICE_FEE_RATE = 0.05
@@ -40,7 +38,7 @@ export default function OrderSummary({
                 <Image src={event.image} alt={event.title} fill className="object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-lime text-ink text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                    <GoDotFill className="animate-pulse" /> Tonight
+                    <Dot className="animate-pulse" /> Tonight
                 </div>
             </div>
 
@@ -74,14 +72,14 @@ export default function OrderSummary({
                                     <span className="text-content-muted/60 ml-1">× {qty}</span>
                                 </span>
                                 <span className="font-medium text-content flex items-center">
-                                    <TbCurrencyNaira />{(ticket.price * qty).toLocaleString()}
+                                    ₦{(ticket.price * qty).toLocaleString()}
                                 </span>
                             </div>
                         ))}
                         <div className="flex justify-between text-sm">
                             <span className="text-content-muted">Service fee (5%)</span>
                             <span className="font-medium text-content flex items-center">
-                                <TbCurrencyNaira />{serviceFee.toLocaleString()}
+                                ₦{serviceFee.toLocaleString()}
                             </span>
                         </div>
                     </>
@@ -92,7 +90,7 @@ export default function OrderSummary({
             <div className="flex items-center justify-between px-4 py-3 border-t border-line/10">
                 <span className="font-bold text-sm text-content">Total</span>
                 <span className={`font-black text-xl flex items-center ${totalTickets > 0 ? "text-content" : "text-content-muted"}`}>
-                    <TbCurrencyNaira />{total.toLocaleString()}
+                    ₦{total.toLocaleString()}
                 </span>
             </div>
 

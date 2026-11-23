@@ -35,7 +35,7 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
     <div className="rounded-2xl border border-line/15 shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold">User Activity by Hour</h3>
-        <span className="text-xs font-semibold text-[#5a9e00] bg-lime-50 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-accent-fg bg-lime/15 px-2.5 py-1 rounded-full">
           Peak: 6 PM
         </span>
       </div>
@@ -45,8 +45,8 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
           onMouseLeave={() => setHovered(null)}>
           <defs>
             <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#90d505" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#90d505" stopOpacity="0" />
+              <stop offset="0%" stopColor="#a3b18a" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#a3b18a" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -65,7 +65,7 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
 
           {/* Area + line */}
           <path d={areaD} fill="url(#actGrad)" />
-          <path d={pathD} fill="none" stroke="#90d505" strokeWidth="2.5"
+          <path d={pathD} fill="none" stroke="#a3b18a" strokeWidth="2.5"
             strokeLinejoin="round" strokeLinecap="round" />
 
           {/* Hover target columns */}
@@ -86,8 +86,8 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
             <circle key={i}
               cx={xPos(i)} cy={yPos(d.users)}
               r={hovered === i ? 6 : 3.5}
-              fill={hovered === i ? "#90d505" : "white"}
-              stroke="#90d505" strokeWidth="2"
+              fill={hovered === i ? "#a3b18a" : "white"}
+              stroke="#a3b18a" strokeWidth="2"
               className="pointer-events-none transition-all duration-100"
             />
           ))}
@@ -103,7 +103,7 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
               <text x={tipX + 45} y={yPos(hov.users) - 28} textAnchor="middle"
                 fontSize="10" fill="#9ca3af" fontFamily="system-ui">{hov.hour}</text>
               <text x={tipX + 45} y={yPos(hov.users) - 15} textAnchor="middle"
-                fontSize="11" fill="#90d505" fontFamily="system-ui" fontWeight="700">
+                fontSize="11" fill="#44633f" fontFamily="system-ui" fontWeight="700">
                 {hov.users} users
               </text>
             </g>
@@ -112,7 +112,7 @@ export function ActivityByHourChart({ data }: { data: HourPoint[] }) {
           {/* X axis labels */}
           {data.map((d, i) => i % step === 0 && (
             <text key={i} x={xPos(i)} y={H - P.bottom + 18} textAnchor="middle"
-              fontSize="10" fill={hovered === i ? "#5a8a00" : "#bbb"} fontFamily="system-ui"
+              fontSize="10" fill={hovered === i ? "#44633f" : "#bbb"} fontFamily="system-ui"
               fontWeight={hovered === i ? "700" : "400"}>
               {d.hour}
             </text>

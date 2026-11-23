@@ -1,7 +1,6 @@
 // event-card.tsx
 import Image, { StaticImageData } from "next/image"
-import { LuDot } from "react-icons/lu"
-import { MoveRight } from "lucide-react"
+import { MoveRight, Dot } from 'lucide-react';
 import Link from "next/link"
 
 interface LineupArtist {
@@ -83,7 +82,7 @@ export default function EventCards({
 
                     {/* Location + time */}
                     <p className="text-xs flex items-center mt-0.5 text-content-muted">
-                        {location} <LuDot /> {time}
+                        {location} <Dot /> {time}
                     </p>
 
                     {/* Combined Lineup & CTA Footer Row */}

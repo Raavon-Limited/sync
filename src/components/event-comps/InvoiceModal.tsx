@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { X, Ticket, MapPin, Clock, Calendar } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
 
 interface Ticket {
   id: string
@@ -68,7 +67,7 @@ export default function InvoiceModal({
       <div className="relative w-full sm:max-w-md bg-[#F5F2EA] border-2 border-black rounded-t-2xl sm:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
 
         {/* Header bar */}
-        <div className="bg-[#C5FF4A] border-b-2 border-black px-5 py-4 flex items-center justify-between">
+        <div className="bg-[#FFC93C] border-b-2 border-black px-5 py-4 flex items-center justify-between">
           <div>
             <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-black/60">Invoice</p>
             <h2 className="font-black text-lg leading-tight text-black">{invoiceNo}</h2>
@@ -112,7 +111,7 @@ export default function InvoiceModal({
                     className="flex items-center justify-between border-2 border-black rounded-xl px-3 py-2 bg-white"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#C5FF4A] border-2 border-black flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-[#FFC93C] border-2 border-black flex items-center justify-center">
                         <Ticket size={11} strokeWidth={2.5} />
                       </div>
                       <div>
@@ -121,9 +120,9 @@ export default function InvoiceModal({
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-black/50">{qty} × <TbCurrencyNaira className="inline" />{ticket.price.toLocaleString()}</p>
+                      <p className="text-xs text-black/50">{qty} × ₦{ticket.price.toLocaleString()}</p>
                       <p className="font-black text-sm flex items-center justify-end">
-                        <TbCurrencyNaira />{(ticket.price * qty).toLocaleString()}
+                        ₦{(ticket.price * qty).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -136,19 +135,19 @@ export default function InvoiceModal({
           <div className="border-t-2 border-dashed border-black pt-3 flex flex-col gap-2">
             <div className="flex justify-between text-sm">
               <span className="text-black/60">Subtotal</span>
-              <span className="font-medium flex items-center"><TbCurrencyNaira />{subtotal.toLocaleString()}</span>
+              <span className="font-medium flex items-center">₦{subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-black/60">Sync Fee</span>
-              <span className="font-medium flex items-center"><TbCurrencyNaira />{syncFee.toLocaleString()}</span>
+              <span className="font-medium flex items-center">₦{syncFee.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Total */}
-          <div className="border-2 border-black rounded-xl bg-black text-[#C5FF4A] px-4 py-3 flex justify-between items-center">
+          <div className="border-2 border-black rounded-xl bg-black text-[#FFC93C] px-4 py-3 flex justify-between items-center">
             <span className="font-mono font-bold text-sm tracking-wide uppercase">Total</span>
             <span className="font-black text-xl flex items-center">
-              <TbCurrencyNaira />{total.toLocaleString()}
+              ₦{total.toLocaleString()}
             </span>
           </div>
 
@@ -162,7 +161,7 @@ export default function InvoiceModal({
             </button>
             <button
               onClick={onConfirm}
-              className="flex-[2] border-2 border-black rounded-xl py-[10px] text-sm font-black bg-[#C5FF4A] hover:bg-black hover:text-[#C5FF4A] transition cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+              className="flex-[2] border-2 border-black rounded-xl py-[10px] text-sm font-black bg-[#FFC93C] hover:bg-black hover:text-[#FFC93C] transition cursor-pointer shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
             >
               Confirm & Pay {totalTickets} ticket{totalTickets > 1 ? "s" : ""}
             </button>

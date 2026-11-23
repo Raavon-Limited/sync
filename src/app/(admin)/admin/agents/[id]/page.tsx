@@ -177,7 +177,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           {p.suspended_at ? (
             <Badge className="bg-coral/10 text-coral">suspended</Badge>
           ) : (
-            <Badge className="gap-1 bg-lime-500/10 text-lime-600">
+            <Badge className="gap-1 bg-lime/15 text-accent-fg">
               <ShieldCheck className="size-3" /> active
             </Badge>
           )}

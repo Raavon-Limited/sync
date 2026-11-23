@@ -47,6 +47,9 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   '403',
   'about',
   'admin',
+  // Gated in PROTECTED_PREFIXES (Nov 2026) and not reserved until now, so the
+  // gate never fired - exactly the trap described at 'organiser' below.
+  'ai',
   'api',
   'around',
   'beauty',

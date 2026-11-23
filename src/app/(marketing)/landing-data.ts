@@ -293,3 +293,225 @@ async function readLandingShowcase(): Promise<LandingShowcase> {
       : null,
   };
 }
+
+/* ─────────────────────────── Find section rails ─────────────────────────── */
+
+/**
+ * The tabs in the landing "Find" section, in display order. Each key is a real
+ * module route. Dispatch is shown as a tab too but has no rail: it is not built,
+ * and the section says so instead of filling it with placeholders.
+ */
+export type RailKey = 'hostels' | 'food' | 'events' | 'hotspots' | 'workmanship' | 'laundry' | 'beauty';
+
+export interface RailCard {
+  id: string;
+  name: string;
+  /** Area or venue, whichever the row carries. */
+  place: string | null;
+  /** One short fact: a price, a date, a category. Never invented. */
+  meta: string | null;
+  image: string | null;
+  href: string;
+  verified: boolean;
+  /**
+   * Shown first and badged "Featured". Comes ONLY from a flag the row already
+   * carries (hotspots.is_featured, a hostel ribbon). There is no paid
+   * placement product yet, so nothing here may be labelled "Sponsored": that
+   * word is a disclosure of payment, and nobody has paid.
+   */
+  featured: boolean;
+}
+
+export type LandingRails = Record<RailKey, RailCard[]>;
+
+const EMPTY_RAILS: LandingRails = {
+  hostels: [],
+  food: [],
+  events: [],
+  hotspots: [],
+  workmanship: [],
+  laundry: [],
+  beauty: [],
+};
+
+/** Five per tab: enough to scroll, few enough to read. */
+const RAIL_SIZE = 5;
+
+/** Same degrade-don't-throw contract as getLandingShowcase. */
+export async function getLandingRails(): Promise<LandingRails> {
+  try {
+    return await readLandingRails();
+  } catch (err) {
+    console.error('[landing] rails read failed, rendering empty:', err);
+    return EMPTY_RAILS;
+  }
+}
+
+async function readLandingRails(): Promise<LandingRails> {
+  const db = createAdminClient();
+  const now = new Date().toISOString();
+
+  const [hostels, events, hotspots, stores] = await Promise.all([
+    // Verified only, for the reason spelled out on the showcase query: this is
+    // above RLS, so the visibility rule has to be repeated here by hand.
+    db
+      .from('hostels')
+      .select('id, slug, name, area, landmark, price_per_session_kobo, ribbon, verified, hostel_images(url, position)')
+      .eq('verified', true)
+      .is('archived_at', null)
+      .order('created_at', { ascending: false })
+      .limit(12),
+    db
+      .from('events')
+      .select('id, slug, name, venue, starts_at, cover_url')
+      .gt('starts_at', now)
+      .order('starts_at')
+      .limit(RAIL_SIZE),
+    db
+      .from('hotspots')
+      .select('id, slug, name, area, category, image_url, is_featured')
+      .eq('is_active', true)
+      .order('is_featured', { ascending: false })
+      .order('sort_order')
+      .limit(RAIL_SIZE),
+    db
+      .from('storefronts')
+      .select('id, slug, name, area, vendor_id')
+      .is('archived_at', null)
+      .eq('is_accepting_orders', true)
+      .order('created_at')
+      .limit(60),
+  ]);
+
+  const rails: LandingRails = { ...EMPTY_RAILS };
+
+  rails.hostels = ((hostels.data ?? []) as Row[]).slice(0, RAIL_SIZE).map((h) => {
+    const pics = [...((h.hostel_images ?? []) as Row[])].sort((a, b) => a.position - b.position);
+    return {
+      id: h.id,
+      name: h.name,
+      place: h.landmark ?? h.area ?? null,
+      meta: `₦${naira(Number(h.price_per_session_kobo)).toLocaleString('en-NG')} / session`,
+      image: pics[0]?.url ?? null,
+      href: `/hostels/${h.slug}`,
+      verified: true,
+      featured: Boolean(h.ribbon),
+    };
+  });
+
+  rails.events = ((events.data ?? []) as Row[]).map((e) => ({
+    id: e.id,
+    name: e.name,
+    place: e.venue ?? null,
+    meta: new Date(e.starts_at).toLocaleDateString('en-NG', { weekday: 'short', day: 'numeric', month: 'short' }),
+    image: e.cover_url ?? null,
+    href: `/events/${e.slug}`,
+    // Events are not vendor-verified on this schema; the badge would be a claim.
+    verified: false,
+    featured: false,
+  }));
+
+  rails.hotspots = ((hotspots.data ?? []) as Row[]).map((h) => ({
+    id: h.id,
+    name: h.name,
+    place: h.area ?? null,
+    // Stored lowercase as a key ('study'); shown as a label ('Study').
+    meta: h.category ? h.category.charAt(0).toUpperCase() + h.category.slice(1) : null,
+    image: h.image_url ?? null,
+    href: `/hotspots/${h.slug}`,
+    verified: false,
+    featured: Boolean(h.is_featured),
+  }));
+
+  // Vendor rails: brand details live on vendor_profiles, verified brands only
+  // (20261012120000_unverified_vendors_hidden, repeated by hand above RLS).
+  const storeRows = (stores.data ?? []) as Row[];
+  if (storeRows.length > 0) {
+    const { data: brands } = await db
+      .from('vendor_profiles')
+      .select('id, business_name, category, logo_url')
+      .in('id', [...new Set(storeRows.map((s) => s.vendor_id as string))])
+      .eq('verification_status', 'verified')
+      .is('archived_at', null);
+    const byId = new Map(((brands ?? []) as Row[]).map((b) => [b.id as string, b]));
+    // vendor_profiles.category -> module route. 'tradesman' is Workmanship in
+    // the product; landlords are not storefront vendors.
+    const route: Record<string, RailKey> = {
+      food: 'food',
+      beauty: 'beauty',
+      laundry: 'laundry',
+      tradesman: 'workmanship',
+    };
+    for (const s of storeRows) {
+      const b = byId.get(s.vendor_id);
+      const key = b ? route[b.category as string] : undefined;
+      if (!b || !key || rails[key].length >= RAIL_SIZE) continue;
+      rails[key] = [
+        ...rails[key],
+        {
+          id: s.id,
+          name: b.business_name ?? s.name,
+          place: s.area ?? null,
+          meta: null,
+          image: b.logo_url ?? null,
+          href: `/${key}/${s.slug}`,
+          verified: true,
+          featured: false,
+        },
+      ];
+    }
+  }
+
+  return rails;
+}
+
+/* ──────────────────────────────── Weather ──────────────────────────────── */
+
+export interface CampusWeather {
+  tempC: number;
+  /** Plain words: "Clear", "Light rain". */
+  condition: string;
+  isDay: boolean;
+}
+
+/**
+ * Current conditions at the launch campus, from Open-Meteo (no key needed).
+ *
+ * SERVER-SIDE ON PURPOSE: the site CSP's connect-src does not name a weather
+ * host, and adding one so every visitor's browser can make the same call is
+ * worse than making it once here and caching it for half an hour.
+ *
+ * Returns null on any failure. The card hides; it never shows a made-up
+ * temperature.
+ */
+export async function getCampusWeather(lat: number, lng: number): Promise<CampusWeather | null> {
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day&timezone=Africa%2FLagos`,
+      { next: { revalidate: 1800 }, signal: AbortSignal.timeout(3000) },
+    );
+    if (!res.ok) return null;
+    const j = (await res.json()) as {
+      current?: { temperature_2m?: number; weather_code?: number; is_day?: number };
+    };
+    const c = j.current;
+    if (typeof c?.temperature_2m !== 'number' || typeof c.weather_code !== 'number') return null;
+    return { tempC: Math.round(c.temperature_2m), condition: wmo(c.weather_code), isDay: c.is_day === 1 };
+  } catch {
+    return null;
+  }
+}
+
+/** WMO weather interpretation codes, collapsed to words a student uses. */
+function wmo(code: number): string {
+  if (code === 0) return 'Clear';
+  if (code <= 2) return 'Partly cloudy';
+  if (code === 3) return 'Cloudy';
+  if (code <= 48) return 'Hazy';
+  if (code <= 57) return 'Drizzle';
+  if (code <= 65) return 'Rain';
+  if (code <= 67) return 'Freezing rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Showers';
+  return 'Thunderstorm';
+}

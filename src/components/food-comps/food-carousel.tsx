@@ -2,10 +2,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image, { StaticImageData } from "next/image"
 import Link from "next/link"
-import { MoveRight, Star } from "lucide-react"
-import { GoDotFill } from "react-icons/go"
-import { LuDot } from "react-icons/lu"
-import { TbCurrencyNaira } from "react-icons/tb"
+import { MoveRight, Star, Dot } from 'lucide-react';
 
 interface FeaturedFood {
     name: string
@@ -125,7 +122,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
 
     return (
         <div
-            className="rounded-2xl overflow-hidden border border-white/10 bg-[#111111] shadow-[3px_3px_0px_0px_rgba(197,255,74,0.25)] touch-pan-y"
+            className="rounded-2xl overflow-hidden border border-white/10 bg-[#111111] shadow-[3px_3px_0px_0px_rgba(255,201,60,0.25)] touch-pan-y"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -152,13 +149,13 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
 
                 {/* Badge */}
                 <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-lime text-ink text-xs font-semibold px-3 py-1 rounded-full pointer-events-none">
-                    <GoDotFill className="animate-pulse" />
+                    <Dot className="animate-pulse" />
                     {items[current].badge}
                 </div>
 
                 {/* Orders */}
                 <div className="absolute bottom-3 left-3 z-10 bg-black/80 text-white text-[11px] font-mono px-2.5 py-1 rounded-lg flex items-center gap-1.5 pointer-events-none">
-                    <GoDotFill className="text-lime animate-pulse" />
+                    <Dot className="text-lime animate-pulse" />
                     {items[current].orders}+ orders today
                 </div>
 
@@ -195,9 +192,9 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
 
                             <p className="flex items-center flex-wrap text-[11px] sm:text-sm text-white/60 gap-0.5">
                                 {item.location}
-                                <LuDot />
+                                <Dot />
                                 {item.distance}
-                                <LuDot />
+                                <Dot />
                                 {item.opens}
                             </p>
 
@@ -219,7 +216,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
                                 <div className="flex flex-col">
                                     <span className="text-xs text-white/50">From</span>
                                     <span className="font-bold text-xl sm:text-2xl flex items-center">
-                                        <TbCurrencyNaira className="text-2xl sm:text-3xl" />
+                                        ₦
                                         {item.fromPrice.toLocaleString()}
                                     </span>
                                 </div>

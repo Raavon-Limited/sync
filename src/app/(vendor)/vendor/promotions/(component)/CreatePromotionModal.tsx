@@ -273,7 +273,6 @@ function PromotionForm({
           size="md"
           onClick={handleSubmit}
           disabled={isSubmitting}
-          className="bg-lime-600 text-white hover:bg-lime-700"
         >
           {isSubmitting ? 'Launching…' : 'Launch Campaign'}
         </Button>

@@ -20,10 +20,10 @@ const PROMISES: { icon: LucideIcon; title: string; body: React.ReactNode }[] = [
   },
   {
     icon: ShieldCheck,
-    title: 'Every payment, held in escrow.',
+    title: 'No surprise charges.',
     body: (
       <>
-        Money moves through Paystack escrow - <em>released when the work is done,</em> not before.
+        Payments go through a licensed payment provider, <em>and any Sync fee is shown before you pay.</em>
         Refunds reverse the fee proportionally.
       </>
     ),

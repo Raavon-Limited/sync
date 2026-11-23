@@ -45,7 +45,7 @@ export function SyncLogo({ height = 20, markOnly = false, role, className }: Syn
         <>
           <span
             aria-hidden="true"
-            className="bg-lime rounded-full"
+            className="bg-sage rounded-full"
             style={{ width: 2, height: height * 0.95, marginLeft: height * 0.14 }}
           />
           <span

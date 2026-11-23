@@ -36,7 +36,7 @@ export default function DeliveryMap({ lat, lng }: DeliveryMapProps) {
             Leaflet marker PNGs, which were hotlinked from unpkg.com and blocked
             by our own img-src CSP anyway. */}
         <AdvancedMarker position={{ lat, lng }} title="Delivery address">
-          <Pin background="#c5ff4a" borderColor="#0e0e12" glyphColor="#0e0e12" />
+          <Pin background="#ffc93c" borderColor="#344e41" glyphColor="#344e41" />
         </AdvancedMarker>
       </Map>
     </GoogleMapsProvider>

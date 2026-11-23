@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { TbCurrencyNaira } from "react-icons/tb"
 import { CirclePlus, CircleMinus, MoveRight } from "lucide-react"
 import InvoiceModal from "./InvoiceModal"
 
@@ -75,13 +74,13 @@ export default function TicketPanel({
                         <div
                             key={t.id}
                             className={`flex justify-between items-center gap-2 p-3 mt-2 rounded-lg transition border-1
-                ${active ? "bg-[#C5FF4A] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" : ""}`}
+                ${active ? "bg-[#FFC93C] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" : ""}`}
                         >
                             <div className="min-w-0 flex-1">
                                 <h2 className="font-bold text-sm lg:text-base truncate">{t.name}</h2>
                                 <p className="text-xs text-muted truncate">{t.desc}</p>
                                 <p className="font-black text-sm flex items-center mt-1">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {t.price.toLocaleString()}
                                 </p>
                             </div>
@@ -121,7 +120,7 @@ export default function TicketPanel({
                                             {qty} × {ticket.name}
                                         </p>
                                         <p className="text-sm font-medium flex items-center">
-                                            <TbCurrencyNaira />
+                                            ₦
                                             {(ticket.price * qty).toLocaleString()}
                                         </p>
                                     </div>
@@ -130,7 +129,7 @@ export default function TicketPanel({
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-xs text-muted">Sync Fee</p>
                                 <p className="text-sm font-medium flex items-center">
-                                    <TbCurrencyNaira />
+                                    ₦
                                     {syncFee.toLocaleString()}
                                 </p>
                             </div>
@@ -139,7 +138,7 @@ export default function TicketPanel({
                         <div className="flex justify-between items-center border-1 rounded-lg p-3 mt-2">
                             <p className="text-sm font-bold">Total</p>
                             <p className="text-sm font-bold flex items-center">
-                                <TbCurrencyNaira />
+                                ₦
                                 {total.toLocaleString()}
                             </p>
                         </div>
@@ -147,7 +146,7 @@ export default function TicketPanel({
                         {/* BUY BUTTON   opens invoice modal */}
                         <button
                             onClick={() => setInvoiceOpen(true)}
-                            className="flex items-center rounded-lg mt-3 w-full justify-center gap-2 bg-[#C5FF4A] py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-bold text-sm border-1 cursor-pointer"
+                            className="flex items-center rounded-lg mt-3 w-full justify-center gap-2 bg-[#FFC93C] py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-bold text-sm border-1 cursor-pointer"
                         >
                             Buy {totalTickets} ticket{totalTickets > 1 ? "s" : ""}{" "}
                             <MoveRight strokeWidth={2} width={15} />

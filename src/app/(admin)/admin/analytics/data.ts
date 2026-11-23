@@ -72,7 +72,7 @@ export interface TopProduct {
  * vendor category should get a colour, not a blank wedge.
  */
 export const SLICE_COLORS = [
-  '#90d505',
+  '#a3b18a',
   '#3b82f6',
   '#a855f7',
   '#f97316',

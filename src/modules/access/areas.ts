@@ -119,6 +119,13 @@ export const ADMIN_AREAS: AreaSpec[] = [
     href: '/admin/reviews',
   },
   {
+    key: 'gist',
+    label: 'Gist & polls',
+    description:
+      'Daily summary of the public gist, and hiding or restoring posts and polls. Revealing who posted is a super admin action on top of this.',
+    href: '/admin/gist',
+  },
+  {
     key: 'disputes',
     label: 'Disputes',
     description: 'Decide who is owed what when an order goes wrong. Moves money.',

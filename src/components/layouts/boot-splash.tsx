@@ -12,6 +12,14 @@
  * making a student sit through it on the way to /food would not be. Each keeps the
  * screen up for its own duration, so the intro is never cut off mid-animation.
  *
+ * The intro plays IN FULL ON EVERY LOAD of the landing page. For one afternoon
+ * (1e71a52) it played in full only once per browser session - but the
+ * component still RENDERED it on every later load, with no minimum, so a
+ * reload showed the animation start and get chopped the moment the page was
+ * ready. A half-played logo reads as a glitch, not as speed. The founder asked
+ * for the full intro back. If it ever needs to be skippable, render the quiet
+ * <BrandLoader> instead of <SyncIntro> - never start the intro and cut it.
+ *
  * Visible on initial render (server + hydration), then fades out once the
  * window finishes loading. On in-app navigations the root layout never
  * remounts, so this only ever runs once per full page load.
@@ -26,8 +34,14 @@ import { SyncIntro, SYNC_INTRO_DURATION } from '@/components/ui/sync-intro';
 import { readStandalone, subscribeStandalone } from '@/lib/pwa/use-install';
 import { cn } from '@/lib/utils';
 
-/** How long the quiet loader stays up on non-landing routes. */
-const MIN_VISIBLE_MS = 2800;
+/**
+ * How long the quiet loader stays up on non-landing routes: not at all past
+ * the load itself. This was a 2800ms MINIMUM, so a page that had already
+ * arrived sat behind a logo for nearly three seconds on every hard refresh.
+ * Most students are on phones and slow data; the page being ready is the
+ * moment to show it.
+ */
+const MIN_VISIBLE_MS = 0;
 const FADE_MS = 500;
 
 /** SSR default is `false` here: assume a browser tab, so a normal page render

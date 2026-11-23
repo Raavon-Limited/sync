@@ -33,7 +33,7 @@ export default function CheckoutSteps({ current }: CheckoutStepsProps) {
                                         : "border-2 border-line text-transparent"
                                     }`}
                             >
-                                {isDone ? <Check size={15} strokeWidth={5} color="#4A8500" /> : null}
+                                {isDone ? <Check size={15} strokeWidth={5} color="#44633F" /> : null}
                             </span>
                             <span
                                 className={`text-sm sm:text-base font-bold whitespace-nowrap ${isDone || isCurrent ? "text-content" : "text-content-muted"

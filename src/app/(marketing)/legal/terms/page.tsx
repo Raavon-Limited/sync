@@ -3,9 +3,11 @@
  * ACCESS: public
  *
  * ⚠️ DRAFT - NOT LEGALLY REVIEWED.
- * Describes the marketplace model the code implements: Sync is an intermediary,
- * payment is held in escrow and released on completion, vendors are verified but
- * their listings are their own. A lawyer must review this before launch -
+ * Describes the marketplace model: Sync is an intermediary that does NOT hold
+ * student funds. Where escrow applies it is run by a licensed third-party
+ * escrow partner, which releases the vendor's payment and Sync's fee on
+ * completion (founder decision, Nov 2026). Vendors are verified but their
+ * listings are their own. A lawyer must review this before launch -
  * liability, refunds and dispute terms are exactly where a template goes wrong.
  *
  * TODO: confirm the refund window, the escrow release trigger, and the fee
@@ -34,8 +36,8 @@ export default function Page() {
         <p>
           {SITE.name} is a marketplace operated by {SITE.legalName}. We connect students with
           hostels, food vendors, event organisers and tradespeople. We are an intermediary: we
-          verify vendors and hold payment, but the room, meal or service itself is provided by the
-          vendor, not by us.
+          verify vendors and show you what is around you, but the room, meal or service itself is
+          provided by the vendor, not by us. {SITE.name} does not hold student funds.
         </p>
       </DocSection>
 
@@ -51,9 +53,25 @@ export default function Page() {
 
       <DocSection title="Payments and escrow">
         <p>
-          Payment is taken when you book and held in escrow. It is released to the vendor once the
-          booking or order completes. If something goes wrong before then, raise a dispute and we
-          will hold the funds while we look at it.
+          {SITE.name} does not hold your money. Where you pay through {SITE.name}, the payment is
+          held by our licensed third-party escrow partner, not by us. The partner releases the
+          vendor&rsquo;s payment, and {SITE.name}&rsquo;s fee, once the booking or order completes.
+          Any {SITE.name} fee is shown before you pay. If something goes wrong before completion,
+          raise a dispute: the funds stay with the escrow partner while we look at it.
+        </p>
+      </DocSection>
+
+      <DocSection title="Staying safe">
+        <p>
+          Only trade with verified vendors. Meet only people you trust or have business with, in a
+          public place, and never follow anyone to a place not agreed in the app. {SITE.name} can
+          only see what is agreed in the app, not conversations held in person or by phone. Report
+          any issue immediately, with evidence where you safely can; we will follow up and report
+          to the nearest help. See{' '}
+          <Link href="/legal/safety" className="underline underline-offset-4">
+            Safety on Sync
+          </Link>
+          .
         </p>
       </DocSection>
 

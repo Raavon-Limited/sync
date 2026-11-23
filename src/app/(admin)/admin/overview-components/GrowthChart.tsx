@@ -46,8 +46,8 @@ export function GrowthChart({ data }: GrowthChartProps) {
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 280 }}>
           <defs>
             <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="#90d505" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#90d505" stopOpacity="0" />
+              <stop offset="0%"   stopColor="#a3b18a" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#a3b18a" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -70,7 +70,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
           <path d={areaD} fill="url(#areaGrad)" />
 
           {/* Line */}
-          <path d={pathD} fill="none" stroke="#90d505" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          <path d={pathD} fill="none" stroke="#a3b18a" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
 
           {/* Data points */}
           {pts.map((p, i) => {
@@ -78,14 +78,14 @@ export function GrowthChart({ data }: GrowthChartProps) {
             return (
               <g key={p.month}>
                 <circle cx={p.x} cy={p.y} r={isHov ? 7 : 4}
-                  fill={isHov ? "#90d505" : "white"} stroke="#90d505" strokeWidth="2"
+                  fill={isHov ? "#a3b18a" : "white"} stroke="#a3b18a" strokeWidth="2"
                   className="cursor-pointer transition-all duration-150"
                   onMouseEnter={() => setHovered(i)}
                   onMouseLeave={() => setHovered(null)}
                 />
                 {/* Month label */}
                 <text x={p.x} y={H - P.bottom + 16} textAnchor="middle"
-                  fontSize="11" fill={isHov ? "#5a9e00" : "#999"}
+                  fontSize="11" fill={isHov ? "#44633f" : "#999"}
                   fontFamily="system-ui" fontWeight={isHov ? "700" : "400"}>
                   {p.month}
                 </text>
@@ -100,7 +100,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
                       fill="white" stroke="#e5e7eb" strokeWidth="1"
                       filter="drop-shadow(0 2px 4px rgba(0,0,0,0.08))" />
                     <text x={p.x} y={p.y - 28} textAnchor="middle" fontSize="10" fill="#999" fontFamily="system-ui">{p.month}</text>
-                    <text x={p.x} y={p.y - 16} textAnchor="middle" fontSize="11" fill="#90d505" fontFamily="system-ui" fontWeight="700">
+                    <text x={p.x} y={p.y - 16} textAnchor="middle" fontSize="11" fill="#44633f" fontFamily="system-ui" fontWeight="700">
                       {p.users.toLocaleString()} users
                     </text>
                   </g>

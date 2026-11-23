@@ -98,12 +98,7 @@ export function PromotionsPage({
             </p>
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleCreateClick}
-            className="bg-lime-600 text-white shadow-md hover:bg-lime-700"
-          >
+          <Button variant="primary" size="md" onClick={handleCreateClick} className="shadow-md">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Create Promotion</span>
             <span className="sm:hidden">Create</span>

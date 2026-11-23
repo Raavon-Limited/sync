@@ -34,10 +34,10 @@ import {
   Text,
 } from '@react-email/components';
 
-const CREAM = '#f4f1e8';
-const INK = '#0e0e12';
-const LIME = '#c5ff4a';
-const MUTED = '#6a6a72';
+const CREAM = '#f2f1ea';
+const INK = '#344e41';
+const LIME = '#ffc93c';
+const MUTED = '#4e5d53';
 const FAINT = '#9a9aa2';
 
 export interface BookingAcceptedEmailProps {
@@ -116,7 +116,7 @@ export function BookingAcceptedEmail({
               thing set apart from the prose rather than buried in it. */}
           <Section
             style={{
-              backgroundColor: 'rgba(197,255,74,0.15)',
+              backgroundColor: 'rgba(255,201,60,0.15)',
               border: '1px solid rgba(14,14,18,0.08)',
               borderRadius: 12,
               margin: '16px 0',

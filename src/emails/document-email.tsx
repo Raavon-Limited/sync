@@ -32,10 +32,10 @@ import {
 } from '@react-email/components';
 import { documentNaira, type PaymentDocument } from '@/modules/documents/types';
 
-const CREAM = '#f4f1e8';
-const INK = '#0e0e12';
-const LIME = '#8fbf1f';
-const MUTED = '#6a6a72';
+const CREAM = '#f2f1ea';
+const INK = '#344e41';
+const LIME = '#44633f'; // lime-deep - see globals.css
+const MUTED = '#4e5d53';
 const FAINT = '#9a9aa2';
 const RULE = 'rgba(14,14,18,0.10)';
 

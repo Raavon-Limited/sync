@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
 
 export interface CheckoutCartItem {
     id: string
@@ -89,7 +88,7 @@ export default function OrderItems({
                                         </div>
 
                                         <p className="font-semibold flex items-center text-content">
-                                            <TbCurrencyNaira />
+                                            ₦
                                             {(item.price * item.qty).toLocaleString()}
                                         </p>
                                     </div>
@@ -108,7 +107,7 @@ export default function OrderItems({
                             </span>
 
                             <span className="font-bold flex items-center text-content">
-                                <TbCurrencyNaira />
+                                ₦
                                 {subtotal.toLocaleString()}
                             </span>
 

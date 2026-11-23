@@ -18,7 +18,55 @@
  * - `refetchOnWindowFocus: false`   with a mobile-first PWA this fires on every
  *   app switch and is mostly wasted requests.
  */
-import { QueryClient, type DefaultOptions } from '@tanstack/react-query';
+import { MutationCache, QueryClient, type DefaultOptions } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
+
+/**
+ * Thrown when a signed-out visitor triggers a write. Components that toast
+ * `error.message` say something sensible while the page navigates to /login.
+ */
+export class SignInRequired extends Error {
+  constructor() {
+    super('Sign in to continue');
+    this.name = 'SignInRequired';
+  }
+}
+
+declare module '@tanstack/react-query' {
+  interface Register {
+    mutationMeta: {
+      /** A mutation that must work signed out. None exist today. */
+      public?: boolean;
+    };
+  }
+}
+
+/**
+ * SIGN IN ONLY WHEN IT IS NEEDED.
+ *
+ * Browsing is public (see PROTECTED_PREFIXES in proxy.ts). The moment a
+ * visitor tries to DO something - book a viewing, add to cart, save, message a
+ * vendor, request a service, buy a ticket - they need an account. Every one of
+ * those is a TanStack mutation, so the rule lives here once instead of on
+ * twenty buttons: no session, no mutation, and the visitor goes to /login with
+ * ?next= pointing back at the page they were on.
+ *
+ * getSession() reads the local session, no network round trip. It is a UX
+ * gate, not a security boundary: RLS and the server actions still refuse an
+ * anonymous write on their own.
+ */
+const mutationCache = new MutationCache({
+  onMutate: async (_vars, mutation) => {
+    if (mutation.options.meta?.public) return;
+    const { data } = await createClient().auth.getSession();
+    if (data.session) return;
+    if (typeof window !== 'undefined') {
+      const here = `${window.location.pathname}${window.location.search}`;
+      window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+    }
+    throw new SignInRequired();
+  },
+});
 
 /** Postgres/PostgREST errors carry a `status`; plain Errors do not. */
 function statusOf(error: unknown): number | undefined {
@@ -48,5 +96,5 @@ const defaultOptions: DefaultOptions = {
 };
 
 export function createQueryClient() {
-  return new QueryClient({ defaultOptions });
+  return new QueryClient({ defaultOptions, mutationCache });
 }

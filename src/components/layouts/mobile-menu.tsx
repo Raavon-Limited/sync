@@ -1,10 +1,11 @@
 /**
- * MobileMenu - hamburger trigger + full-viewport (100vh) overlay menu for the
- * marketing header on small screens. Lists every module plus the auth/CTA
- * actions and a theme toggle. Built on Radix Dialog so we get focus trapping,
+ * MobileMenu - hamburger trigger + full-viewport overlay menu for the
+ * marketing header below xl. Shows the SAME groups as the desktop nav
+ * (config/marketing-nav) as collapsible sections, the location picker, and
+ * the auth/CTA actions plus a theme toggle. Built on Radix Dialog so we get focus trapping,
  * Escape-to-close, and body scroll lock for free.
  *
- * Visible only below `md`; the desktop header shows the inline split nav.
+ * Visible only below `xl`; the desktop header shows the inline nav.
  */
 'use client';
 
@@ -12,12 +13,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ArrowRight, Info, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { ArrowRight, ChevronDown, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { toast } from '@/components/ui/toast';
-import { MODULES } from '@/config/modules';
-import SyncIcon from '@/components/brand/SyncIcon';
+import { TOP_NAV, isGroup } from '@/config/marketing-nav';
+import { NavIcon } from './nav-icon';
+import { CampusLocationPicker } from './campus-location-picker';
 import { SyncLogo } from '@/components/brand/sync-logo';
 import { AFTER_SIGN_OUT } from '@/config/site';
 import { signOut } from '@/modules/auth/actions';
@@ -70,7 +72,7 @@ export function MobileMenu({
         <button
           type="button"
           aria-label="Open menu"
-          className="text-foreground hover:bg-foreground/5 inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors md:hidden"
+          className="text-foreground hover:bg-foreground/5 inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors xl:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -85,7 +87,7 @@ export function MobileMenu({
             were never reachable because they were below the fold, outside the
             one element that scrolls. `dvh` tracks the visible viewport as the
             toolbars collapse, so the footer stays on screen. */}
-        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-dvh w-full flex-col md:hidden">
+        <Dialog.Content className="bg-surface text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 flex h-dvh w-full flex-col xl:hidden">
           <Dialog.Title className="sr-only">Menu</Dialog.Title>
           <Dialog.Description className="sr-only">
             Sync navigation, account actions, and theme toggle.
@@ -115,41 +117,71 @@ export function MobileMenu({
             </div>
           </div>
 
-          {/* Nav links - large, tappable, every module */}
-          <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-6 py-8">
+          {/* Nav - the desktop groups as native <details>, so they open with
+              no JS and are keyboard-operable for free. Explore starts open:
+              it is what most people opened the menu for. */}
+          <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-6 py-6" data-lenis-prevent>
+            <CampusLocationPicker className="mb-5 w-full justify-start" />
             <ul className="flex flex-col">
-              {MODULES.map(({ slug, label, tagline, iconName }) => (
-                <li key={slug} className="border-line/5 border-b last:border-b-0">
-                  <Link
-                    href={`/${slug}`}
-                    onClick={close}
-                    className="hover:text-accent-fg flex items-center gap-4 py-4 transition-colors"
-                  >
-                    {/* Brand-kit section icon: follows currentColor, so it
-                        inverts with the theme and never needs a colour picked. */}
-                    <span className="text-accent-fg shrink-0">
-                      <SyncIcon name={iconName} size={20} />
-                    </span>
-                    <span className="flex-1">
-                      <span className="font-display text-card block leading-tight">{label}</span>
-                      <span className="text-content-muted text-xs">{tagline}</span>
-                    </span>
-                    <ArrowRight className="text-content-muted h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
+              {TOP_NAV.map((n) =>
+                isGroup(n) ? (
+                  <li key={n.label} className="border-line/5 border-b">
+                    <details open={n.label === 'Explore'} className="group">
+                      <summary className="font-display text-card flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
+                        {n.label}
+                        <ChevronDown className="text-content-muted h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                      </summary>
+                      <ul className="flex flex-col gap-1 pb-4">
+                        {n.items.map((it) => {
+                          const inner = (
+                            <>
+                              <span className={it.soon ? 'text-content-muted' : 'text-accent-fg'}>
+                                <NavIcon name={it.icon} size={18} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                  {it.label}
+                                  {it.soon && (
+                                    <span className="bg-lime text-ink rounded-full px-1.5 font-mono text-[9px] tracking-wider uppercase">
+                                      Soon
+                                    </span>
+                                  )}
+                                </span>
+                                {it.desc && <span className="text-content-muted block truncate text-xs">{it.desc}</span>}
+                              </span>
+                            </>
+                          );
+                          return (
+                            <li key={it.label}>
+                              {it.href && !it.soon ? (
+                                <Link href={it.href} onClick={close} className="hover:bg-surface-deep flex min-h-11 items-center gap-3 rounded-xl px-2 py-2">
+                                  {inner}
+                                </Link>
+                              ) : (
+                                <div aria-disabled="true" className="flex min-h-11 items-center gap-3 px-2 py-2 opacity-80">
+                                  {inner}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
+                  </li>
+                ) : (
+                  <li key={n.label} className="border-line/5 border-b">
+                    <Link
+                      href={n.href}
+                      onClick={close}
+                      className="font-display text-card hover:text-accent-fg flex items-center justify-between py-4 transition-colors"
+                    >
+                      {n.label}
+                      <ArrowRight className="text-content-muted h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ),
+              )}
             </ul>
-
-            {/* Secondary marketing links (not service modules) */}
-            <Link
-              href="/about"
-              onClick={close}
-              className="hover:text-accent-fg font-display text-card mt-6 flex items-center gap-4 py-4 transition-colors"
-            >
-              <Info className="text-accent-fg h-5 w-5 shrink-0" aria-hidden="true" />
-              <span className="flex-1">About Sync</span>
-              <ArrowRight className="text-content-muted h-4 w-4" aria-hidden="true" />
-            </Link>
           </nav>
 
           {/* Sticky auth/CTA footer.
@@ -199,9 +231,9 @@ export function MobileMenu({
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Button asChild size="lg" onClick={close} className="min-w-0 flex-1">
-                  <Link href="/signup?role=vendor&category=landlord">
-                    <span className="truncate">List a property</span>
+                <Button asChild size="lg" onClick={close} className="min-w-0 flex-[1.5]">
+                  <Link href="/for-vendors">
+                    <span className="truncate">Become a vendor</span>
                     <ArrowRight />
                   </Link>
                 </Button>

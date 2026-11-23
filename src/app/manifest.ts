@@ -31,8 +31,8 @@ export default function manifest(): MetadataRoute.Manifest {
 
     // Matches --color-ink so the splash screen and status bar are continuous
     // with the app's dark shell instead of flashing white on launch.
-    background_color: '#0e0e12',
-    theme_color: '#0e0e12',
+    background_color: '#344e41',
+    theme_color: '#344e41',
 
     categories: ['shopping', 'lifestyle', 'food'],
     lang: 'en-NG',

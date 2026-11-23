@@ -2,7 +2,6 @@
 
 import { Ticket } from "@/lib/event"
 import { Minus, Plus, Ticket as TicketIcon } from "lucide-react"
-import { TbCurrencyNaira } from "react-icons/tb"
 
 interface TicketCardProps {
     ticket: Ticket
@@ -23,7 +22,7 @@ export default function TicketCard({
         <div
             className={`w-full rounded-xl border bg-panel shadow-card transition-all relative overflow-hidden ${
                 selected
-                    ? "border-lime shadow-[2px_2px_0px_0px_rgba(197,255,74,0.4)]"
+                    ? "border-lime shadow-[2px_2px_0px_0px_rgba(255,201,60,0.4)]"
                     : "border-line/10 hover:border-line/30"
             }`}
         >
@@ -45,7 +44,7 @@ export default function TicketCard({
                         <h2 className="font-bold text-base text-content">{ticket.name}</h2>
                         <p className="text-xs text-content-muted mt-0.5">{ticket.desc}</p>
                         <p className="flex items-center font-black text-lg text-content mt-2">
-                            <TbCurrencyNaira className="text-xl" />
+                            ₦
                             {ticket.price.toLocaleString()}
                         </p>
                     </div>
@@ -80,7 +79,7 @@ export default function TicketCard({
             {selected && (
                 <div className="px-5 pb-3 flex justify-end">
                     <span className="text-xs font-semibold text-lime-deep dark:text-lime bg-lime/10 px-2 py-0.5 rounded-full border border-lime/20">
-                        {quantity} selected · <TbCurrencyNaira className="inline" />{(ticket.price * quantity).toLocaleString()}
+                        {quantity} selected · ₦{(ticket.price * quantity).toLocaleString()}
                     </span>
                 </div>
             )}

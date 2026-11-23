@@ -319,6 +319,71 @@ locally. Branch `verification-visits`, not yet merged or pushed.
 
 ### Just finished
 
+**Redesign: green palette, new header, new landing (branch `redesign/green-landing`, Nov 2026).**
+Three commits. (1) The whole app moved to the green palette (stone, paper, sage, leaf, moss, forest,
+sunflower accent) with a dark-green dark mode; the old token NAMES (`lime`, `ink`, `cream`) are
+kept and remapped, see the header of `globals.css`. (2) The public header now carries the full nav
+from `config/marketing-nav.ts` (one list for desktop and mobile), a campus picker and Become a
+vendor. Campus choice lives in `hooks/use-campus-choice.ts`, separate from the area scope in
+`LocationProvider`: anyone may pick any campus, **detection never overwrites a pick**, and a
+non-serviced campus shows "we are not here yet". (3) The landing page is rebuilt from the design
+canvas: constellation hero, Find tabs with five real cards each (`getLandingRails`), Around you
+(real weather via Open-Meteo, server-side), How it works (#how), Why Sync, Reach out (#contact).
+The mock ActivityTicker, the newsletter band (fake success) and the FAQ/trust/CTA bands are gone.
+**Focus outlines and rings are removed app-wide** at the founder's request; `--shadow-focus` is
+still defined if that is revisited.
+**The landing is light in every theme** (the design is light): its sections use palette colours
+(`bg-stone`, `bg-paper`, `text-forest`), not the semantic tokens, and carry no `dark:` classes.
+Header and footer still follow the toggle. **`dark:` follows the toggle** (custom variant at the
+top of `globals.css`); before, it followed the OS alone, so OS-dark plus toggle-light painted pale
+text on light pages. **Reviews** show as a carousel only when approved rows exist (no seeded
+fallback); the first review is written from Reach out. `supabase/checks/landing_content.sql`
+reports what each landing tab can show and what lacks a photo.
+**Sunflower is for important actions only.** `lime` resolves to SAGE; the primary Button and
+deliberate CTAs use `sunflower` by name. Never sunflower on the logo, loaders or icon accents.
+**`lime-400`, `lime-500` … are NOT `lime`.** They are Tailwind's built-in palette, and the palette
+move left ~80 of them plus a dozen hard-coded `#90d505`s painting the old electric lime (the hostel
+price card, vendor screens, every admin chart). All converted on 23 Nov; `globals.css` now also
+overrides `--color-lime-50` … `950` onto the green ramp as a backstop. In new code pick by role:
+`sunflower` for the main action, `lime` for accent fills, `accent-fg` for accent text,
+`accent-fg` + `text-surface` for a solid selected state. Tailwind's other default palettes
+(`emerald`, `green`, `amber`, `red`, `blue` …) are still used across the app and are not remapped.
+**Browsing is public, doing needs an account.** The module routes (/hostels, /events, /food,
+/beauty, /workmanship, /laundry, /hotspots, /search) left PROTECTED_PREFIXES; checkout, orders,
+favourites, wallet, /ai, ticket purchase (`/events/<slug>/tickets`) and every dashboard stay
+gated. Writes on public pages are gated by the global MutationCache in `lib/query/query-client.ts`:
+no session, the mutation throws `SignInRequired` and the page goes to `/login?next=<here>`. A
+mutation that must work signed out opts out with `meta: { public: true }` (none exist). **A gated
+prefix must also be in RESERVED_HANDLES** (`lib/handle.ts`) or the gate never fires; `ai` was
+missing and is now added.
+**Money: Sync does not hold student funds.** Where escrow applies, a licensed third-party escrow
+partner holds the payment and pays out the vendor and Sync's fee on completion. Paystack is not
+named as the escrow (it has no escrow product). Public copy (footer, terms, privacy, how it works,
+how verification works, About) says this; keep new copy consistent. **Safety on Sync**
+(`/legal/safety`) carries the founder's meet-up and reporting notice, linked from the footer
+disclaimer, terms and the Policies menu.
+**Around you bento** (`components/around/around-bento.tsx`) is shared by the landing and the top
+of /around (the map stays below it). Backed by **`20261124090000_gist_and_polls_v2`** on top of
+`20261123120000_around_gist_and_polls` (the first version, applied, then wrongly rewritten in place;
+restored to what was applied, and v2 drops and recreates its objects behind a guard that refuses
+if any gist post or poll vote exists). **Never edit an applied migration; add a new one.** Parsed
+with Postgres's parser (pglast), never executed; verify blocks at the end:
+- **Gist** shows the poster's `profiles.display_name` (set via `set_display_name()`, unique, or
+  "Anonymous"). **Clients have NO select on `gist_posts`** (it holds `author_id`); read through
+  `gist_feed()`, write by insert (trigger sets author, cleans text: masks words from
+  `gist_masked_words`, removes phone numbers, 5/hour). Public = last 24h and newest 50 per
+  campus; alerts pinned 2h; kept 72 days for staff, then `purge_gist()`. 3 reports hide.
+- **Reveal**: `reveal_gist_author()` is super admin only, needs a written reason, logs to
+  `gist_identity_reveals`. Policy: only for law enforcement. Called as the user, never service role.
+- **Daily stats**: `compute_gist_daily_stats()` + purge run from `/api/cron/gist-daily`
+  (vercel.json, 23:10 UTC). Counts only, no AI. Shown at `/admin/gist` (area `gist`).
+- **Polls**: any signed-in user via `create_poll()` (3/day); single, multi (up to N), ranked
+  (top N, points); scope open (votes tagged near/far) or local (near only). **Voting needs no
+  account**: only `/api/polls/vote` calls `cast_poll_vote()` (service role), one ballot per
+  httpOnly cookie, per localStorage device key and per account; vicinity = within 5km of one of
+  the campus's `areas`. Creator kept in `poll_creators`, unreadable by clients.
+- **Emergency alerts: super admins only at launch** (decided, not built yet). GIFs: later.
+
 **Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
 NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every
 privileged table, no client INSERT on `orders` / `order_items`, the viewing fee read from the
@@ -515,6 +580,14 @@ cap.
 ## 6. Open threads
 
 Roughly in priority order. Nothing here is started.
+
+**Landing gaps the redesign left honest rather than faked.**
+- No paid placement exists, so Find cards are badged **Featured** (from `hotspots.is_featured` or a
+  hostel `ribbon`), never "Sponsored". Build a sponsorship product before using that word.
+- Reach out opens the visitor's email app (`mailto:`); there is no contact table or endpoint.
+- The gist feed, communities, creators, careers pages, Sync Internet and Dispatch are "soon" in the
+  nav with no href. Give each an href in `config/marketing-nav.ts` when it ships.
+- Module pages ignore `?q=` from the Find bar except `/search` (hostels).
 
 **`authenticated` cannot reach schema `private`, and three call sites forget it.**
 `20260816225649` revokes that schema from clients and grants usage to `service_role` alone. Several

@@ -367,7 +367,6 @@ export default function ListingsPage() {
         </div>
         <Button
           variant="primary"
-          className="hover:bg-accent-fg bg-lime-500 text-white"
           onClick={openAddListing}
         >
           <Plus className="size-4" /> Add New Listing

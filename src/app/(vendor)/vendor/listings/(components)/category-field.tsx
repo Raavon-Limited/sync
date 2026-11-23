@@ -91,8 +91,8 @@ export function CategoryField({ value, onChange, error }: CategoryFieldProps) {
               className={cn(
                 'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors',
                 value === c.name
-                  ? 'border-lime-500 bg-lime-500/10 text-lime-deep font-medium'
-                  : 'border-line/40 text-content-muted hover:border-lime-500/50',
+                  ? 'border-lime bg-lime/15 text-accent-fg font-medium'
+                  : 'border-line/40 text-content-muted hover:border-lime/60',
               )}
             >
               {value === c.name && <Check className="size-3" />}

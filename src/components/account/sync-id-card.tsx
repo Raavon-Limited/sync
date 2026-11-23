@@ -71,14 +71,14 @@ const H = 450;
  *   would be a small betrayal every time it was opened.
  *
  * WHICH LIME, AND WHY IT DIFFERS BY THEME
- *   Not the bright brand `lime` (#c5ff4a): that is a FILL colour, and as
+ *   Not the bright brand `lime` (#ffc93c): that is a FILL colour, and as
  *   hairline text or a 1.5px rule it glares on ink and vanishes on cream. The
- *   two ends of the ramp carry the contrast instead   the near-green #a8db3c
+ *   two ends of the ramp carry the contrast instead   the near-green #f2bd32
  *   the dark theme already uses for fills, and `lime-deep` on cream. This is
  *   the same rule the stylesheet states at the top: never bright lime as text.
  */
-const INK = '#0e0e12';
-const CREAM = '#f4f1e8';
+const INK = '#344e41';
+const CREAM = '#f2f1ea';
 
 /**
  * The QR is drawn in LIME-DEEP on a light panel in BOTH themes.
@@ -91,7 +91,7 @@ const CREAM = '#f4f1e8';
  * code that every reader handles. This is the one part of the card the theme
  * gets no vote on   a code some scanners refuse is not a code.
  */
-const LIME_DEEP = '#4a8500';
+const LIME_DEEP = '#44633f';
 
 interface Palette {
   /** The card ground   `--sf`. */
@@ -123,11 +123,11 @@ const DARK: Palette = {
   bg: INK,
   text: CREAM,
   muted: '#9b9ba3',
-  accent: '#a8db3c',
-  footer: '#6a6a72',
+  accent: '#f2bd32',
+  footer: '#4e5d53',
   qrPanel: CREAM,
   state: {
-    verified: { label: 'VERIFIED', colour: '#a8db3c' },
+    verified: { label: 'VERIFIED', colour: '#f2bd32' },
     pending: { label: 'IN REVIEW', colour: '#ff8b5c' },
     unverified: { label: 'NOT VERIFIED', colour: '#9b9ba3' },
     rejected: { label: 'NOT VERIFIED', colour: '#ff8b5c' },
@@ -139,7 +139,7 @@ const DARK: Palette = {
 const LIGHT: Palette = {
   bg: CREAM,
   text: INK,
-  muted: '#6a6a72',
+  muted: '#4e5d53',
   accent: LIME_DEEP,
   footer: '#9b9ba3',
   qrPanel: '#ffffff',
@@ -149,7 +149,7 @@ const LIGHT: Palette = {
     // contrast at 12px, so the same hue is taken down the ramp   the alarm has
     // to be legible or it is decoration.
     pending: { label: 'IN REVIEW', colour: '#b4451a' },
-    unverified: { label: 'NOT VERIFIED', colour: '#6a6a72' },
+    unverified: { label: 'NOT VERIFIED', colour: '#4e5d53' },
     rejected: { label: 'NOT VERIFIED', colour: '#b4451a' },
   },
   // The rosette is dark art. At the dark card's 0.5 it reads as a smudge on
@@ -184,6 +184,7 @@ const KIND_LABEL: Record<CardKind, string> = {
   agent: 'AGENT ID',
   staff: 'STAFF ID',
 };
+// 480px (was a 2000px, 1.8MB PNG downsampled to 420 in canvas anyway).
 const ROSETTE_SRC = '/klario-rosette.png';
 
 // Resolved once at module scope. It is build-time inlined and never changes,

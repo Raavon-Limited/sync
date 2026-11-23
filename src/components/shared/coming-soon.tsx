@@ -13,7 +13,8 @@ import { ArrowLeft } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
-import SyncIcon, { type SyncIconName } from '@/components/brand/SyncIcon';
+import type { SyncIconName } from '@/components/brand/SyncIcon';
+import { NavIcon } from '@/components/layouts/nav-icon';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -47,7 +48,7 @@ export function ComingSoon({
     >
       <span className="bg-lime/15 text-accent-fg mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
         {iconName ? (
-          <SyncIcon name={iconName} size={28} />
+          <NavIcon name={iconName} size={28} />
         ) : Icon ? (
           <Icon className="h-7 w-7" aria-hidden="true" />
         ) : null}
