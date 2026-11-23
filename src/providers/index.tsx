@@ -61,9 +61,8 @@ export function Providers({
    * header two inches above it.
    *
    * The header was right because it is server-rendered. The button was wrong
-   * because it was not. The layout has had this value all along and was
-   * already using it for InstallGate; it just never reached the provider whose
-   * prop exists to receive it.
+   * because it was not. The layout has had this value all along; it just never
+   * reached the provider whose prop exists to receive it.
    */
   user?: User | null;
 }) {

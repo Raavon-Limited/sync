@@ -39,11 +39,11 @@ import { usePathname } from 'next/navigation';
  * So it is scoped to the marketing and policy pages, where the pointer is
  * decoration on something being read rather than an instrument.
  *
- * NOT `WEB_ROUTES` from install-gate, though the lists look alike. That one
- * answers "is this reachable without the app", which includes /login, /signup
- * and the password-reset flow - forms, i.e. exactly the aiming case this
- * excludes. Two different questions that happen to share some routes; merging
- * them would silently put the ring back over every auth form.
+ * Not the list of "pages that open without the app" (the old InstallGate's
+ * WEB_ROUTES, removed Nov 2026), though it looked alike. That one included
+ * /login, /signup and the password-reset flow - forms, i.e. exactly the aiming
+ * case this excludes. Do not grow this list into a list of public pages; it
+ * would silently put the ring back over every auth form.
  */
 const CURSOR_ROUTES = [
   '/about',

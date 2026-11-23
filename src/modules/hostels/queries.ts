@@ -472,11 +472,15 @@ export async function fetchMyInspections(db: Client): Promise<Inspection[]> {
 }
 
 /**
- * `fullName`, `phone` and `feeKobo` are REQUIRED by the table, not optional
- * extras: the ambassador doing the visit needs a contact, and the fee is
- * snapshotted so a later change to `hostels.inspection_fee_kobo` cannot
- * retroactively reprice a booked visit. Read the fee from the hostel and pass
- * it through.
+ * `fullName` and `phone` are REQUIRED by the table: the ambassador doing the
+ * visit needs a contact.
+ *
+ * `feeKobo` is sent only because the generated Insert type requires the
+ * column. THE DATABASE IGNORES IT. guard_inspection_privileged_cols
+ * (20261113090000) overwrites it with the hostel's own `inspection_fee_kobo`,
+ * and forces the row to 'pending_payment' - this used to take the fee from the
+ * browser, which made a N5,000 viewing payable for N100. The returned row is
+ * the real fee; show that, not what was sent.
  */
 export async function scheduleInspection(
   db: Client,

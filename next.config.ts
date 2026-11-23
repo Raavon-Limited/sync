@@ -88,6 +88,9 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Each resized copy is kept 31 days, so Vercel does not resize the same photo again
+    // (each resize counts against the plan's monthly image allowance).
+    minimumCacheTTL: 2678400,
     // Allow Supabase storage hosts for next/image. Replace `your-project` with
     // the actual project ref once the env is set.
     remotePatterns: [

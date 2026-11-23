@@ -264,6 +264,28 @@ broken by accident already.
     layout's `h-full` makes the page unscrollable. Lenis is not mounted at all under
     `prefers-reduced-motion`.
 
+13. **A guard that freezes a column on UPDATE must also reset it on INSERT.** Every `guard_*`
+    trigger was `BEFORE UPDATE` while the 0006 owner policies also allowed INSERT, so a hostel, a
+    vendor, a rider, a document or a bank account could simply be *created* verified, and a
+    booking created `confirmed` — which minted a tenancy code. `20261113090000` closed all of
+    them; its verify block fails if any of those triggers stops firing on INSERT. A new privileged
+    column needs a line in both branches, or the table's INSERT revoked.
+
+14. **A client moves a status only along a transition a person may make, and a refused move
+    raises.** `guard_booking_privileged_cols` and `guard_order_privileged_cols` hold the whole
+    client-side state machine (`20261113090000`). Anything past `awaiting_payment`, any
+    cancellation that refunds, and every delivery step belong to SECURITY DEFINER functions. Do
+    not go back to reverting silently — that is how a screen reported success for a change that
+    never happened.
+
+15. **An escrow hold is `held` only once its money has arrived.** `checkout_cart` creates order and
+    delivery holds before payment; they start `unfunded` and become `held` when
+    `pay_order_from_wallet` stamps `paid_at` (`20261113120000`). This works because every money
+    mover — `release_order_escrow`, `release_delivery_escrow`, `release_matured_escrow`,
+    `cancel_order`, `resolve_dispute`, `sync_wallet_pending` — acts only on `status = 'held'`.
+    Loosening that test in any of them makes unpaid orders payable again; the migration's verify
+    block asserts each one.
+
 ---
 
 ## 5. Where we stopped
@@ -296,6 +318,20 @@ locally. Branch `verification-visits`, not yet merged or pushed.
 > A CSV export mangles box-drawing characters in comments; the dump does not.
 
 ### Just finished
+
+**Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
+NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every
+privileged table, no client INSERT on `orders` / `order_items`, the viewing fee read from the
+hostel (and `hostels.inspection_fee_kobo` frozen against landlords), booking and order
+transitions enforced, the rider's direct delivery update dropped, and `unfunded` holds for unpaid
+orders. Invariants 13–15. Written and syntax-checked with Postgres's own parser, **never
+executed** — there is no Docker on the machine that wrote them. Both migrations carry verify
+blocks and run in one transaction, so a failed assertion rolls the whole file back. Both print
+`AUDIT:` notices for damage the old holes may already have done (forged scheduled inspections;
+holds released or refunded for unpaid orders) — read the push output, then decide what to do
+about any rows they count. Expect, after applying: a vendor gets "This order has not been paid
+for yet" for unpaid orders (the button is now hidden), and any client code that relied on a
+silently-reverted status change will now see an error.
 
 **One decision path for every visit (`20260914180000`)** — `decide_verification_visit` replaces
 `decide_store_visit` and the old two-statement `decideHostelVisit`. Staff only, a filed report

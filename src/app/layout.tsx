@@ -18,7 +18,6 @@ import { getCurrentUser } from '@/modules/auth/queries';
 import { BootSplash } from '@/components/layouts/boot-splash';
 import { SmoothScroll } from '@/components/layouts/smooth-scroll';
 import { RegisterSW } from '@/components/pwa/register-sw';
-import { InstallGate } from '@/components/pwa/install-gate';
 import { Cursor } from '@/components/ui/cursor';
 
 const bricolage = Bricolage_Grotesque({
@@ -90,8 +89,7 @@ export default async function RootLayout({
   // Both reads are independent, so fire them together. `user` MUST come from
   // the server: the browser's Supabase client does not learn about a
   // server-action sign-in, so anything asking the client first paints as
-  // signed-out. It seeds SessionProvider (so no screen contradicts the header)
-  // and decides whether the InstallGate renders.
+  // signed-out. It seeds SessionProvider (so no screen contradicts the header).
   const [areas, user] = await Promise.all([listAreas(), getCurrentUser()]);
 
   return (
@@ -112,7 +110,7 @@ export default async function RootLayout({
       <body className="bg-surface text-foreground flex min-h-full flex-col font-[family-name:var(--font-body)]">
         <BootSplash />
         <RegisterSW />
-        {/* Wraps the page content only. BootSplash, InstallGate and the rest
+        {/* Wraps the page content only. BootSplash and the rest
             below are fixed overlays that must not be inside the scroll
             container Lenis drives. */}
         <SmoothScroll>
@@ -120,16 +118,14 @@ export default async function RootLayout({
             {children}
           </Providers>
         </SmoothScroll>
-        {/* Renders only in a browser tab, only when signed out, and only on a
-            route outside WEB_ROUTES.
-
-            `signedIn` is resolved HERE, on the server. The gate briefly read it
-            from useSession() instead, which made it cover the dashboard of a
-            user who had just logged in: `signIn` is a server action, so the
-            cookies are written server-side and the browser client never fires
-            onAuthStateChange - the client session stayed null until a reload.
-            The server has the answer before any of this renders. */}
-        <InstallGate signedIn={!!user} />
+        {/* NO INSTALL GATE. Until Nov 2026 an InstallGate here covered every app
+            route (hostels, food, events) in a browser tab with a full-screen
+            "Get the Sync app" wall for signed-out visitors. It was removed on
+            purpose: every page now opens in a browser and in the installed app
+            alike. It was only ever a client-side overlay - proxy.ts and RLS
+            are what guard access - so nothing else depended on it. If an
+            install nudge comes back, make it dismissible, not a wall: the wall
+            kept out exactly the people arriving from a shared WhatsApp link. */}
         {/* Renders nothing on touch devices or under reduced motion. */}
         <Cursor />
       </body>

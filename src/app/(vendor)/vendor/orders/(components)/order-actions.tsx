@@ -50,18 +50,29 @@ export function OrderActions({ order }: { order: FoodOrder }) {
       <p className="text-content-muted mt-4 text-xs">
         {order.status === 'delivered'
           ? 'Delivered. Escrow releases to you automatically.'
-          : 'Cancelled. The customer has been refunded in full.'}
+          : order.paidAt
+            ? 'Cancelled. The customer has been refunded in full.'
+            : 'Cancelled before it was paid for. No money moved.'}
       </p>
     );
   }
 
-  const next = NEXT[order.status];
+  // An unpaid order cannot be advanced: guard_order_privileged_cols refuses it
+  // (20261113090000), and its escrow is 'unfunded' until the student pays. Not
+  // offering the button is what keeps that refusal from reading as a fault.
+  const awaitingPayment = !order.paidAt;
+  const next = awaitingPayment ? undefined : NEXT[order.status];
   const busy = update.isPending;
 
   return (
     <div className="mt-4 flex flex-col gap-3">
       {!confirming ? (
         <div className="flex flex-wrap items-center gap-2">
+          {awaitingPayment && (
+            <p className="text-content-muted text-xs">
+              Waiting for the customer to pay. Don’t start on it yet.
+            </p>
+          )}
           {next && (
             <Button
               type="button"

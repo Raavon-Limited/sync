@@ -344,6 +344,10 @@ export async function fetchVendorOrders(
  * Only the vendor advances fulfilment   that is `orders_update_vendor` in 0006.
  * Money columns are frozen by `guard_order_privileged_cols`, so a vendor cannot
  * mark an order paid or change its total while updating the status.
+ *
+ * The same guard (20261113090000) now owns the transitions: forward only,
+ * never into 'cancelled', and not at all while the order is unpaid. A refused
+ * move RAISES, so the toast carries the reason instead of a silent no-op.
  */
 export async function updateOrderStatus(
   db: Client,
