@@ -87,7 +87,7 @@ export function ListingFilters({
             className={cn(
               'rounded-md p-2 transition-all',
               view === 'grid'
-                ? 'bg-lime-500 text-white shadow-sm'
+                ? 'bg-accent-fg text-surface shadow-sm'
                 : 'text-muted-foreground hover:bg-background',
             )}
           >
@@ -102,7 +102,7 @@ export function ListingFilters({
             className={cn(
               'rounded-md p-2 transition-all',
               view === 'list'
-                ? 'bg-lime-500 text-white shadow-sm'
+                ? 'bg-accent-fg text-surface shadow-sm'
                 : 'text-muted-foreground hover:bg-background',
             )}
           >
@@ -139,8 +139,8 @@ export function ListingFilters({
               className={cn(
                 'shrink-0 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200',
                 selectedCategory === cat
-                  ? 'border-lime-500 bg-lime-500 text-white shadow-sm'
-                  : 'border-line/10 bg-background text-muted-foreground hover:border-border hover:bg-lime-500 hover:text-white',
+                  ? 'border-accent-fg bg-accent-fg text-surface shadow-sm'
+                  : 'border-line/10 bg-background text-muted-foreground hover:border-border hover:bg-accent-fg hover:text-surface',
               )}
             >
               {cat}

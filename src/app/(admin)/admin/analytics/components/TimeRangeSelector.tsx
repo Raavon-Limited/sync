@@ -53,11 +53,11 @@ export function TimeRangeSelector({ value }: { value: TimeRange }) {
               onClick={() => choose(o)}
               className={`flex items-center justify-between w-full px-4 py-2 text-sm transition-colors ${
                 o === value
-                  ? "text-[#5a9e00] font-bold bg-lime-50"
+                  ? "text-accent-fg font-bold bg-lime/15"
                   : " hover:bg-gray-50 font-medium"
               }`} >
               {o}
-              {o === value && <Check className="text-[#90d505] size-3" aria-hidden="true" />}
+              {o === value && <Check className="text-accent-fg size-3" aria-hidden="true" />}
             </button>
           ))}
         </div>

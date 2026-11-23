@@ -44,7 +44,7 @@ interface FoodCardProps {
 const statusConfig: Record<VendorStatus, { label: string; className: string }> = {
     open: {
         label: "Open",
-        className: "bg-lime-100 text-lime-deep border border-lime-300 dark:border-line/10",
+        className: "bg-lime/15 text-accent-fg border border-lime/40 dark:border-line/10",
     },
     closed: {
         label: "Closed",

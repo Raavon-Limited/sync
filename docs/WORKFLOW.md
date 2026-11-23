@@ -341,6 +341,13 @@ fallback); the first review is written from Reach out. `supabase/checks/landing_
 reports what each landing tab can show and what lacks a photo.
 **Sunflower is for important actions only.** `lime` resolves to SAGE; the primary Button and
 deliberate CTAs use `sunflower` by name. Never sunflower on the logo, loaders or icon accents.
+**`lime-400`, `lime-500` … are NOT `lime`.** They are Tailwind's built-in palette, and the palette
+move left ~80 of them plus a dozen hard-coded `#90d505`s painting the old electric lime (the hostel
+price card, vendor screens, every admin chart). All converted on 23 Nov; `globals.css` now also
+overrides `--color-lime-50` … `950` onto the green ramp as a backstop. In new code pick by role:
+`sunflower` for the main action, `lime` for accent fills, `accent-fg` for accent text,
+`accent-fg` + `text-surface` for a solid selected state. Tailwind's other default palettes
+(`emerald`, `green`, `amber`, `red`, `blue` …) are still used across the app and are not remapped.
 **Browsing is public, doing needs an account.** The module routes (/hostels, /events, /food,
 /beauty, /workmanship, /laundry, /hotspots, /search) left PROTECTED_PREFIXES; checkout, orders,
 favourites, wallet, /ai, ticket purchase (`/events/<slug>/tickets`) and every dashboard stay

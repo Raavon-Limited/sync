@@ -426,7 +426,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
           </div>
           <Button
             onClick={handleWithdrawClick}
-            className="font-display flex items-center gap-2 rounded-xl bg-lime-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-lime-600 active:scale-95"
+            className="font-display flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-md transition-all active:scale-95"
           >
             <Receipt className="h-4 w-4" />
             Withdraw Funds
@@ -521,7 +521,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
               {dateRange.from && (
                 <Button
                   onClick={handleExportFiltered}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-transparent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-lime-600 sm:w-auto"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-line/15 bg-transparent px-3 py-2 text-sm font-medium text-content transition-colors hover:bg-ink/5 sm:w-auto"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Export Filtered
@@ -530,7 +530,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
 
               <Button
                 onClick={handleExportAll}
-                className="border-line/20 flex w-full items-center justify-center gap-1.5 rounded-lg border-none bg-lime-500 px-3 py-2 text-sm text-white transition-colors hover:bg-lime-600 sm:w-auto"
+                className="border-line/15 flex w-full items-center justify-center gap-1.5 rounded-lg border bg-transparent px-3 py-2 text-sm text-content transition-colors hover:bg-ink/5 sm:w-auto"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export All

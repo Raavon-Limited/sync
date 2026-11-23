@@ -18,7 +18,7 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
             </span>
             <div className="bg-surface-deep h-6 flex-1 overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-lime-500 transition-all"
+                className="bg-lime h-full rounded-full transition-all"
                 style={{ width: `${(product.revenue / max) * 100}%` }}
               />
             </div>

@@ -39,7 +39,7 @@ export function AppSelect({
         <SelectTrigger
           className={cn(
             'border-line/10 bg-background h-11 rounded-xl transition-colors',
-            'focus:ring-2 focus:ring-lime-500/20',
+            'focus:ring-lime/30 focus:ring-2',
             error && 'border-red-500',
             className,
           )}

@@ -52,7 +52,7 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
         <h3 className="text-sm font-bold">Revenue &amp; Orders Trend</h3>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-            <div className="w-5 h-0.5 bg-[#90d505] rounded" /> Revenue (₦)
+            <div className="w-5 h-0.5 bg-lime rounded" /> Revenue (₦)
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
             <div className="w-5 h-0.5 bg-blue-500 rounded" /> Orders
@@ -65,8 +65,8 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
           onMouseLeave={() => setHovered(null)}>
           <defs>
             <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#90d505" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#90d505" stopOpacity="0" />
+              <stop offset="0%" stopColor="#a3b18a" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#a3b18a" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="ordGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.12" />
@@ -103,7 +103,7 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
           <path d={ordArea} fill="url(#ordGrad)" />
 
           {/* Lines */}
-          <path d={revPath} fill="none" stroke="#90d505" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          <path d={revPath} fill="none" stroke="#a3b18a" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           <path d={ordPath} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
           {/* Invisible hover target columns */}
@@ -125,7 +125,7 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
             <g>
               <line x1={hovX} x2={hovX} y1={P.top} y2={P.top + CH}
                 stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4,3" />
-              <circle cx={hovX} cy={yRev(hov.revenue)} r="5" fill="#90d505" stroke="white" strokeWidth="2.5" />
+              <circle cx={hovX} cy={yRev(hov.revenue)} r="5" fill="#a3b18a" stroke="white" strokeWidth="2.5" />
               <circle cx={hovX} cy={yOrd(hov.orders)}  r="5" fill="#3b82f6" stroke="white" strokeWidth="2.5" />
               {/* Tooltip box */}
               <rect x={tipX} y={P.top + 2} width={tipW} height={46} rx="8"
@@ -133,7 +133,7 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
                 filter="drop-shadow(0 2px 8px rgba(0,0,0,0.10))" />
               <text x={tipX + tipW/2} y={P.top + 16} textAnchor="middle"
                 fontSize="10" fill="#9ca3af" fontFamily="system-ui">{hov.date}</text>
-              <text x={tipX + 10} y={P.top + 32} fontSize="11" fill="#90d505" fontFamily="system-ui" fontWeight="700">
+              <text x={tipX + 10} y={P.top + 32} fontSize="11" fill="#44633f" fontFamily="system-ui" fontWeight="700">
                 ₦{hov.revenue.toLocaleString()}
               </text>
               <text x={tipX + tipW - 10} y={P.top + 32} textAnchor="end" fontSize="11" fill="#3b82f6" fontFamily="system-ui" fontWeight="700">
@@ -145,7 +145,7 @@ export function RevenueTrendChart({ data }: { data: TrendPoint[] }) {
           {/* X axis labels */}
           {data.map((d, i) => i % labelStep === 0 && (
             <text key={i} x={xPos(i)} y={H - P.bottom + 18} textAnchor="middle"
-              fontSize="10" fill={hovered === i ? "#5a8a00" : "#bbb"} fontFamily="system-ui"
+              fontSize="10" fill={hovered === i ? "#44633f" : "#bbb"} fontFamily="system-ui"
               fontWeight={hovered === i ? "700" : "400"}>
               {d.date}
             </text>

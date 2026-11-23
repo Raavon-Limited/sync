@@ -183,7 +183,7 @@ function PendingRow({
           <Button
             disabled={busy}
             onClick={handleAccept}
-            className="text-ink bg-lime hover:bg-lime/85 flex-1 rounded-full border border-lime-300 font-semibold sm:flex-none"
+            className="text-ink bg-lime hover:bg-lime/85 border-lime flex-1 rounded-full border font-semibold sm:flex-none"
           >
             {state === 'accepting' ? 'Accepting…' : 'Accept'}
             {state !== 'accepting' && <ArrowRight className="ml-1 size-4" />}

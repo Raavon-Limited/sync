@@ -66,7 +66,7 @@ export function RevenueChart({
   onPeriodChange,
   activePeriod = '1Y',
   height = 220,
-  accentColor = 'var(--color-lime, #CAFF4D)',
+  accentColor = 'var(--color-lime, #a3b18a)',
   baseColor = 'var(--color-content, #0f0f0f)',
 }: RevenueChartProps) {
   const [period, setPeriod] = useState<ChartPeriod>(activePeriod);
@@ -87,7 +87,9 @@ export function RevenueChart({
                 key={p}
                 onClick={() => handlePeriod(p)}
                 className={`rounded-md px-3 py-1 font-mono text-[11px] tracking-wide uppercase transition-colors ${
-                  period === p ? 'bg-lime-600 text-white' : 'text-content-muted hover:text-content'
+                  period === p
+                    ? 'bg-accent-fg text-surface'
+                    : 'text-content-muted hover:text-content'
                 }`}
               >
                 {p}

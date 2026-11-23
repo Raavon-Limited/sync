@@ -134,7 +134,7 @@ export function ActivityLog({
                   className={cn(
                     'mt-0.5 grid size-7 shrink-0 place-items-center rounded-full',
                     row.byAgent
-                      ? 'bg-lime-500/10 text-lime-600'
+                      ? 'bg-lime/15 text-accent-fg'
                       : 'bg-ink/5 text-content-muted',
                   )}
                   aria-hidden="true"

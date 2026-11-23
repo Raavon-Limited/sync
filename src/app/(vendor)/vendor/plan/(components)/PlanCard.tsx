@@ -34,15 +34,15 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
       className={cn(
         'relative flex h-full flex-col rounded-xl border p-5 transition-shadow sm:p-6',
         isEnterprise
-          ? 'text-cream border-lime-100 bg-lime-500'
+          ? 'text-cream border-ink bg-ink'
           : 'border-line/10 bg-panel text-content shadow-card',
-        isCurrent && !isEnterprise && 'ring-2 ring-lime-500',
+        isCurrent && !isEnterprise && 'ring-lime ring-2',
       )}
     >
       {/* Current badge */}
       {isCurrent && (
         <div className="absolute -top-3 left-4">
-          <Badge variant="accent" className="bg-lime-100 text-lime-700">
+          <Badge variant="accent" className="bg-lime/15 text-accent-fg">
             Current
           </Badge>
         </div>
@@ -90,10 +90,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
         {plan.features.map((f) => (
           <li key={f.label} className="flex items-center gap-2 text-sm">
             <Check
-              className={cn(
-                'h-3.5 w-3.5 shrink-0',
-                isEnterprise ? 'text-lime-deep' : 'text-lime-500',
-              )}
+              className={cn('h-3.5 w-3.5 shrink-0', isEnterprise ? 'text-lime' : 'text-accent-fg')}
             />
             <span className={isEnterprise ? 'text-cream/80' : 'text-content'}>{f.label}</span>
           </li>
@@ -105,7 +102,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
         {isCurrent ? (
           <Button
             variant="outline"
-            className="w-full border-lime-200 bg-lime-50 text-lime-600 hover:bg-lime-50"
+            className="border-lime/40 bg-lime/15 text-accent-fg hover:bg-lime/15 w-full"
             disabled
           >
             Current Plan
@@ -119,7 +116,7 @@ export function PlanCard({ plan, currentPlanId, onSelect }: Props) {
             Contact Sales
           </Button>
         ) : plan.cta === 'upgrade' ? (
-          <Button className="w-full bg-lime-600 text-white hover:bg-lime-700" onClick={handleClick}>
+          <Button className="w-full" onClick={handleClick}>
             {/* "Upgrade" on the free plan is not a thing you can do to it.
                 Somebody on no plan at all is choosing, not upgrading. */}
             {plan.price === 0 ? 'Start free' : 'Upgrade'}

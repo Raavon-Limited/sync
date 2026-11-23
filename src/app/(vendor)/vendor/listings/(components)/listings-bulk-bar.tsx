@@ -18,7 +18,7 @@ export function ListingBulkBar({
   if (count === 0) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-lg bg-lime-600 px-5 py-3 text-white">
+    <div className="bg-ink text-cream flex items-center justify-between rounded-lg px-5 py-3">
       <p className="text-sm font-semibold">{count} selected</p>
       <div className="flex items-center gap-2">
         <button

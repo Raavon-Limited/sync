@@ -58,6 +58,27 @@
      clears 4.5:1 on stone. Leaf itself stays available for large display text
      and decoration. */
   --color-lime-deep: #44633f;
+  /* TAILWIND'S OWN LIME SCALE, OVERRIDDEN. Remapping `lime` above to sage did
+     nothing for `lime-50` … `lime-950`: those are Tailwind's built-in palette,
+     a separate set of variables, and ~80 classes plus a dozen hard-coded
+     #90d505s kept painting the old electric lime on the hostel page, the
+     vendor screens and every admin chart after the palette move. Those uses
+     are converted to tokens; this ramp is the backstop, so a `bg-lime-500`
+     written tomorrow comes out green rather than lime. Do not reach for these
+     in new code - use `lime` / `accent-fg` / `sunflower` by what the thing IS.
+     400 is sage, 500 leaf, 600 lime-deep, 700 moss, 800 forest; the light end
+     is sage mixed into paper. */
+  --color-lime-50: #e8e9de;
+  --color-lime-100: #dee1d2;
+  --color-lime-200: #ced4bf;
+  --color-lime-300: #bbc4a7;
+  --color-lime-400: #a3b18a;
+  --color-lime-500: #588157;
+  --color-lime-600: #44633f;
+  --color-lime-700: #3a5a40;
+  --color-lime-800: #344e41;
+  --color-lime-900: #263a30;
+  --color-lime-950: #141e18;
   --color-white: #ffffff;
   --color-muted: #4e5d53;
   --color-coral: #ff8b5c;

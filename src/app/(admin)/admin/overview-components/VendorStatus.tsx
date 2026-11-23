@@ -7,7 +7,7 @@ interface VendorStatusProps {
 }
 
 const SEGMENTS = [
-  { key: "active" as const, label: "Active", color: "#90d505", hoverColor: "#a8e800" },
+  { key: "active" as const, label: "Active", color: "#a3b18a", hoverColor: "#588157" },
   { key: "pending" as const, label: "Pending", color: "#f97316", hoverColor: "#fb923c" },
   { key: "suspended" as const, label: "Suspended", color: "#ef4444", hoverColor: "#f87171" },
 ];

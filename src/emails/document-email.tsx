@@ -34,7 +34,7 @@ import { documentNaira, type PaymentDocument } from '@/modules/documents/types';
 
 const CREAM = '#f2f1ea';
 const INK = '#344e41';
-const LIME = '#8fbf1f';
+const LIME = '#44633f'; // lime-deep - see globals.css
 const MUTED = '#4e5d53';
 const FAINT = '#9a9aa2';
 const RULE = 'rgba(14,14,18,0.10)';

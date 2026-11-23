@@ -193,7 +193,7 @@ function VerifiedBadge({ verified, compact = false }: { verified: boolean; compa
   if (verified) {
     return (
       <span
-        className={`rounded-full border border-lime-500/30 bg-lime-500/10 font-semibold whitespace-nowrap text-lime-400 ${
+        className={`border-lime/40 bg-lime/15 text-accent-fg rounded-full border font-semibold whitespace-nowrap ${
           compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-0.5 text-xs'
         }`}
       >
@@ -265,7 +265,7 @@ function Gallery({ hostel }: { hostel: Hostel }) {
               <div
                 key={url}
                 className={`relative h-31 overflow-hidden rounded-2xl border ${
-                  isLast ? 'border-lime-500/30' : 'border-line/10'
+                  isLast ? 'border-lime/40' : 'border-line/10'
                 }`}
               >
                 <Image
@@ -277,7 +277,7 @@ function Gallery({ hostel }: { hostel: Hostel }) {
                 />
                 {isLast && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/55">
-                    <span className="text-sm font-bold text-lime-400">+{hidden} more</span>
+                    <span className="text-accent-fg text-sm font-bold">+{hidden} more</span>
                   </div>
                 )}
               </div>
@@ -589,7 +589,7 @@ function HostelsPage() {
         {showModal && (
           <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md duration-200">
             <div className="animate-in zoom-in-95 w-full max-w-md space-y-5 rounded-3xl border border-zinc-800 bg-zinc-950 p-6 text-center shadow-2xl duration-300 md:p-8">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-lime-500/30 bg-lime-500/10 text-xl text-lime-400">
+              <div className="border-lime/40 bg-lime/15 text-accent-fg mx-auto flex h-12 w-12 items-center justify-center rounded-full border text-xl">
                 <KeyRound className="size-6" aria-hidden="true" />
               </div>
               <div>
@@ -604,7 +604,7 @@ function HostelsPage() {
                   </li>
                   <li>You pay within the 24 hours to confirm it.</li>
                 </ol>
-                <p className="mt-4 rounded-xl border border-lime-500/20 bg-lime-500/5 p-3 text-xs font-semibold text-lime-400">
+                <p className="border-lime/30 bg-lime/10 text-accent-fg mt-4 rounded-xl border p-3 text-xs font-semibold">
                   Nothing is charged now, and nothing is charged until you choose to pay.
                 </p>
               </div>
@@ -628,7 +628,7 @@ function HostelsPage() {
                   type="button"
                   onClick={requestRoom}
                   disabled={book.isPending}
-                  className="flex-2 rounded-xl bg-lime-400 py-3 text-xs font-extrabold tracking-wider text-black uppercase transition-all hover:bg-lime-500 disabled:bg-zinc-800 disabled:text-zinc-500"
+                  className="bg-sunflower text-forest hover:bg-sunflower/85 disabled:bg-surface-deep disabled:text-content-muted flex-2 rounded-xl py-3 text-xs font-extrabold tracking-wider uppercase transition-all"
                 >
                   {book.isPending ? 'Sending…' : 'Send request'}
                 </button>
@@ -656,7 +656,7 @@ function HostelsPage() {
             <button
               type="button"
               onClick={() => setSelectedHostel(null)}
-              className="group text-content-muted flex items-center gap-2 text-sm font-semibold transition-colors hover:text-lime-400"
+              className="group text-content-muted hover:text-accent-fg flex items-center gap-2 text-sm font-semibold transition-colors"
             >
               <svg
                 className="h-5 w-5 transform transition-transform group-hover:-translate-x-1"
@@ -776,7 +776,7 @@ function HostelsPage() {
                           key={facility}
                           className="border-line/10 bg-panel flex items-center gap-2 rounded-xl border p-2.5 text-xs"
                         >
-                          <Check className="size-3.5 shrink-0 text-lime-400" aria-hidden="true" />
+                          <Check className="text-accent-fg size-3.5 shrink-0" aria-hidden="true" />
                           <span className="text-content font-medium">{facility}</span>
                         </div>
                       ))}
@@ -852,7 +852,7 @@ function HostelsPage() {
                         {naira(quote.rentKobo)}
                       </h2>
                     </div>
-                    <span className="rounded-md border border-lime-500/20 bg-lime-500/10 px-2.5 py-1 text-xs font-semibold text-lime-400">
+                    <span className="border-lime/30 bg-lime/15 text-accent-fg rounded-md border px-2.5 py-1 text-xs font-semibold">
                       Per session
                     </span>
                   </div>
@@ -877,7 +877,7 @@ function HostelsPage() {
 
                   <div className="mb-2 flex items-center justify-between text-sm font-bold text-current">
                     <span>Total to pay</span>
-                    <span className="font-mono text-xl text-lime-400">
+                    <span className="text-accent-fg font-mono text-xl">
                       {naira(quote.totalKobo)}
                     </span>
                   </div>
@@ -918,7 +918,7 @@ function HostelsPage() {
                     ) : !isAuthenticated ? (
                       <Link
                         href={`/login?next=${encodeURIComponent('/hostels')}`}
-                        className="flex w-full items-center justify-center rounded-xl bg-lime-400 py-3.5 text-xs font-extrabold tracking-wider text-black uppercase shadow-lg transition-all hover:bg-lime-500 active:scale-95"
+                        className="bg-sunflower text-forest hover:bg-sunflower/85 flex w-full items-center justify-center rounded-xl py-3.5 text-xs font-extrabold tracking-wider uppercase shadow-lg transition-all active:scale-95"
                       >
                         Sign in to request a room
                       </Link>
@@ -963,7 +963,7 @@ function HostelsPage() {
                         <div className="grid grid-cols-5 gap-2">
                           <Link
                             href="/user/bookings"
-                            className="bg-surface-deep border-line/10 text-content col-span-3 flex flex-col justify-center rounded-xl border p-3 transition-colors hover:text-lime-400"
+                            className="bg-surface-deep border-line/10 text-content hover:text-accent-fg col-span-3 flex flex-col justify-center rounded-xl border p-3 transition-colors"
                           >
                             <span className="text-content-muted block text-[9px] uppercase">
                               Manage
@@ -1042,7 +1042,7 @@ function HostelsPage() {
                             book.isPending ||
                             (freeRooms.length > 0 && !selectedRoomId)
                           }
-                          className="disabled:bg-surface-deep disabled:text-content-muted w-full rounded-xl bg-lime-400 py-3.5 text-xs font-extrabold tracking-wider text-black uppercase shadow-lg transition-all hover:bg-lime-500 active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100"
+                          className="disabled:bg-surface-deep disabled:text-content-muted bg-sunflower text-forest hover:bg-sunflower/85 w-full rounded-xl py-3.5 text-xs font-extrabold tracking-wider uppercase shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                           {/* A full hostel had a live "Lock Apartment Layout" button
                               over a "SOLD OUT" counter. One of the two was lying. */}
@@ -1063,7 +1063,7 @@ function HostelsPage() {
                     <button
                       type="button"
                       onClick={() => setShowScheduleModal(true)}
-                      className="border-line/10 text-content hover:bg-surface-deep w-full rounded-xl border py-3 text-xs font-bold transition-all hover:text-lime-400 active:scale-98"
+                      className="border-line/10 text-content hover:bg-surface-deep hover:text-accent-fg w-full rounded-xl border py-3 text-xs font-bold transition-all active:scale-98"
                     >
                       Book a visit ({naira(selectedHostel.inspectionFeeKobo)}) is optional
                     </button>
@@ -1100,7 +1100,7 @@ function HostelsPage() {
                   key={hostel.slug}
                   onClick={() => setSelectedHostel(hostel)}
                   type="button"
-                  className="border-line/10 hover:border-line/25 bg-surface-deep text-content rounded-xl border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-all hover:text-lime-400"
+                  className="border-line/10 hover:border-line/25 bg-surface-deep text-content hover:text-accent-fg rounded-xl border px-3 py-1.5 text-[11px] font-medium whitespace-nowrap transition-all"
                 >
                   {hostel.name} · {hostel.roomsLeft === 0 ? 'full' : `${hostel.roomsLeft} free`}
                 </button>
@@ -1120,7 +1120,7 @@ function HostelsPage() {
         <section className="mb-10">
           <h1 className="font-display text-4xl leading-tight font-extrabold tracking-tight text-current md:text-5xl lg:text-6xl">
             Find your{' '}
-            <span className="block font-normal text-lime-400 italic md:inline">
+            <span className="text-accent-fg block font-normal italic md:inline">
               perfect hostel.
             </span>
           </h1>
@@ -1183,7 +1183,7 @@ function HostelsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, area or amenity: “Safari”, “Wi-Fi”…"
-            className="border-line/10 bg-panel text-content placeholder:text-content-muted h-12 w-full rounded-2xl border pr-11 pl-11 text-sm transition-colors outline-none focus:border-lime-400"
+            className="border-line/10 bg-panel text-content placeholder:text-content-muted focus:border-lime h-12 w-full rounded-2xl border pr-11 pl-11 text-sm transition-colors outline-none"
           />
           {query && (
             <button
@@ -1246,7 +1246,7 @@ function HostelsPage() {
                       setQuery('');
                       setActive('all');
                     }}
-                    className="border-line/10 bg-panel text-content rounded-full border px-4 py-2 text-xs font-semibold transition-colors hover:text-lime-400"
+                    className="border-line/10 bg-panel text-content hover:text-accent-fg rounded-full border px-4 py-2 text-xs font-semibold transition-colors"
                   >
                     Clear search and filters
                   </button>
@@ -1296,7 +1296,7 @@ function HostelsPage() {
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-lg font-bold text-current transition-colors group-hover:text-lime-400">
+                      <h3 className="group-hover:text-accent-fg text-lg font-bold text-current transition-colors">
                         {hostel.name}
                       </h3>
                       <p className="text-content-muted mt-1 flex items-center gap-1 text-xs">
@@ -1329,7 +1329,7 @@ function HostelsPage() {
                     <span className="text-content font-bold">{hostel.totalRooms} total</span>
                     <span className="text-content-muted">|</span>
                     <span
-                      className={`${hostel.roomsLeft === 0 ? 'font-black text-rose-400' : 'font-black text-lime-400'}`}
+                      className={`${hostel.roomsLeft === 0 ? 'font-black text-rose-400' : 'text-accent-fg font-black'}`}
                     >
                       {hostel.roomsLeft === 0 ? 'FULLY BOOKED' : `${hostel.roomsLeft} FREE`}
                     </span>

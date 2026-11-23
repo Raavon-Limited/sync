@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { TopProduct } from "../data";
 
-const RANK_COLORS = ["bg-[#90d505]","bg-blue-500","bg-orange-500","bg-purple-500","bg-pink-500"];
+const RANK_COLORS = ["bg-lime","bg-blue-500","bg-orange-500","bg-purple-500","bg-pink-500"];
 
 export function TopProductsList({ products }: { products: TopProduct[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -39,7 +39,7 @@ export function TopProductsList({ products }: { products: TopProduct[] }) {
             {/* Name + orders */}
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold truncate transition-colors ${
-                hovered === i ? "text-[#5a9e00]" : "text-content-muted"
+                hovered === i ? "text-accent-fg" : "text-content-muted"
               }`}>
                 {p.name}
               </p>

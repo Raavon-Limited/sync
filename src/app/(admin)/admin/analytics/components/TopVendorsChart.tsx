@@ -28,7 +28,7 @@ export function TopVendorsChart({ data }: { data: VendorBar[] }) {
 
               {/* Name */}
               <span className={`text-xs font-semibold w-28 shrink-0 truncate transition-colors ${
-                isHov ? "text-[#5a9e00]" : "text-gray-500"
+                isHov ? "text-accent-fg" : "text-gray-500"
               }`}>
                 {v.name}
               </span>
@@ -40,14 +40,14 @@ export function TopVendorsChart({ data }: { data: VendorBar[] }) {
                   style={{
                     width: `${pct}%`,
                     background: isHov
-                      ? "linear-gradient(90deg,#b0f020,#90d505)"
-                      : "linear-gradient(90deg,#90d505,#6aaf00)",
+                      ? "linear-gradient(90deg,#588157,#44633f)"
+                      : "linear-gradient(90deg,#a3b18a,#588157)",
                   }} />
               </div>
 
               {/* Value */}
               <span className={`text-xs font-bold w-20 text-right shrink-0 transition-colors ${
-                isHov ? "text-[#5a9e00]" : "text-content"
+                isHov ? "text-accent-fg" : "text-content"
               }`}>
                 ₦{(v.revenue / 1000).toFixed(0)}k
               </span>
