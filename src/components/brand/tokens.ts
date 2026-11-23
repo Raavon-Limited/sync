@@ -1,9 +1,14 @@
 /** Sync design tokens. Single source of truth for colour and motion. */
 
 export const color = {
-  cream: "#F4F1E8",   // surfaces, roughly 60% of any screen
-  ink: "#0E0E12",     // type and marks, roughly 30%
-  lime: "#C5FF4A",    // accent only, roughly 10%
+  // Green system, Nov 2026. Key names kept from the original kit so every
+  // import keeps working: `cream` is stone, `ink` is forest, `lime` is the
+  // sunflower accent. `sage` is the mark's light half.
+  cream: "#DAD7CD",   // stone - surfaces, roughly 60% of any screen
+  paper: "#F2F1EA",   // cards on stone, and the mark's counter on forest
+  ink: "#344E41",     // forest - type and marks, roughly 30%
+  lime: "#FFC93C",    // sunflower - accent only, roughly 10%
+  sage: "#A3B18A",    // the mark's accent half
 } as const;
 
 export const radius = {

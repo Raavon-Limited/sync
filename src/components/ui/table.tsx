@@ -48,7 +48,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
       ref={ref}
       className={cn(
         /*
-         * `muted` is a TEXT token in this design system (#6a6a72), not a
+         * `muted` is a TEXT token in this design system (#4e5d53), not a
          * surface - the upstream `bg-muted/50` painted rows dark grey on
          * hover. Tint with `ink` instead, which is what the rest of the app
          * uses for subtle hover backgrounds.

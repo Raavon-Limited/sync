@@ -24,7 +24,29 @@ name (`./SyncMark`, `./SyncIcon`), so all four must stay in this directory.
 - Section icons belong on mobile tabs, section headers, listing card badges and
   the dashboard side nav. **Not** the desktop top nav, which stays text only.
 - Below 16px, drop the icon and keep the text label.
-- Never recolour anything outside Cream, Ink and Electric Lime.
+- Never recolour anything outside the green system: stone, paper, sage, leaf,
+  forest and the sunflower accent (values in `tokens.ts` and `globals.css`).
+
+## The green system (Nov 2026) - these files are no longer a straight copy
+
+The kit shipped as Cream / Ink / Electric Lime. The brand moved to the green
+system, so **four colour constants in these files were changed by hand**:
+`tokens.ts` (`color`), `SyncMark.tsx` and `SyncLoaders.tsx` (`LIME`, `INK`,
+`CREAM`), and the `--sync-accent` fallback in `SyncIcon.tsx`. Nothing else in
+them was touched - no path, no geometry, no motion. The constant NAMES are
+the kit's and were kept so every import still resolves: `LIME` is sage in the
+mark and sunflower as an accent, `INK` is forest.
+
+If the kit is ever re-copied from `public/logo-kit2/`, **those four edits
+must be re-applied**, or the logo goes back to lime overnight. The static
+files under `public/logo-kit2/` are the original kit and still lime; they are
+reference only and nothing in the app serves them. The app icons, favicon and
+OG mark were regenerated in the new palette.
+
+One deliberate exception to "rotation means waiting": the landing hero spins
+the mark slowly as the hub the feature lines run into. It is decorative,
+sits in one place only, stops under `prefers-reduced-motion`, and is never on
+screen beside a loader.
 
 ## `sync-logo.tsx` - the app-side lockup (not part of the kit)
 

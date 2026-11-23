@@ -48,7 +48,7 @@ const CATEGORY: Record<PinCategory, { label: string; color: string }> = {
   food: { label: 'Food', color: '#ff8b5c' },
   beauty: { label: 'Beauty', color: '#c45cff' },
   laundry: { label: 'Laundry', color: '#1f9fb8' },
-  workmanship: { label: 'Workmanship', color: '#0e0e12' },
+  workmanship: { label: 'Workmanship', color: '#344e41' },
   hotspot: { label: 'Hot spots', color: '#ff5c8b' },
 };
 
@@ -119,10 +119,10 @@ function YouAreHere() {
       <Circle
         center={{ lat: coords.lat, lng: coords.lng }}
         radius={coords.accuracy}
-        strokeColor="#c5ff4a"
+        strokeColor="#ffc93c"
         strokeWeight={1}
         strokeOpacity={0.9}
-        fillColor="#c5ff4a"
+        fillColor="#ffc93c"
         fillOpacity={0.12}
         clickable={false}
       />
@@ -279,7 +279,7 @@ export default function AroundMapGoogle({ pins = [] }: { pins?: MapPin[] }) {
                   <span
                     className="amap-pin__dot"
                     style={{
-                      background: pin.featured ? '#0e0e12' : CATEGORY[pin.category].color,
+                      background: pin.featured ? '#344e41' : CATEGORY[pin.category].color,
                     }}
                   />
                   <span className="amap-pin__text">

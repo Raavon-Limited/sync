@@ -55,7 +55,7 @@ export function DocumentQr({ verify }: { verify: PaymentDocument['verify'] }) {
     // contrast, and a dark-on-dark QR is a QR nobody can read. See lib/qr.
     return renderQr(payload, {
       size: 116,
-      dark: '#0e0e12',
+      dark: '#344e41',
       light: '#ffffff',
       margin: 2,
       radius: 0.34,

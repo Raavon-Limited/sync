@@ -46,13 +46,17 @@ export const metadata: Metadata = {
 };
 
 const COLOR_TOKENS = [
-  { name: 'cream', cls: 'bg-surface', hex: '#F4F1E8', note: '60% - primary surface' },
-  { name: 'cream-deep', cls: 'bg-surface-deep', hex: '#ECE7D8', note: 'surfaces, hovers' },
-  { name: 'ink', cls: 'bg-ink', hex: '#0E0E12', note: '30% - primary text' },
-  { name: 'lime', cls: 'bg-lime', hex: '#C5FF4A', note: '10% - accent fills only' },
-  { name: 'lime-deep', cls: 'bg-lime-deep', hex: '#4A8500', note: 'lime as text on cream' },
-  { name: 'white', cls: 'bg-panel', hex: '#FFFFFF', note: 'cards on cream' },
-  { name: 'muted', cls: 'bg-muted', hex: '#6A6A72', note: 'meta text' },
+  // Token names are historical (see the header of globals.css): `cream` is
+  // stone, `ink` is forest, `lime` is the sunflower accent.
+  { name: 'cream · stone', cls: 'bg-surface', hex: '#DAD7CD', note: '60% - primary surface' },
+  { name: 'cream-deep', cls: 'bg-surface-deep', hex: '#CFCBBE', note: 'sunken panels, hovers' },
+  { name: 'ink · forest', cls: 'bg-ink', hex: '#344E41', note: '30% - text and dark panels' },
+  { name: 'lime · sunflower', cls: 'bg-lime', hex: '#FFC93C', note: '10% - accent fills only' },
+  { name: 'lime-deep', cls: 'bg-lime-deep', hex: '#44633F', note: 'accent as TEXT on stone' },
+  { name: 'paper', cls: 'bg-panel', hex: '#F2F1EA', note: 'cards on stone' },
+  { name: 'sage', cls: 'bg-sage', hex: '#A3B18A', note: 'soft fills, the mark' },
+  { name: 'leaf', cls: 'bg-leaf', hex: '#588157', note: 'connections, large display text' },
+  { name: 'muted', cls: 'bg-muted', hex: '#4E5D53', note: 'meta text' },
   { name: 'coral', cls: 'bg-coral', hex: '#FF8B5C', note: 'warnings, sparingly' },
 ];
 

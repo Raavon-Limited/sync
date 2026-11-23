@@ -15,8 +15,8 @@
 
 import { useId } from "react";
 
-const LIME = "#C5FF4A";
-const INK = "#0E0E12";
+const LIME = "#A3B18A"; // sage: the mark's accent half since the green system
+const INK = "#344E41"; // forest
 
 const LEFT = "M 50,10 C 61.9,10 61.9,50 48.4,50 C 34.9,50 34.9,90 50,90 A 40,40 0 0 1 50,10 Z";
 const RIGHT = "M 50,10 C 65.1,10 65.1,50 51.6,50 C 38.1,50 38.1,90 50,90 A 40,40 0 0 0 50,10 Z";

@@ -29,7 +29,7 @@ const MID = {
 const DASH_SYMBOL = {
     path: 'M 0,-1 0,1',
     strokeOpacity: 0.85,
-    strokeColor: '#c5ff4a',
+    strokeColor: '#ffc93c',
     strokeWeight: 4,
     scale: 2,
 }
@@ -64,8 +64,8 @@ export default function TrackMap() {
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            background: '#c5ff4a',
-                            border: '3px solid #0e0e12',
+                            background: '#ffc93c',
+                            border: '3px solid #344e41',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

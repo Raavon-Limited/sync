@@ -397,7 +397,7 @@ export default function FoodMain() {
     return (
         <section className="flex flex-col gap-3">
             <h1 className="text-center text-3xl lg:text-left font-display lg:text-section text-content">
-                What are you <span className="text-[#4A8500] dark:text-lime-deep"> <br className='lg:hidden' />Chopping</span> tonight?
+                What are you <span className="text-[#44633F] dark:text-lime-deep"> <br className='lg:hidden' />Chopping</span> tonight?
             </h1>
 
             {/* Real storefronts from vendor_profiles   the curated rows below

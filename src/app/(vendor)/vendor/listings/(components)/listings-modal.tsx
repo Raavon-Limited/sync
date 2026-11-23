@@ -15,8 +15,8 @@
  * WHY THE HAND-ROLLED MODAL WENT
  *   The old shell was a bare `fixed inset-0` div: no focus trap, no restore on
  *   close, no labelled title, and its headings were `text-ink`   a fixed near
- *   black   so on the dark theme "Add new listing" was drawn in #0e0e12 on a
- *   #0e0e12 panel and could not be read at all. Everything here is on the Radix
+ *   black   so on the dark theme "Add new listing" was drawn in #344e41 on a
+ *   #344e41 panel and could not be read at all. Everything here is on the Radix
  *   primitives, which handle the first four, and on `text-content`, which is
  *   the token that follows the theme.
  */

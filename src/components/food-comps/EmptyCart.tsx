@@ -4,11 +4,11 @@ export default function EmptyCart() {
         <div className="flex flex-col items-center justify-center h-full gap-3 px-4 py-8 text-center">
             {/* Cart SVG illustration */}
             <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="80" height="80" rx="40" fill="#C5FF4A" fillOpacity="0.12" />
-                <path d="M20 24h5l6 24h22l4-16H29" stroke="#C5FF4A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="36" cy="54" r="2.5" fill="#C5FF4A" />
-                <circle cx="48" cy="54" r="2.5" fill="#C5FF4A" />
-                <path d="M29 32h26" stroke="#C5FF4A" strokeWidth="2" strokeLinecap="round" />
+                <rect width="80" height="80" rx="40" fill="#FFC93C" fillOpacity="0.12" />
+                <path d="M20 24h5l6 24h22l4-16H29" stroke="#FFC93C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="36" cy="54" r="2.5" fill="#FFC93C" />
+                <circle cx="48" cy="54" r="2.5" fill="#FFC93C" />
+                <path d="M29 32h26" stroke="#FFC93C" strokeWidth="2" strokeLinecap="round" />
             </svg>
 
             <div>

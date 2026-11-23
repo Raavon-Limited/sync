@@ -125,7 +125,7 @@ export default function FeaturedCarousel({ items }: { items: FeaturedFood[] }) {
 
     return (
         <div
-            className="rounded-2xl overflow-hidden border border-white/10 bg-[#111111] shadow-[3px_3px_0px_0px_rgba(197,255,74,0.25)] touch-pan-y"
+            className="rounded-2xl overflow-hidden border border-white/10 bg-[#111111] shadow-[3px_3px_0px_0px_rgba(255,201,60,0.25)] touch-pan-y"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}

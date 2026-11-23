@@ -5,26 +5,53 @@
  * automatically creates the matching Tailwind utility (e.g. `--color-lime`
  * exposes `bg-lime`, `text-lime`, `border-lime`, etc.).
  *
- * 60/30/10 colour ratio: cream (surface) / ink (text) / lime (accent).
- * NEVER use bright `lime` as text on `cream` - use `lime-deep` for text and
- * reserve `lime` for fills, badges, focus rings, and accent surfaces.
+ * 60/30/10 colour ratio: stone (surface) / forest (text) / sunflower (accent).
+ *
+ * THE TOKEN NAMES ARE HISTORICAL. The palette moved from cream / ink / electric
+ * lime to the green system (Nov 2026), and the old names were kept ON PURPOSE:
+ * `bg-lime`, `text-ink`, `bg-cream` appear ~500 times across ~220 files, and
+ * renaming them would have been a sweep through every screen for no visual
+ * gain. So `lime` now MEANS "the accent fill" (sunflower), `ink` means "the
+ * dark brand colour" (forest), `cream` means "the page" (stone). The new names
+ * below (`forest`, `sage`, `leaf`, `stone`, `sunflower`) are aliases for new
+ * code; both spellings resolve to the same values, so they can never drift.
+ *
+ * NEVER use bright `lime` (sunflower) as text on `cream` (stone) - it is a
+ * fill. Use `lime-deep` for accent TEXT on light grounds. Every pairing below
+ * was contrast-checked: forest on stone 6.3:1, lime-deep on stone 4.7:1,
+ * forest on sunflower 5.9:1, sunflower on forest 5.9:1.
  */
 @import 'tailwindcss';
 
 @theme {
   /* ─── Colour tokens ─────────────────────────────────────────────── */
-  --color-cream: #f4f1e8;
-  --color-cream-deep: #ece7d8;
-  --color-ink: #0e0e12;
-  --color-lime: #c5ff4a;
-  --color-lime-deep: #4a8500;
+  --color-cream: #dad7cd; /* stone - the page */
+  --color-cream-deep: #cfcbbe; /* sunken / hover on stone */
+  --color-ink: #344e41; /* forest - text and dark panels */
+  --color-lime: #ffc93c; /* sunflower - the accent FILL */
+  /* Accent TEXT on light grounds. Not the palette's #588157 (leaf): that is
+     3.1:1 on stone and fails as body text. This is leaf taken darker until it
+     clears 4.5:1 on stone. Leaf itself stays available for large display text
+     and decoration. */
+  --color-lime-deep: #44633f;
   --color-white: #ffffff;
-  --color-muted: #6a6a72;
+  --color-muted: #4e5d53;
   --color-coral: #ff8b5c;
-  /* Coral is defined for a DARK ground. On cream it is a pastel that fails
+  /* Coral is defined for a DARK ground. On stone it is a pastel that fails
      contrast as small text, so the ramp has a deep end for exactly the reason
-     lime does - see --color-warning-fg below. */
-  --color-coral-deep: #b4451a;
+     the accent does - see --color-warning-fg below. Darkened from #b4451a,
+     which passed on the old cream and fails (3.8:1) on stone. */
+  --color-coral-deep: #9a3a14;
+
+  /* The green system by its own names. Same values as the historical tokens
+     above where they overlap - see the header. */
+  --color-stone: #dad7cd;
+  --color-paper: #f2f1ea;
+  --color-sage: #a3b18a;
+  --color-leaf: #588157;
+  --color-moss: #3a5a40;
+  --color-forest: #344e41;
+  --color-sunflower: #ffc93c;
 
   /* Semantic, THEME-AWARE tokens - these flip under dark mode (values defined
      in the :root / dark layer below). Convert page surfaces to these
@@ -105,71 +132,73 @@
   --spacing: 0.25rem;
 
   /* ─── Shadows ───────────────────────────────────────────────────── */
-  --shadow-card: 0 1px 2px rgb(14 14 18 / 0.04), 0 4px 16px rgb(14 14 18 / 0.06);
-  --shadow-pop: 0 8px 32px rgb(14 14 18 / 0.12);
-  --shadow-focus: 0 0 0 3px rgb(197 255 74 / 0.6);
+  --shadow-card: 0 1px 2px rgb(52 78 65 / 0.05), 0 4px 16px rgb(52 78 65 / 0.08);
+  --shadow-pop: 0 8px 32px rgb(52 78 65 / 0.16);
+  --shadow-focus: 0 0 0 3px rgb(255 201 60 / 0.6);
 }
 
 /* ─── Theme variables (light default, dark follows the system) ─────────
    Default = light. Dark applies when the OS prefers dark (unless .light is
    set to force light), or when .dark is set explicitly (future manual toggle). */
 :root {
-  --sf: #f4f1e8;
-  /* cream */
-  --sf-2: #ece7d8;
-  /* cream-deep */
-  --sf-card: #ffffff;
-  /* white */
-  --ct: #0e0e12;
-  /* ink */
-  --ct-muted: #6a6a72;
-  /* muted */
-  --ac-fg: #4a8500;
-  /* lime-deep */
-  --wn-fg: #b4451a;
-  /* coral-deep: coral itself is a pastel on cream */
-  --ln: #0e0e12;
-  /* ink (borders use /opacity) */
-  --sb: #0e0e12;
-  /* scrollbar thumb: ink on cream, lime on ink. Not the same hue in both
-     themes on purpose - lime is a fill colour for dark ground, and on the
-     cream page even a deepened lime sits too close to the background to
-     find. Each theme takes whichever of the two carries the contrast. */
+  --sf: #dad7cd;
+  /* stone */
+  --sf-2: #cfcbbe;
+  /* stone, sunken */
+  --sf-card: #f2f1ea;
+  /* paper - cards sit LIGHTER than the page, as in the design */
+  --ct: #344e41;
+  /* forest */
+  --ct-muted: #4e5d53;
+  /* muted green-grey, 4.8:1 on stone */
+  --ac-fg: #44633f;
+  /* deep leaf - accent text */
+  --wn-fg: #9a3a14;
+  /* coral-deep: coral itself is a pastel on stone */
+  --ln: #344e41;
+  /* forest (borders use /opacity) */
+  --sb: #588157;
+  /* scrollbar thumb: leaf. Thin and green on both themes - the design asked
+     for one green scrollbar, and leaf carries enough contrast on stone and on
+     the dark-green ground alike. */
   color-scheme: light;
 }
 
+/* Dark is the SAME palette at night, not a different brand: deep forest
+   grounds, paper text, sunflower accents. The old dark theme was near-black
+   ink; a green product on a black page read as two different apps the moment
+   someone's phone switched theme at sunset. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --sf: #0e0e12;
-    --sf-2: #1b1b22;
-    --sf-card: #17171c;
-    --ct: #f4f1e8;
-    --ct-muted: #9b9ba3;
-    --ac-fg: #c5ff4a;
-    /* bright lime for contrast on dark */
+    --sf: #141e18;
+    --sf-2: #1b2820;
+    --sf-card: #203027;
+    --ct: #e8e6dd;
+    --ct-muted: #a3b18a;
+    /* sage, 7.5:1 on the dark ground */
+    --ac-fg: #ffc93c;
     --wn-fg: #ff8b5c;
-    /* coral reads as intended on ink */
-    --ln: #f4f1e8;
-    --sb: #a8db3c;
-    /* Deeper lime for fills on dark - less glare than the bright brand lime.
-       Drives every bg-lime/accent in dark mode. Tune this one value. */
-    --color-lime: #a8db3c;
+    --ln: #dad7cd;
+    --sb: #588157;
+    /* Slightly deeper sunflower for fills on dark - full sunflower on a
+       near-black green glares. Drives every bg-lime/accent in dark mode. */
+    --color-lime: #f2bd32;
     color-scheme: dark;
   }
 }
 
 .dark {
-  --sf: #0e0e12;
-  --sf-2: #1b1b22;
-  --sf-card: #17171c;
-  --ct: #f4f1e8;
-  --ct-muted: #9b9ba3;
-  --ac-fg: #c5ff4a;
+  --sf: #141e18;
+  --sf-2: #1b2820;
+  --sf-card: #203027;
+  --ct: #e8e6dd;
+  --ct-muted: #a3b18a;
+  --ac-fg: #ffc93c;
   --wn-fg: #ff8b5c;
-  --ln: #f4f1e8;
-  --sb: #a8db3c;
-  /* Deeper lime for fills on dark (see note above). */
-  --color-lime: #a8db3c;
+  --ln: #dad7cd;
+  --sb: #588157;
+  /* Deeper sunflower for fills on dark (see note above). */
+  --color-lime: #f2bd32;
   color-scheme: dark;
 }
 
@@ -495,7 +524,7 @@ input:-webkit-autofill:focus {
   align-items: center;
   gap: 0;
   background: #fff;
-  color: #0e0e12;
+  color: #344e41;
   padding: 4px;
   border-radius: 9999px;
   white-space: nowrap;
@@ -579,8 +608,8 @@ input:-webkit-autofill:focus {
 }
 
 .amap-you__label {
-  background: #0e0e12;
-  color: #f4efe2;
+  background: #344e41;
+  color: #f2f1ea;
   border-radius: 9999px;
   padding: 1px 7px;
   font-size: 10px;
@@ -588,9 +617,9 @@ input:-webkit-autofill:focus {
 }
 
 .amap-campus {
-  background: rgba(197, 255, 74, 0.18);
-  border: 1px dashed rgba(90, 120, 20, 0.7);
-  color: #0e0e12;
+  background: rgba(255, 201, 60, 0.22);
+  border: 1px dashed rgba(88, 129, 87, 0.75);
+  color: #344e41;
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 11px;
@@ -628,15 +657,15 @@ input:-webkit-autofill:focus {
 
 @keyframes amap-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(197, 255, 74, 0.5);
+    box-shadow: 0 0 0 0 rgba(255, 201, 60, 0.5);
   }
 
   70% {
-    box-shadow: 0 0 0 10px rgba(197, 255, 74, 0);
+    box-shadow: 0 0 0 10px rgba(255, 201, 60, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(197, 255, 74, 0);
+    box-shadow: 0 0 0 0 rgba(255, 201, 60, 0);
   }
 }
 

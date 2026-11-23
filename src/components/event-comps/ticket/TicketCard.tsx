@@ -23,7 +23,7 @@ export default function TicketCard({
         <div
             className={`w-full rounded-xl border bg-panel shadow-card transition-all relative overflow-hidden ${
                 selected
-                    ? "border-lime shadow-[2px_2px_0px_0px_rgba(197,255,74,0.4)]"
+                    ? "border-lime shadow-[2px_2px_0px_0px_rgba(255,201,60,0.4)]"
                     : "border-line/10 hover:border-line/30"
             }`}
         >

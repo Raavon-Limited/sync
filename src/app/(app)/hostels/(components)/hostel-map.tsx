@@ -92,7 +92,7 @@ export function HostelMap({
             style={{ height: '100%' }}
           >
             <AdvancedMarker position={position} title={name}>
-              <Pin background="#c5ff4a" borderColor="#0e0e12" glyphColor="#0e0e12" />
+              <Pin background="#ffc93c" borderColor="#344e41" glyphColor="#344e41" />
             </AdvancedMarker>
 
             <AdvancedMarker
@@ -100,7 +100,7 @@ export function HostelMap({
               anchorPoint={AdvancedMarkerAnchorPoint.CENTER}
               title={CAMPUS_POINT.label}
             >
-              <span className="rounded-full border-2 border-[#0e0e12] bg-white px-2 py-1 font-mono text-[10px] font-bold text-[#0e0e12] shadow">
+              <span className="rounded-full border-2 border-[#344e41] bg-white px-2 py-1 font-mono text-[10px] font-bold text-[#344e41] shadow">
                 KWASU
               </span>
             </AdvancedMarker>

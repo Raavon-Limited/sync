@@ -16,9 +16,9 @@ import { useId } from "react";
 import SyncMark from "./SyncMark";
 import SyncIcon, { type SyncIconName, SYNC_ICON_LABELS } from "./SyncIcon";
 
-const LIME = "#C5FF4A";
-const INK = "#0E0E12";
-const CREAM = "#F4F1E8";
+const LIME = "#A3B18A"; // sage
+const INK = "#344E41"; // forest
+const CREAM = "#F2F1EA"; // paper
 
 export interface SyncSpinnerProps {
   size?: number;

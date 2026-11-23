@@ -267,7 +267,7 @@ export function SyncIntro({ className }: { className?: string }) {
       >
         {/* Resized to the real viewBox on mount - see measure(). The initial
             values only have to cover the first frame before that runs. */}
-        <rect id={uid + '-bg'} width="1920" height="1080" fill="#0E0E12" />
+        <rect id={uid + '-bg'} width="1920" height="1080" fill="#344E41" />
         <defs>
           <clipPath id={uid + '-wordclip'}>
             <rect id={uid + '-wipe'} x="-6" y="-40" width="0" height="200" />
@@ -277,23 +277,23 @@ export function SyncIntro({ className }: { className?: string }) {
         <g id={uid + '-root'}>
           <g id={uid + '-stage'}>
             <g id={uid + '-ringg'}>
-              <circle id={uid + '-ring'} cx="0" cy="0" r="40" fill="none" stroke="#C5FF4A" opacity="0" />
+              <circle id={uid + '-ring'} cx="0" cy="0" r="40" fill="none" stroke="#FFC93C" opacity="0" />
             </g>
             <g id={uid + '-mark'}>
               <g id={uid + '-gl'}>
                 <g transform="translate(-50,-50)">
-                  <path d={LEFT_PATH} fill="#C5FF4A" />
+                  <path d={LEFT_PATH} fill="#FFC93C" />
                 </g>
               </g>
               <g id={uid + '-gr'}>
                 <g transform="translate(-50,-50)">
-                  <path d={RIGHT_PATH} fill="#F4F1E8" />
+                  <path d={RIGHT_PATH} fill="#F2F1EA" />
                 </g>
               </g>
             </g>
           </g>
 
-          <g id={uid + '-word'} opacity="0" clipPath={'url(#' + uid + '-wordclip)'} fill="#F4F1E8">
+          <g id={uid + '-word'} opacity="0" clipPath={'url(#' + uid + '-wordclip)'} fill="#F2F1EA">
             <g transform="translate(-5.909,102.121)">
               <path d={WORDMARK_PATH} />
             </g>
@@ -303,7 +303,7 @@ export function SyncIntro({ className }: { className?: string }) {
             id={uid + '-tag'}
             textAnchor="middle"
             opacity="0"
-            fill="#F4F1E8"
+            fill="#F2F1EA"
             fontFamily="var(--font-jetbrains-mono), ui-monospace, monospace"
             fontWeight={500}
           >

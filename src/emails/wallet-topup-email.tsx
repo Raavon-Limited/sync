@@ -39,9 +39,9 @@ import {
   Text,
 } from '@react-email/components';
 
-const CREAM = '#f4f1e8';
-const INK = '#0e0e12';
-const MUTED = '#6a6a72';
+const CREAM = '#f2f1ea';
+const INK = '#344e41';
+const MUTED = '#4e5d53';
 const FAINT = '#9a9aa2';
 
 export interface WalletTopupEmailProps {
