@@ -1,14 +1,21 @@
 /**
  * MarketingHeader - public top bar.
  *
- * Desktop (md+): 3-column grid - nav links split left & right around a
- * centered logo, with the auth/CTA cluster pinned to the far right.
- * Mobile (<md): logo on the left, hamburger (MobileMenu) on the right.
+ * Landing (lg+): logo left, the full nav in the middle (Home, How it works,
+ * Explore, Spill the gist, Careers, About, Policies), then location, theme,
+ * account and the Become a vendor CTA on the right. The nav list lives in
+ * config/marketing-nav so the mobile menu shows exactly the same items.
+ * Below xl the nav moves into the MobileMenu; seven links plus a location chip
+ * do not fit a tablet bar without crushing each other.
+ *
+ * The account menu (and its role switcher, WORKFLOW invariant) is untouched.
  *
  * Logo: the brand kit's mark + Sync wordmark (<SyncLogo>), following currentColor.
  */
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { MarketingNav } from './marketing-nav';
+import { CampusLocationPicker } from './campus-location-picker';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { MobileMenu } from './mobile-menu';
@@ -18,26 +25,6 @@ import { getCurrentUser, getFirstName, getProfile } from '@/modules/auth/queries
 import { resolveHandle } from '@/lib/handle';
 import { SITE } from '@/config/site';
 import { SyncLogo } from '@/components/brand/sync-logo';
-
-// Module nav from the hi-fi guide, split around the centered logo. These are
-// hidden in `dockMode` (e.g. /around) since the ServicesDock already lists them.
-/**
- * The landing header carries ONE nav item. The modules used to be split
- * across a left and a right nav plus an About link, putting eight
- * destinations in front of someone who has not signed up yet. Around you is
- * the front door; everything else lives behind it.
- *
- * About is still reachable from the mobile menu.
- */
-const LEFT_LINKS = [{ href: '/around', label: 'Around you' }];
-
-function NavLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={href} className="text-foreground hover:text-accent-fg transition-colors">
-      {label}
-    </Link>
-  );
-}
 
 interface MarketingHeaderProps {
   /**
@@ -89,7 +76,8 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
   );
 
   const rightCluster = (
-    <div className="flex items-center justify-end gap-6">
+    <div className="flex items-center justify-end gap-2 md:gap-3">
+      {!dockMode && <CampusLocationPicker className="hidden sm:flex" />}
       <ThemeToggle className="hidden md:inline-flex" />
       {user ? (
         <UserMenu
@@ -104,23 +92,25 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
           handle={handle}
         />
       ) : (
-        <div className="hidden items-center gap-2 md:flex">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="text-foreground hover:bg-foreground/10"
-          >
-            <Link href="/login">Sign in / Sign up</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/signup?role=vendor&category=landlord">
-              List a property <ArrowRight />
-            </Link>
-          </Button>
-        </div>
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="text-foreground hover:bg-foreground/10 hidden rounded-full md:inline-flex"
+        >
+          <Link href="/login">Sign in</Link>
+        </Button>
       )}
-      {/* Hamburger - mobile only, far right */}
+      {/* Sunflower, no shadow - the one loud button in the bar. Signed-in
+          vendors already have their dashboard in the account menu. */}
+      {!dockMode && role !== 'vendor' && (
+        <Button asChild size="sm" className="hidden rounded-full shadow-none md:inline-flex">
+          <Link href="/for-vendors">
+            Become a vendor <ArrowRight />
+          </Link>
+        </Button>
+      )}
+      {/* Hamburger - below xl, far right */}
       <MobileMenu signedIn={!!user} name={name} email={user?.email ?? ''} role={role} handle={handle} />
     </div>
   );
@@ -147,18 +137,9 @@ export async function MarketingHeader({ dockMode = false }: MarketingHeaderProps
           {rightCluster}
         </div>
       ) : (
-        <div className="mx-auto flex h-16 items-center justify-between gap-4 px-6 md:grid md:grid-cols-[1fr_auto_1fr]">
-          {/* Left nav - desktop only */}
-          <nav
-            aria-label="Primary left"
-            className="hidden items-center gap-5 text-sm md:flex md:justify-start"
-          >
-            {LEFT_LINKS.map((l) => (
-              <NavLink key={l.href} {...l} />
-            ))}
-          </nav>
-          {/* Logo - centered on desktop */}
-          <div className="md:justify-self-center">{logo}</div>
+        <div className="mx-auto flex h-16 max-w-[90rem] items-center justify-between gap-4 px-4 md:px-6">
+          {logo}
+          <MarketingNav className="hidden xl:flex" />
           {rightCluster}
         </div>
       )}
