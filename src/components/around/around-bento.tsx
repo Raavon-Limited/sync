@@ -51,6 +51,7 @@ import { toast } from '@/components/ui/toast';
 import { NavIcon } from '@/components/layouts/nav-icon';
 import { CampusLocationPicker } from '@/components/layouts/campus-location-picker';
 import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
+import { EmojiPicker } from '@/components/shared/emoji-picker';
 import { useCampusChoice } from '@/hooks/use-campus-choice';
 import { useSession } from '@/providers/session-provider';
 import {
@@ -254,11 +255,13 @@ export function AroundBento({
 
 /* ── The gist ──────────────────────────────────────────────────────────── */
 
-const EMOJI = [
-  '😂', '🤣', '😭', '🔥', '💯', '🙏', '👀', '😍', '🥲', '😤', '😴', '🤔',
-  '👏', '🙌', '💀', '😅', '🎉', '⚡', '💡', '🍲', '🍗', '📚', '🏠', '🚌',
-  '⚽', '🎶', '💸', '🚨', '❤️', '💚', '✅', '❌',
-];
+/** What the field asks for, by what is being posted. */
+const PLACEHOLDER: Record<GistKind, string> = {
+  gist: "What's popping? Type it here...",
+  alert: 'Light out? Road blocked? Say it here...',
+  deal: 'Share a deal worth knowing...',
+  event: "What's on, where and when...",
+};
 
 function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; campusLabel: string; live: boolean }) {
   const [filter, setFilter] = useState<'all' | GistKind>('all');
@@ -278,8 +281,6 @@ function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; ca
         <Empty title={`We are not at ${campusLabel} yet`} text="The gist feed opens when Sync launches here. Pick a live campus to see what is happening there." />
       ) : (
         <>
-          <Composer campusId={campusId} />
-
           <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1" role="tablist" aria-label="Filter the gist">
             {FILTERS.map((f) => (
               <button
@@ -327,6 +328,13 @@ function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; ca
               )}
             </>
           )}
+
+          {/* BELOW the posts, like a chat: you read what is there, then add to
+              it. mt-auto pins it to the bottom of the card when the feed is
+              short, so it never floats in the middle of an empty card. */}
+          <div className="mt-auto pt-1">
+            <Composer campusId={campusId} />
+          </div>
         </>
       )}
     </div>
@@ -338,21 +346,34 @@ function Composer({ campusId }: { campusId: string | null }) {
   const [kind, setKind] = useState<GistKind>('gist');
   const [body, setBody] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [kindOpen, setKindOpen] = useState(false);
   const { isAuthenticated } = useSession();
   const { data: name } = useMyDisplayName();
   const drop = useDropGist(campusId);
   const left = 280 - body.length;
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  const insert = (e: string) => {
+  // The field grows with what is typed, up to about four lines, then scrolls.
+  // A fixed `rows` either clipped a long gist or left a tall empty box.
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
+  };
+
+  const insert = (e: string, focus = true) => {
     const el = ref.current;
     if (!el) return setBody((b) => (b + e).slice(0, 280));
     const s = el.selectionStart ?? body.length;
     const next = (body.slice(0, s) + e + body.slice(el.selectionEnd ?? s)).slice(0, 280);
     setBody(next);
     requestAnimationFrame(() => {
-      el.focus();
+      if (focus) el.focus();
+      // Moving the caret works on an unfocused field too, so the next emoji
+      // still lands after this one.
       el.setSelectionRange(s + e.length, s + e.length);
+      fit();
     });
   };
 
@@ -364,11 +385,20 @@ function Composer({ campusId }: { campusId: string | null }) {
         onSuccess: () => {
           setBody('');
           setEmojiOpen(false);
+          requestAnimationFrame(fit);
         },
         onError: (err) => toast(err instanceof Error ? err.message : 'Could not post that'),
       },
     );
   };
+
+  /*
+   * ONE ROW, LIKE A CHAT BAR: + (what you are posting), emoji, the field, send.
+   * The four kind chips used to sit in their own row under the field; they
+   * live behind + now, and the placeholder and the line underneath say which
+   * one is picked, so the choice is never hidden.
+   */
+  const roundBtn = 'hover:bg-stone flex size-11 shrink-0 items-center justify-center rounded-full transition-colors';
 
   return (
     <form
@@ -376,82 +406,117 @@ function Composer({ campusId }: { campusId: string | null }) {
         e.preventDefault();
         post();
       }}
-      className="border-forest/15 bg-stone/40 flex flex-col gap-2 rounded-2xl border p-2.5"
+      className="flex flex-col gap-1.5"
     >
-      <label className="sr-only" htmlFor="gist-input">
-        What is happening around you?
-      </label>
-      <textarea
-        id="gist-input"
-        ref={ref}
-        value={body}
-        onChange={(e) => setBody(e.target.value.slice(0, 280))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            post();
-          }
-        }}
-        rows={body.length > 60 ? 3 : 1}
-        placeholder="What's popping? Type it here..."
-        className="placeholder:text-moss/70 w-full resize-none bg-transparent px-1.5 py-1 text-[15px]"
-      />
-      <div className="flex flex-wrap items-center gap-1.5">
-        {(Object.keys(GIST_KINDS) as GistKind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            title={GIST_KINDS[k].hint}
-            aria-pressed={kind === k}
-            onClick={() => setKind(k)}
-            className={cn(
-              'min-h-8 rounded-full border px-3 text-xs font-semibold',
-              kind === k ? 'bg-forest text-paper border-forest' : 'border-forest/20',
-            )}
-          >
-            {GIST_KINDS[k].label}
-          </button>
-        ))}
-        <Popover.Root open={emojiOpen} onOpenChange={setEmojiOpen}>
-          <Popover.Trigger
-            className="hover:bg-stone flex size-8 items-center justify-center rounded-full"
-            aria-label="Add emoji"
-          >
-            <Smile className="size-[18px]" aria-hidden="true" />
+      <div className="flex items-end gap-1">
+        <Popover.Root open={kindOpen} onOpenChange={setKindOpen}>
+          <Popover.Trigger className={roundBtn} aria-label={`Posting a ${GIST_KINDS[kind].label}. Change`}>
+            <Plus className="size-5" aria-hidden="true" />
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content
               side="top"
               align="start"
               sideOffset={8}
-              className="bg-panel border-line/10 shadow-pop z-50 grid w-72 grid-cols-8 gap-0.5 rounded-2xl border p-2"
+              className="bg-panel border-line/10 shadow-pop z-50 flex w-64 flex-col gap-0.5 rounded-2xl border p-1.5"
             >
-              {EMOJI.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => insert(e)}
-                  className="hover:bg-surface-deep flex size-8 items-center justify-center rounded-lg text-lg"
-                  aria-label={`Insert ${e}`}
-                >
-                  {e}
-                </button>
-              ))}
+              {(Object.keys(GIST_KINDS) as GistKind[]).map((k) => {
+                const K = KIND[k];
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={kind === k}
+                    onClick={() => {
+                      setKind(k);
+                      setKindOpen(false);
+                      ref.current?.focus();
+                    }}
+                    className="hover:bg-surface-deep flex items-center gap-3 rounded-xl px-2.5 py-2 text-left"
+                  >
+                    <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-full', K.avatar)}>
+                      <K.Icon className="size-4" fill="currentColor" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{GIST_KINDS[k].label}</span>
+                      <span className="text-content-muted block text-xs">{GIST_KINDS[k].hint}</span>
+                    </span>
+                    {kind === k && <Check className="size-4 shrink-0" aria-hidden="true" />}
+                  </button>
+                );
+              })}
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
-        <span className={cn('ml-auto text-xs', left < 20 ? 'text-coral-deep' : 'text-moss')}>{left}</span>
+
+        <Popover.Root open={emojiOpen} onOpenChange={setEmojiOpen}>
+          <Popover.Trigger className={roundBtn} aria-label="Add emoji">
+            <Smile className="size-5" aria-hidden="true" />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              side="top"
+              align="start"
+              sideOffset={8}
+              collisionPadding={8}
+              // Back to the field when the picker closes, so typing carries on.
+              onCloseAutoFocus={(e) => {
+                e.preventDefault();
+                ref.current?.focus();
+              }}
+              className="z-50"
+            >
+              {/* Stays open across picks, like a chat app. insert(e, false)
+                  leaves focus in the picker: moving it to the field would
+                  count as focus-outside and close the popover after one. */}
+              <EmojiPicker onSelect={(e) => insert(e, false)} />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+
+        <div className="bg-stone flex min-h-11 min-w-0 flex-1 items-end gap-2 rounded-[22px] px-4 py-2.5">
+          <label className="sr-only" htmlFor="gist-input">
+            What is happening around you?
+          </label>
+          <textarea
+            id="gist-input"
+            ref={ref}
+            value={body}
+            onChange={(e) => {
+              setBody(e.target.value.slice(0, 280));
+              fit();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                post();
+              }
+            }}
+            rows={1}
+            placeholder={PLACEHOLDER[kind]}
+            className="placeholder:text-moss/70 block max-h-28 min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-6 outline-none"
+          />
+          {/* Only when it matters: a counter that always reads "280" is noise. */}
+          {left < 40 && (
+            <span className={cn('shrink-0 text-xs leading-6', left < 20 ? 'text-coral-deep' : 'text-moss')}>
+              {left}
+            </span>
+          )}
+        </div>
+
         <button
           type="submit"
           disabled={drop.isPending || body.trim().length < 2}
           aria-label="Post"
-          className="bg-forest text-paper flex size-9 items-center justify-center rounded-full disabled:opacity-40"
+          className="bg-forest text-paper flex size-11 shrink-0 items-center justify-center rounded-full transition-opacity disabled:opacity-40"
         >
-          <Send className="size-4" aria-hidden="true" />
+          <Send className="size-4.5" aria-hidden="true" />
         </button>
       </div>
-      <p className="text-moss flex flex-wrap items-center gap-x-1.5 px-1 text-[11.5px]">
-        <span>{GIST_KINDS[kind].hint}.</span>
+      <p className="text-moss flex flex-wrap items-center gap-x-1.5 px-3 text-[11.5px]">
+        <span>
+          <strong className="text-forest">{GIST_KINDS[kind].label}</strong> · {GIST_KINDS[kind].hint}.
+        </span>
         {isAuthenticated && (
           <span>
             Posting as <strong className="text-forest">{name ?? 'Anonymous'}</strong>
