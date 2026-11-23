@@ -364,13 +364,22 @@ how verification works, About) says this; keep new copy consistent. **Safety on 
 disclaimer, terms and the Policies menu.
 **Around you bento** (`components/around/around-bento.tsx`) is shared by the landing and the top
 of /around (the map stays below it). Backed by **`20261123120000_around_gist_and_polls`, NOT YET
-APPLIED**: `gist_posts` (public read, signed-in post, 5/hour, 3-day expiry, author name set by
-trigger as "First L."), `gist_reactions` ("Same here"), `gist_reports` (3 reports auto-hide; staff
-read), `gist_masked_words` + `mask_words()` (swear words stored masked, e.g. "f***"; staff add
-words by insert), and `polls` / `poll_options` / `poll_votes` with `poll_results()` (totals
-without voter identities). Seeds the first KWASU poll. Parsed with Postgres's parser (pglast),
-never executed. Anon policies must not call `is_staff()` (anon cannot execute it); the verify
-block checks that. **Emergency alerts: super admins only at launch** (decided, not built yet).
+APPLIED** (parsed with Postgres's parser via pglast, never executed; verify block at the end):
+- **Gist** shows the poster's `profiles.display_name` (set via `set_display_name()`, unique, or
+  "Anonymous"). **Clients have NO select on `gist_posts`** (it holds `author_id`); read through
+  `gist_feed()`, write by insert (trigger sets author, cleans text: masks words from
+  `gist_masked_words`, removes phone numbers, 5/hour). Public = last 24h and newest 50 per
+  campus; alerts pinned 2h; kept 72 days for staff, then `purge_gist()`. 3 reports hide.
+- **Reveal**: `reveal_gist_author()` is super admin only, needs a written reason, logs to
+  `gist_identity_reveals`. Policy: only for law enforcement. Called as the user, never service role.
+- **Daily stats**: `compute_gist_daily_stats()` + purge run from `/api/cron/gist-daily`
+  (vercel.json, 23:10 UTC). Counts only, no AI. Shown at `/admin/gist` (area `gist`).
+- **Polls**: any signed-in user via `create_poll()` (3/day); single, multi (up to N), ranked
+  (top N, points); scope open (votes tagged near/far) or local (near only). **Voting needs no
+  account**: only `/api/polls/vote` calls `cast_poll_vote()` (service role), one ballot per
+  httpOnly cookie, per localStorage device key and per account; vicinity = within 5km of one of
+  the campus's `areas`. Creator kept in `poll_creators`, unreadable by clients.
+- **Emergency alerts: super admins only at launch** (decided, not built yet). GIFs: later.
 
 **Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
 NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every

@@ -18,9 +18,10 @@
  */
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as Popover from '@radix-ui/react-popover';
 import { formatDistanceToNowStrict } from 'date-fns';
 import {
   ArrowRight,
@@ -33,7 +34,9 @@ import {
   Plus,
   Printer,
   RefreshCw,
+  Send,
   Share2,
+  Smile,
   ShieldCheck,
   Sun,
   Ticket,
@@ -49,18 +52,25 @@ import { NavIcon } from '@/components/layouts/nav-icon';
 import { CampusLocationPicker } from '@/components/layouts/campus-location-picker';
 import { DoodleBackdrop } from '@/components/shared/doodle-backdrop';
 import { useCampusChoice } from '@/hooks/use-campus-choice';
+import { useSession } from '@/providers/session-provider';
 import {
+  GIST_KINDS,
   useCampusPoll,
+  useCreatePoll,
   useDeleteGist,
   useDropGist,
   useGistFeed,
-  useMyVote,
+  useMyDisplayName,
   usePollResults,
   useReportGist,
+  useReportPoll,
+  useSetDisplayName,
   useToggleSameHere,
   useVote,
+  votedHere,
   type GistKind,
   type GistPost,
+  type PollKind,
 } from '@/modules/around/gist-hooks';
 import type { CampusWeather } from '@/app/(marketing)/landing-data';
 
@@ -226,9 +236,9 @@ export function AroundBento({
               <li key={g.label}>
                 <Link
                   href={g.href}
-                  className="border-forest/12 hover:border-forest/30 flex h-full min-h-[100px] flex-col justify-between gap-4 rounded-2xl border p-3.5 transition-colors"
+                  className="border-forest/12 hover:border-forest/30 flex h-full items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors"
                 >
-                  <span className="bg-stone flex size-9 items-center justify-center rounded-xl">
+                  <span className="bg-stone flex size-8 shrink-0 items-center justify-center rounded-lg">
                     <g.Icon className="size-[18px]" fill="currentColor" fillOpacity={0.15} aria-hidden="true" />
                   </span>
                   <span className="text-sm leading-snug font-semibold">{g.label}</span>
@@ -244,22 +254,32 @@ export function AroundBento({
 
 /* ── The gist ──────────────────────────────────────────────────────────── */
 
+const EMOJI = [
+  '😂', '🤣', '😭', '🔥', '💯', '🙏', '👀', '😍', '🥲', '😤', '😴', '🤔',
+  '👏', '🙌', '💀', '😅', '🎉', '⚡', '💡', '🍲', '🍗', '📚', '🏠', '🚌',
+  '⚽', '🎶', '💸', '🚨', '❤️', '💚', '✅', '❌',
+];
+
 function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; campusLabel: string; live: boolean }) {
   const [filter, setFilter] = useState<'all' | GistKind>('all');
-  const { data: posts = [], isLoading } = useGistFeed(live ? campusId : null);
+  // First 20; "Show more" reaches the full public window of 50.
+  const [limit, setLimit] = useState(20);
+  const { data: posts = [], isLoading } = useGistFeed(live ? campusId : null, limit);
   const shown = useMemo(() => (filter === 'all' ? posts : posts.filter((p) => p.kind === filter)), [posts, filter]);
 
   return (
     <div className={cn(card, 'flex h-full min-w-0 flex-col gap-3 p-5')}>
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-display text-[19px] font-bold">The gist near you</span>
-        {live && <DropGist campusId={campusId} />}
+        <span className="text-moss text-xs">Last 24 hours</span>
       </div>
 
       {!live ? (
         <Empty title={`We are not at ${campusLabel} yet`} text="The gist feed opens when Sync launches here. Pick a live campus to see what is happening there." />
       ) : (
         <>
+          <Composer campusId={campusId} />
+
           <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1" role="tablist" aria-label="Filter the gist">
             {FILTERS.map((f) => (
               <button
@@ -286,15 +306,26 @@ function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; ca
             </ul>
           ) : shown.length === 0 ? (
             <Empty
-              title={filter === 'all' ? 'No gist yet' : `No ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase()} yet`}
-              text={`Be the first to put ${campusLabel} on. Light back on your street? A deal worth knowing? Drop it.`}
+              title={filter === 'all' ? 'No gist yet today' : `No ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase()} today`}
+              text={`Be the first to put ${campusLabel} on. Light back on your street? A deal worth knowing?`}
             />
           ) : (
-            <ul className="divide-forest/10 flex flex-col divide-y">
-              {shown.map((p) => (
-                <GistRow key={p.id} post={p} campusLabel={campusLabel} />
-              ))}
-            </ul>
+            <>
+              <ul className="divide-forest/10 flex flex-col divide-y">
+                {shown.map((p) => (
+                  <GistRow key={p.id} post={p} />
+                ))}
+              </ul>
+              {limit < 50 && posts.length >= limit && (
+                <button
+                  type="button"
+                  onClick={() => setLimit(50)}
+                  className="border-forest/20 min-h-10 self-center rounded-full border px-4 text-[13px] font-semibold"
+                >
+                  Show more
+                </button>
+              )}
+            </>
           )}
         </>
       )}
@@ -302,16 +333,210 @@ function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; ca
   );
 }
 
-function GistRow({ post, campusLabel }: { post: GistPost; campusLabel: string }) {
+/** Type and post in place. Signed-out visitors are sent to sign in on Post. */
+function Composer({ campusId }: { campusId: string | null }) {
+  const [kind, setKind] = useState<GistKind>('gist');
+  const [body, setBody] = useState('');
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const { isAuthenticated } = useSession();
+  const { data: name } = useMyDisplayName();
+  const drop = useDropGist(campusId);
+  const left = 280 - body.length;
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const insert = (e: string) => {
+    const el = ref.current;
+    if (!el) return setBody((b) => (b + e).slice(0, 280));
+    const s = el.selectionStart ?? body.length;
+    const next = (body.slice(0, s) + e + body.slice(el.selectionEnd ?? s)).slice(0, 280);
+    setBody(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(s + e.length, s + e.length);
+    });
+  };
+
+  const post = () => {
+    if (body.trim().length < 2) return;
+    drop.mutate(
+      { kind, body: body.trim() },
+      {
+        onSuccess: () => {
+          setBody('');
+          setEmojiOpen(false);
+        },
+        onError: (err) => toast(err instanceof Error ? err.message : 'Could not post that'),
+      },
+    );
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        post();
+      }}
+      className="border-forest/15 bg-stone/40 flex flex-col gap-2 rounded-2xl border p-2.5"
+    >
+      <label className="sr-only" htmlFor="gist-input">
+        What is happening around you?
+      </label>
+      <textarea
+        id="gist-input"
+        ref={ref}
+        value={body}
+        onChange={(e) => setBody(e.target.value.slice(0, 280))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            post();
+          }
+        }}
+        rows={body.length > 60 ? 3 : 1}
+        placeholder="What's popping? Type it here..."
+        className="placeholder:text-moss/70 w-full resize-none bg-transparent px-1.5 py-1 text-[15px]"
+      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        {(Object.keys(GIST_KINDS) as GistKind[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            title={GIST_KINDS[k].hint}
+            aria-pressed={kind === k}
+            onClick={() => setKind(k)}
+            className={cn(
+              'min-h-8 rounded-full border px-3 text-xs font-semibold',
+              kind === k ? 'bg-forest text-paper border-forest' : 'border-forest/20',
+            )}
+          >
+            {GIST_KINDS[k].label}
+          </button>
+        ))}
+        <Popover.Root open={emojiOpen} onOpenChange={setEmojiOpen}>
+          <Popover.Trigger
+            className="hover:bg-stone flex size-8 items-center justify-center rounded-full"
+            aria-label="Add emoji"
+          >
+            <Smile className="size-[18px]" aria-hidden="true" />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              side="top"
+              align="start"
+              sideOffset={8}
+              className="bg-panel border-line/10 shadow-pop z-50 grid w-72 grid-cols-8 gap-0.5 rounded-2xl border p-2"
+            >
+              {EMOJI.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => insert(e)}
+                  className="hover:bg-surface-deep flex size-8 items-center justify-center rounded-lg text-lg"
+                  aria-label={`Insert ${e}`}
+                >
+                  {e}
+                </button>
+              ))}
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+        <span className={cn('ml-auto text-xs', left < 20 ? 'text-coral-deep' : 'text-moss')}>{left}</span>
+        <button
+          type="submit"
+          disabled={drop.isPending || body.trim().length < 2}
+          aria-label="Post"
+          className="bg-forest text-paper flex size-9 items-center justify-center rounded-full disabled:opacity-40"
+        >
+          <Send className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+      <p className="text-moss flex flex-wrap items-center gap-x-1.5 px-1 text-[11.5px]">
+        <span>{GIST_KINDS[kind].hint}.</span>
+        {isAuthenticated && (
+          <span>
+            Posting as <strong className="text-forest">{name ?? 'Anonymous'}</strong>
+            {' · '}
+            <DisplayNameDialog current={name ?? null} />
+          </span>
+        )}
+      </p>
+    </form>
+  );
+}
+
+function DisplayNameDialog({ current }: { current: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(current ?? '');
+  const save = useSetDisplayName();
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setValue(current ?? '');
+      }}
+    >
+      <Dialog.Trigger className="text-leaf font-semibold underline underline-offset-2">
+        {current ? 'change' : 'set a display name'}
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[rgb(20_30_24/0.5)]" />
+        <Dialog.Content className="bg-panel text-content fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-[440px] flex-col gap-4 rounded-t-3xl p-5 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-3xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Dialog.Title className="font-display text-xl font-bold">Your display name</Dialog.Title>
+              <Dialog.Description className="text-content-muted mt-1 text-sm">
+                Shown on your public gist and polls instead of your real name. Leave it empty to post as
+                Anonymous.
+              </Dialog.Description>
+            </div>
+            <Dialog.Close className="bg-surface-deep flex size-10 shrink-0 items-center justify-center rounded-full" aria-label="Close">
+              <X className="size-4" />
+            </Dialog.Close>
+          </div>
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate(value, {
+                onSuccess: () => {
+                  setOpen(false);
+                  toast('Saved');
+                },
+                onError: (err) => toast(err instanceof Error ? err.message : 'Could not save'),
+              });
+            }}
+          >
+            <input
+              value={value}
+              onChange={(e) => setValue(e.target.value.slice(0, 24))}
+              placeholder="e.g. SafariBoy"
+              autoComplete="nickname"
+              className="border-line/15 bg-surface focus:border-line rounded-xl border px-3.5 py-3 text-[15px]"
+            />
+            <p className="text-content-muted text-xs">
+              2 to 24 letters, numbers, spaces, dots or underscores. Staff can still see which account
+              posted, and only share it when the law requires.
+            </p>
+            <button type="submit" disabled={save.isPending} className="bg-ink text-cream min-h-11 rounded-full text-sm font-semibold">
+              {save.isPending ? 'Saving...' : 'Save'}
+            </button>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function GistRow({ post }: { post: GistPost }) {
   const k = KIND[post.kind];
   const same = useToggleSameHere();
   const report = useReportGist();
   const del = useDeleteGist();
-  const ago = formatDistanceToNowStrict(new Date(post.createdAt), { addSuffix: false })
+  const ago = formatDistanceToNowStrict(new Date(post.createdAt))
     .replace(/ seconds?/, 's')
     .replace(/ minutes?/, 'm')
-    .replace(/ hours?/, 'h')
-    .replace(/ days?/, 'd');
+    .replace(/ hours?/, 'h');
 
   return (
     <li className="flex gap-3 py-3.5">
@@ -321,9 +546,7 @@ function GistRow({ post, campusLabel }: { post: GistPost; campusLabel: string })
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-[15px] font-bold">{post.authorName}</span>
-          <span className="text-moss text-xs">
-            {campusLabel} · {ago}
-          </span>
+          <span className="text-moss text-xs">{ago}</span>
           <span className={cn('rounded px-1.5 py-px font-mono text-[10px] font-semibold tracking-wider uppercase', k.chip)}>
             {k.label}
           </span>
@@ -334,7 +557,7 @@ function GistRow({ post, campusLabel }: { post: GistPost; campusLabel: string })
             type="button"
             aria-pressed={post.reacted}
             disabled={same.isPending}
-            onClick={() => same.mutate({ postId: post.id, on: !post.reacted })}
+            onClick={() => same.mutate(post.id)}
             className={cn(
               'flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
               post.reacted ? 'bg-forest text-paper border-forest' : 'border-forest/20',
@@ -354,12 +577,7 @@ function GistRow({ post, campusLabel }: { post: GistPost; campusLabel: string })
           ) : (
             <button
               type="button"
-              onClick={() =>
-                report.mutate(
-                  { postId: post.id },
-                  { onSuccess: () => toast('Thanks. Our team will take a look.') },
-                )
-              }
+              onClick={() => report.mutate(post.id, { onSuccess: () => toast('Thanks. Our team will take a look.') })}
               className="text-moss flex min-h-8 items-center gap-1.5 rounded-full px-2 text-xs font-medium"
             >
               <Flag className="size-3.5" aria-hidden="true" /> Report
@@ -371,26 +589,193 @@ function GistRow({ post, campusLabel }: { post: GistPost; campusLabel: string })
   );
 }
 
-function DropGist({ campusId }: { campusId: string | null }) {
+/* ── Poll ──────────────────────────────────────────────────────────────── */
+
+function PollCard({ campusId, campusLabel }: { campusId: string | null; campusLabel: string }) {
+  const { data: poll } = useCampusPoll(campusId);
+  // This browser's record of votes. The poll only arrives after hydration
+  // (client query), so reading localStorage here cannot mismatch the server.
+  const [justVoted, setVoted] = useState(false);
+  const voted = justVoted || (poll ? votedHere(poll.id) : false);
+  const { data: results } = usePollResults(poll?.id, voted);
+  const vote = useVote(poll);
+  const report = useReportPoll();
+  const [picked, setPicked] = useState<string[]>([]);
+  const [tag, setTag] = useState<boolean | undefined>(undefined);
+
+  if (!poll) {
+    return (
+      <div className={cn(card, 'flex min-w-0 flex-col gap-3 p-5 lg:col-span-4')}>
+        <p className={kicker}>Students are saying</p>
+        <p className="font-display text-lg leading-tight font-bold">No poll running at {campusLabel}</p>
+        <CreatePollDialog campusId={campusId} label="Start a poll" />
+      </div>
+    );
+  }
+
+  const ranked = poll.kind === 'ranked';
+  const multi = poll.kind === 'multi';
+  const toggle = (id: string) => {
+    if (poll.kind === 'single') return setPicked([id]);
+    setPicked((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= poll.maxChoices ? cur : [...cur, id],
+    );
+  };
+  const submit = () =>
+    vote.mutate(picked, {
+      onSuccess: (r) => {
+        setVoted(true);
+        setTag(r.inVicinity);
+        if (r.already) toast('You have already voted on this poll');
+      },
+      onError: (err) => toast(err instanceof Error ? err.message : 'Could not save your vote'),
+    });
+
+  const total = results ? [...results.score.values()].reduce((a, b) => a + b, 0) : 0;
+  const instruction =
+    poll.kind === 'single'
+      ? 'Pick one'
+      : multi
+        ? `Pick up to ${poll.maxChoices}`
+        : `Tap in order: your top ${poll.maxChoices}, best first`;
+
+  return (
+    <div className={cn(card, 'flex min-w-0 flex-col gap-3 p-5 lg:col-span-4')}>
+      <div className="flex items-center justify-between gap-2">
+        <p className={kicker}>Students are saying</p>
+        <span className="bg-stone rounded-full px-2 py-0.5 text-[10.5px] font-semibold">
+          {poll.scope === 'local' ? 'Near campus only' : 'Open to all'}
+        </span>
+      </div>
+      <p className="font-display text-lg leading-tight font-bold">{poll.question.replace('KWASU', campusLabel)}</p>
+      {!voted && <p className="text-moss -mt-1 text-xs">{instruction}</p>}
+
+      <ul className="flex flex-col gap-2">
+        {poll.options.map((o) => {
+          const n = results?.score.get(o.id) ?? 0;
+          const pct = total ? Math.round((n / total) * 100) : 0;
+          const order = picked.indexOf(o.id);
+          const on = order !== -1;
+          return (
+            <li key={o.id}>
+              <button
+                type="button"
+                disabled={voted || vote.isPending}
+                aria-pressed={on}
+                onClick={() => toggle(o.id)}
+                className={cn(
+                  'relative flex min-h-11 w-full items-center justify-between gap-2 overflow-hidden rounded-xl border px-3.5 text-left text-sm font-medium',
+                  on ? 'border-forest' : 'border-forest/20',
+                )}
+              >
+                {voted && (
+                  <span aria-hidden="true" className="bg-sage/45 absolute inset-y-0 left-0" style={{ width: `${pct}%` }} />
+                )}
+                <span className="relative min-w-0">
+                  {o.label}
+                  {voted && results && (
+                    <span className="text-moss block text-[11px] font-normal">
+                      {results.near.get(o.id) ?? 0} near campus · {results.far.get(o.id) ?? 0} from outside
+                    </span>
+                  )}
+                </span>
+                {voted ? (
+                  <span className="relative shrink-0 text-xs font-semibold">{pct}%</span>
+                ) : ranked ? (
+                  <span
+                    className={cn(
+                      'relative flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold',
+                      on ? 'bg-forest text-paper border-forest' : 'border-forest/35',
+                    )}
+                    aria-hidden="true"
+                  >
+                    {on ? order + 1 : ''}
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      'relative flex size-[18px] shrink-0 items-center justify-center border-2',
+                      multi ? 'rounded-md' : 'rounded-full',
+                      on ? 'bg-forest border-forest text-paper' : 'border-forest/35',
+                    )}
+                    aria-hidden="true"
+                  >
+                    {on && <Check className="size-3" strokeWidth={3} />}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {!voted ? (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={picked.length === 0 || vote.isPending}
+          className="bg-forest text-paper min-h-11 rounded-full text-sm font-semibold disabled:opacity-40"
+        >
+          {vote.isPending ? 'Saving your vote...' : 'Vote'}
+        </button>
+      ) : (
+        <p className="text-moss text-xs">
+          {results?.ballots ?? 0} vote{results?.ballots === 1 ? '' : 's'} so far
+          {ranked && ' · ranked by points'}
+          {tag !== undefined && (tag ? ' · yours counted as near campus' : ' · yours counted as from outside')}
+        </p>
+      )}
+
+      <div className="text-moss flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span>by {poll.authorName}</span>
+        <span className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => report.mutate(poll.id, { onSuccess: () => toast('Thanks. Our team will take a look.') })}
+            className="flex items-center gap-1 font-medium"
+          >
+            <Flag className="size-3" aria-hidden="true" /> Report
+          </button>
+          <CreatePollDialog campusId={campusId} label="New poll" compact />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CreatePollDialog({ campusId, label, compact }: { campusId: string | null; label: string; compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<GistKind>('gist');
-  const [body, setBody] = useState('');
-  const drop = useDropGist(campusId);
-  const left = 280 - body.length;
+  const [question, setQuestion] = useState('');
+  const [kind, setKind] = useState<PollKind>('single');
+  const [maxChoices, setMax] = useState(3);
+  const [scope, setScope] = useState<'open' | 'local'>('open');
+  const [days, setDays] = useState(3);
+  const [options, setOptions] = useState(['', '']);
+  const create = useCreatePoll(campusId);
+  const filled = options.filter((o) => o.trim()).length;
+
+  const seg = (on: boolean) =>
+    cn('min-h-9 flex-1 rounded-full border px-3 text-[13px] font-semibold', on ? 'bg-ink text-cream border-transparent' : 'border-line/20');
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger className="bg-forest text-paper flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold">
-        <Plus className="text-sunflower size-3.5" strokeWidth={3} aria-hidden="true" /> Drop gist
+      <Dialog.Trigger
+        className={
+          compact
+            ? 'text-leaf flex items-center gap-1 font-semibold'
+            : 'bg-forest text-paper flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold'
+        }
+      >
+        <Plus className="size-3.5" aria-hidden="true" /> {label}
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[rgb(20_30_24/0.5)]" />
-        <Dialog.Content className="bg-panel text-content fixed inset-x-0 bottom-0 z-50 mx-auto flex w-full max-w-[520px] flex-col gap-4 rounded-t-3xl p-5 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-3xl">
+        <Dialog.Content className="bg-panel text-content fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] w-full max-w-[520px] flex-col gap-4 overflow-y-auto rounded-t-3xl p-5 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-3xl">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <Dialog.Title className="font-display text-xl font-bold">Drop gist</Dialog.Title>
+              <Dialog.Title className="font-display text-xl font-bold">Start a poll</Dialog.Title>
               <Dialog.Description className="text-content-muted mt-1 text-sm">
-                Everyone on campus can see this for 3 days. Keep it kind and true.
+                Anyone can vote, no account needed. One vote per person.
               </Dialog.Description>
             </div>
             <Dialog.Close className="bg-surface-deep flex size-10 shrink-0 items-center justify-center rounded-full" aria-label="Close">
@@ -398,116 +783,122 @@ function DropGist({ campusId }: { campusId: string | null }) {
             </Dialog.Close>
           </div>
           <form
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (body.trim().length < 3) return;
-              drop.mutate(
-                { kind, body: body.trim() },
+              create.mutate(
+                { question: question.trim(), kind, maxChoices: kind === 'single' ? 1 : maxChoices, scope, days, options },
                 {
                   onSuccess: () => {
-                    setBody('');
                     setOpen(false);
-                    toast('Posted');
+                    setQuestion('');
+                    setOptions(['', '']);
+                    toast('Poll is live');
                   },
-                  onError: (err) => toast(err instanceof Error ? err.message : 'Could not post that'),
+                  onError: (err) => toast(err instanceof Error ? err.message : 'Could not create the poll'),
                 },
               );
             }}
           >
-            <fieldset className="flex flex-wrap gap-2">
-              <legend className="sr-only">Type</legend>
-              {(Object.keys(KIND) as GistKind[]).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={kind === k}
-                  onClick={() => setKind(k)}
-                  className={cn(
-                    'min-h-9 rounded-full border px-3.5 text-[13px] font-semibold',
-                    kind === k ? 'bg-ink text-cream border-transparent' : 'border-line/20',
-                  )}
-                >
-                  {KIND[k].label}
-                </button>
-              ))}
-            </fieldset>
             <label className="flex flex-col gap-1.5">
-              <span className="sr-only">What is happening?</span>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value.slice(0, 280))}
-                rows={4}
-                placeholder="What is happening around you?"
-                className="border-line/15 bg-surface focus:border-line w-full resize-none rounded-xl border p-3 text-[15px]"
+              <span className="text-sm font-semibold">Question</span>
+              <input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value.slice(0, 160))}
+                placeholder="Best hostel near the gate?"
+                className="border-line/15 bg-surface rounded-xl border px-3.5 py-3 text-[15px]"
               />
-              <span className={cn('self-end text-xs', left < 20 ? 'text-warning' : 'text-content-muted')}>{left}</span>
             </label>
-            <p className="text-content-muted text-xs">
-              No phone numbers or addresses. Posts that get reported are hidden until our team checks them.
-            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold">Options</span>
+              {options.map((o, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={o}
+                    onChange={(e) => setOptions((all) => all.map((x, j) => (j === i ? e.target.value.slice(0, 80) : x)))}
+                    placeholder={`Option ${i + 1}`}
+                    className="border-line/15 bg-surface min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-sm"
+                  />
+                  {options.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setOptions((all) => all.filter((_, j) => j !== i))}
+                      aria-label={`Remove option ${i + 1}`}
+                      className="bg-surface-deep flex size-10 shrink-0 items-center justify-center rounded-xl"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {options.length < 10 && (
+                <button type="button" onClick={() => setOptions((all) => [...all, ''])} className="text-leaf self-start text-sm font-semibold">
+                  + Add option
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold">How people answer</span>
+              <div className="flex gap-1.5">
+                <button type="button" className={seg(kind === 'single')} onClick={() => setKind('single')}>One answer</button>
+                <button type="button" className={seg(kind === 'multi')} onClick={() => setKind('multi')}>Several</button>
+                <button type="button" className={seg(kind === 'ranked')} onClick={() => setKind('ranked')}>Rank them</button>
+              </div>
+              {kind !== 'single' && (
+                <label className="text-content-muted flex items-center gap-2 text-sm">
+                  {kind === 'multi' ? 'Most picks per person' : 'Rank the top'}
+                  <select
+                    value={maxChoices}
+                    onChange={(e) => setMax(Number(e.target.value))}
+                    className="border-line/15 bg-surface rounded-lg border px-2 py-1"
+                  >
+                    {Array.from({ length: kind === 'ranked' ? 4 : 9 }, (_, i) => i + 2).map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold">Who can vote</span>
+              <div className="flex gap-1.5">
+                <button type="button" className={seg(scope === 'open')} onClick={() => setScope('open')}>Anyone</button>
+                <button type="button" className={seg(scope === 'local')} onClick={() => setScope('local')}>Near campus only</button>
+              </div>
+              <p className="text-content-muted text-xs">
+                {scope === 'open'
+                  ? 'Everyone can vote; results show how many voted from near campus and from outside.'
+                  : 'Voters share their location once; only people near campus are counted.'}
+              </p>
+            </div>
+
+            <label className="text-content-muted flex items-center gap-2 text-sm">
+              Runs for
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="border-line/15 bg-surface rounded-lg border px-2 py-1">
+                {[1, 2, 3, 7, 14].map((d) => (
+                  <option key={d} value={d}>
+                    {d} day{d > 1 ? 's' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <button
               type="submit"
-              disabled={drop.isPending || body.trim().length < 3}
+              disabled={create.isPending || question.trim().length < 5 || filled < 2}
               className="bg-sunflower text-forest min-h-12 rounded-full text-[15px] font-bold disabled:opacity-50"
             >
-              {drop.isPending ? 'Posting...' : 'Post'}
+              {create.isPending ? 'Creating...' : 'Create poll'}
             </button>
           </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-/* ── Poll ──────────────────────────────────────────────────────────────── */
-
-function PollCard({ campusId, campusLabel }: { campusId: string | null; campusLabel: string }) {
-  const { data: poll } = useCampusPoll(campusId);
-  const { data: myVote } = useMyVote(poll?.id);
-  const voted = !!myVote;
-  const { data: results } = usePollResults(poll?.id, voted);
-  const vote = useVote(poll?.id);
-  if (!poll) return null;
-  const total = results ? [...results.values()].reduce((a, b) => a + b, 0) : 0;
-
-  return (
-    <div className={cn(card, 'flex min-w-0 flex-col gap-3 p-5 lg:col-span-4')}>
-      <p className={kicker}>Students are saying</p>
-      <p className="font-display text-lg leading-tight font-bold">{poll.question.replace('KWASU', campusLabel)}</p>
-      <ul className="flex flex-col gap-2">
-        {poll.options.map((o) => {
-          const n = results?.get(o.id) ?? 0;
-          const pct = total ? Math.round((n / total) * 100) : 0;
-          const mine = myVote === o.id;
-          return (
-            <li key={o.id}>
-              <button
-                type="button"
-                disabled={voted || vote.isPending}
-                aria-pressed={mine}
-                onClick={() => vote.mutate(o.id)}
-                className={cn(
-                  'relative flex min-h-11 w-full items-center justify-between overflow-hidden rounded-xl border px-3.5 text-left text-sm font-medium',
-                  mine ? 'border-forest' : 'border-forest/20',
-                )}
-              >
-                {voted && (
-                  <span aria-hidden="true" className="bg-sage/45 absolute inset-y-0 left-0" style={{ width: `${pct}%` }} />
-                )}
-                <span className="relative">{o.label}</span>
-                {voted ? (
-                  <span className="relative text-xs font-semibold">{pct}%</span>
-                ) : (
-                  <span className="border-forest/35 relative size-[18px] rounded-full border-2" aria-hidden="true" />
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      {voted && <p className="text-moss text-xs">{total} vote{total === 1 ? '' : 's'} so far</p>}
-    </div>
   );
 }
 

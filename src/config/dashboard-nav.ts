@@ -42,6 +42,7 @@ import {
   Users,
   Wallet,
   Receipt,
+  MessagesSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -314,6 +315,7 @@ export const DASHBOARD_NAV: Record<DashboardNavKey, DashboardNavConfig> = {
             icon: MessageSquareQuote,
             area: 'reviews',
           },
+          { href: '/admin/gist', label: 'Gist & polls', icon: MessagesSquare, area: 'gist' },
         ],
       },
       {

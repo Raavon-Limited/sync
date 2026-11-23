@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/purge-archived",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/gist-daily",
+      "schedule": "10 23 * * *"
     }
   ]
 }
