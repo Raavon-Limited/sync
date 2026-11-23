@@ -9,7 +9,7 @@ import { BadgeCheck, Building2, Hammer, Megaphone, Tag, Truck, X, Check } from '
 
 const ROWS = [
   { topic: 'Find', Icon: Building2, old: 'Trekking round in the sun with an agent asking for inspection fee.', sync: 'Verified hostels with real photos and prices before you move an inch.' },
-  { topic: 'Trust', Icon: BadgeCheck, old: 'Fake listings and agents that disappear after payment.', sync: 'A Verified badge only after Sync checks the vendor, and rent held in escrow till you move in.' },
+  { topic: 'Trust', Icon: BadgeCheck, old: 'Fake listings and agents that disappear after payment.', sync: 'A Verified badge only after Sync checks the vendor, so you know who you are dealing with.' },
   { topic: 'Move', Icon: Truck, old: 'Begging a friend with a bike to help you carry your stuff.', sync: 'Dispatch riders for pickups, errands and moves. Coming soon.' },
   { topic: 'Gist', Icon: Megaphone, old: 'Gist scattered across twenty WhatsApp groups.', sync: 'One place for what is happening around you.' },
   { topic: 'Book', Icon: Hammer, old: 'Asking around for a plumber, tailor or laundry guy.', sync: 'Book artisans, laundry and beauty in a few taps.' },

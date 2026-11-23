@@ -867,3 +867,45 @@ select:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .sync-float, .sync-flow, .sync-flow-in, .sync-spin, .sync-fade, .live-dot { animation: none; }
 }
+
+/* ─── Landing: dark-green in dark mode ────────────────────────────────────
+   The landing sections are written in palette colours (bg-stone, bg-paper,
+   text-forest...) rather than the semantic tokens, because the design is
+   drawn in them. To follow the theme switch they are REMAPPED inside
+   `.landing` in dark mode, instead of carrying a dark: class on every line:
+   Tailwind utilities read var(--color-*) at the element, so overriding the
+   variable on an ancestor recolours everything under it.
+
+   forest becomes the light text colour, so anything drawn as a dark fill
+   (bg-forest buttons, the weekly card) turns light with dark text: the usual
+   dark-mode inversion for a primary pill. `.landing-fixed` opts a block back
+   out: the Find section is already a dark green band and stays one. */
+.dark .landing {
+  --color-stone: #141e18;
+  --color-paper: #203027;
+  --color-cream-deep: #1b2820;
+  --color-forest: #e8e6dd;
+  --color-moss: #a3b18a;
+  --color-leaf: #a3b18a;
+  --color-sage: #3a5a40;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .landing {
+    --color-stone: #141e18;
+    --color-paper: #203027;
+    --color-cream-deep: #1b2820;
+    --color-forest: #e8e6dd;
+    --color-moss: #a3b18a;
+    --color-leaf: #a3b18a;
+    --color-sage: #3a5a40;
+  }
+}
+.landing .landing-fixed {
+  --color-stone: #dad7cd;
+  --color-paper: #f2f1ea;
+  --color-cream-deep: #cfcbbe;
+  --color-forest: #344e41;
+  --color-moss: #3a5a40;
+  --color-leaf: #588157;
+  --color-sage: #a3b18a;
+}

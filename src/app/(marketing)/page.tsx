@@ -59,7 +59,8 @@ export default async function LandingPage() {
   ]);
 
   return (
-    <>
+    // `landing` remaps the palette for dark mode (see the end of globals.css).
+    <div className="landing">
       <HeroConstellation highlights={showcase.highlights} areaLabel={CAMPUS_SHORT} />
       <FindSection rails={rails} />
       <AroundSection campus={CAMPUS_SHORT} showcase={showcase} weather={weather} />
@@ -67,6 +68,6 @@ export default async function LandingPage() {
       <WhySection />
       {reviews.length > 0 && <ReviewsCarousel reviews={reviews} signedIn={Boolean(user)} mine={mine} />}
       <ReachOut signedIn={Boolean(user)} mine={mine} />
-    </>
+    </div>
   );
 }

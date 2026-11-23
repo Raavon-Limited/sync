@@ -22,8 +22,10 @@ const SOCIALS = [
 ];
 
 export function MarketingFooter() {
+  // Near-black, as the footer was before the green palette: the founder's
+  // call. A literal, not `ink`, which means forest now.
   return (
-    <footer className="bg-ink text-cream relative isolate overflow-hidden">
+    <footer className="bg-[#0e0e12] text-cream relative isolate overflow-hidden">
       {/* The townscape, in cream outline on the Ink surface. Sits UNDER the
           glow below (both are -z-10, this one first in source order), so the
           lime bloom reads as light falling across the drawing. */}
@@ -103,19 +105,19 @@ export function MarketingFooter() {
         <div className="border-cream/10 mt-12 border-t pt-10">
           <p className="eyebrow text-cream/40">Disclaimer</p>
           <div className="text-cream/50 mt-4 flex flex-col gap-4 text-xs leading-relaxed md:max-w-4xl">
+            {/* Founder-approved wording (Nov 2026). Keep it verbatim; change it
+                only with sign-off, it is the public statement of what Sync is. */}
             <p>
-              {SITE.name} is a marketplace operated by {SITE.legalName}. We verify every vendor -
-              ID check, business proof, and an in-person visit - but listings, prices, and
-              availability are provided by the vendors themselves. Always confirm details and
-              inspect a property before paying.
+              {SITE.name} is a discovery platform operated by {SITE.legalName}. A Verified badge
+              means {SITE.name} has checked that vendor; listings without the badge have not been
+              checked yet. Listings, prices and availability are provided by vendors themselves, so
+              always confirm details and inspect a property before paying anyone.
             </p>
             <p>
-              Payments are processed and held in escrow by Paystack, a CBN-licensed payment
-              provider; {SITE.name} does not hold or custody student funds. Any {SITE.name} fee is
-              shown before you pay. A Verified badge means {SITE.name} has checked that vendor;
-              listings without it have not been checked yet. By using {SITE.name} you agree to our
-              Terms of Service and acknowledge that reliance on any information here is at your
-              own risk.
+              {SITE.name} does not hold student funds. Where payment options are offered, they are
+              handled by a licensed payment provider and any {SITE.name} fee is shown before you
+              pay. By using {SITE.name} you agree to our Terms of Service and acknowledge that
+              reliance on any information here is at your own risk.
             </p>
           </div>
         </div>

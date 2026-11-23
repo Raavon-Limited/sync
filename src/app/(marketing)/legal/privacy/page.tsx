@@ -69,7 +69,7 @@ export default function Page() {
         <DocList
           items={[
             'Supabase - authentication, database and file storage.',
-            'Paystack - payments, payouts and escrow.',
+            'Our licensed payment provider - processing payments you choose to make on Sync.',
             'Our identity verification provider - vendor and landlord ID checks.',
             'Google Maps - map rendering. Your precise location is never sent to us in full.',
             'Resend - transactional email such as sign-in links and receipts.',

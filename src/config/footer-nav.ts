@@ -35,4 +35,7 @@ export const HELP_LINKS: FooterLink[] = [
   { href: '/how-it-works', label: 'How it works' },
   { href: '/how-verification-works', label: 'How verification works' },
   ...LEGAL_LINKS,
+  // Not a page: the Reach out section on the landing (#contact). There is no
+  // /contact route, and a footer link to one would 404.
+  { href: '/#contact', label: 'Contact us' },
 ];
