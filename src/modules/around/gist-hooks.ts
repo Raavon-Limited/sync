@@ -15,6 +15,7 @@
  */
 'use client';
 
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
@@ -87,6 +88,44 @@ export function useGistFeed(campusId: string | null, limit = 20) {
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+}
+
+/**
+ * Live: refetch the feed the moment anyone on this campus posts or reacts.
+ *
+ * Listens for the database's broadcast on 'gist:<campus>' (20261124150000).
+ * The event carries NO data - who wrote or reacted never leaves gist_feed() -
+ * it only says "refetch now". NOT lib/query/use-realtime.ts: that one is
+ * postgres_changes, which needs SELECT on the table, and nobody has it here.
+ *
+ * Bursts are coalesced over 300ms, so ten quick reactions cost one refetch per
+ * viewer instead of ten. The 60s poll in useGistFeed stays as the backstop for
+ * a dropped socket.
+ */
+export function useGistLive(campusId: string | null) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!campusId) return;
+    const supabase = createClient();
+    const topic = `gist:${campusId}`;
+    // channel() is get-or-create: a channel left on this topic by a remount
+    // (React StrictMode in dev) would make .on() throw after subscribe().
+    for (const c of supabase.getChannels()) {
+      if (c.topic === `realtime:${topic}`) void supabase.removeChannel(c);
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ch = supabase
+      .channel(topic)
+      .on('broadcast', { event: 'changed' }, () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => qc.invalidateQueries({ queryKey: ['gist', 'feed'] }), 300);
+      })
+      .subscribe();
+    return () => {
+      clearTimeout(timer);
+      void supabase.removeChannel(ch);
+    };
+  }, [campusId, qc]);
 }
 
 export function useDropGist(campusId: string | null) {

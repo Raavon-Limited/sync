@@ -52,12 +52,16 @@ alter table public.gist_reactions add column if not exists reactor text;
 update public.gist_reactions set reactor = 'u:' || user_id::text where reactor is null;
 
 alter table public.gist_reactions alter column reactor set not null;
+
+-- The old key (post_id, user_id) must go BEFORE user_id can be nullable: a
+-- primary-key column cannot drop NOT NULL (42P16 - the first push of this file
+-- failed exactly there and rolled back).
+alter table public.gist_reactions drop constraint if exists gist_reactions_pkey;
+alter table public.gist_reactions add constraint gist_reactions_pkey primary key (post_id, reactor);
+
 -- An anonymous reaction has no account. user_id stays for the account case,
 -- so deleting an account still cascades its reactions away.
 alter table public.gist_reactions alter column user_id drop not null;
-
-alter table public.gist_reactions drop constraint if exists gist_reactions_pkey;
-alter table public.gist_reactions add constraint gist_reactions_pkey primary key (post_id, reactor);
 
 alter table public.gist_reactions drop constraint if exists gist_reactions_kind_check;
 alter table public.gist_reactions add constraint gist_reactions_kind_check

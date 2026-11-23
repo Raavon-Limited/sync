@@ -61,6 +61,7 @@ import {
   useDeleteGist,
   useDropGist,
   useGistFeed,
+  useGistLive,
   useMyDisplayName,
   usePollResults,
   useReportGist,
@@ -269,6 +270,8 @@ function GistFeed({ campusId, campusLabel, live }: { campusId: string | null; ca
   // First 20; "Show more" reaches the full public window of 50.
   const [limit, setLimit] = useState(20);
   const { data: posts = [], isLoading } = useGistFeed(live ? campusId : null, limit);
+  // New posts and reactions from anyone on this campus appear at once.
+  useGistLive(live ? campusId : null);
   const shown = useMemo(() => (filter === 'all' ? posts : posts.filter((p) => p.kind === filter)), [posts, filter]);
 
   return (
