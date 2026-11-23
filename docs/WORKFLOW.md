@@ -332,6 +332,23 @@ canvas: constellation hero, Find tabs with five real cards each (`getLandingRail
 The mock ActivityTicker, the newsletter band (fake success) and the FAQ/trust/CTA bands are gone.
 **Focus outlines and rings are removed app-wide** at the founder's request; `--shadow-focus` is
 still defined if that is revisited.
+**The landing is light in every theme** (the design is light): its sections use palette colours
+(`bg-stone`, `bg-paper`, `text-forest`), not the semantic tokens, and carry no `dark:` classes.
+Header and footer still follow the toggle. **`dark:` follows the toggle** (custom variant at the
+top of `globals.css`); before, it followed the OS alone, so OS-dark plus toggle-light painted pale
+text on light pages. **Reviews** show as a carousel only when approved rows exist (no seeded
+fallback); the first review is written from Reach out. `supabase/checks/landing_content.sql`
+reports what each landing tab can show and what lacks a photo.
+**Sunflower is for important actions only.** `lime` resolves to SAGE; the primary Button and
+deliberate CTAs use `sunflower` by name. Never sunflower on the logo, loaders or icon accents.
+**Browsing is public, doing needs an account.** The module routes (/hostels, /events, /food,
+/beauty, /workmanship, /laundry, /hotspots, /search) left PROTECTED_PREFIXES; checkout, orders,
+favourites, wallet, /ai, ticket purchase (`/events/<slug>/tickets`) and every dashboard stay
+gated. Writes on public pages are gated by the global MutationCache in `lib/query/query-client.ts`:
+no session, the mutation throws `SignInRequired` and the page goes to `/login?next=<here>`. A
+mutation that must work signed out opts out with `meta: { public: true }` (none exist). **A gated
+prefix must also be in RESERVED_HANDLES** (`lib/handle.ts`) or the gate never fires; `ai` was
+missing and is now added.
 
 **Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
 NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every
