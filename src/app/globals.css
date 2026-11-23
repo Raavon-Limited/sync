@@ -23,6 +23,23 @@
  */
 @import 'tailwindcss';
 
+/* `dark:` MUST follow the same rule as the tokens below, or the two disagree.
+   Tailwind v4's default `dark:` is the OS media query alone, so with the OS in
+   dark mode and the theme toggle set to LIGHT, every `dark:text-paper` fired
+   on a light page: pale text on stone, the landing headline washed out. This
+   matches the token blocks exactly: `.dark` wins, `.light` wins, otherwise the
+   OS decides. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   /* ─── Colour tokens ─────────────────────────────────────────────── */
   --color-cream: #dad7cd; /* stone - the page */

@@ -316,7 +316,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
             <ul className="no-scrollbar -mx-4 grid snap-x snap-mandatory auto-cols-[76%] grid-flow-col gap-3.5 overflow-x-auto px-4 pt-1.5 pb-2.5 sm:auto-cols-[minmax(240px,40%)] md:mx-0 md:px-0 xl:grid-flow-row xl:grid-cols-5 xl:overflow-visible">
               {cards.map((c) => (
                 <li key={c.id} className="snap-start">
-                  <Card c={c} />
+                  <Card c={c} icon={tab.icon} />
                 </li>
               ))}
             </ul>
@@ -333,7 +333,7 @@ export function FindSection({ rails }: { rails: LandingRails }) {
   );
 }
 
-function Card({ c }: { c: RailCard }) {
+function Card({ c, icon }: { c: RailCard; icon: string }) {
   return (
     <Link
       href={c.href}
@@ -343,9 +343,13 @@ function Card({ c }: { c: RailCard }) {
         {c.image ? (
           <Image src={c.image} alt="" fill sizes="(max-width: 640px) 76vw, 260px" className="object-cover" />
         ) : (
-          // No photo on the row: a quiet tile, not a stock image.
-          <span className="text-forest/50 absolute inset-0 flex items-center justify-center">
-            <MapPin className="size-10" aria-hidden="true" />
+          // No photo on the row yet: the section's icon on a soft tile, not a
+          // stock image that would pass for the real place.
+          <span className="from-sage to-leaf/70 text-forest absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br">
+            <span className="bg-paper/70 flex size-16 items-center justify-center rounded-2xl">
+              <NavIcon name={icon} size={30} />
+            </span>
+            <span className="text-forest/70 font-mono text-[10px] tracking-wider uppercase">Photo coming</span>
           </span>
         )}
         {c.featured && (

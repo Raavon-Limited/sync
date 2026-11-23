@@ -204,7 +204,7 @@ export function HeroConstellation({
   return (
     <section
       ref={root}
-      className="relative isolate overflow-hidden lg:h-[calc(100svh-4rem)] lg:min-h-[600px]"
+      className="bg-stone text-forest relative isolate overflow-hidden lg:h-[calc(100svh-4rem)] lg:min-h-[600px]"
     >
       {/* Glow behind the hub */}
       {lines.hub && (
@@ -227,14 +227,14 @@ export function HeroConstellation({
           width={lines.w}
           height={lines.h}
           viewBox={`0 0 ${lines.w} ${lines.h}`}
-          className="text-forest dark:text-paper pointer-events-none absolute top-0 left-0 -z-10 overflow-visible"
+          className="text-forest pointer-events-none absolute top-0 left-0 -z-10 overflow-visible"
         >
           <g fill="none" stroke="currentColor" strokeOpacity={0.3} strokeWidth={1.5} strokeLinecap="round" strokeDasharray="2 9" className="max-lg:[stroke-opacity:0.22]">
             {lines.inL.map((l, i) => (
               <line key={i} className="sync-flow-in" {...l} />
             ))}
           </g>
-          <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeDasharray="6 10" className="text-leaf dark:text-sage">
+          <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeDasharray="6 10" className="text-leaf">
             {lines.outL.map((l, i) => (
               <line key={i} className="sync-flow" {...l} />
             ))}
@@ -256,10 +256,10 @@ export function HeroConstellation({
               style={p ? { left: p.left, top: p.top } : { left: ic.left, top: ic.top }}
             >
               <div className="sync-float relative size-full" style={{ animationDelay: `${(i % 5) * -1.2}s` }}>
-                <div className="bg-surface border-forest/35 dark:border-paper/35 text-forest dark:text-paper flex size-full items-center justify-center rounded-full border">
+                <div className="bg-stone border-forest/35 text-forest flex size-full items-center justify-center rounded-full border">
                   <NavIcon name={ic.icon} size={22} />
                 </div>
-                <span className="text-forest dark:text-paper absolute top-[68px] left-1/2 -translate-x-1/2 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase max-[880px]:hidden">
+                <span className="text-forest absolute top-[68px] left-1/2 -translate-x-1/2 font-mono text-[11px] tracking-wider whitespace-nowrap uppercase max-[880px]:hidden">
                   {ic.label}
                 </span>
               </div>
@@ -271,21 +271,21 @@ export function HeroConstellation({
       <div className="relative z-10 mx-auto flex h-full w-full max-w-[1400px] flex-col gap-8 px-4 pt-2 pb-7 md:px-8 lg:flex-row lg:items-stretch lg:gap-10 lg:pt-0">
         {/* Copy */}
         <div data-copy="" className="order-2 flex min-w-0 flex-col justify-end gap-5 lg:order-1 lg:flex-1">
-          <span className="text-moss dark:text-sage flex items-center gap-2.5 font-mono text-xs tracking-wider uppercase">
+          <span className="text-moss flex items-center gap-2.5 font-mono text-xs tracking-wider uppercase">
             <span className="bg-leaf size-2 rounded-full" />
             Connect · Search · Sync
           </span>
-          <h1 className="font-display text-forest dark:text-paper max-w-[600px] text-[clamp(36px,min(4vw,6.4vh),60px)] leading-[1.02] font-bold tracking-[-0.035em]">
-            Everything campus. <span className="text-leaf dark:text-sage">One sync.</span>
+          <h1 className="font-display text-forest max-w-[600px] text-[clamp(36px,min(4vw,6.4vh),60px)] leading-[1.02] font-bold tracking-[-0.035em]">
+            Everything campus. <span className="text-leaf">One sync.</span>
           </h1>
-          <p className="text-moss dark:text-paper/80 max-w-[460px] text-[17px] leading-relaxed">
+          <p className="text-moss max-w-[460px] text-[17px] leading-relaxed">
             Hostels, internet, events, food and every service around campus, in one place built for
             students.
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <Link
               href="/around"
-              className="bg-forest text-stone dark:bg-paper dark:text-forest flex min-h-[52px] items-center gap-2.5 rounded-full py-1.5 pr-1.5 pl-5 text-[15px] font-semibold"
+              className="bg-forest text-stone flex min-h-[52px] items-center gap-2.5 rounded-full py-1.5 pr-1.5 pl-5 text-[15px] font-semibold"
             >
               Explore {areaLabel}
               <span className="bg-sunflower text-forest flex size-10 items-center justify-center rounded-full">
@@ -294,7 +294,7 @@ export function HeroConstellation({
             </Link>
             <Link
               href="#how"
-              className="border-forest text-forest bg-stone/70 dark:border-paper dark:text-paper flex min-h-[52px] items-center rounded-full border-[1.5px] px-5 text-[15px] font-semibold dark:bg-transparent"
+              className="border-forest text-forest bg-stone/70 flex min-h-[52px] items-center rounded-full border-[1.5px] px-5 text-[15px] font-semibold"
             >
               How it works
             </Link>

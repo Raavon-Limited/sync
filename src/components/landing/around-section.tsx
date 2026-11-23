@@ -55,7 +55,7 @@ function lagosPart(): Part {
   return h < 5 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 21 ? 'evening' : 'night';
 }
 
-const card = 'bg-paper dark:bg-panel rounded-[26px] p-5 shadow-[0_14px_36px_rgb(52_78_65/0.1)]';
+const card = 'bg-paper rounded-[26px] p-5 shadow-[0_14px_36px_rgb(52_78_65/0.1)]';
 
 export function AroundSection({
   campus,
@@ -73,21 +73,21 @@ export function AroundSection({
   const night = weather ? !weather.isDay : part === 'night' || part === 'evening';
 
   return (
-    <section id="around" className="bg-surface text-forest dark:text-paper px-4 pt-16 pb-20 md:px-8 md:pt-[72px] md:pb-[88px]">
+    <section id="around" className="bg-stone text-forest px-4 pt-16 pb-20 md:px-8 md:pt-[72px] md:pb-[88px]">
       <div className="mx-auto flex max-w-[1280px] flex-col gap-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-2">
-            <span className="text-moss dark:text-sage flex items-center gap-2 font-mono text-[11.5px] tracking-wider uppercase">
+            <span className="text-moss flex items-center gap-2 font-mono text-[11.5px] tracking-wider uppercase">
               <span className="live-dot bg-leaf size-2 rounded-full" />
               Around you · Live
             </span>
             <h2 className="font-display text-[clamp(28px,3.4vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">
-              What&rsquo;s popping in <span className="text-leaf dark:text-sage">{campus}</span>
+              What&rsquo;s popping in <span className="text-leaf">{campus}</span>
             </h2>
           </div>
           <Link
             href="/around"
-            className="border-forest/25 dark:border-paper/25 flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold"
+            className="border-forest/25 flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-[13.5px] font-semibold"
           >
             Open Around you <ArrowRight className="size-3.5" aria-hidden="true" />
           </Link>
@@ -98,7 +98,7 @@ export function AroundSection({
           <div className={`${card} flex flex-col gap-4 md:col-span-6 lg:col-span-4 lg:row-span-2`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-moss dark:text-sage font-mono text-[11px] tracking-wider uppercase">{greeting}</p>
+                <p className="text-moss font-mono text-[11px] tracking-wider uppercase">{greeting}</p>
                 {weather ? (
                   <p className="mt-1 flex items-baseline gap-2">
                     <span className="font-display text-[34px] leading-none font-bold">{weather.tempC}°C</span>
@@ -118,9 +118,9 @@ export function AroundSection({
                 <Link
                   key={p.label}
                   href={p.href}
-                  className="hover:bg-stone/60 dark:hover:bg-surface-deep flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm font-medium transition-colors"
+                  className="hover:bg-stone/60 flex min-h-11 items-center gap-3 rounded-xl px-2 text-sm font-medium transition-colors"
                 >
-                  <span className="bg-sage/40 text-forest dark:text-paper flex size-8 items-center justify-center rounded-lg">
+                  <span className="bg-sage/40 text-forest flex size-8 items-center justify-center rounded-lg">
                     <NavIcon name={p.icon} size={16} />
                   </span>
                   <span className="flex-1">{p.label}</span>
@@ -141,9 +141,9 @@ export function AroundSection({
                 <Megaphone className="text-sunflower size-3.5" aria-hidden="true" /> Drop gist
               </Link>
             </div>
-            <div className="border-forest/20 dark:border-paper/20 rounded-2xl border border-dashed p-5">
+            <div className="border-forest/20 rounded-2xl border border-dashed p-5">
               <p className="font-display text-[17px] font-bold">The live gist feed is coming</p>
-              <p className="text-moss dark:text-paper/75 mt-1 text-sm leading-relaxed">
+              <p className="text-moss mt-1 text-sm leading-relaxed">
                 Alerts, deals and what students around {campus} are saying, in one feed. Seen something worth
                 sharing before then? Send it in and we will put people on.
               </p>
@@ -170,10 +170,10 @@ export function AroundSection({
               href="/?topic=event#contact"
               className={`${card} flex min-h-44 flex-col justify-between gap-4 md:col-span-3 lg:col-span-4`}
             >
-              <span className="text-moss dark:text-sage font-mono text-[10px] tracking-wider uppercase">Coming up</span>
+              <span className="text-moss font-mono text-[10px] tracking-wider uppercase">Coming up</span>
               <span>
                 <span className="font-display block text-lg font-bold">No events listed yet</span>
-                <span className="text-moss dark:text-paper/75 mt-1 block text-sm">Hosting something? Get it in front of students.</span>
+                <span className="text-moss mt-1 block text-sm">Hosting something? Get it in front of students.</span>
               </span>
             </Link>
           )}
@@ -192,7 +192,7 @@ export function AroundSection({
             </Link>
           ) : (
             <div className={`${card} flex min-h-44 flex-col justify-between gap-4 md:col-span-3 lg:col-span-4`}>
-              <span className="text-moss dark:text-sage font-mono text-[10px] tracking-wider uppercase">Hot spot</span>
+              <span className="text-moss font-mono text-[10px] tracking-wider uppercase">Hot spot</span>
               <span className="font-display text-lg font-bold">Spots are being added</span>
             </div>
           )}
@@ -205,7 +205,7 @@ export function AroundSection({
                 <Link
                   key={g.href}
                   href={g.href}
-                  className="border-forest/20 dark:border-paper/20 flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] font-medium"
+                  className="border-forest/20 flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] font-medium"
                 >
                   {g.label} <ArrowRight className="size-3" aria-hidden="true" />
                 </Link>

@@ -19,6 +19,8 @@ import { ArrowRight, AtSign, LifeBuoy, Mail, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SITE } from '@/config/site';
 import { CONTACT_TOPICS, type ContactTopic } from '@/config/marketing-nav';
+import type { PendingTestimonial } from '@/modules/testimonials/queries';
+import { ReviewDialog } from './reviews-carousel';
 
 const LABEL: Record<ContactTopic, string> = {
   general: 'General',
@@ -33,7 +35,7 @@ const LABEL: Record<ContactTopic, string> = {
 
 const isTopic = (x: string | null): x is ContactTopic => !!x && (CONTACT_TOPICS as readonly string[]).includes(x);
 
-export function ReachOut() {
+export function ReachOut({ signedIn, mine }: { signedIn: boolean; mine: PendingTestimonial | null }) {
   const [topic, setTopic] = useState<ContactTopic>('general');
   const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
@@ -58,18 +60,18 @@ export function ReachOut() {
     `[${LABEL[topic]}] ${name || 'Hello Sync'}`,
   )}&body=${encodeURIComponent(msg)}`;
 
-  const field = 'border-forest/20 dark:border-paper/20 focus:border-forest/50 w-full rounded-xl border bg-transparent px-3.5 py-3 text-[15px]';
+  const field = 'border-forest/20 focus:border-forest/50 w-full rounded-xl border bg-transparent px-3.5 py-3 text-[15px]';
 
   return (
-    <section id="contact" className="bg-surface-deep text-forest dark:text-paper scroll-mt-16 px-4 pt-16 pb-[68px] md:px-8 md:pt-20 md:pb-[88px]">
+    <section id="contact" className="bg-cream-deep text-forest scroll-mt-16 px-4 pt-16 pb-[68px] md:px-8 md:pt-20 md:pb-[88px]">
       <div className="mx-auto grid max-w-[1280px] gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
-            <span className="text-moss dark:text-sage font-mono text-[11.5px] tracking-wider uppercase">Reach out</span>
+            <span className="text-moss font-mono text-[11.5px] tracking-wider uppercase">Reach out</span>
             <h2 className="font-display text-[clamp(28px,3.4vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">
-              Talk to us. <span className="text-leaf dark:text-sage">We are listening.</span>
+              Talk to us. <span className="text-leaf">We are listening.</span>
             </h2>
-            <p className="text-moss dark:text-paper/75 max-w-[420px] leading-relaxed">
+            <p className="text-moss max-w-[420px] leading-relaxed">
               Questions, a vendor issue, a partnership idea or just a vibe check. Pick a channel or drop a message.
             </p>
           </div>
@@ -79,6 +81,14 @@ export function ReachOut() {
             <Channel Icon={Store} label="Vendor support" value="Listings, orders and verification" href="/for-vendors" />
             <Channel Icon={AtSign} label="Socials" value="@syncng on X and Instagram" href={SITE.socials.instagram} external />
           </ul>
+          {/* The one place a review can be written when none is published yet. */}
+          <div className="bg-paper flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+            <span className="text-sm">
+              <span className="block font-bold">Been through Sync?</span>
+              <span className="text-moss">Tell the next student what it was like.</span>
+            </span>
+            <ReviewDialog signedIn={signedIn} mine={mine} label="Leave a review" />
+          </div>
         </div>
 
         <form
@@ -86,11 +96,11 @@ export function ReachOut() {
             e.preventDefault();
             window.location.href = href;
           }}
-          className="bg-paper dark:bg-panel flex flex-col gap-4 rounded-[26px] p-5 shadow-[0_14px_36px_rgb(52_78_65/0.1)] md:p-7"
+          className="bg-paper flex flex-col gap-4 rounded-[26px] p-5 shadow-[0_14px_36px_rgb(52_78_65/0.1)] md:p-7"
         >
           <span className="font-display text-xl font-bold">Send us a message</span>
           <fieldset className="flex flex-wrap gap-2">
-            <legend className="text-moss dark:text-sage mb-2 font-mono text-[11px] tracking-wider uppercase">Topic</legend>
+            <legend className="text-moss mb-2 font-mono text-[11px] tracking-wider uppercase">Topic</legend>
             {CONTACT_TOPICS.map((t) => (
               <button
                 key={t}
@@ -100,8 +110,8 @@ export function ReachOut() {
                 className={cn(
                   'min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors',
                   topic === t
-                    ? 'bg-forest text-paper border-forest dark:bg-paper dark:text-forest dark:border-paper'
-                    : 'border-forest/25 dark:border-paper/25',
+                    ? 'bg-forest text-paper border-forest'
+                    : 'border-forest/25',
                 )}
               >
                 {LABEL[t]}
@@ -122,7 +132,7 @@ export function ReachOut() {
           >
             Open in my email app <ArrowRight className="size-4" aria-hidden="true" />
           </button>
-          <p className="text-moss dark:text-paper/60 text-xs">
+          <p className="text-moss text-xs">
             This writes the email for you, addressed to {SITE.support.email}. Nothing is sent until you press send there.
           </p>
         </form>
@@ -146,16 +156,16 @@ function Channel({
 }) {
   const inner = (
     <>
-      <span className="bg-sage/45 text-forest dark:text-paper flex size-10 shrink-0 items-center justify-center rounded-xl">
+      <span className="bg-sage/45 text-forest flex size-10 shrink-0 items-center justify-center rounded-xl">
         <Icon className="size-[18px]" aria-hidden="true" />
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-bold">{label}</span>
-        <span className="text-moss dark:text-paper/70 block truncate text-[13px]">{value}</span>
+        <span className="text-moss block truncate text-[13px]">{value}</span>
       </span>
     </>
   );
-  const cls = 'bg-paper dark:bg-panel flex items-center gap-3 rounded-2xl p-3.5';
+  const cls = 'bg-paper flex items-center gap-3 rounded-2xl p-3.5';
   return (
     <li>
       {href.startsWith('/') ? (

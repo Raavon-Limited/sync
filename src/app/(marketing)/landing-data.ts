@@ -415,7 +415,8 @@ async function readLandingRails(): Promise<LandingRails> {
     id: h.id,
     name: h.name,
     place: h.area ?? null,
-    meta: h.category ?? null,
+    // Stored lowercase as a key ('study'); shown as a label ('Study').
+    meta: h.category ? h.category.charAt(0).toUpperCase() + h.category.slice(1) : null,
     image: h.image_url ?? null,
     href: `/hotspots/${h.slug}`,
     verified: false,

@@ -18,17 +18,17 @@ const ROWS = [
 
 export function WhySection() {
   return (
-    <section id="why" className="bg-surface text-forest dark:text-paper px-4 pt-16 pb-[68px] md:px-8 md:pt-20 md:pb-[88px]">
+    <section id="why" className="bg-stone text-forest px-4 pt-16 pb-[68px] md:px-8 md:pt-20 md:pb-[88px]">
       <div className="mx-auto flex max-w-[1100px] flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <span className="text-moss dark:text-sage font-mono text-[11.5px] tracking-wider uppercase">Why Sync</span>
+          <span className="text-moss font-mono text-[11.5px] tracking-wider uppercase">Why Sync</span>
           <h2 className="font-display text-[clamp(28px,3.4vw,44px)] leading-[1.05] font-bold tracking-[-0.03em]">
-            The old way vs <span className="text-leaf dark:text-sage">the Sync way</span>
+            The old way vs <span className="text-leaf">the Sync way</span>
           </h2>
         </div>
 
         <div className="flex flex-col gap-2.5">
-          <div className="text-moss dark:text-sage hidden grid-cols-[180px_1fr_1fr] gap-4 px-5 font-mono text-[11px] tracking-wider uppercase lg:grid">
+          <div className="text-moss hidden grid-cols-[180px_1fr_1fr] gap-4 px-5 font-mono text-[11px] tracking-wider uppercase lg:grid">
             <span />
             <span>The old way</span>
             <span>The Sync way</span>
@@ -36,16 +36,16 @@ export function WhySection() {
           {ROWS.map((r) => (
             <div
               key={r.topic}
-              className="bg-paper dark:bg-panel grid grid-cols-1 gap-3 rounded-[22px] p-4 sm:grid-cols-2 lg:grid-cols-[180px_1fr_1fr] lg:items-center lg:gap-4 lg:p-5"
+              className="bg-paper grid grid-cols-1 gap-3 rounded-[22px] p-4 sm:grid-cols-2 lg:grid-cols-[180px_1fr_1fr] lg:items-center lg:gap-4 lg:p-5"
             >
               <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-1">
-                <span className="bg-sage/45 text-forest dark:text-paper flex size-10 items-center justify-center rounded-xl">
+                <span className="bg-sage/45 text-forest flex size-10 items-center justify-center rounded-xl">
                   <r.Icon className="size-[18px]" aria-hidden="true" />
                 </span>
                 <span className="font-display text-base font-bold">{r.topic}</span>
               </div>
-              <p className="text-moss/80 dark:text-paper/60 flex items-start gap-2.5 text-sm leading-relaxed">
-                <span className="border-forest/25 dark:border-paper/25 mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border">
+              <p className="text-moss/80 flex items-start gap-2.5 text-sm leading-relaxed">
+                <span className="border-forest/25 mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border">
                   <X className="size-3" aria-hidden="true" />
                 </span>
                 <span>
