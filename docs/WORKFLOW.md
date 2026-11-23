@@ -355,6 +355,15 @@ named as the escrow (it has no escrow product). Public copy (footer, terms, priv
 how verification works, About) says this; keep new copy consistent. **Safety on Sync**
 (`/legal/safety`) carries the founder's meet-up and reporting notice, linked from the footer
 disclaimer, terms and the Policies menu.
+**Around you bento** (`components/around/around-bento.tsx`) is shared by the landing and the top
+of /around (the map stays below it). Backed by **`20261123120000_around_gist_and_polls`, NOT YET
+APPLIED**: `gist_posts` (public read, signed-in post, 5/hour, 3-day expiry, author name set by
+trigger as "First L."), `gist_reactions` ("Same here"), `gist_reports` (3 reports auto-hide; staff
+read), `gist_masked_words` + `mask_words()` (swear words stored masked, e.g. "f***"; staff add
+words by insert), and `polls` / `poll_options` / `poll_votes` with `poll_results()` (totals
+without voter identities). Seeds the first KWASU poll. Parsed with Postgres's parser (pglast),
+never executed. Anon policies must not call `is_staff()` (anon cannot execute it); the verify
+block checks that. **Emergency alerts: super admins only at launch** (decided, not built yet).
 
 **Client writes locked, unpaid escrow made inert (13 Nov, `20261113090000` + `20261113120000`,
 NOT YET APPLIED).** Fixes the first five findings of the 8 Nov review: INSERT guards on every

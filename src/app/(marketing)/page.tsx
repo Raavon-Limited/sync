@@ -8,8 +8,8 @@
  *   1. Hero         - feature icons flow into the Sync mark, Sync flows out to
  *                     student life (HeroConstellation). Explore-first CTA.
  *   2. Find         - tabs, compact search, five real cards per tab.
- *   3. Around you   - time of day, weather, plans, next event, a hot spot, the
- *                     gist (coming), guides.
+ *   3. Around you   - AroundBento, shared with /around: weather and plans, the
+ *                     public gist feed, the campus poll, daily dose, guides.
  *   4. How it works - students / vendors (#how, the header link).
  *   5. Why Sync     - the old way vs the Sync way, one word per row.
  *   6. Reviews      - approved reviews only, as a carousel. Hidden entirely
@@ -35,7 +35,7 @@ import { getMyTestimonial, listApprovedTestimonials } from '@/modules/testimonia
 import { CAMPUS_POINT } from '@/lib/constants/areas';
 import { HeroConstellation } from '@/components/landing/hero-constellation';
 import { FindSection } from '@/components/landing/find-section';
-import { AroundSection } from '@/components/landing/around-section';
+import { AroundBento } from '@/components/around/around-bento';
 import { HowSection } from '@/components/landing/how-section';
 import { WhySection } from '@/components/landing/why-section';
 import { ReachOut } from '@/components/landing/reach-out';
@@ -63,7 +63,7 @@ export default async function LandingPage() {
     <div className="landing">
       <HeroConstellation highlights={showcase.highlights} areaLabel={CAMPUS_SHORT} />
       <FindSection rails={rails} />
-      <AroundSection campus={CAMPUS_SHORT} showcase={showcase} weather={weather} />
+      <AroundBento weather={weather} />
       <HowSection />
       <WhySection />
       {reviews.length > 0 && <ReviewsCarousel reviews={reviews} signedIn={Boolean(user)} mine={mine} />}
