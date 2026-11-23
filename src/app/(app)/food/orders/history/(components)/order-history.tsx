@@ -75,7 +75,7 @@ export function OrderHistory() {
               <Badge
                 className={
                   o.status === 'delivered'
-                    ? 'bg-emerald-500/10 text-emerald-600'
+                    ? 'bg-lime/15 text-accent-fg'
                     : 'bg-rose-500/10 text-rose-600'
                 }
               >

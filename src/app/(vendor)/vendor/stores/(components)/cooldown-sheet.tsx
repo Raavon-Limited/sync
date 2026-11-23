@@ -96,7 +96,7 @@ export function CooldownSheet({ store, disabled }: { store: Storefront; disabled
           {paused ? (
             <Badge className="bg-amber-500/10 text-amber-600">{minutesLeft} min left</Badge>
           ) : (
-            <Badge className="bg-emerald-500/10 text-emerald-600">Taking orders</Badge>
+            <Badge className="bg-lime/15 text-accent-fg">Taking orders</Badge>
           )}
         </Button>
       </SheetTrigger>
@@ -122,7 +122,7 @@ export function CooldownSheet({ store, disabled }: { store: Storefront; disabled
               {store.pauseReason === 'auto_backlog' && ' · automatic'}
             </Badge>
           ) : (
-            <Badge className="bg-emerald-500/10 text-emerald-600">Taking orders</Badge>
+            <Badge className="bg-lime/15 text-accent-fg">Taking orders</Badge>
           )}
         </div>
 

@@ -141,7 +141,7 @@ export function PlanContainer() {
         </p>
       )}
       {done && (
-        <p className="flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600">
+        <p className="flex items-center gap-1 rounded-lg border border-lime/40 bg-lime/10 px-3 py-2 text-sm text-accent-fg">
           <Check className="size-4" /> You are now on {done}.
         </p>
       )}

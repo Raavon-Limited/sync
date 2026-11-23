@@ -41,7 +41,7 @@ function statusOf(t: StoreTransaction): { label: string; className: string } {
   if (t.isRefunded) return { label: 'Refunded', className: 'bg-red-500/10 text-red-600' };
   switch (t.status) {
     case 'delivered':
-      return { label: 'Completed', className: 'bg-emerald-500/10 text-emerald-600' };
+      return { label: 'Completed', className: 'bg-lime/15 text-accent-fg' };
     case 'cancelled':
       return { label: 'Cancelled', className: 'bg-ink/5 text-content-muted' };
     case 'pending':

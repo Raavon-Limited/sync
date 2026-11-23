@@ -213,7 +213,7 @@ function StoreRow({
       {carried && (
         <Badge
           className={
-            soldOut ? 'bg-red-500/10 text-red-600' : 'bg-emerald-500/10 text-emerald-600'
+            soldOut ? 'bg-red-500/10 text-red-600' : 'bg-lime/15 text-accent-fg'
           }
         >
           {soldOut ? 'Sold out' : 'Available'}

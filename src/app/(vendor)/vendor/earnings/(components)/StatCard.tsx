@@ -21,7 +21,7 @@ export function StatCard({ label, value, subtext, subtextPositive, icon, iconBg 
           </span>
           <span className="font-display text-content text-2xl font-semibold">{value}</span>
           <span
-            className={`flex items-center gap-1 text-xs ${subtextPositive ? 'text-emerald-600' : 'text-content-muted'}`}
+            className={`flex items-center gap-1 text-xs ${subtextPositive ? 'text-accent-fg' : 'text-content-muted'}`}
           >
             {subtextPositive && <ArrowUpRight className="h-3 w-3" />}
             {subtext}

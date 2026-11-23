@@ -66,7 +66,8 @@ import {
   useReportGist,
   useReportPoll,
   useSetDisplayName,
-  useToggleSameHere,
+  useReactToGist,
+  REACTIONS,
   useVote,
   votedHere,
   type GistKind,
@@ -595,7 +596,7 @@ function DisplayNameDialog({ current }: { current: string | null }) {
 
 function GistRow({ post }: { post: GistPost }) {
   const k = KIND[post.kind];
-  const same = useToggleSameHere();
+  const react = useReactToGist();
   const report = useReportGist();
   const del = useDeleteGist();
   const ago = formatDistanceToNowStrict(new Date(post.createdAt))
@@ -617,20 +618,41 @@ function GistRow({ post }: { post: GistPost }) {
           </span>
         </p>
         <p className="mt-1 text-[15px] leading-snug break-words">{post.body}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            aria-pressed={post.reacted}
-            disabled={same.isPending}
-            onClick={() => same.mutate(post.id)}
-            className={cn(
-              'flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
-              post.reacted ? 'bg-forest text-paper border-forest' : 'border-forest/20',
-            )}
-          >
-            <Check className="size-3.5" aria-hidden="true" />
-            Same here{post.sameHere > 0 && ` · ${post.sameHere}`}
-          </button>
+        {/* WORD REACTIONS, anyone, signed in or not (20261124120000). One per
+            person: tapping another word moves yours, tapping yours takes it
+            back. One row that scrolls sideways on a narrow phone, so six
+            words never push the post's own actions off screen. */}
+        <div
+          className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1"
+          role="group"
+          aria-label="React to this post"
+        >
+          {REACTIONS.map((r) => {
+            const n = post.reactions[r.key] ?? 0;
+            const on = post.myReaction === r.key;
+            return (
+              <button
+                key={r.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() =>
+                  react.mutate(
+                    { postId: post.id, kind: r.key },
+                    { onError: (err) => toast(err instanceof Error ? err.message : 'Could not react') },
+                  )
+                }
+                className={cn(
+                  'flex min-h-8 shrink-0 items-center gap-1 rounded-full border px-3 text-xs font-semibold whitespace-nowrap transition-colors',
+                  on ? 'bg-forest text-paper border-forest' : 'border-forest/20 hover:bg-stone',
+                )}
+              >
+                {r.label}
+                {n > 0 && <span className={on ? 'text-paper/80' : 'text-moss'}>{n}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-1 flex items-center gap-2">
           {post.mine ? (
             <button
               type="button"

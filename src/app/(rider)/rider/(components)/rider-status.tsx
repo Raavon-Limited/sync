@@ -108,7 +108,7 @@ export function RiderStatus({ rider }: { rider: RiderProfile }) {
 
   return (
     <div className="border-line/10 bg-panel flex flex-wrap items-center gap-3 rounded-xl border p-4">
-      <ShieldCheck className="size-5 shrink-0 text-emerald-600" aria-hidden="true" />
+      <ShieldCheck className="text-accent-fg size-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="text-content font-medium">
           {rider.isOnline ? 'You are on the board' : 'You are offline'}
@@ -120,7 +120,7 @@ export function RiderStatus({ rider }: { rider: RiderProfile }) {
         </p>
       </div>
       {rider.isOnline && (
-        <span className="flex items-center gap-1 text-xs text-emerald-600">
+        <span className="text-accent-fg flex items-center gap-1 text-xs">
           <CircleDot className="size-3" aria-hidden="true" />
           online
         </span>

@@ -217,7 +217,7 @@ export function BusinessProfileForm() {
           </p>
         </div>
 
-          {saved && <span className="text-sm text-emerald-600">Saved.</span>}
+          {saved && <span className="text-sm text-accent-fg">Saved.</span>}
         </div>
 
         {/* Reissuing is irreversible and instantly breaks cards that may be in

@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { Listing } from '@/modules/vendor/types';
 
 const statusStyle: Record<Listing['status'], string> = {
-  Active: 'bg-green-100 text-green-700',
+  Active: 'bg-lime/20 text-accent-fg',
   Archived: 'bg-ink/8 text-content',
   'Out of Stock': 'bg-red-100 text-red-600',
 };

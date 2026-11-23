@@ -51,10 +51,10 @@ const TONE: Record<
   { ring: string; text: string; chip: string; bar: string }
 > = {
   good: {
-    ring: 'ring-emerald-500/40',
-    text: 'text-emerald-500',
-    chip: 'bg-emerald-500/10 text-emerald-500',
-    bar: 'bg-emerald-500',
+    ring: 'ring-leaf/40',
+    text: 'text-accent-fg',
+    chip: 'bg-lime/15 text-accent-fg',
+    bar: 'bg-leaf',
   },
   wait: {
     ring: 'ring-amber-500/40',
@@ -187,7 +187,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                         <span
                           className={
                             c.state === 'verified'
-                              ? 'text-xs font-semibold text-emerald-500'
+                              ? 'text-accent-fg text-xs font-semibold'
                               : c.state === 'pending'
                                 ? 'text-xs font-semibold text-amber-500'
                                 : 'text-content-muted text-xs font-semibold'
@@ -224,7 +224,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                       return (
                         <li key={r.key} className="flex items-start gap-2 text-sm">
                           {r.met ? (
-                            <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                            <Check className="text-accent-fg mt-0.5 size-4 shrink-0" />
                           ) : (
                             <X className="text-content-muted mt-0.5 size-4 shrink-0" />
                           )}

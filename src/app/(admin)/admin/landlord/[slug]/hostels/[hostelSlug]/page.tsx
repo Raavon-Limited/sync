@@ -26,7 +26,7 @@ const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 // The four states `hostel_room_state` can actually return. Inventing a fifth
 // here is how a room silently renders with no badge at all.
 const ROOM_STATE: Record<string, string> = {
-  free: 'bg-emerald-500/10 text-emerald-600',
+  free: 'bg-lime/15 text-accent-fg',
   reserved: 'bg-amber-500/10 text-amber-600',
   booked: 'bg-rose-500/10 text-rose-600',
   unlisted: 'bg-ink/5 text-content-muted',

@@ -72,7 +72,7 @@ export default async function Page() {
                   {/* The one thing a landlord wants to know before letting a
                       stranger into a building. */}
                   {r.studentVerified ? (
-                    <Badge className="bg-emerald-500/10 text-emerald-600">
+                    <Badge className="bg-lime/15 text-accent-fg">
                       <ShieldCheck className="size-3" /> verified
                     </Badge>
                   ) : (

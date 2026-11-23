@@ -100,7 +100,7 @@ export function PlatformSettings({
           {error}
         </p>
       )}
-      {saved && <p className="text-sm text-emerald-600">Saved {saved}.</p>}
+      {saved && <p className="text-sm text-accent-fg">Saved {saved}.</p>}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-content-muted flex items-center gap-2 font-mono text-sm tracking-wide">
@@ -177,7 +177,7 @@ export function PlatformSettings({
                   <code className="font-mono">{f.key}</code>
                   <Badge
                     className={
-                      f.enabled ? 'bg-emerald-500/10 text-emerald-600' : 'bg-ink/5 text-content-muted'
+                      f.enabled ? 'bg-lime/15 text-accent-fg' : 'bg-ink/5 text-content-muted'
                     }
                   >
                     {f.enabled ? 'on' : 'off'}

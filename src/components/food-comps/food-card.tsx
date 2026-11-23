@@ -139,7 +139,7 @@ export default function FoodCards({
                             strokeWidth={2}
                             className={`transition-colors duration-200 ${isFavourited
                                 ? "fill-lime-deep text-lime-deep"
-                                : "text-green-700"
+                                : "text-accent-fg"
                                 }`}
                         />
                     </button>

@@ -95,7 +95,7 @@ export interface AdminVendor {
 }
 
 export const VENDOR_BADGE: Record<string, string> = {
-  verified: 'bg-emerald-500/10 text-emerald-600',
+  verified: 'bg-lime/15 text-accent-fg',
   pending: 'bg-amber-500/10 text-amber-600',
   rejected: 'bg-rose-500/10 text-rose-600',
   unverified: 'bg-ink/5 text-content-muted',
@@ -109,7 +109,7 @@ const DOC_ICON: Record<string, typeof CheckCircle2> = {
 };
 
 const DOC_STATUS_CLASS: Record<string, string> = {
-  approved: 'text-emerald-600',
+  approved: 'text-accent-fg',
   needs_action: 'text-coral',
 };
 
@@ -678,7 +678,7 @@ function AskForMore({
         </Button>
         {sentCount > 0 && <p className="text-content-muted text-xs">{sentCount} sent so far</p>}
         {result && (
-          <p className={cn('text-xs', result.ok ? 'text-emerald-600' : 'text-coral')}>
+          <p className={cn('text-xs', result.ok ? 'text-accent-fg' : 'text-coral')}>
             {result.text}
           </p>
         )}
@@ -790,7 +790,7 @@ function DocActions({
         disabled
         // disabled:opacity-50 from the base variant would fade this to look
         // like a control waiting to become available. It is a result.
-        className="border-emerald-500/30 text-emerald-600 disabled:opacity-100"
+        className="border-lime/40 text-accent-fg disabled:opacity-100"
       >
         <CheckCircle2 aria-hidden="true" />
         Approved

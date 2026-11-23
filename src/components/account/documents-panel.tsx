@@ -89,7 +89,7 @@ function roleFor(role: string | undefined): VerificationRole {
 }
 
 const STATUS_META: Record<DocStatus, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  approved: { label: 'Approved', cls: 'bg-emerald-500/10 text-emerald-600', icon: CheckCircle2 },
+  approved: { label: 'Approved', cls: 'bg-lime/15 text-accent-fg', icon: CheckCircle2 },
   under_review: { label: 'Under review', cls: 'bg-amber-500/10 text-amber-600', icon: Clock },
   needs_action: { label: 'Needs action', cls: 'bg-rose-500/10 text-rose-600', icon: AlertCircle },
   not_uploaded: { label: 'Not uploaded', cls: 'bg-ink/5 text-content-muted', icon: Circle },
@@ -333,7 +333,7 @@ export function DocumentsPanel({
         {items.map((item) => (
           <div key={item.id} className="flex items-center gap-2 text-sm">
             {item.status === 'approved' ? (
-              <CheckCircle2 className="size-4 text-emerald-600" />
+              <CheckCircle2 className="size-4 text-accent-fg" />
             ) : item.status === 'under_review' ? (
               <Clock className="size-4 text-amber-600" />
             ) : (

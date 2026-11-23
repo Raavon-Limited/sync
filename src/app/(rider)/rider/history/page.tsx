@@ -12,7 +12,7 @@ import { getCompletedJobs, getRiderProfile } from '@/modules/rider/queries';
 export const metadata: Metadata = { title: 'History   Rider' };
 
 const TONE: Record<string, string> = {
-  delivered: 'bg-emerald-500/10 text-emerald-600',
+  delivered: 'bg-lime/15 text-accent-fg',
   failed: 'bg-rose-500/10 text-rose-600',
   cancelled: 'bg-ink/5 text-content-muted',
 };

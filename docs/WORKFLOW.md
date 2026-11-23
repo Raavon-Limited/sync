@@ -346,8 +346,12 @@ move left ~80 of them plus a dozen hard-coded `#90d505`s painting the old electr
 price card, vendor screens, every admin chart). All converted on 23 Nov; `globals.css` now also
 overrides `--color-lime-50` … `950` onto the green ramp as a backstop. In new code pick by role:
 `sunflower` for the main action, `lime` for accent fills, `accent-fg` for accent text,
-`accent-fg` + `text-surface` for a solid selected state. Tailwind's other default palettes
-(`emerald`, `green`, `amber`, `red`, `blue` …) are still used across the app and are not remapped.
+`accent-fg` + `text-surface` for a solid selected state. **`emerald-*` and `green-*` are gone
+too** (24 Nov, 162 uses): a "success" state IS the brand green here, so Paid / Active / Verified
+use `bg-lime/15` + `text-accent-fg`, and a solid tile that holds white content uses `bg-leaf`
+(fixed, so white stays readable in dark mode — `accent-fg` turns pale there). Do not reintroduce
+them. `amber`, `red`, `blue` … are still used for warning, error and info states and are not
+remapped.
 **Browsing is public, doing needs an account.** The module routes (/hostels, /events, /food,
 /beauty, /workmanship, /laundry, /hotspots, /search) left PROTECTED_PREFIXES; checkout, orders,
 favourites, wallet, /ai, ticket purchase (`/events/<slug>/tickets`) and every dashboard stay

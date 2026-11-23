@@ -103,7 +103,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ s
                 )}
                 {d.top_posts.length > 0 && (
                   <div>
-                    <p className="eyebrow text-content-muted mb-1">Most &ldquo;same here&rdquo;</p>
+                    <p className="eyebrow text-content-muted mb-1">Most reactions</p>
                     <ul className="flex flex-col gap-1 text-sm">
                       {d.top_posts.slice(0, 3).map((p) => (
                         <li key={p.id} className="line-clamp-2">

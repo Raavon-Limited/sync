@@ -63,7 +63,7 @@ interface ListingGridCardProps {
 }
 
 const statusStyle: Record<Listing['status'], string> = {
-  Active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  Active: 'bg-lime/15 text-accent-fg',
   Archived: 'bg-ink/10 text-content-muted',
   'Out of Stock': 'bg-red-500/10 text-red-600',
 };

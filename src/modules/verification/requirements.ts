@@ -109,7 +109,7 @@ export const VERIFICATION_REQUIREMENTS: VerificationRequirementSpec[] = [
     label: 'Live photo',
     accepts: 'Taken on camera at sign-up',
     description: 'Taken now, on your camera   not uploaded. A reviewer compares it to your ID.',
-    colour: 'bg-emerald-50 text-emerald-600',
+    colour: 'bg-lime/15 text-accent-fg',
     // Everyone, without exception. Whatever else an account is, a person is
     // behind it and this is the picture a reviewer holds against the ID.
     roles: ['student', 'rider', 'vendor', 'landlord', 'company', 'creator', 'event_manager'],

@@ -178,7 +178,7 @@ const mockData: EarningsData = {
 
 export function TxnStatusBadge({ status }: { status: Transaction['status'] }) {
   const map: Record<Transaction['status'], string> = {
-    Settled: 'border border-emerald-500/30 text-emerald-600 bg-emerald-50',
+    Settled: 'border border-lime/40 text-accent-fg bg-lime/15',
     Completed: 'border border-violet-500/30 text-violet-600 bg-violet-50',
     Processed: 'border border-orange-500/30 text-orange-600 bg-orange-50',
     Pending: 'border border-yellow-500/30 text-yellow-600 bg-yellow-50',
@@ -194,7 +194,7 @@ export function TxnStatusBadge({ status }: { status: Transaction['status'] }) {
 
 export function TxnDot({ type }: { type: Transaction['type'] }) {
   const color =
-    type === 'order' ? 'bg-emerald-500' : type === 'refund' ? 'bg-red-500' : 'bg-content-muted';
+    type === 'order' ? 'bg-leaf' : type === 'refund' ? 'bg-red-500' : 'bg-content-muted';
   return <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${color}`} />;
 }
 
@@ -227,7 +227,7 @@ function TransactionDetailModal({
       label: 'Amount',
       value: (
         <span
-          className={`font-display font-semibold ${txn.amount > 0 ? 'text-emerald-600' : 'text-red-500'}`}
+          className={`font-display font-semibold ${txn.amount > 0 ? 'text-accent-fg' : 'text-red-500'}`}
         >
           {txn.amount > 0 ? '+' : ''}₦{Math.abs(txn.amount).toLocaleString()}
         </span>
@@ -441,7 +441,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
             subtext="Ready to withdraw"
             subtextPositive
             icon={<Wallet className="h-5 w-5 text-white" />}
-            iconBg="bg-emerald-500"
+            iconBg="bg-leaf"
           />
           <StatCard
             label="Pending Balance"
@@ -484,7 +484,7 @@ export default function EarningsPage({ data = mockData }: EarningsPageProps) {
         {/* Bank Account Bar */}
         <div className="bg-panel shadow-card border-line/10 flex items-center justify-between gap-4 rounded-xl border px-5 py-4">
           <div className="flex-col items-center gap-3 sm:flex-row">
-            <div className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-sm font-bold text-white">
+            <div className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-leaf text-sm font-bold text-white">
               {accountDetails.bankName.slice(0, 2).toUpperCase()}
             </div>
             <div>

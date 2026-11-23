@@ -32,7 +32,7 @@ export function EditorialStatsRow({ stats }: EditorialStatsProps) {
           </p>
           <CheckCircle2 size={16} className="text-lime/60 group-hover:text-lime transition-colors" />
         </div>
-        <p className="text-3xl font-display font-medium text-green-700 tracking-tight">
+        <p className="text-3xl font-display font-medium text-accent-fg tracking-tight">
           {stats.published}
         </p>
       </div>

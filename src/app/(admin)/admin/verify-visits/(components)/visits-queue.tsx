@@ -159,7 +159,7 @@ const STATUS_BADGE: Record<string, string> = {
   // on the person reading the screen; a 10% tint made the one actionable state
   // the faintest thing on the card.
   'Under Review': 'bg-amber-500 text-white',
-  Verified: 'bg-emerald-500/10 text-emerald-600',
+  Verified: 'bg-lime/15 text-accent-fg',
   Rejected: 'bg-rose-500/10 text-rose-600',
   Fraud: 'bg-rose-600 text-white',
 };
@@ -472,7 +472,7 @@ function VisitCard({
                 </Badge>
               )}
               {v.subjectVerified && (
-                <Badge className="bg-emerald-500/10 text-emerald-600">verified</Badge>
+                <Badge className="bg-lime/15 text-accent-fg">verified</Badge>
               )}
               {/* The one state the status chip gets wrong. An agent assigned
                   with no agreed time leaves the row at 'Not Visited', which
@@ -645,7 +645,7 @@ function VisitCard({
                   how the same visit gets a second agent. */}
               {v.ambassadorId ? (
                 <p className="text-content flex flex-wrap items-center gap-2 text-sm">
-                  <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+                  <Badge className="gap-1 bg-lime/15 text-accent-fg">
                     <UserRound className="size-3" /> Agent assigned
                   </Badge>
                   <span>{v.ambassadorName ?? 'Someone'} is going.</span>

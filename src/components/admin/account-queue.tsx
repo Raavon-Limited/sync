@@ -34,7 +34,7 @@ import { Badge, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 export const STATUS_BADGE: Record<string, string> = {
-  verified: 'bg-emerald-500/10 text-emerald-600',
+  verified: 'bg-lime/15 text-accent-fg',
   pending: 'bg-amber-500/10 text-amber-600',
   rejected: 'bg-rose-500/10 text-rose-600',
   unverified: 'bg-ink/5 text-content-muted',

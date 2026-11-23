@@ -268,7 +268,7 @@ export function ChangeAccountDialog({ open, onClose, onSave, current }: ChangeAc
               </>
             ) : name ? (
               <>
-                <Check className="size-4 shrink-0 text-emerald-600" />
+                <Check className="size-4 shrink-0 text-accent-fg" />
                 <span className="text-content font-medium">{name}</span>
               </>
             ) : (

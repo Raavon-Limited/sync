@@ -44,7 +44,7 @@ function RoomCount({ available, total }: { available: number; total: number }) {
     );
   }
   return (
-    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-green-700 bg-green-100 border border-lime/20 px-2 py-0.5 rounded-md">
+    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-accent-fg bg-lime/20 border border-lime/20 px-2 py-0.5 rounded-md">
       <DoorOpen size={10} />
       {available}/{total} available
     </span>
@@ -102,7 +102,7 @@ function ListCard({ listing, saved, setSaved }: CardProps) {
       <div className="flex flex-col flex-1 p-5 min-w-0 bg-panel">
         {/* Name + rating meta row */}
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="text-base font-display font-semibold text-content tracking-tight line-clamp-1 transition-colors group-hover:text-green-700">
+          <h3 className="text-base font-display font-semibold text-content tracking-tight line-clamp-1 transition-colors group-hover:text-accent-fg">
             {listing.name}
           </h3>
           <div className="flex items-center gap-1 shrink-0 bg-surface-deep/60 border border-line/10 rounded-md px-2 py-0.5 font-mono text-xs">
@@ -210,7 +210,7 @@ function GridCard({ listing, saved, setSaved }: CardProps) {
       {/* Main Bottom Details Body Grid wrapper */}
       <div className="flex flex-col flex-1 p-4 bg-panel space-y-3">
         <div>
-          <h3 className="text-sm font-display font-semibold text-content tracking-tight line-clamp-1 transition-colors group-hover:text-green-700 mb-0.5">
+          <h3 className="text-sm font-display font-semibold text-content tracking-tight line-clamp-1 transition-colors group-hover:text-accent-fg mb-0.5">
             {listing.name}
           </h3>
           <div className="flex items-center gap-1 text-xs text-content-muted/80">

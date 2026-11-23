@@ -336,7 +336,7 @@ export function MailComposer({ recipients, sent }: { recipients: Recipient[]; se
             className={cn(
               'rounded-lg border px-3 py-2 text-sm',
               result.ok
-                ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-600'
+                ? 'border-lime/40 bg-lime/10 text-accent-fg'
                 : 'border-coral/30 bg-coral/5 text-coral',
             )}
           >

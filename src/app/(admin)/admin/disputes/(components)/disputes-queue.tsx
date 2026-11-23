@@ -50,7 +50,7 @@ const STATUS_BADGE: Record<string, string> = {
   open: 'bg-amber-500/10 text-amber-600',
   investigating: 'bg-blue-500/10 text-blue-600',
   awaiting_response: 'bg-violet-500/10 text-violet-600',
-  resolved: 'bg-emerald-500/10 text-emerald-600',
+  resolved: 'bg-lime/15 text-accent-fg',
   rejected: 'bg-ink/5 text-content-muted',
 };
 

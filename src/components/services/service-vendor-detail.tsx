@@ -83,7 +83,7 @@ export function ServiceVendorDetail({ slug, vertical }: { slug: string; vertical
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-section text-content">{vendor.businessName}</h1>
             {vendor.isVerified && (
-              <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+              <Badge className="gap-1 bg-lime/15 text-accent-fg">
                 <ShieldCheck className="size-3" /> Verified
               </Badge>
             )}

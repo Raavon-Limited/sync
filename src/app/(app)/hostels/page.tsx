@@ -292,7 +292,7 @@ function Gallery({ hostel }: { hostel: Hostel }) {
 const STATUS_MAP = {
   available: {
     label: 'Rooms available',
-    cls: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+    cls: 'bg-lime/15 border-lime/40 text-accent-fg',
   },
   full: {
     label: 'Fully booked',

@@ -22,12 +22,12 @@ interface OrderDetailsDialogProps {
 const statusVariant: Record<Order['status'], string> = {
   Pending: 'bg-ink/8 text-ink',
   Processing: 'bg-amber-100 text-amber-700',
-  Delivered: 'bg-green-100 text-green-700',
+  Delivered: 'bg-lime/20 text-accent-fg',
   Cancelled: 'bg-red-100 text-red-700',
 };
 
 const paymentVariant: Record<Order['payment'], string> = {
-  Paid: 'bg-green-100 text-green-700',
+  Paid: 'bg-lime/20 text-accent-fg',
   Pending: 'bg-amber-100 text-amber-700',
   Failed: 'bg-red-100 text-red-700',
 };

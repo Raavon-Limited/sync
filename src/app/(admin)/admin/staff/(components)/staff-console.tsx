@@ -196,7 +196,7 @@ export function StaffConsole({
               failure used to be appended to the success line, so "invitation
               created" and "the email did not send" arrived as one sentence in
               one colour and read as a success. */}
-          {message && <p className="text-xs text-emerald-600">{message}</p>}
+          {message && <p className="text-xs text-accent-fg">{message}</p>}
           {failure && (
             <p className="border-line/10 bg-surface text-content-muted rounded-lg border px-3 py-2 font-mono text-xs">
               {failure}

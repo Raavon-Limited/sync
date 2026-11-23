@@ -365,7 +365,7 @@ function StudentIdentityCard({ initial }: { initial?: StudentIdentityFields | nu
           {saving ? 'Saving…' : 'Save details'}
         </Button>
         {note && (
-          <span className={note.ok ? 'text-sm text-emerald-600' : 'text-coral text-sm'}>
+          <span className={note.ok ? 'text-accent-fg text-sm' : 'text-coral text-sm'}>
             {note.text}
           </span>
         )}

@@ -72,7 +72,7 @@ export function RoleSwitcher({ role, roles }: { role: string; roles: string[] })
       {switchable.map((r) => (
         <DropdownMenuItem key={r} onSelect={() => choose(r)} disabled={pending}>
           {r === role ? (
-            <Check className="size-4 shrink-0 text-emerald-600" />
+            <Check className="text-accent-fg size-4 shrink-0" />
           ) : pending ? (
             <Loader2 className="size-4 shrink-0 animate-spin opacity-40" />
           ) : (

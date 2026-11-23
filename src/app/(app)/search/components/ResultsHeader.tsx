@@ -24,7 +24,7 @@ export default function ResultsHeader({
       <div>
         <h2 className="text-xl sm:text-3xl font-display font-bold text-content tracking-tight leading-tight">
           {count} hostels{" "}
-          <span className="text-green-600 font-bold italic">
+          <span className="text-accent-fg font-bold italic">
             near you
           </span>
         </h2>

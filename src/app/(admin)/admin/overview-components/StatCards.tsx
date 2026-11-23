@@ -60,7 +60,7 @@ function StatCardItem({ stat }: { stat: StatCard }) {
       <div
         className={cn(
           'flex items-center gap-1 text-[10px] font-bold tracking-wide uppercase',
-          isNegative ? 'text-coral' : 'text-green-500',
+          isNegative ? 'text-coral' : 'text-accent-fg',
         )}
       >
         {isNegative ? (

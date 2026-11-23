@@ -7,9 +7,9 @@
  * through functions or plain inserts that the database re-checks.
  *
  * Gist writes are mutations, so a signed-out tap goes to /login via the
- * MutationCache gate (lib/query/query-client.ts). Poll VOTES are not gated:
- * voting needs no account and goes through /api/polls/vote, marked
- * `meta: { public: true }`.
+ * MutationCache gate (lib/query/query-client.ts). Two are NOT gated, both
+ * marked `meta: { public: true }`: poll VOTES (through /api/polls/vote) and
+ * gist REACTIONS (react_to_gist, 20261124120000). Neither needs an account.
  *
  * The tables postdate the generated types, hence the untyped client.
  */
@@ -32,14 +32,30 @@ export const GIST_KINDS: Record<GistKind, { label: string; hint: string }> = {
   event: { label: 'Event', hint: 'Something happening at a set time and place' },
 };
 
+/**
+ * The words anyone can react with (20261124120000). One per person per post;
+ * picking another switches it. Order is the order they sit under a post.
+ */
+export const REACTIONS = [
+  { key: 'same_here', label: 'Same here' },
+  { key: 'co_ask', label: 'I co ask' },
+  { key: 'facts', label: 'Facts' },
+  { key: 'lol', label: 'Lol' },
+  { key: 'wahala', label: 'Wahala' },
+  { key: 'thanks', label: 'Thanks' },
+] as const;
+export type ReactionKind = (typeof REACTIONS)[number]['key'];
+
 export interface GistPost {
   id: string;
   authorName: string;
   kind: GistKind;
   body: string;
   createdAt: string;
-  sameHere: number;
-  reacted: boolean;
+  /** Count per word; words nobody picked are absent. */
+  reactions: Partial<Record<ReactionKind, number>>;
+  /** This visitor's word - by account when signed in, else by this device. */
+  myReaction: ReactionKind | null;
   mine: boolean;
 }
 
@@ -50,7 +66,12 @@ export function useGistFeed(campusId: string | null, limit = 20) {
     queryKey: ['gist', 'feed', campusId, limit, userId],
     enabled: !!campusId,
     queryFn: async (): Promise<GistPost[]> => {
-      const { data, error } = await db().rpc('gist_feed', { p_campus: campusId, p_limit: limit });
+      // The device id lets a signed-out visitor see which word they picked.
+      const { data, error } = await db().rpc('gist_feed', {
+        p_campus: campusId,
+        p_limit: limit,
+        p_device: deviceId() ?? null,
+      });
       if (error) throw error;
       return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
         id: r.id as string,
@@ -58,8 +79,8 @@ export function useGistFeed(campusId: string | null, limit = 20) {
         kind: r.kind as GistKind,
         body: r.body as string,
         createdAt: r.created_at as string,
-        sameHere: Number(r.same_here ?? 0),
-        reacted: Boolean(r.reacted),
+        reactions: (r.reactions ?? {}) as Partial<Record<ReactionKind, number>>,
+        myReaction: (r.my_reaction as ReactionKind | null) ?? null,
         mine: Boolean(r.mine),
       }));
     },
@@ -86,14 +107,43 @@ export function useDropGist(campusId: string | null) {
   });
 }
 
-export function useToggleSameHere() {
+/**
+ * React with a word, switch to another, or tap the same word to take it back.
+ * NO ACCOUNT NEEDED: anyone may react, so this skips the sign-in gate. The
+ * database counts a signed-out visitor by this device's id.
+ *
+ * Optimistic: the chip moves the moment it is tapped and the server's answer
+ * settles it, because waiting a round trip on campus data feels broken.
+ */
+export function useReactToGist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (postId: string) => {
-      const { error } = await db().rpc('toggle_gist_reaction', { p_post: postId });
+    meta: { public: true },
+    mutationFn: async ({ postId, kind }: { postId: string; kind: ReactionKind }) => {
+      const { error } = await db().rpc('react_to_gist', {
+        p_post: postId,
+        p_kind: kind,
+        p_device: deviceId() ?? null,
+      });
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['gist', 'feed'] }),
+    onMutate: async ({ postId, kind }) => {
+      await qc.cancelQueries({ queryKey: ['gist', 'feed'] });
+      const before = qc.getQueriesData<GistPost[]>({ queryKey: ['gist', 'feed'] });
+      qc.setQueriesData<GistPost[]>({ queryKey: ['gist', 'feed'] }, (posts) =>
+        posts?.map((p) => {
+          if (p.id !== postId) return p;
+          const counts = { ...p.reactions };
+          if (p.myReaction) counts[p.myReaction] = Math.max(0, (counts[p.myReaction] ?? 1) - 1);
+          const next = p.myReaction === kind ? null : kind;
+          if (next) counts[next] = (counts[next] ?? 0) + 1;
+          return { ...p, reactions: counts, myReaction: next };
+        }),
+      );
+      return { before };
+    },
+    onError: (_err, _vars, ctx) => ctx?.before.forEach(([key, data]) => qc.setQueryData(key, data)),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['gist', 'feed'] }),
   });
 }
 

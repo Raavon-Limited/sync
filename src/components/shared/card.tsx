@@ -21,7 +21,7 @@ const trendStyles: Record<
   Trend,
   { textClass: string; Icon?: ComponentType<{ className?: string }> }
 > = {
-  up: { textClass: 'text-emerald-600', Icon: ArrowUpRight },
+  up: { textClass: 'text-accent-fg', Icon: ArrowUpRight },
   down: { textClass: 'text-red-500', Icon: ArrowDownRight },
   neutral: { textClass: 'text-content-muted' },
 };

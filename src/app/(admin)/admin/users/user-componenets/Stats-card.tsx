@@ -19,7 +19,7 @@ export function StatCard({ icon: Icon, label, value, sub, subColour = 'default',
       </div>
       <p className={cn(
         'font-display mt-2 text-3xl font-extrabold leading-none tracking-tight',
-        valueColour === 'green' ? 'text-green-600' :
+        valueColour === 'green' ? 'text-accent-fg' :
         valueColour === 'purple' ? 'text-violet-600' :
         'text-content',
       )}>
@@ -28,7 +28,7 @@ export function StatCard({ icon: Icon, label, value, sub, subColour = 'default',
       {sub && (
         <p className={cn(
           'mt-1.5 text-xs font-semibold',
-          subColour === 'green' ? 'text-green-600' :
+          subColour === 'green' ? 'text-accent-fg' :
           subColour === 'red' ? 'text-red-500' :
           'text-content-muted',
         )}>

@@ -102,7 +102,7 @@ export function StoreFacts({
           {store.name}
           {showVerification &&
             (store.verifiedAt ? (
-              <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+              <Badge className="gap-1 bg-lime/15 text-accent-fg">
                 <ShieldCheck className="size-3" /> verified
               </Badge>
             ) : (

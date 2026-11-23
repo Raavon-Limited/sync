@@ -35,9 +35,9 @@ export function ListingStatsBar({ listings, soldOutIds }: ListingStatsBarProps) 
     {
       label: 'ACTIVE',
       value: active,
-      valueColor: 'text-green-600',
-      icon: <BadgeCheck className="size-5 text-green-600" />,
-      iconBg: 'bg-green-100',
+      valueColor: 'text-accent-fg',
+      icon: <BadgeCheck className="size-5 text-accent-fg" />,
+      iconBg: 'bg-lime/20',
     },
     {
       label: 'ARCHIVED',

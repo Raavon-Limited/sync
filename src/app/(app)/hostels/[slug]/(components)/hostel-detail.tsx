@@ -28,7 +28,7 @@ import { useSession } from '@/providers/session-provider';
 const naira = (kobo?: number | null) => `₦${((kobo ?? 0) / 100).toLocaleString()}`;
 
 const AVAILABILITY_LABEL: Record<string, { label: string; cls: string }> = {
-  available: { label: 'Rooms available', cls: 'bg-emerald-500/10 text-emerald-600' },
+  available: { label: 'Rooms available', cls: 'bg-lime/15 text-accent-fg' },
   filling_up: { label: 'Filling up', cls: 'bg-amber-500/10 text-amber-600' },
   full: { label: 'Fully booked', cls: 'bg-rose-500/10 text-rose-600' },
   draft: { label: 'Not yet listed', cls: 'bg-ink/5 text-content-muted' },
@@ -79,7 +79,7 @@ export function HostelDetail({ slug }: { slug: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-section text-content">{hostel.name}</h1>
             {hostel.isVerified && (
-              <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+              <Badge className="gap-1 bg-lime/15 text-accent-fg">
                 <ShieldCheck className="size-3" /> Verified
               </Badge>
             )}
@@ -158,7 +158,7 @@ export function HostelDetail({ slug }: { slug: string }) {
           )}
           {error && <p className="text-coral text-xs">{error}</p>}
           {book.isSuccess && (
-            <p className="flex items-center gap-1 text-xs text-emerald-600">
+            <p className="flex items-center gap-1 text-xs text-accent-fg">
               <Check className="size-3" /> Request sent to the landlord.
             </p>
           )}

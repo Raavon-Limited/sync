@@ -65,7 +65,7 @@ export function RevenuePanel({ data }: { data: RevenueData }) {
       label: 'Charged',
       value: naira(data.charged_kobo),
       icon: ArrowUpRight,
-      tone: 'text-emerald-600',
+      tone: 'text-accent-fg',
     },
     {
       label: 'Returned',

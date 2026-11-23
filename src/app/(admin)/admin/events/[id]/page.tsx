@@ -83,9 +83,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           {name}
           <Badge
             className={
-              status === 'verified'
-                ? 'bg-emerald-500/10 text-emerald-600'
-                : 'bg-ink/5 text-content-muted'
+              status === 'verified' ? 'bg-lime/15 text-accent-fg' : 'bg-ink/5 text-content-muted'
             }
           >
             {status}

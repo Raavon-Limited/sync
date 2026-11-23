@@ -162,7 +162,7 @@ export function TicketCheckout({ slug }: { slug: string }) {
           )}
 
           {bought > 0 && !error && (
-            <p className="mt-3 flex items-center gap-1 text-sm text-emerald-600">
+            <p className="mt-3 flex items-center gap-1 text-sm text-accent-fg">
               <Check className="size-4" /> {bought} ticket{bought === 1 ? '' : 's'} bought.
             </p>
           )}

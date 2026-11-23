@@ -123,7 +123,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
           <Badge
             className={
               l.verification_status === 'verified'
-                ? 'bg-emerald-500/10 text-emerald-600'
+                ? 'bg-lime/15 text-accent-fg'
                 : 'bg-ink/5 text-content-muted'
             }
           >
@@ -218,7 +218,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
                       <p className="text-content flex items-center gap-2 font-medium">
                         {h.name}
                         {h.verified && (
-                          <Badge className="gap-1 bg-emerald-500/10 text-emerald-600">
+                          <Badge className="bg-lime/15 text-accent-fg gap-1">
                             <ShieldCheck className="size-3" /> verified
                           </Badge>
                         )}

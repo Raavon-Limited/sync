@@ -58,8 +58,8 @@ const DEFAULT_ITEMS: PromotionTypeItem[] = [
   {
     type: 'Flash Sale',
     description: 'Limited-time lightning deals',
-    iconBg: 'bg-green-100',
-    iconColor: 'text-green-500',
+    iconBg: 'bg-lime/20',
+    iconColor: 'text-accent-fg',
   },
 ];
 

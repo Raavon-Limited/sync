@@ -39,7 +39,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
     <div className="bg-panel rounded-2xl border border-line/10 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-content">User Growth</h3>
-        <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">↑ Trending up</span>
+        <span className="text-xs text-accent-fg font-semibold bg-lime/15 px-2.5 py-1 rounded-full">↑ Trending up</span>
       </div>
 
       <div className="w-full overflow-x-auto">

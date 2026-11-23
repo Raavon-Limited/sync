@@ -66,7 +66,7 @@ export function RidersConsole({ riders }: { riders: AdminRider[] }) {
             {r.blocked && <Badge className="bg-rose-500/10 text-rose-600">fraud</Badge>}
             {r.suspendedAt && <Badge className="bg-coral/10 text-coral">suspended</Badge>}
             {r.isOnline && !r.suspendedAt && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600">
+              <span className="text-accent-fg flex items-center gap-1 text-xs">
                 <CircleDot className="size-3" aria-hidden="true" />
                 online
               </span>

@@ -106,11 +106,11 @@ const STATUS_STYLE: Record<string, string> = {
   'Not Visited': 'bg-ink/5 text-content-muted',
   'Visit Scheduled': 'bg-amber-500/10 text-amber-600',
   'Under Review': 'bg-blue-500/10 text-blue-600',
-  Verified: 'bg-emerald-500/10 text-emerald-600',
+  Verified: 'bg-lime/15 text-accent-fg',
   Rejected: 'bg-rose-500/10 text-rose-600',
   pending_payment: 'bg-ink/5 text-content-muted',
   scheduled: 'bg-amber-500/10 text-amber-600',
-  completed: 'bg-emerald-500/10 text-emerald-600',
+  completed: 'bg-lime/15 text-accent-fg',
   cancelled: 'bg-ink/5 text-content-muted',
   student_no_show: 'bg-rose-500/10 text-rose-600',
   agent_no_show: 'bg-rose-500/10 text-rose-600',
@@ -425,7 +425,7 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
       */}
       {!done &&
         (i.studentConfirmedAt ? (
-          <p className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600">
+          <p className="flex items-center gap-1.5 rounded-lg border border-lime/30 bg-lime/10 px-3 py-2 text-sm text-accent-fg">
             <CheckCircle2 className="size-4 shrink-0" />
             Confirmed by the student.
           </p>
@@ -489,7 +489,7 @@ function InspectionCard({ inspection: i }: { inspection: AgentInspection }) {
       )}
 
       {note && (
-        <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
+        <p className={cn('text-xs', note.ok ? 'text-accent-fg' : 'text-coral')}>{note.text}</p>
       )}
 
       <ReportSheet

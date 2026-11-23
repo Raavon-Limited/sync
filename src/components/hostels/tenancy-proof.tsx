@@ -97,7 +97,7 @@ export function TenancyProof(props: TenancyProofProps) {
           </p>
           <p className="font-display text-content text-lg font-semibold">{props.studentName}</p>
         </div>
-        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-600">
+        <span className="flex items-center gap-1 rounded-full bg-lime/15 px-2 py-1 text-[10px] font-medium text-accent-fg">
           <ShieldCheck className="size-3" aria-hidden="true" />
           Confirmed
         </span>

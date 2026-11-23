@@ -27,7 +27,7 @@ function formatDateRange(start: string, end: string) {
 
 // ── status badge ──────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<CampaignStatus, string> = {
-  Active: 'bg-green-100 text-green-700',
+  Active: 'bg-lime/20 text-accent-fg',
   Ended: 'bg-surface-deep text-content-muted',
   Draft: 'bg-yellow-100 text-yellow-700',
   Paused: 'bg-orange-100 text-orange-700',
@@ -66,7 +66,7 @@ function MetricPill({ label, value, green }: { label: string; value: string; gre
   return (
     <div className="flex flex-col items-center gap-0.5">
       <span
-        className={cn('font-display text-sm font-bold', green ? 'text-green-600' : 'text-content')}
+        className={cn('font-display text-sm font-bold', green ? 'text-accent-fg' : 'text-content')}
       >
         {value}
       </span>
@@ -235,7 +235,7 @@ function MetricCard({ label, value, green }: { label: string; value: string; gre
       <span
         className={cn(
           'font-display text-base font-bold',
-          green ? 'text-green-600' : 'text-content',
+          green ? 'text-accent-fg' : 'text-content',
         )}
       >
         {value}

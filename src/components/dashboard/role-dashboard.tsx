@@ -78,7 +78,7 @@ export interface DashboardKpi {
  *   that, not the stroke inside it.
  */
 const KPI_STYLE: Record<string, { icon: LucideIcon; iconBg: string }> = {
-  'Total Revenue': { icon: Wallet, iconBg: 'bg-emerald-500/15 text-content' },
+  'Total Revenue': { icon: Wallet, iconBg: 'bg-lime/15 text-content' },
   Orders: { icon: ShoppingBag, iconBg: 'bg-blue-500/15 text-content' },
   'Store Rating': { icon: Star, iconBg: 'bg-amber-500/15 text-content' },
   'Stock Alerts': { icon: AlertTriangle, iconBg: 'bg-red-500/15 text-content' },

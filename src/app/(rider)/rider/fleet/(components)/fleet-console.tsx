@@ -106,7 +106,7 @@ export function FleetConsole({ fleet }: { fleet: Fleet }) {
         <p className="text-content-muted w-full text-xs">
           They need a rider account already. Sync verifies each rider separately from the fleet.
         </p>
-        {message && <p className="w-full text-xs text-emerald-600">{message}</p>}
+        {message && <p className="text-accent-fg w-full text-xs">{message}</p>}
         {error && <p className="text-coral w-full text-xs">{error}</p>}
       </div>
 
@@ -132,7 +132,7 @@ export function FleetConsole({ fleet }: { fleet: Fleet }) {
                     </Badge>
                   )}
                   {r.isOnline && !r.suspended && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-600">
+                    <span className="text-accent-fg flex items-center gap-1 text-xs">
                       <CircleDot className="size-3" aria-hidden="true" />
                       online
                     </span>

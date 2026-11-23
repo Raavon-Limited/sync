@@ -324,7 +324,7 @@ function Requirement({
           <p className="text-content-muted mt-0.5 text-xs">{spec.description}</p>
         </div>
         {done && (
-          <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600">
+          <span className="bg-lime/15 text-accent-fg shrink-0 rounded-full px-2 py-0.5 text-[11px]">
             Added
           </span>
         )}

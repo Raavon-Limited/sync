@@ -89,8 +89,8 @@ export function StoreAnalytics() {
           label="RECEIVED"
           value={<span className="text-content">{naira(totals.revenue)}</span>}
           subtext="Released to you, after commission"
-          icon={<Wallet className="size-5 text-green-600" />}
-          iconBg="bg-green-100"
+          icon={<Wallet className="size-5 text-accent-fg" />}
+          iconBg="bg-lime/20"
         />
         <CustomCard
           label="IN ESCROW"

@@ -42,7 +42,7 @@ export function RiderDetail({ rider }: { rider: AdminRider }) {
                 <Badge className="bg-rose-500/10 text-rose-600">blocked for fraud</Badge>
               )}
               {rider.isOnline && !rider.suspendedAt && (
-                <span className="flex items-center gap-1 text-xs text-emerald-600">
+                <span className="text-accent-fg flex items-center gap-1 text-xs">
                   <CircleDot className="size-3" aria-hidden="true" />
                   online
                 </span>

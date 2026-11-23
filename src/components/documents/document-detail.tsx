@@ -102,7 +102,7 @@ export function DocumentDetail({
             {/* WHERE it went, not just that it went. "Sent" on its own invites
                 a second press when nothing arrives at the address they assumed
                 we had. */}
-            {sent && <p className="text-xs text-emerald-600">Sent to {sent}.</p>}
+            {sent && <p className="text-accent-fg text-xs">Sent to {sent}.</p>}
             {error && <p className="text-coral text-xs">{error}</p>}
 
             <p className="text-content-muted text-[11px] leading-relaxed">

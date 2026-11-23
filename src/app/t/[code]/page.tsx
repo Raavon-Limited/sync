@@ -79,12 +79,12 @@ export default async function Page({ params }: { params: Promise<{ code: string 
       <div
         className={
           proof.is_current
-            ? 'flex flex-col items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center'
+            ? 'border-lime/40 bg-lime/15 flex flex-col items-center gap-2 rounded-2xl border p-6 text-center'
             : 'border-line/15 bg-panel flex flex-col items-center gap-2 rounded-2xl border p-6 text-center'
         }
       >
         {proof.is_current ? (
-          <BadgeCheck className="size-8 text-emerald-500" aria-hidden="true" />
+          <BadgeCheck className="text-accent-fg size-8" aria-hidden="true" />
         ) : (
           <ShieldX className="text-content-muted size-8" aria-hidden="true" />
         )}

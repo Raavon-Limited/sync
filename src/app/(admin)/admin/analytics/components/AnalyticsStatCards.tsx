@@ -27,7 +27,7 @@ export function AnalyticsStatCards({ stats }: { stats: StatCard[] }) {
                 {ICONS[s.icon]}
               </div>
             </div>
-            <div className={`flex items-center gap-1 text-xs font-semibold ${neg ? "text-red-500" : "text-emerald-600"}`}>
+            <div className={`flex items-center gap-1 text-xs font-semibold ${neg ? "text-red-500" : "text-accent-fg"}`}>
               {neg ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
               {neg ? "" : "+"}{s.change}% vs last month
             </div>

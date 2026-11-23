@@ -25,7 +25,7 @@ import type { AreaPulse } from '@/modules/around/types';
 
 const BUSY: Record<AreaPulse['busyness'], { label: string; className: string }> = {
   busy: { label: 'Busy', className: 'bg-amber-500/10 text-amber-600' },
-  steady: { label: 'Steady', className: 'bg-emerald-500/10 text-emerald-600' },
+  steady: { label: 'Steady', className: 'bg-lime/15 text-accent-fg' },
   quiet: { label: 'Quiet', className: 'bg-ink/5 text-content-muted' },
 };
 

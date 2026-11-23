@@ -80,7 +80,7 @@ export function BookingSheet({
               Stated either way   a missing badge reads as "we forgot", and
               this is the fact a student most wants before travelling. */}
           {hostel.isVerified ? (
-            <Badge className="w-fit bg-emerald-500/10 text-emerald-600">
+            <Badge className="bg-lime/15 text-accent-fg w-fit">
               <ShieldCheck className="size-3" /> Visited by an agent
             </Badge>
           ) : (

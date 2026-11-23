@@ -92,7 +92,7 @@ export async function getOverview(): Promise<Overview> {
         label: 'Active Users',
         value: o.users,
         change: change(o.users, o.users_prev),
-        iconBg: 'bg-emerald-500',
+        iconBg: 'bg-leaf',
         icon: 'users',
         href: '/admin/users',
       },

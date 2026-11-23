@@ -44,7 +44,7 @@ export function statusBadge(u: EnrichedUser) {
   }
   if (u.verification_status === 'verified') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wide text-green-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/20 px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wide text-accent-fg">
         Verified
       </span>
     );

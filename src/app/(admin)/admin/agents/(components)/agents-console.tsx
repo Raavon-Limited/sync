@@ -266,7 +266,7 @@ export function AgentsConsole({
         </div>
 
         {assignNote && (
-          <p className={cn('text-xs', assignNote.ok ? 'text-emerald-600' : 'text-coral')}>
+          <p className={cn('text-xs', assignNote.ok ? 'text-accent-fg' : 'text-coral')}>
             {assignNote.text}
           </p>
         )}
@@ -297,7 +297,7 @@ export function AgentsConsole({
         </p>
 
         {note && (
-          <p className={cn('text-xs', note.ok ? 'text-emerald-600' : 'text-coral')}>{note.text}</p>
+          <p className={cn('text-xs', note.ok ? 'text-accent-fg' : 'text-coral')}>{note.text}</p>
         )}
 
         {link && (

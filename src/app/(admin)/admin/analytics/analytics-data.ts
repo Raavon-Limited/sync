@@ -107,7 +107,7 @@ export async function getAnalytics(range: TimeRange): Promise<Analytics> {
       label: 'Total Revenue',
       value: compactNaira(a.revenue_kobo),
       change: change(a.revenue_kobo, a.prev_revenue_kobo),
-      iconBg: 'bg-emerald-500',
+      iconBg: 'bg-leaf',
       icon: 'revenue',
     },
     {

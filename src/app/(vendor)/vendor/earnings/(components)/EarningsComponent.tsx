@@ -34,7 +34,7 @@ export const earningsColumns: ColumnDef<Transaction>[] = [
     cell: ({ row }) => (
       <span
         className={`font-display font-semibold ${
-          row.original.amount > 0 ? 'text-emerald-600' : 'text-red-500'
+          row.original.amount > 0 ? 'text-accent-fg' : 'text-red-500'
         }`}
       >
         {row.original.amount > 0 ? '+' : ''}₦{Math.abs(row.original.amount).toLocaleString()}
